@@ -228,8 +228,8 @@ To convert the sketch, you *eject* it:
 
    $ workshop sketch-sdk --eject
 
-     "dev" sketch ejected to ".workshop/hello-workshop"
-     To use it, add "project-hello-workshop" to the list of SDKs and run 'workshop refresh dev'
+     "dev" sketch ejected to ".workshop/example"
+     To use it, add "project-example" to the list of SDKs and run 'workshop refresh dev'
 
 
 This command creates a new *in-project SDK*
@@ -251,7 +251,7 @@ bypassing the SDK Store.
 
 
 By default, the new in-project SDK is named after the project directory;
-here, it's :file:`hello-workshop/`, so renaming it is a good idea.
+here, it's :file:`example/`, so renaming it is a good idea.
 To specify a custom name, use the :option:`!--name` option:
 
 .. code-block:: console

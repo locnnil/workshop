@@ -21,23 +21,7 @@ Follow the sections of the tutorial in order.
 .. toctree::
    :maxdepth: 1
 
-   Part 1: Get Started <get-started>
+   Part 1: Get started <get-started>
    Part 2: Work with interfaces <work-with-interfaces>
    Part 3: Sketch SDKs <sketch-sdks>
    Part 4: Craft SDKs <craft-sdks>
-
-
-Next steps
-----------
-
-The :ref:`ROS 2 how-to guides <how_ros2>`
-provide a real-world example
-to detail the process of building an SDK
-and using it in |ws_markup|.
-
-Finally, if you need a more descriptive overview of |ws_markup|,
-refer to the :ref:`explanation <exp_index>` section.
-For comprehensive details,
-explore the :ref:`reference <ref_index>` section.
-If you're looking for advanced practical steps,
-see the :ref:`how-to guides <how_index>`.

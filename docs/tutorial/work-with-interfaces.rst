@@ -13,6 +13,8 @@ This is the second section of the :ref:`four-part series <tut_index>`;
 it explains how to work with interfaces.
 It relies on the knowledge gained in the :ref:`tut_get_started` section,
 where you learned how to create and run workshops.
+Here, you will learn how to make better use of SDKs in your workshop
+and integrate them with the host system.
 
 .. @artefact interface
 .. @artefact system SDK
@@ -73,7 +75,7 @@ You can remount a mount interface plug to a new location on the host:
 
      name:     dev
      base:     ubuntu@24.04
-     project:  /home/user/hello-workshop
+     project:  /home/user/example
      status:   ready
      notes:    -
      sdks:

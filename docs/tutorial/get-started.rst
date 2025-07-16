@@ -141,8 +141,8 @@ Now you'll learn how to define, launch, start and stop a workshop.
 
 .. _tut_define:
 
-Define
-~~~~~~
+Define, add SDKs
+~~~~~~~~~~~~~~~~
 
 First, you need to define a workshop.
 A definition lists the components of a workshop
@@ -155,8 +155,11 @@ and is stored in your project directory.
 .. @artefact SDK Store
 
 A definition can list many moving parts;
-in this tutorial, we'll be focusing on SDKs,
-which are the basic units of a workshop's functionality.
+perhaps, the most important are SDKs,
+which are basic, pre-defined units of a workshop's functionality.
+
+You reference SDKs from your workshop definition
+to specify what you want to include in your workshop.
 At run-time, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
@@ -175,12 +178,12 @@ by the |ws_markup| team.
 
 .. @artefact project
 
-Create a project directory named :file:`hello-workshop`:
+For the project directory, clone the official Go examples repository:
 
 .. code-block:: console
 
-   $ mkdir ./hello-workshop
-   $ cd ./hello-workshop
+   $ git clone https://github.com/golang/example.git
+   $ cd example
 
 
 Everything you handle with your workshop goes here:
@@ -216,7 +219,7 @@ list the workshops in the project directory:
    $ workshop list
 
      Project                Workshop   Status  Notes
-     ~/hello-workshop       dev        Off     -
+     ~/example              dev        Off     -
 
 
 As the output suggests, your newly defined workshop is *Off*,
@@ -258,7 +261,7 @@ to see what went into your workshop:
 
      name:     dev
      base:     ubuntu@22.04
-     project:  /home/user/hello-workshop
+     project:  /home/user/example
      status:   ready
      notes:    -
      sdks:
@@ -298,45 +301,6 @@ and not be copied or stored externally, e.g. in a repository.
    such as "ignore everything except these files and directories,"
    add them to the list of explicitly tracked items.
 
-
-To see how |ws_markup| keeps track of the directory,
-check out the recent major operations, or changes:
-
-.. @artefact workshop changes
-
-.. code-block:: console
-
-   $ workshop changes
-
-     ID  Status  Spawn               Ready               Summary
-     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
-
-
-To find out which smaller steps, or tasks, went into a certain change,
-pass the change ID to the :command:`workshop tasks` command.
-To look at the latest change,
-use :command:`workshop tasks` without the argument:
-
-.. @artefact workshop tasks
-
-.. code-block:: console
-
-   $ workshop tasks
-
-     ID   Status  Spawn               Ready               Summary
-     132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
-     133  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
-     ...
-     144  Done    today at 11:32 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
-     ...
-
-     ......................................................................
-     Run hook "setup-base" for "go" SDK
-
-     2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical** installed
-
-
-This lists all the tasks and includes logs for some of them.
 
 You only need to launch a workshop once after defining it;
 for any subsequent changes, you can do a :ref:`refresh <tut_refresh>`.
@@ -427,21 +391,9 @@ Execute commands
 
 When the workshop is *Ready*,
 you can run arbitrary commands in it.
-In this tutorial, we're building Go code, so let's write some.
-
-In the project directory, save this code as :file:`main.go`:
-
-.. code-block:: go
-   :caption: main.go
-
-   package main
-
-   import "fmt"
-
-   func main() {
-     fmt.Println("Hello, Workshop")
-   }
-
+In this tutorial, we're building Go code,
+and we've already cloned the official Go examples repository
+to serve as our project directory.
 
 .. note::
 
@@ -450,22 +402,36 @@ In the project directory, save this code as :file:`main.go`:
    :ref:`how_vscode_workshops`.
 
 
-Next, build it *inside the workshop* using the :command:`workshop exec` command:
+Next, build the :samp:`hello` example *inside the workshop*
+using the :command:`workshop exec` command.
+The source for this example is in the :file:`hello/` directory.
 
 .. @artefact workshop exec
 
 .. code-block:: console
 
-   $ workshop exec dev -- go build main.go
+   $ workshop exec dev -- sh -c "cd hello && go build"
 
 
 This runs the Go version installed by the :samp:`go` SDK.
 The resulting binary, built within the workshop environment,
-is now available in the project directory.
+is now available in the :file:`hello/` directory in your project.
+If the host system permits
+(mind that it can differ from the workshop base),
+you can run the binary directly:
+
+.. code-block:: console
+
+   $ ./hello/hello
+
+     Hello, world!
+
 
 **This is the single most important part of the tutorial**;
 your deliverables, however complex they are, end up on the host system,
 while the tool chain is transparently confined and managed by |ws_markup|.
+This enables you to focus on your project,
+switching when needed between language and framework versions or base images.
 
 Next, we'll explore the remaining aspects of your daily workshop usage.
 
@@ -515,6 +481,57 @@ are visible in the project directory, and vice versa:
 
 This isn't the only way the host interacts with the workshop;
 let's dive into how interfaces operate.
+
+
+.. _tut_changes_tasks:
+
+Track changes and tasks
+-----------------------
+
+To see how |ws_markup| keeps track of its activities around a project,
+check out the recent major operations, or changes,
+with :command:`workshop changes`:
+
+.. @artefact workshop changes
+
+.. code-block:: console
+
+   $ workshop changes
+
+     ID  Status  Spawn               Ready               Summary
+     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
+
+
+Changes are enacted atomically to ensure workshops stay operational.
+Any change must have all its smaller steps, or tasks, succeed;
+otherwise, it will be undone.
+
+To find out which tasks went into a certain change,
+pass the change ID to the :command:`workshop tasks` command.
+To look at the latest change, run the command without an argument:
+
+.. @artefact workshop tasks
+
+.. code-block:: console
+
+   $ workshop tasks
+
+     ID   Status  Spawn               Ready               Summary
+     132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
+     133  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
+     ...
+     144  Done    today at 11:32 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
+     ...
+
+     ......................................................................
+     Run hook "setup-base" for "go" SDK
+
+     2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical installed
+
+
+This lists all the tasks and includes logs for some of them;
+each task expresses a simple token of logic,
+such as running a hook or connecting an interface.
 
 
 .. _tut_remove:
