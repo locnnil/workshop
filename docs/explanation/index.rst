@@ -37,13 +37,8 @@ Workshops and projects
 .. @artefact workshop (container)
 .. @artefact workshop definition
 
-A *workshop* is a container that enables consistent environment builds.
-It is tied to a definition that lists SDKs and is stored as a :file:`.yaml` file
-under a project directory.
-A *project* is the working directory where workshop definitions are placed.
-When you start a workshop, the project directory is mounted inside it,
-so storing repositories, code, or data such as models in the project directory
-enables you to use them inside the workshop.
+Workshops are containers for consistent environment builds,
+and projects are the working directories where workshop definitions are placed.
 
 .. toctree::
    :hidden:
@@ -61,13 +56,8 @@ SDKs
 
 .. @artefact SDK
 
-With |sdk_markup|, you can package and publish software dependencies
-as isolated *SDKs* to be used in a workshop definition by |ws_markup|,
-instead of managing them system-wide or through container images.
-SDKs encapsulate all required functionality,
-keeping installations clean and limiting access to system-level capabilities.
-Publishers handle installation and updates for SDKs,
-freeing users from maintaining complex image definitions or configurations.
+SDKs are packages of software dependencies that can be installed in workshops
+to create tailored development environments.
 
 .. toctree::
    :hidden:
@@ -86,10 +76,9 @@ freeing users from maintaining complex image definitions or configurations.
 Interfaces
 ----------
 
-Interface connections are a mechanism for communication and resource sharing.
-It is an integral part of workshop confinement,
-ensuring that each workshop operates in its own isolated environment,
-while still allowing controlled interactions among the SDKs and with the host.
+Interfaces allow communication and resource sharing
+between a workshop and the host system,
+as well as between the different SDKs that are part of a workshop.
 
 .. toctree::
    :hidden:

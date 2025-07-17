@@ -10,11 +10,18 @@ Workshop concepts
 
 .. @artefact project
 .. @artefact workshop (container)
+.. @artefact workshop definition
 
 A *workshop*
 (lowercase; not to be confused with |ws_markup| itself)
-is a container that is described in a definition file,
-which is associated with a :ref:`project directory <exp_projects>`.
+is a container that enables consistent environment builds.
+It is tied to a definition that lists SDKs
+and is stored as a :file:`.yaml` file under a project directory.
+A *project* is the working directory where workshop definitions are placed.
+When you start a workshop, the project directory is mounted inside it,
+so storing repositories, code, or data such as models in the project directory
+enables you to use them inside the workshop.
+
 Currently, these containers are hosted by `LXD`_,
 but it's not recommended to rely on this implementation detail.
 

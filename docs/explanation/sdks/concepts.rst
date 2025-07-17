@@ -12,11 +12,14 @@ SDK concepts
 .. @artefact SDK publisher
 .. @artefact SDK Store
 
-An *SDK* is an essential workshop component
-that installs system and language packages,
-configures the workshop for their operation
-and maintains its own state
-throughout the lifetime of the workshop.
+With |sdk_markup|, you can package and publish software dependencies
+as isolated *SDKs* to be used in a workshop definition by |ws_markup|,
+instead of managing them system-wide or through container images.
+SDKs encapsulate all required functionality,
+keeping installations clean and limiting access to system-level capabilities.
+Publishers handle installation and updates for SDKs,
+freeing users from maintaining complex image definitions or configurations.
+
 Most SDKs are designed by publishers
 and made available via the SDK Store,
 but some are specific to a particular project or user.
