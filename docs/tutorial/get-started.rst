@@ -516,17 +516,16 @@ To look at the latest change, run the command without an argument:
 
    $ workshop tasks
 
-     ID   Status  Spawn               Ready               Summary
-     132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
-     133  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
+     Status    Duration  Summary
+     Done          35ms  Retrieve "system" SDK
+     Done          35ms  Retrieve "go" SDK from channel "noble/stable"
      ...
-     144  Done    today at 11:32 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
+     Done          95ms  Install "go" SDK
+     Done          31ms  Register "go" SDK plugs and slots
+     Done     1m44.117s  Run hook "setup-base" for "go" SDK
      ...
-
      ......................................................................
      Run hook "setup-base" for "go" SDK
-
-     2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical installed
 
 
 This lists all the tasks and includes logs for some of them;
