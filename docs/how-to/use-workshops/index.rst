@@ -23,4 +23,5 @@ These articles cover the aspects of using |ws_markup| with developer tooling:
    :maxdepth: 1
 
    Use workshops with Git <git-workshop>
-   Use workshops with VS Code <vscode-workshop>
+   Connect VS Code to a workshop <connect-vscode-to-workshop>
+   Run VS Code in your browser <run-vscode-in-browser>

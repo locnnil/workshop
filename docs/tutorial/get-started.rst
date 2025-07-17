@@ -398,8 +398,8 @@ to serve as our project directory.
 .. note::
 
    |ws_markup| also integrates with modern IDEs.
-   For instance, see this guide:
-   :ref:`how_vscode_workshops`.
+   For instance, see these guides:
+   :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
 
 
 Next, build the :samp:`hello` example *inside the workshop*

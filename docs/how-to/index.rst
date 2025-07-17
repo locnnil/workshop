@@ -24,10 +24,11 @@ such as moving projects within the file system or using |ws_markup| with Git:
    Use workshops <use-workshops/index>
 
 - :doc:`Add scripts to workshops <use-workshops/add-scripts>`
+- :doc:`Connect VS Code to a workshop <use-workshops/connect-vscode-to-workshop>`
 - :doc:`Forward ports <use-workshops/forward-ports>`
 - :doc:`Move projects around <use-workshops/move-projects>`
+- :doc:`Run VS Code in your browser <use-workshops/run-vscode-in-browser>`
 - :doc:`Use workshops with Git <use-workshops/git-workshop>`
-- :doc:`Use workshops with VS Code <use-workshops/vscode-workshop>`
 
 
 Fix workshops
