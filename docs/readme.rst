@@ -1,9 +1,9 @@
 Workshop
 ========
 
-.. image:: https://readthedocs.com/projects/canonical-workshop/badge/?version=latest&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
-   :target: https://canonical-workshop.readthedocs-hosted.com/latest/?badge=latest
-   :alt: Documentation Status
+.. image:: https://readthedocs.com/projects/canonical-workshop/badge/?version=stable&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
+   :target: https://canonical-workshop.readthedocs-hosted.com/stable/?badge=stable
+   :alt: Documentation status
 
 **A tool for defining and handling ephemeral development environments**.
 
@@ -14,16 +14,16 @@ Getting Started
 Follow the sections below,
 or refer to the
 `Tutorial
-<https://canonical-workshop.readthedocs-hosted.com/latest/tutorial/>`_
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/>`_
 in our docs for a more detailed introduction to Workshop.
 
 To join the development effort, see `How to contribute <contributing.rst>`_.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
-see the
-`how-to guide
-<https://canonical-workshop.readthedocs-hosted.com/latest/how-to/use-sdkcraft/>`_
+jump straight to the
+`SDK crafting guide
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/craft-sdks/>`_
 in our docs.
 
 Installation
@@ -43,7 +43,7 @@ Check whether it's configured:
 
 If the command displays an older version
 or returns an error indicating LXD is missing,
-install a recent LXD version with :program:`snap`:
+install a recent LXD version with ``snap``:
 
 .. code-block:: console
 
@@ -74,15 +74,17 @@ create a workshop definition file named ``workshop.yaml``
 to list your project's prerequisites,
 then run ``workshop launch``:
 
-.. code-block:: console
+.. code-block:: yaml
+   :caption: workshop.yaml
 
-   cat > workshop.yaml <<EOF -
-   name: golang
+   name: dev
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/stable
-   EOF
+       channel: jammy/stable
+
+
+.. code-block:: console
 
    workshop launch
 

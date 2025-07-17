@@ -5,6 +5,7 @@ AUTH
 backend
 basename
 Caddy
+Caddyfile
 Charmcraft
 CLIs
 colcon

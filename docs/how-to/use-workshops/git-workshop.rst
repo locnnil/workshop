@@ -107,6 +107,19 @@ From here, you can do whatever you like with your repo,
 because |ws_markup| handles
 :ref:`moving projects around <how_move_projects>` quite well.
 
+Don't forget to add the :file:`.lock` file to your :file:`.gitignore` file:
+
+.. code-block:: console
+
+   $ echo ".workshop.lock" >> .gitignore
+
+
+To the contrary, the definition and the :file:`.workshop/` directory
+are *meant* to be stored in a repository;
+if your :file:`.gitignore` file uses rules
+such as "ignore everything except these files and directories,"
+add them to the list of explicitly tracked items.
+
 With your dependencies accounted for,
 restoring your build system after cloning the repo elsewhere
 is as simple as re-launching the workshop from a new

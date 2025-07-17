@@ -4,10 +4,10 @@
    :description: Tutorial on creating experimental SDKs with the 'workshop sketch-sdk'
                  command, enabling quick local SDK experiments without publishing them.
 
-Customize workshops with sketch SDKs
-====================================
+Customize with sketch SDKs
+==========================
 
-This is the second section of the :ref:`three-part series <tut_index>`;
+This is the third section of the :ref:`four-part series <tut_index>`;
 it teaches you to create experimental SDKs quickly
 using the :command:`workshop sketch-sdk` command
 to run local SDK experiments without publishing them.
@@ -210,47 +210,49 @@ To restore the stashed SDK:
    $ workshop sketch-sdk --restore
 
 
-Eject the SDK
--------------
+Eject to an in-project SDK
+--------------------------
 
 .. @artefact in-project SDK
 .. @artefact SDK Store
 
-If you're satisfied with the sketch to a degree
-where others may benefit from it,
-you can either add it to your project
-or publish it in the SDK Store.
+If you're satisfied with your sketch SDK,
+you can convert it into an :ref:`in-project SDK <exp_in_project_sdk>`.
+This makes it a permanent, version-controllable part of your project,
+shareable with your team;
+a good step before deciding to publish it to the SDK Store for wider use.
 
-The first step is to *eject* the SDK:
+To convert the sketch, you *eject* it:
 
 .. code-block:: console
 
    $ workshop sketch-sdk --eject
 
-     "dev" sketch ejected to ".workshop/hello-workshop"
-     To use it, add "project-hello-workshop" to the list of SDKs and run 'workshop refresh dev'
+     "dev" sketch ejected to ".workshop/example"
+     To use it, add "project-example" to the list of SDKs and run 'workshop refresh dev'
 
 
-This moves the SDK definition files
-into the :file:`.workshop/` subdirectory of the project
-and removes the sketch from the running workshop.
-|ws_markup| can pull SDKs from this directory,
+This command creates a new *in-project SDK*
+by moving the sketch's definition files
+into the :file:`.workshop/` subdirectory of your project.
+The original sketch SDK is removed from the workshop.
+|ws_markup| can then pull the SDK directly from this directory,
 bypassing the SDK Store.
-Such SDKs are called *in-project SDKs*.
 
 .. note::
 
-   For details of how in-project SDKs are different from regular and sketch SDKs,
+   For a detailed comparison of in-project SDKs with other SDK types,
    see the :ref:`exp_in_project_sdk` explanation section.
 
-   If you'd rather publish a regular SDK for other projects to use,
+   If you intend to publish a regular SDK for other projects to use,
    |sdk_markup| can help;
    proceed to the next part of the tutorial,
    :ref:`tut_craft_sdks`.
 
 
-The new SDK is named after the project directory by default;
-use the :option:`!--name` option to change this:
+By default, the new in-project SDK is named after the project directory;
+here, it's :file:`example/`, so renaming it is a good idea.
+To specify a custom name, use the :option:`!--name` option:
 
 .. code-block:: console
 
@@ -260,9 +262,10 @@ use the :option:`!--name` option to change this:
      To use it, add "project-tools" to the list of SDKs and run 'workshop refresh dev'
 
 
-After you eject the SDK,
-add it to your workshop definition
-(usually in :file:`workshop.yaml`) under the :samp:`sdks:` list:
+After ejecting, add the new in-project SDK to your workshop definition
+(usually in :file:`workshop.yaml`) under the :samp:`sdks:` list,
+adding the :samp:`project-` prefix
+so |ws_markup| knows it's an in-project SDK:
 
 .. code-block:: yaml
 
@@ -270,19 +273,17 @@ add it to your workshop definition
      - name: project-tools
 
 
-This is required for the workshop to use the new in-project SDK;
-next, run :command:`workshop refresh` to apply the change.
+Next, run :command:`workshop refresh` to apply the change.
 
-The definition and the hooks of the ejected SDK
-are placed in the :file:`.workshop/tools/` subdirectory of the project.
-If your project did not previously have a :file:`.workshop/` directory
-(for example, if you only had a single :file:`workshop.yaml` in the project root),
-add the new directory and its contents to version control manually:
+The definition and hooks of the ejected :samp:`tools` SDK
+are placed in the :file:`.workshop/tools/` subdirectory.
+If your project did not previously have a :file:`.workshop/` directory,
+add it and its contents to version control:
 
 .. code-block:: console
 
    $ git add .workshop/
-   $ git commit -m "Add tools project SDK"
+   $ git commit -m "Add tools in-project SDK"
 
 
 This ensures your in-project SDK is tracked

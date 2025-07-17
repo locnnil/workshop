@@ -7,7 +7,7 @@
 Get started with workshops
 ==========================
 
-This is the first section of the :ref:`three-part series <tut_index>`;
+This is the first section of the :ref:`four-part series <tut_index>`;
 a practical introduction
 that takes you on a tour
 of the essential |ws_markup| activities.
@@ -141,8 +141,8 @@ Now you'll learn how to define, launch, start and stop a workshop.
 
 .. _tut_define:
 
-Define
-~~~~~~
+Define, add SDKs
+~~~~~~~~~~~~~~~~
 
 First, you need to define a workshop.
 A definition lists the components of a workshop
@@ -155,8 +155,11 @@ and is stored in your project directory.
 .. @artefact SDK Store
 
 A definition can list many moving parts;
-in this tutorial, we'll be focusing on SDKs,
-which are the basic units of a workshop's functionality.
+perhaps, the most important are SDKs,
+which are basic, pre-defined units of a workshop's functionality.
+
+You reference SDKs from your workshop definition
+to specify what you want to include in your workshop.
 At run-time, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
@@ -175,12 +178,12 @@ by the |ws_markup| team.
 
 .. @artefact project
 
-Create a project directory named :file:`hello-workshop`:
+For the project directory, clone the official Go examples repository:
 
 .. code-block:: console
 
-   $ mkdir ./hello-workshop
-   $ cd ./hello-workshop
+   $ git clone https://github.com/golang/example.git
+   $ cd example
 
 
 Everything you handle with your workshop goes here:
@@ -216,7 +219,7 @@ list the workshops in the project directory:
    $ workshop list
 
      Project                Workshop   Status  Notes
-     ~/hello-workshop       dev        Off     -
+     ~/example              dev        Off     -
 
 
 As the output suggests, your newly defined workshop is *Off*,
@@ -258,7 +261,7 @@ to see what went into your workshop:
 
      name:     dev
      base:     ubuntu@22.04
-     project:  /home/user/hello-workshop
+     project:  /home/user/example
      status:   ready
      notes:    -
      sdks:
@@ -282,44 +285,22 @@ The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g. in a repository.
 
-To see how |ws_markup| keeps track of the directory,
-check out the recent major operations, or changes:
+.. note::
 
-.. @artefact workshop changes
+   Consider adding the :file:`.lock` file
+   to your :file:`.gitignore` or similar ignore files:
 
-.. code-block:: console
+   .. code-block:: console
 
-   $ workshop changes
-
-     ID  Status  Spawn               Ready               Summary
-     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
+      $ echo ".workshop.lock" >> .gitignore
 
 
-To find out which smaller steps, or tasks, went into a certain change,
-pass the change ID to the :command:`workshop tasks` command.
-To look at the latest change,
-use :command:`workshop tasks` without the argument:
+   To the contrary, the definition and the :file:`.workshop/` directory
+   are *meant* to be stored in a repository;
+   if your :file:`.gitignore` file uses rules
+   such as "ignore everything except these files and directories,"
+   add them to the list of explicitly tracked items.
 
-.. @artefact workshop tasks
-
-.. code-block:: console
-
-   $ workshop tasks
-
-     ID   Status  Spawn               Ready               Summary
-     132  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "system" SDK
-     133  Done    today at 11:32 GMT  today at 11:32 GMT  Retrieve "go" SDK from channel "latest/stable"
-     ...
-     144  Done    today at 11:32 GMT  today at 11:33 GMT  Run hook "setup-base" for "go" SDK
-     ...
-
-     ......................................................................
-     Run hook "setup-base" for "go" SDK
-
-     2024-08-25T11:34:53+00:00 INFO go 1.23.0 from Canonical** installed
-
-
-This lists all the tasks and includes logs for some of them.
 
 You only need to launch a workshop once after defining it;
 for any subsequent changes, you can do a :ref:`refresh <tut_refresh>`.
@@ -410,21 +391,9 @@ Execute commands
 
 When the workshop is *Ready*,
 you can run arbitrary commands in it.
-In this tutorial, we're building Go code, so let's write some.
-
-In the project directory, save this code as :file:`main.go`:
-
-.. code-block:: go
-   :caption: main.go
-
-   package main
-
-   import "fmt"
-
-   func main() {
-     fmt.Println("Hello, Workshop")
-   }
-
+In this tutorial, we're building Go code,
+and we've already cloned the official Go examples repository
+to serve as our project directory.
 
 .. note::
 
@@ -433,22 +402,36 @@ In the project directory, save this code as :file:`main.go`:
    :ref:`how_vscode_workshops`.
 
 
-Next, build it *inside the workshop* using the :command:`workshop exec` command:
+Next, build the :samp:`hello` example *inside the workshop*
+using the :command:`workshop exec` command.
+The source for this example is in the :file:`hello/` directory.
 
 .. @artefact workshop exec
 
 .. code-block:: console
 
-   $ workshop exec dev -- go build main.go
+   $ workshop exec dev -- sh -c "cd hello && go build"
 
 
 This runs the Go version installed by the :samp:`go` SDK.
 The resulting binary, built within the workshop environment,
-is now available in the project directory.
+is now available in the :file:`hello/` directory in your project.
+If the host system permits
+(mind that it can differ from the workshop base),
+you can run the binary directly:
+
+.. code-block:: console
+
+   $ ./hello/hello
+
+     Hello, world!
+
 
 **This is the single most important part of the tutorial**;
 your deliverables, however complex they are, end up on the host system,
 while the tool chain is transparently confined and managed by |ws_markup|.
+This enables you to focus on your project,
+switching when needed between language and framework versions or base images.
 
 Next, we'll explore the remaining aspects of your daily workshop usage.
 
@@ -500,195 +483,54 @@ This isn't the only way the host interacts with the workshop;
 let's dive into how interfaces operate.
 
 
-.. _tut_interfaces:
+.. _tut_changes_tasks:
 
-Work with interfaces
---------------------
+Track changes and tasks
+-----------------------
 
-.. @artefact interface
-.. @artefact system SDK
+To see how |ws_markup| keeps track of its activities around a project,
+check out the recent major operations, or changes,
+with :command:`workshop changes`:
 
-SDKs use interfaces to interact in an organized manner,
-exposing the resources they provide via slots and consuming them via plugs;
-the layout of these plugs and slots is defined by the SDK publishers.
-
-For uniformity, security and control,
-various host system capabilities (camera, GPU, and so on)
-are also exposed to the workshop via the same interface mechanism
-with a designated system SDK.
-
-To check out the connected interfaces of a workshop, list the connections:
-
-.. @artefact workshop connections
+.. @artefact workshop changes
 
 .. code-block:: console
 
-   $ workshop connections
+   $ workshop changes
 
-     Interface  Plug              Slot              Notes
-     mount      dev/go:mod-cache  dev/system:mount  -
+     ID  Status  Spawn               Ready               Summary
+     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
 
 
-This lists a mount interface plug named :samp:`dev/go:mod-cache`.
-As seen in the :command:`workshop info` output,
-it was automatically connected at :ref:`launch <tut_launch>`
-to the :samp:`dev/system:mount` slot,
-indicated by the ellipsis in the :samp:`host-source` path.
+Changes are enacted atomically to ensure workshops stay operational.
+Any change must have all its smaller steps, or tasks, succeed;
+otherwise, it will be undone.
 
-Some interfaces are auto-connected, while some are not;
-this usually depends on their purpose.
+To find out which tasks went into a certain change,
+pass the change ID to the :command:`workshop tasks` command.
+To look at the latest change, run the command without an argument:
 
-In any case, you can connect and disconnect interfaces at will,
-confirming the connection state with :command:`workshop connections`:
-
-.. @artefact workshop connect
-.. @artefact workshop disconnect
+.. @artefact workshop tasks
 
 .. code-block:: console
 
-   $ workshop disconnect dev/go:mod-cache
-   $ workshop connections
-   $ workshop connect dev/go:mod-cache :mount
-   $ workshop connections
+   $ workshop tasks
 
-
-You can remount a mount interface plug to a new location on the host:
-
-.. @artefact workshop remount
-
-.. code-block:: console
-   :emphasize-lines: 14
-
-   $ workshop remount dev/go:mod-cache ~/mod/
-   $ workshop info
-
-     name:     dev
-     base:     ubuntu@24.04
-     project:  /home/user/hello-workshop
-     status:   ready
-     notes:    -
-     sdks:
-       go:
-         tracking:   noble/stable
-         installed:  1.23.3  2024-11-09  (54)
-         mounts:
-           mod-cache:
-             host-source:      /home/user/mod
-             workshop-target:  /home/workshop/go/pkg/mod
-
-
-This makes :file:`/home/user/mod/` on the host
-act as the Go modules cache for the workshop.
-
-Lastly, you can add plugs and slots to the SDKs in the workshop definition,
-allowing you to tailor the initial plug and slot layout to your requirements.
-For instance, you could use the tunnel interface
-with the system SDK to connect to a server running in the workshop.
-
-.. @artefact tunnel interface
-
-For a quick demo, let's install `Caddy <https://caddyserver.com/>`_
-to serve files over HTTP:
-
-.. code-block:: console
-
-   $ workshop exec --env GOBIN=/project dev -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
-   $ cat <<EOF > Caddyfile
-   :8080 {
-           file_server
-   }
-   EOF
-   $ echo 'Hello, Workshop!' > index.html
-
-
-This builds Caddy inside the workshop,
-installs it to the project directory,
-configures it to run as a file server at port 8080
-and creates an index file.
-
-.. note::
-
-   We added the index file to the project directory on the host;
-   however, the server will be able to access it
-   because the project directory is mounted inside the workshop.
-
-
-To configure the tunnel interface,
-add the following lines to the definition:
-
-.. code-block:: yaml
-   :caption: workshop.yaml
-   :emphasize-lines: 6-14
-
-   name: dev
-   base: ubuntu@24.04
-   sdks:
-     - name: go
-       channel: noble/stable
-       slots:
-         caddy:
-           interface: tunnel
-           endpoint: localhost:8080
-     - name: system
-       plugs:
-         caddy:
-           interface: tunnel
-           endpoint: localhost:8080
-
-
-First, this defines a :samp:`go:caddy` slot under the :samp:`go` SDK,
-used to expose the server running inside the workshop.
-This slot isn't part of the SDK by default;
-it's defined for this workshop only,
-so other instances of the :samp:`go` SDK in other workshops won't have it.
-
-Additionally, this adds a plug named :samp:`system:caddy`
-to indicate that the system SDK in this workshop
-can connect to a tunnel interface slot and expose it in the host system.
-
-Refresh the workshop to enable the tunnel;
-|ws_markup| matches the plug to the slot using their names,
-then validates and enables the connection.
-Check the result using :command:`workshop info`:
-
-.. code-block:: console
-
-   $ workshop refresh
-   $ workshop info
-
+     Status    Duration  Summary
+     Done          35ms  Retrieve "system" SDK
+     Done          35ms  Retrieve "go" SDK from channel "noble/stable"
      ...
-     sdks:
-       system:
-         tunnels:
-           server:
-             from:  127.0.0.1:8080/tcp
-             to:    127.0.0.1:8080/tcp
+     Done          95ms  Install "go" SDK
+     Done          31ms  Register "go" SDK plugs and slots
+     Done     1m44.117s  Run hook "setup-base" for "go" SDK
      ...
-
-Then start the server at port 8080 (the slot):
-
-.. code-block:: console
-
-   $ workshop exec dev -- ./caddy start
+     ......................................................................
+     Run hook "setup-base" for "go" SDK
 
 
-By default,
-:command:`exec` uses the :file:`/project/` directory in the workshop
-as the current working directory
-so Caddy will serve the files in it.
-Finally, test the server on the host at port 8080 (the plug):
-
-.. code-block:: console
-
-   $ curl localhost:8080
-
-     Hello, Workshop!
-
-
-.. note::
-
-   For additional details of using the tunnel interface, see this guide:
-   :ref:`how_forward_ports`.
+This lists all the tasks and includes logs for some of them;
+each task expresses a simple token of logic,
+such as running a hook or connecting an interface.
 
 
 .. _tut_remove:
@@ -723,6 +565,13 @@ however, the content in *default* mount locations will be deleted).
    for help, see this guide: :ref:`how_troubleshoot_lxc`.
 
 
+Even if you remove the workshop completely,
+you can rebuild it with :command:`workshop launch`;
+this may come in handy if you have removed your workshop
+using the command above
+before proceeding to the other parts of the tutorial.
+
+
 Next steps
 ----------
 
@@ -730,24 +579,9 @@ This was the last step in this tutorial section;
 you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.
 
-|ws_markup| is built around the concept of SDKs;
-you next step is to look at the different ways of building them.
+Your next step is to learn how to work with interfaces.
 
 To continue learning about |ws_markup|,
-proceed to the following tutorial sections:
-
-- :ref:`tut_sketch_sdks`:
-  Create experimental SDKs quickly
-  using the :command:`workshop sketch-sdk` command.
-  This tutorial section shows you
-  how to run local SDK experiments without publishing them.
-
-- :ref:`tut_craft_sdks`:
-  Go through the complete process
-  of building and publishing full-fledged SDKs to the SDK Store.
-  This tutorial section covers the workflow for creating production-ready SDKs
-  that can be shared with others.
-
-
-Both sections build on what you've learned here
-and expand your |ws_markup| skills.
+proceed to the :ref:`tut_work_with_interfaces` tutorial section.
+It builds on what you've learned here
+and expands your |ws_markup| skills.
