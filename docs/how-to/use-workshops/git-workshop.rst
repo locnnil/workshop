@@ -94,7 +94,7 @@ They stay there even if you remove the workshop:
      hello, Workshop
 
 
-.. tip::
+.. note::
 
    If you do remove the workshop at this step of the guide,
    relaunch it before proceeding further:

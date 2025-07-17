@@ -44,7 +44,7 @@ Follow this guidance and type in the SSH address listed in the output
 (:samp:`workshop@10.41.49.51` in the sample above).
 In the terminal prompt, you'll see that the IDE is running inside your workshop.
 
-.. tip::
+.. note::
 
    If you're having trouble finding the :guilabel:`Connect to host` command,
    mind that it's enabled by the :samp:`Remote-SSH` extension

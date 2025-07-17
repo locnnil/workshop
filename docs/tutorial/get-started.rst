@@ -169,7 +169,7 @@ To do this, let's use the sample :samp:`go` SDK,
 which was already defined, built and published in the SDK Store
 by the |ws_markup| team.
 
-.. tip::
+.. note::
 
    The tutorial uses Go samples for demonstration purposes only.
    This doesn't imply that |ws_markup| is intended solely for Go;
