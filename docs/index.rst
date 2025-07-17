@@ -19,7 +19,7 @@
    reference/index
    explanation/index
    Contribution <contributing>
-   Release notes <release-notes>
+   Release notes <release-notes/index>
 
 
 **A tool for defining and handling ephemeral development environments**.
