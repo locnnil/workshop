@@ -36,10 +36,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- `Workshop v0.1.19 <https://github.com/canonical/workshop/releases/tag/v0.1.19>`_
+- `Workshop v0.1.20 <https://github.com/canonical/workshop/releases/tag/v0.1.20>`_
 
 Older versions:
 
+- `Workshop v0.1.19 <https://github.com/canonical/workshop/releases/tag/v0.1.19>`_
 - `Workshop v0.1.18 <https://github.com/canonical/workshop/releases/tag/v0.1.18>`_
 - `Workshop v0.1.17 <https://github.com/canonical/workshop/releases/tag/v0.1.17>`_
 - Workshop v0.1.16 didn't go public
@@ -107,7 +108,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.19_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.20_amd64.snap
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
 
