@@ -25,7 +25,7 @@ jobs:
 
   code-coverage:
     needs: [spread, unit-tests]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, reactive, amd64, large-tiobe, noble]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
