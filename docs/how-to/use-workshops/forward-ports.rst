@@ -185,7 +185,7 @@ Now let's invert the flow.
 Share a host abstract socket (which exists only in the kernel, not on disk)
 with code inside the workshop on TCP port :samp:`9000`.
 
-.. tip::
+.. note::
 
    Abstract sockets avoid file system permissions and name collisions.
    They are written as :samp:`@name` (note the leading "@").

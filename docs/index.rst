@@ -18,8 +18,8 @@
    how-to/index
    reference/index
    explanation/index
+   Release notes <release-notes/index>
    Contribution <contributing>
-   Release notes <release-notes>
 
 
 **A tool for defining and handling ephemeral development environments**.

@@ -2,7 +2,7 @@
 Describe the issue or suggestion concisely here.
 
 
-## Expected behaviour
+## Expected behavior
 Describe what you expected to see here;
 refer to the [Sphinx/RTD style guide](https://canonical-documentation-with-sphinx-and-readthedocscom.readthedocs-hosted.com/)
 when suggesting changes in documentation.

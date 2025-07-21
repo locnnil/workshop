@@ -30,7 +30,7 @@ SDK parts
 Parts can be thought of as the building blocks of |ws_markup| and |sdk_markup|.
 Each part in the :file:`sdk.yaml` :ref:`definition <ref_sdk_definition>`
 describes a specific component or piece of the SDK being packaged,
-providing a way to modularise the package and manage its dependencies.
+providing a way to modularize the package and manage its dependencies.
 
 |sdk_markup| is built as a
 `craft-application <https://github.com/canonical/craft-application/>`_,

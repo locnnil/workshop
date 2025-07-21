@@ -1,8 +1,22 @@
-rm -rf /tmp/sp /project/docs/{Makefile,.sphinx}
+# Create a temporary directory that will be automatically cleaned up on exit.
+# We use this to clone the starter pack.
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
 
-git clone --depth 1 https://github.com/canonical/sphinx-docs-starter-pack /tmp/sp/
-cp -ar /tmp/sp/docs/{Makefile,.sphinx} /project/docs/
+# Clean up any previous installation.
+rm -rf /project/docs/Makefile /project/docs/.sphinx
+
+# Clone the starter pack into the temporary directory.
+git clone --depth 1 https://github.com/canonical/sphinx-docs-starter-pack "$TMP_DIR"
+
+# Ensure the docs directory exists.
+mkdir -p /project/docs
+
+# Copy the Makefile and .sphinx directory to the project's docs directory.
+cp -ar "$TMP_DIR/docs/Makefile" "$TMP_DIR/docs/.sphinx" /project/docs/
+
+# Set the correct spell checking language from British to American English.
 sed -i 's/en_GB/en_US/g' /project/docs/.sphinx/spellingcheck.yaml
-cd /project/docs/ && make install
 
-rm -rf /tmp/sp/
+# Install documentation dependencies using the copied Makefile.
+make -C /project/docs install

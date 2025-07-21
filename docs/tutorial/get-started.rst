@@ -169,7 +169,7 @@ To do this, let's use the sample :samp:`go` SDK,
 which was already defined, built and published in the SDK Store
 by the |ws_markup| team.
 
-.. tip::
+.. note::
 
    The tutorial uses Go samples for demonstration purposes only.
    This doesn't imply that |ws_markup| is intended solely for Go;
@@ -398,8 +398,8 @@ to serve as our project directory.
 .. note::
 
    |ws_markup| also integrates with modern IDEs.
-   For instance, see this guide:
-   :ref:`how_vscode_workshops`.
+   For instance, see these guides:
+   :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
 
 
 Next, build the :samp:`hello` example *inside the workshop*

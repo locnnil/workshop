@@ -12,6 +12,11 @@ Interface concepts
 .. @artefact SDK
 .. @artefact interface
 
+Interface connections are a mechanism for communication and resource sharing.
+It is an integral part of workshop confinement,
+ensuring that each workshop operates in its own isolated environment,
+while still allowing controlled interactions among the SDKs and with the host.
+
 In |ws_markup|, SDKs can act as providers and consumers of resources
 such as the GPU, or file directories.
 Host system resources
