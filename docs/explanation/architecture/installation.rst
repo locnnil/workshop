@@ -75,22 +75,24 @@ The client supports both synchronous and asynchronous operations,
 with proper error reporting and progress tracking.
 
 
+.. _exp_arch_install_daemon:
+
 Daemon
 ~~~~~~
 
 .. @artefact workshopd
 
-The :program:`workshopd` is the core component of |ws_markup|
-responsible for managing the complete workshop life cycle. It uses LXD as its container backend.
-
-The :program:`workshopd` daemon is a :program:`systemd` service
-responsible for the complete workshop life cycle.
-At its core, it relies on the proven state package from :program:`snapd`
+The :program:`workshopd` daemon, a core component of |ws_markup|,
+is a :program:`systemd` service responsible for the complete workshop life cycle.
+It uses LXD as its container backend
+and relies on the proven state package from :program:`snapd`
 to ensure that any changes to a workshop are handled in a transactional manner:
 safely, consistently, and reversibly.
 
 When integrated with :program:`systemd`,
-:program:`workshopd` implements the watchdog notification mechanism for health monitoring and supports socket activation to reduce memory footprint.
+:program:`workshopd` implements the watchdog notification mechanism
+for health monitoring
+and supports socket activation to reduce memory footprint.
 
 
 REST API
@@ -186,6 +188,7 @@ image management,
 network isolation,
 and project isolation.
 
+.. _exp_arch_install_storage:
 
 Storage pool
 ~~~~~~~~~~~~
@@ -200,6 +203,8 @@ volumes for SDKs and SDK data persistence,
 snapshots for quick workshop updates and rollbacks,
 and cached container images.
 
+
+.. _exp_arch_install_images:
 
 Images
 ~~~~~~
