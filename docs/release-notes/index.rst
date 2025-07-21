@@ -24,6 +24,7 @@ Releases
 .. toctree::
    :hidden:
 
+   Workshop v0.1.20 <v0.1.20>
    Workshop v0.1.19 <v0.1.19>
    Workshop v0.1.18 <v0.1.18>
    Workshop v0.1.17 <v0.1.17>
@@ -52,11 +53,12 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.19 <v0.1.19>`
+- :doc:`Workshop v0.1.20 <v0.1.20>`
 
 
 Recent versions:
 
+- :doc:`Workshop v0.1.19 <v0.1.19>`
 - :doc:`Workshop v0.1.18 <v0.1.18>`
 - :doc:`Workshop v0.1.17 <v0.1.17>`
 - Workshop v0.1.16 didn't go public
