@@ -13,7 +13,7 @@ and resolve issues with your workshops:
 .. toctree::
    :maxdepth: 1
 
-   Debug issues in workshops <debug-workshop-issues>
-   Fix the installation <troubleshoot>
+   Debug issues in workshops <debug-issues>
+   Fix the installation <fix-installation>
    Purge workshops <purge>
    Resolve plug conflicts <resolve-plug-conflicts>
