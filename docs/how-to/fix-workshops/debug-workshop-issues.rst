@@ -52,7 +52,7 @@ run :command:`workshop tasks` without arguments:
 
    $ workshop tasks
 
-     ID    Status  Spawn           Ready           Summary
+     Status    Duration  Summary
      ...
 
 
@@ -77,27 +77,27 @@ this time supplying the change ID as the argument:
 
    $ workshop tasks 81
 
-     ID    Status  Spawn           Ready           Summary
-     1390  Undone  today at 12:20  today at 12:21  Create SDK state storage
-     1391  Done    today at 12:20  today at 12:21  Run hook "save-state" for "go" SDK
-     1392  Done    today at 12:20  today at 12:21  Disconnect interfaces of "go" SDK
-     1393  Done    today at 12:20  today at 12:21  Disconnect interfaces of "system" SDK
-     1394  Undone  today at 12:20  today at 12:21  Unregister "go" SDK plugs and slots
-     1395  Undone  today at 12:20  today at 12:21  Stash previous "dev-volatile" workshop
-     1396  Undone  today at 12:20  today at 12:21  Restore "dev-volatile" workshop from "system" snapshot
-     1397  Undone  today at 12:20  today at 12:21  Start "dev-volatile" workshop
-     1398  Undone  today at 12:20  today at 12:21  Install "go" SDK
-     1399  Undone  today at 12:20  today at 12:21  Register "go" SDK plugs and slots
-     1400  Error   today at 12:20  today at 12:21  Run hook "setup-base" for "go" SDK
-     1401  Hold    today at 12:20  today at 12:21  Auto-connect interfaces of "system" SDK
-     1402  Hold    today at 12:20  today at 12:21  Auto-connect interfaces of "go" SDK
-     1403  Hold    today at 12:20  today at 12:21  Run hook "restore-state" for "go" SDK
-     1404  Hold    today at 12:20  today at 12:21  Run hook "check-health" for "system" SDK
-     1405  Hold    today at 12:20  today at 12:21  Run hook "check-health" for "go" SDK
-     1406  Hold    today at 12:20  today at 12:21  Remove SDK state storage
-     1407  Hold    today at 12:20  today at 12:21  Remove "dev-volatile" workshop from stash
-     1408  Done    today at 12:20  today at 12:21  Remove "go" SDK profile
-     1409  Done    today at 12:20  today at 12:21  Remove "system" SDK profile
+     Status    Duration  Summary
+     Undone        42ms  Create SDK state storage
+     Done          28ms  Run hook "save-state" for "go" SDK
+     Done          31ms  Disconnect interfaces of "go" SDK
+     Done          29ms  Disconnect interfaces of "system" SDK
+     Undone        35ms  Unregister "go" SDK plugs and slots
+     Undone        48ms  Stash previous "dev-volatile" workshop
+     Undone        52ms  Restore "dev-volatile" workshop from "system" snapshot
+     Undone        41ms  Start "dev-volatile" workshop
+     Undone        67ms  Install "go" SDK
+     Undone        33ms  Register "go" SDK plugs and slots
+     Error      1m12.5s  Run hook "setup-base" for "go" SDK
+     Hold             -  Auto-connect interfaces of "system" SDK
+     Hold             -  Auto-connect interfaces of "go" SDK
+     Hold             -  Run hook "restore-state" for "go" SDK
+     Hold             -  Run hook "check-health" for "system" SDK
+     Hold             -  Run hook "check-health" for "go" SDK
+     Hold             -  Remove SDK state storage
+     Hold             -  Remove "dev-volatile" workshop from stash
+     Done          24ms  Remove "go" SDK profile
+     Done          26ms  Remove "system" SDK profile
 
      ......................................................................
      Run hook "save-state" for "go" SDK
