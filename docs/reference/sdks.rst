@@ -19,6 +19,95 @@ where you'll run |sdk_markup|
 to initialize, define, pack and publish the SDK.
 
 
+.. _ref_sdk_platform:
+
+SDK platform
+------------
+
+.. @artefact SDK platforms
+
+A platform describes where an SDK can be built and installed.
+
+The components describing a platform are:
+
+- The base image: used to build SDKs and initialize workshops.
+- The CPU architecture: :samp:`amd64`, :samp:`arm64`, :samp:`armhf`, :samp:`i386`,
+  :samp:`ppc64el`, :samp:`riscv64`, or :samp:`s390x`.
+
+The easiest way to define a platform
+is to name it after the CPU architecture:
+
+.. code-block:: yaml
+   :caption: sdk.yaml
+
+   # ...
+   base: ubuntu@24.04
+   platforms:
+     amd64:
+     arm64:
+
+
+The above SDK can be built on :samp:`amd64` or :samp:`arm64` machines
+and installed in :samp:`ubuntu@24.04` workshops with the same architecture.
+
+The :samp:`base` can also be moved into the platform names:
+
+.. code-block:: yaml
+   :caption: sdk.yaml
+
+   # ...
+   platforms:
+     ubuntu@24.04:amd64:
+     ubuntu@24.04:arm64:
+
+
+More complex scenarios can be described using the following attributes:
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 3 2 15
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`build-on`
+     - array
+     - List of supported CPU architectures
+       that can build the SDK for the platform.
+
+       If the SDK has no :samp:`base` or :samp:`build-base`,
+       each entry must be prefixed by a valid base and a colon,
+       e.g. :samp:`ubuntu@22.04:amd64`.
+       This has no effect on the supported build machines,
+       because |sdk_markup| performs builds in containers.
+       The prefix must match :samp:`build-for`.
+
+   * - :samp:`build-for`
+     - string
+     - CPU architecture the SDK is expected to run on,
+       or :samp:`all` if the SDK can run on all supported architectures.
+       SDK authors are responsible for ensuring compatibility.
+
+       If the SDK has no :samp:`base` or :samp:`build-base`,
+       each entry must be prefixed by a valid base and a colon,
+       e.g. :samp:`ubuntu@24.04:riscv64`.
+       The prefix must match every entry in :samp:`build-on`.
+
+
+Architecture-independent SDKs require the complex format:
+
+.. code-block:: yaml
+   :caption: sdk.yaml
+
+   # ...
+   platforms:
+     all:
+       build-on: [amd64, arm64, riscv64]
+       build-for: all
+
+
 .. _ref_sdk_parts:
 
 SDK parts
