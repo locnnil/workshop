@@ -456,8 +456,11 @@ Here's the publishing checklist to follow:
 
 - Merge and close the outstanding pull requests from the release scope
 
-- Make sure the unit, integration and documentation tests are green;
+- Make sure the unit, integration, and documentation tests are green;
   see `Testing`_ for details
+
+- Update the documentation;
+  see the `Release documentation`_ section for the full checklist
 
 - Create and push a new release tag with ``git``,
   using `semantic versioning <https://semver.org/>`_
@@ -473,11 +476,6 @@ Here's the publishing checklist to follow:
 - Generate the
   `change log <https://github.com/canonical/workshop/releases/new>`_
   on GitHub
-
-
-You'll also need to update the documentation:
-see the :ref:`contributing_doc_release` section for the full checklist.
-
 
 
 .. _contributing_doc:
@@ -572,6 +570,10 @@ At every release, remember to:
 - Update the `release notes <https://github.com/canonical/workshop/releases>`_
   with relevant details, following the established format;
   for an SDKcraft release, update the respective section in the same manner.
+
+- Copy the release notes to the documentation under :file:`docs/release-notes/`
+  and update the latest version in :file:`docs/release-notes/index.rst`;
+  the recent version lists should contain versions from the last 6 months.
 
 - Refresh the
   `coverage map <https://github.com/canonical/workshop/blob/main/docs/coverage.md>`_
