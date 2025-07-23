@@ -21,7 +21,7 @@ func Validate(sdk *Info) error {
 		return fmt.Errorf("invalid SDK name %q", sdk.Name)
 	}
 
-	if !slices.Contains(AllowedBases, sdk.Base) {
+	if sdk.Base != "" && !slices.Contains(AllowedBases, sdk.Base) {
 		return fmt.Errorf("invalid SDK base %q; supported bases: %s", sdk.Base, strings.Join(AllowedBases, ", "))
 	}
 

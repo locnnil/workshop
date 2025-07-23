@@ -158,10 +158,6 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		info.Name = "project-" + info.Name
 	}
 
-	// Local and system SDKs match the workshop's base by default.
-	if info.Base == "" && (setup.Revision.Local() || info.Type == sdk.System) {
-		info.Base = w.Base
-	}
 	info.Revision = setup.Revision
 	info.Channel = setup.Channel
 	info.Source = setup.Source

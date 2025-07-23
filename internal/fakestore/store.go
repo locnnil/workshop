@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -93,7 +94,7 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 			if info.Name != act.Name {
 				return nil, fmt.Errorf("SDK must be named %q (now: %q)", act.Name, info.Name)
 			}
-			if act.Base != info.Base {
+			if !slices.Contains([]string{"", act.Base}, info.Base) {
 				return nil, fmt.Errorf("%q SDK from %q has %q base; required: %q", act.Name, act.Channel, info.Base, act.Base)
 			}
 
