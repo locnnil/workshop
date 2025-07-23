@@ -38,6 +38,7 @@ func VolumeName(name string, revision Revision) string {
 type sdkYaml struct {
 	Name      string                 `yaml:"name"`
 	Base      string                 `yaml:"base"`
+	Arch      string                 `yaml:"architecture"`
 	Version   string                 `yaml:"version,omitempty"`
 	Type      string                 `yaml:"type"`
 	BuildTime *time.Time             `yaml:"sdkcraft-started-at,omitempty"`
@@ -71,6 +72,7 @@ type Info struct {
 	Workshop  string
 	Name      string
 	Base      string
+	Arch      string
 	Version   string
 	Type      Type
 	Revision  Revision
@@ -190,6 +192,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Workshop:      workshop,
 		Name:          sdkYaml.Name,
 		Base:          sdkYaml.Base,
+		Arch:          sdkYaml.Arch,
 		Version:       sdkYaml.Version,
 		Type:          Type(sdkYaml.Type),
 		BuildTime:     sdkYaml.BuildTime,

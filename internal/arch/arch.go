@@ -131,3 +131,15 @@ func IsSupportedArchitecture(architectures []string) bool {
 
 	return false
 }
+
+var AllowedArchitectures = []string{
+	"amd64",
+	"arm64",
+	"armhf",
+	"i386",
+	"powerpc",
+	"ppc64",
+	"ppc64el",
+	"riscv64",
+	"s390x",
+}

@@ -19,6 +19,7 @@ import (
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 
+	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
@@ -96,6 +97,9 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 			}
 			if !slices.Contains([]string{"", act.Base}, info.Base) {
 				return nil, fmt.Errorf("%q SDK from %q has %q base; required: %q", act.Name, act.Channel, info.Base, act.Base)
+			}
+			if !slices.Contains([]string{"", "all", arch.DpkgArchitecture()}, info.Arch) {
+				return nil, fmt.Errorf(`%q SDK from %q has %q architecture; required: %q or "all"`, act.Name, act.Channel, info.Arch, arch.DpkgArchitecture())
 			}
 
 			info.Revision = s.Revision

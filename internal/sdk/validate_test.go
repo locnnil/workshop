@@ -83,6 +83,16 @@ base: ubuntu@21.04
 	c.Check(err, check.ErrorMatches, `invalid SDK base "ubuntu@21.04"; supported bases: ubuntu@20.04, ubuntu@22.04, ubuntu@24.04`)
 }
 
+func (s *ValidateSuite) TestIllegalSdkArch(c *check.C) {
+	info, err := sdk.ReadSdkInfo([]byte(`name: foo
+architecture: '8086'
+`), s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+
+	err = sdk.Validate(info)
+	c.Check(err, check.ErrorMatches, `invalid SDK architecture "8086"; supported architectures: amd64, arm64, armhf, i386, powerpc, ppc64, ppc64el, riscv64, s390x`)
+}
+
 func (s *ValidateSuite) TestSdkBuildTimeNotUTC(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo
 base: ubuntu@24.04
