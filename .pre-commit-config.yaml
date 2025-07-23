@@ -8,3 +8,12 @@ repos:
         name: errcheck
         args:
           - --config=.golangci.errcheck.yaml
+
+  - repo: local
+    hooks:
+      - id: docs-check
+        name: Run docs check with Workshop
+        entry: workshop run docs-check
+        language: system
+        pass_filenames: false
+        files: ^docs/.*\.(rst|md|txt|json)$
