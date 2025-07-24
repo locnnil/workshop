@@ -174,7 +174,7 @@ redirects = {}
 # TODO: Remove or adjust the ACME entry after you update the contributing guide
 
 linkcheck_ignore = [
-    "http://localhost:8090",
+    "http://localhost:*",
     "https://github.com/canonical/sdkcraft",
     "https://github.com/canonical/workshop",
     r"^https://.*\.readthedocs-hosted\.com/.*#\w+$",
