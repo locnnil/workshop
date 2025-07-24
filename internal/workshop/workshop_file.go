@@ -21,7 +21,7 @@ var (
 	sdkBlocklist   = []string{"agent"}
 
 	workshopName = regexp.MustCompile(`^[a-z](?:-?[a-z0-9])*$`)
-	channel      = regexp.MustCompile(`^(?:[a-zA-Z0-9\.-]+/(?:stable|candidate|beta|edge)|)$`)
+	channel      = regexp.MustCompile(`^(?:[a-z0-9](?:[.-]?[a-z0-9])*/(?:stable|candidate|beta|edge)|)$`)
 	scriptName   = workshopName
 
 	Directory = ".workshop"
