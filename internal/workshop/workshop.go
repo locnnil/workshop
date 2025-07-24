@@ -149,13 +149,8 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 	if err != nil {
 		return nil, err
 	}
-
-	trimmed := strings.TrimPrefix(sdkName, "project-")
-	if info.Name != trimmed {
-		return nil, fmt.Errorf("SDK must be named %q (now: %q)", trimmed, info.Name)
-	}
-	if IsProjectSdk(sdkName) {
-		info.Name = "project-" + info.Name
+	if info.Name != sdkName {
+		return nil, fmt.Errorf("SDK must be named %q (now: %q)", sdkName, info.Name)
 	}
 
 	// Local and system SDKs match the workshop's base by default.

@@ -80,6 +80,13 @@ $ workshop sketch-sdk nimble --stash`,
 	return cmd
 }
 
+type SketchFile struct {
+	Name  string                 `yaml:"name"`
+	Plugs map[string]interface{} `yaml:"plugs,omitempty"`
+	Slots map[string]interface{} `yaml:"slots,omitempty"`
+	Hooks map[string]string      `yaml:"hooks,omitempty"`
+}
+
 var sketchTemplate = `# Sketch SDK for %s
 # Sketch SDK provides local customisation of this specific workshop.
 
@@ -197,12 +204,8 @@ func (c *CmdSketch) inferSdkName(project string) error {
 		inferred = true
 	}
 
-	if sdk.SdkName.MatchString(c.name) {
-		return nil
-	}
-
-	err := fmt.Errorf("invalid SDK name %q", c.name)
-	if inferred {
+	err := sdk.ValidateName(c.name)
+	if err != nil && inferred {
 		err = fmt.Errorf("flag --name required: %w", err)
 	}
 	return err
@@ -225,16 +228,16 @@ func ejectSketch(project, sketchdir string, name string) (*revert.Reverter, erro
 		return nil, err
 	}
 
-	var rec workshop.SdkRecord
-	if err := document.Decode(&rec); err != nil {
+	var file SketchFile
+	if err := document.Decode(&file); err != nil {
 		return nil, err
 	}
-	rec.Name = name
+	file.Name = name
 
 	if err := sketchToProjectSdk(&document, name); err != nil {
 		return nil, err
 	}
-	if err := validateProjectSdk(&document, &rec); err != nil {
+	if err := validateProjectSdk(&document, &file); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +266,7 @@ func ejectSketch(project, sketchdir string, name string) (*revert.Reverter, erro
 	if err := encoder.Encode(&document); err != nil {
 		return nil, err
 	}
-	if err := writeHooks(temp, rec); err != nil {
+	if err := writeHooks(temp, file); err != nil {
 		return nil, err
 	}
 
@@ -299,8 +302,8 @@ func sketchToProjectSdk(document *yaml.Node, name string) error {
 	return nil
 }
 
-func validateProjectSdk(document *yaml.Node, expected *workshop.SdkRecord) error {
-	var actual workshop.SdkRecord
+func validateProjectSdk(document *yaml.Node, expected *SketchFile) error {
+	var actual SketchFile
 	if err := document.Decode(&actual); err != nil {
 		return err
 	}
@@ -545,21 +548,21 @@ func writeSketchSdk(path string, content []byte) error {
 }
 
 func writeSketchHooks(sketchdir string, content []byte) error {
-	var rec workshop.SdkRecord
-	if err := yaml.Unmarshal(content, &rec); err != nil {
+	var file SketchFile
+	if err := yaml.Unmarshal(content, &file); err != nil {
 		return err
 	}
 
-	if !sdk.IsSketch(rec.Name) {
-		return fmt.Errorf("SDK must be named %q (now: %q)", sdk.Sketch, rec.Name)
+	if !sdk.IsSketch(file.Name) {
+		return fmt.Errorf("SDK must be named %q (now: %q)", sdk.Sketch, file.Name)
 	}
 
-	return writeHooks(sketchdir, rec)
+	return writeHooks(sketchdir, file)
 }
 
-func writeHooks(sdkdir string, rec workshop.SdkRecord) error {
+func writeHooks(sdkdir string, file SketchFile) error {
 	hooksdir := filepath.Join(sdkdir, "hooks")
-	if len(rec.Hooks) > 0 {
+	if len(file.Hooks) > 0 {
 		if err := os.MkdirAll(hooksdir, 0755); err != nil {
 			return err
 		}
@@ -567,7 +570,7 @@ func writeHooks(sdkdir string, rec workshop.SdkRecord) error {
 
 	for _, hook := range []string{"setup-base", "setup-project", "save-state", "restore-state", "check-health"} {
 		hookpath := filepath.Join(hooksdir, hook)
-		if script := rec.Hooks[hook]; len(script) > 0 {
+		if script := file.Hooks[hook]; len(script) > 0 {
 			if !strings.HasSuffix(script, "\n") {
 				script += "\n"
 			}
