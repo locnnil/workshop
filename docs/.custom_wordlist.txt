@@ -17,6 +17,7 @@ config
 ConnectionError
 cooldown
 coverprofile
+CPUs
 cuda
 customisable
 cwd

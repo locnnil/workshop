@@ -435,7 +435,7 @@ Optionally, you can clean the build cache before a build attempt:
 .. @artefact SDK metadata
 
 Ran without arguments,
-:command:`sdkcraft` builds and packs the SDK into the :file:`go.sdk` file,
+:command:`sdkcraft` builds and packs the SDK into the :file:`go_amd64_ubuntu@24.04.sdk` file,
 which contains the build artifacts from the previous step
 along with SDK metadata, hooks and other components.
 
@@ -453,7 +453,7 @@ for use with |ws_markup|:
 
 .. code-block:: console
 
-   $ sdkcraft.publish ./go.sdk latest/beta
+   $ sdkcraft.publish ./go_amd64_ubuntu@24.04.sdk latest/beta
 
 
 This publishes the newly created SDK

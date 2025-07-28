@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/arch"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -129,4 +130,34 @@ func (s *storeSuite) TestSdkActionInstallIncompatibleBase(c *check.C) {
 	}
 	_, err := store.SdkAction(context.Background(), acts)
 	c.Assert(err, check.ErrorMatches, `"test-sdk" SDK from "latest/stable" has "ubuntu@20.04" base; required: "ubuntu@22.04"`)
+}
+
+func (s *storeSuite) TestSdkActionInstallIncompatibleArch(c *check.C) {
+	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
+		var s = store.StoreSdk{
+			Name:     "test-sdk",
+			Channel:  channel,
+			Revision: sdk.Revision{N: 123},
+			SdkYAML:  testSdk + "architecture: amd64\n",
+		}
+		return s, nil
+	})
+	defer r()
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+	oldarch := arch.ArchitectureType(arch.DpkgArchitecture())
+	arch.SetArchitecture("ppc64el")
+	defer arch.SetArchitecture(oldarch)
+
+	store := store.New()
+	acts := []sdk.SdkAction{{
+		ProjectId: "24242424",
+		Workshop:  "test-workshop",
+		Action:    sdk.Install,
+		Name:      "test-sdk",
+		Base:      "ubuntu@20.04",
+		Channel:   "latest/stable",
+	},
+	}
+	_, err := store.SdkAction(context.Background(), acts)
+	c.Assert(err, check.ErrorMatches, `"test-sdk" SDK from "latest/stable" has "amd64" architecture; required: "ppc64el" or "all"`)
 }

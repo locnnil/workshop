@@ -51,6 +51,9 @@ the definition may look like this:
      Go is an open source programming language that enables the production
      of simple, efficient and reliable software at scale.
 
+   platforms:
+     amd64:
+
    plugs:
      mod-cache:
        interface: mount
@@ -107,6 +110,32 @@ the states of the SDKs are saved
 by invoking their :samp:`save-state` hooks.
 On success,
 they are restored using the :samp:`restore-state` hooks.
+
+
+SDK platforms
+-------------
+
+.. @artefact SDK platforms
+
+Platforms describe where SDKs can be built and installed.
+Some SDKs include compiled code,
+which only certain families of CPUs will understand.
+Others depend on particular versions of software provided by the workshop's base image.
+
+The :samp:`platforms` section of the :ref:`definition <exp_sdk_definition>`
+lists the platforms that the SDK supports.
+Each build corresponds to one of these platforms.
+By default, |sdk_markup| builds SDKs for every possible platform.
+This typically means all platforms
+with the same CPU architecture as the build machine.
+
+When installing an SDK,
+|ws_markup| will check its platform metadata for compatibility.
+
+|ws_markup| and |sdk_markup| follow `Debian's naming scheme <https://www.debian.org/ports/>`_
+for CPU architectures.
+SDKs that don't ship compiled binaries
+can use the :samp:`all` architecture instead.
 
 
 .. _exp_system_sdk:

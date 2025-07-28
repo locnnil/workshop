@@ -142,6 +142,15 @@ func MockMaxCp(new int64) (restore func()) {
 	}
 }
 
+// MockUname mocks syscall.Uname as used by MachineName and KernelVersion
+func MockUname(f func(*syscall.Utsname) error) (restore func()) {
+	old := syscallUname
+	syscallUname = f
+	return func() {
+		syscallUname = old
+	}
+}
+
 func FakeRandomString(f func(int) string) (restore func()) {
 	old := randomString
 	randomString = f

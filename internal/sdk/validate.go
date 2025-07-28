@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"golang.org/x/exp/slices"
+
+	"github.com/canonical/workshop/internal/arch"
 )
 
 var (
@@ -21,8 +23,12 @@ func Validate(sdk *Info) error {
 		return fmt.Errorf("invalid SDK name %q", sdk.Name)
 	}
 
-	if !slices.Contains(AllowedBases, sdk.Base) {
+	if sdk.Base != "" && !slices.Contains(AllowedBases, sdk.Base) {
 		return fmt.Errorf("invalid SDK base %q; supported bases: %s", sdk.Base, strings.Join(AllowedBases, ", "))
+	}
+	if !slices.Contains([]string{"", "all"}, sdk.Arch) && !slices.Contains(arch.AllowedArchitectures, sdk.Arch) {
+		arches := strings.Join(arch.AllowedArchitectures, ", ")
+		return fmt.Errorf("invalid SDK architecture %q; supported architectures: %s", sdk.Arch, arches)
 	}
 
 	if sdk.BuildTime != nil && sdk.BuildTime.Location() != time.UTC {

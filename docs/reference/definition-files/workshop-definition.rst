@@ -64,7 +64,7 @@ and includes a number of mandatory and optional keys:
        or :samp:`ubuntu@24.04`.
 
    * - :samp:`sdks`
-     - object
+     - array
      - List of individual SDKs
        from the SDK Store to include in the workshop.
 

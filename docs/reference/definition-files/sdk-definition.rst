@@ -28,16 +28,16 @@ Structure
 The definition in the file must be written in
 `YAML <https://yaml.org/>`__
 and include these top-level fields:
-:samp:`name`, :samp:`base`, :samp:`version`, :samp:`summary`,
-:samp:`description`, :samp:`license`, :samp:`platforms` and :samp:`parts`.
-The :samp:`plugs` field is optional.
+:samp:`name`, :samp:`version`, and :samp:`platforms`.
+Other fields are optional.
 
 .. @artefact SDK base image
+.. @artefact SDK platforms
 
 .. list-table::
    :header-rows: 1
    :width: 95
-   :widths: 1 1 7
+   :widths: 3 2 15
 
    * - Key
      - Value
@@ -53,8 +53,17 @@ The :samp:`plugs` field is optional.
      - SDK's base image
        that provides the underlying OS capabilities.
 
-       It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`
+       It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`,
        or :samp:`ubuntu@24.04`.
+
+       SDKs with a :samp:`base` can only be added to a workshop with the same :samp:`base`.
+       SDKs without a :samp:`base` can be added to any workshop.
+
+   * - :samp:`build-base`
+     - string
+     - Base OS used to build the SDK.
+
+       Required by |sdk_markup| if a :samp:`base` is not defined.
 
    * - :samp:`version`
      - string
@@ -89,7 +98,10 @@ The :samp:`plugs` field is optional.
 
    * - :samp:`platforms`
      - object
-     - Lists individual architectures that the SDK supports.
+     - A collection of named platforms,
+       describing where the SDK can be built and installed.
+
+       See :ref:`ref_sdk_platform` for a detailed discussion.
 
 
    * - :samp:`parts`
@@ -111,26 +123,26 @@ For example:
 .. code-block:: yaml
    :caption: sdk.yaml
 
-    name: go
-    title: Go SDK
-    base: ubuntu@22.04
-    summary: The Go programming language
-    description: |
-      Go is an open source programming language that enables the production
-      of simple, efficient and reliable software at scale.
-    version: '0.1'
-    license: LGPL-2.1
-    platforms:
-        amd64:
+   name: go
+   title: Go SDK
+   base: ubuntu@22.04
+   summary: The Go programming language
+   description: |
+     Go is an open source programming language that enables the production
+     of simple, efficient and reliable software at scale.
+   version: '0.1'
+   license: LGPL-2.1
+   platforms:
+     amd64:
 
-    parts:
-      go-part:
-        plugin: nil
+   parts:
+     go-part:
+       plugin: nil
 
-    plugs:
-      mod-cache:
-        interface: mount
-        workshop-target: /home/workshop/go/pkg/mod
+   plugs:
+     mod-cache:
+       interface: mount
+       workshop-target: /home/workshop/go/pkg/mod
 
    slots:
       tools:
@@ -155,28 +167,29 @@ formalizes the description above:
 Examples
 --------
 
-This YAML file defines a simple :samp:`go` SDK:
+This YAML file defines a simple :samp:`go` SDK
+that supports multiple bases:
 
 .. code-block:: yaml
    :caption: sdk.yaml
 
    name: go
-   base: ubuntu@24.04
    version: '0.1'
    summary: Go SDK
    description: |
      This is my Go SDK description.
    license: GPL-3.0
    platforms:
-     amd64:
-
-   parts:
-     my-part:
-       plugin: nil
+     noble:
+       build-on: ['ubuntu@24.04:amd64', 'ubuntu@24.04:arm64']
+       build-for: 'ubuntu@24.04:all'
+     jammy:
+       build-on: ['ubuntu@22.04:amd64', 'ubuntu@22.04:arm64']
+       build-for: 'ubuntu@22.04:all'
 
 
 This is a more elaborate example of an SDK
-that uses several :ref:`plugs <ref_sdk_plugs_slots>` and multiple platforms:
+that uses several :ref:`plugs <ref_sdk_plugs_slots>`:
 
 .. code-block:: yaml
    :caption: sdk.yaml
@@ -199,10 +212,6 @@ that uses several :ref:`plugs <ref_sdk_plugs_slots>` and multiple platforms:
    platforms:
      amd64:
      arm64:
-   
-   parts:
-     ros2-part:
-       plugin: nil
    
    plugs:
      ros-cache:

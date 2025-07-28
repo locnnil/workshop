@@ -92,6 +92,11 @@
   specs:
     - SK000
 
+"SDK platforms":
+  category: SDK
+  type: concept
+  specs: []
+
 "SDK publisher":
   category: SDK
   type: concept
