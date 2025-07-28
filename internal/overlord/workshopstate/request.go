@@ -153,7 +153,7 @@ func (w *WorkshopManager) resolveWorkshops(ctx context.Context, project workshop
 func resolveStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.Setup, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
-		if workshop.IsImplicitSdk(sd.Name) || workshop.IsProjectSdk(sd.Name) {
+		if workshop.IsImplicitSdk(sd.Name) || sd.Source != "" {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
@@ -184,10 +184,10 @@ func (s *localStore) resolveSdks(name string, file *workshop.File, wp *workshop.
 	localSdks := []sdk.Setup{}
 
 	for _, sd := range file.Sdks {
-		if !workshop.IsProjectSdk(sd.Name) {
+		if sd.Source != "project" {
 			continue
 		}
-		relative := workshop.ProjectSdkPath("", strings.TrimPrefix(sd.Name, "project-"))
+		relative := workshop.ProjectSdkPath("", sd.Name)
 		escaped := strings.ReplaceAll(relative, "$", "$$")
 		source := filepath.Join("$PROJECT", escaped)
 		localSdks = append(localSdks, sdk.Setup{Name: sd.Name, Source: source})

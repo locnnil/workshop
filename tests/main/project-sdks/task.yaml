@@ -5,17 +5,17 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch workshop with project-defined SDKs"
+  echo "Launch workshop with in-project SDKs"
   cd project
   workshop_exec launch
   workshop_exec exec -- test -d /one/two/three
   workshop_exec exec -- test -f /setup-project.log
 
-  workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
-  workshop_exec connections dev | MATCH "^tunnel.+\-.+dev/project-two:http.+\-$"
-  workshop_exec connections dev | MATCH "^desktop.+dev/project-three:desktop.+\-.+\-$"
+  workshop_exec connections dev | MATCH "^ssh-agent.+dev/one:ssh-agent.+\-.+\-$"
+  workshop_exec connections dev | MATCH "^tunnel.+\-.+dev/two:http.+\-$"
+  workshop_exec connections dev | MATCH "^desktop.+dev/three:desktop.+\-.+\-$"
 
-  echo "Move project-defined SDKs"
+  echo "Move in-project SDKs"
   mv .workshop/{one,two,three} ./
   workshop_exec exec -- test -d /one/two/three
   workshop_exec stop
@@ -28,12 +28,12 @@ execute: |
   cd moved
   workshop_exec exec -- test -d /one/two/three
 
-  workshop_exec info | grep -v notes | yq '.sdks["project-one"].tracking' | MATCH "^$PWD/\\.workshop/one\$"
-  workshop_exec info | grep -v notes | yq '.sdks["project-one"].installed' | MATCH '\(x1\)$'
-  workshop_exec info | grep -v notes | yq '.sdks["project-two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
-  workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x1\)$'
-  workshop_exec info | grep -v notes | yq '.sdks["project-three"].tracking' | MATCH "^$PWD/\\.workshop/three\$"
-  workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["one"].tracking' | MATCH "^$PWD/\\.workshop/one\$"
+  workshop_exec info | grep -v notes | yq '.sdks["one"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
+  workshop_exec info | grep -v notes | yq '.sdks["two"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["three"].tracking' | MATCH "^$PWD/\\.workshop/three\$"
+  workshop_exec info | grep -v notes | yq '.sdks["three"].installed' | MATCH '\(x1\)$'
 
   echo "Break second SDK"
   echo false >> .workshop/two/sdk/hooks/setup-base
@@ -41,8 +41,8 @@ execute: |
   workshop_exec exec -- test -d /one/two/three
   workshop_exec exec -- test ! -f /restored-state
 
-  workshop_exec info | grep -v notes | yq '.sdks["project-two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
-  workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["two"].tracking' | MATCH "^$PWD/\\.workshop/two\$"
+  workshop_exec info | grep -v notes | yq '.sdks["two"].installed' | MATCH '\(x1\)$'
 
   echo "Fix second SDK"
   sed 's@false@mkdir /two@' -i .workshop/two/sdk/hooks/setup-base
@@ -51,14 +51,14 @@ execute: |
   workshop_exec exec -- test -d /two
   workshop_exec exec -- test -f /restored-state
 
-  workshop_exec info | grep -v notes | yq '.sdks["project-one"].installed' | MATCH '\(x1\)$'
-  workshop_exec info | grep -v notes | yq '.sdks["project-two"].installed' | MATCH '\(x3\)$'
-  workshop_exec info | grep -v notes | yq '.sdks["project-three"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["one"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["two"].installed' | MATCH '\(x3\)$'
+  workshop_exec info | grep -v notes | yq '.sdks["three"].installed' | MATCH '\(x1\)$'
 
   echo "Add a new plug"
   sed 's@ssh-agent@camera@' -i .workshop/one/sdk.yaml
-  workshop_exec connections dev | MATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
-  workshop_exec connections dev | NOMATCH "^camera.+dev/project-one:camera.+\-.+\-$"
+  workshop_exec connections dev | MATCH "^ssh-agent.+dev/one:ssh-agent.+\-.+\-$"
+  workshop_exec connections dev | NOMATCH "^camera.+dev/one:camera.+\-.+\-$"
   workshop_exec refresh
-  workshop_exec connections dev | NOMATCH "^ssh-agent.+dev/project-one:ssh-agent.+\-.+\-$"
-  workshop_exec connections dev | MATCH "^camera.+dev/project-one:camera.+\-.+\-$"
+  workshop_exec connections dev | NOMATCH "^ssh-agent.+dev/one:ssh-agent.+\-.+\-$"
+  workshop_exec connections dev | MATCH "^camera.+dev/one:camera.+\-.+\-$"

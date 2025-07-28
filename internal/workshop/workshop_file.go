@@ -18,7 +18,6 @@ import (
 
 var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	sdkBlocklist   = []string{"agent"}
 
 	workshopName = regexp.MustCompile(`^[a-z](?:-?[a-z0-9])*$`)
 	channel      = regexp.MustCompile(`^(?:[a-z0-9](?:[.-]?[a-z0-9])*/(?:stable|candidate|beta|edge)|)$`)
@@ -126,8 +125,8 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 	if len(parts[0]) == 0 {
 		parts[0] = sdk.System.String()
 	}
-	if !sdk.SdkName.MatchString(parts[0]) {
-		return fmt.Errorf("%q is not a valid plug or slot reference: invalid SDK name %q", refStr, parts[0])
+	if err := sdk.ValidateName(parts[0]); err != nil {
+		return fmt.Errorf("%q is not a valid plug or slot reference: %w", refStr, err)
 	}
 
 	b.Sdk = parts[0]
@@ -141,10 +140,35 @@ func (b PlugRef) MarshalYAML() (interface{}, error) {
 
 type SdkRecord struct {
 	Name    string                 `yaml:"name"`
-	Channel string                 `yaml:"channel"`
+	Channel string                 `yaml:"channel,omitempty"`
+	Source  string                 `yaml:"source,omitempty"`
 	Plugs   map[string]PlugOrBind  `yaml:"plugs,omitempty"`
 	Slots   map[string]interface{} `yaml:"slots,omitempty"`
-	Hooks   map[string]string      `yaml:"hooks,omitempty"`
+}
+
+func (s SdkRecord) MarshalYAML() (interface{}, error) {
+	if s.Source != "" {
+		s.Name = fmt.Sprintf("%s-%s", s.Source, s.Name)
+		s.Source = ""
+	}
+
+	type record SdkRecord
+	return (*record)(&s), nil
+}
+
+func (s *SdkRecord) UnmarshalYAML(value *yaml.Node) error {
+	type record SdkRecord
+	err := value.Decode((*record)(s))
+
+	name, found := strings.CutPrefix(s.Name, "project-")
+	if found {
+		s.Name = name
+		s.Source = "project"
+	} else {
+		s.Source = ""
+	}
+
+	return err
 }
 
 type Connection struct {
@@ -255,8 +279,8 @@ func readWorkshop(path string) (*File, error) {
 func validateSdks(sdks []SdkRecord) error {
 	seen := map[string]bool{}
 	for _, s := range sdks {
-		if slices.Contains(sdkBlocklist, s.Name) {
-			return fmt.Errorf("%q is a reserved SDK name", s.Name)
+		if err := sdk.ValidateName(s.Name); err != nil {
+			return err
 		}
 
 		if _, ok := seen[s.Name]; ok {
@@ -264,8 +288,6 @@ func validateSdks(sdks []SdkRecord) error {
 		}
 		seen[s.Name] = true
 
-		// An SDK installed from a local source (e.g. system SDK) does not have a
-		// channel.
 		if !channel.MatchString(s.Channel) {
 			return fmt.Errorf("unsupported channel %q for %q SDK", s.Channel, s.Name)
 		}

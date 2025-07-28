@@ -1173,11 +1173,11 @@ func (s *apiSuite) TestLaunchWorkshopNoProjectSdk(c *check.C) {
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
 
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "project-test-sdk"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "project-test-sdk"), check.HasLen, 0)
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
 
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "project-test-sdk-2"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "project-test-sdk-2"), check.HasLen, 0)
+	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
+	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
@@ -1789,20 +1789,20 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "project-test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/basic/test-sdk:data b8639dea/basic/system:mount",
-			"b8639dea/basic/project-test-sdk-2:photos b8639dea/basic/system:mount",
-			"b8639dea/basic/project-test-sdk-2:gpu b8639dea/basic/system:gpu",
+			"b8639dea/basic/test-sdk-2:photos b8639dea/basic/system:mount",
+			"b8639dea/basic/test-sdk-2:gpu b8639dea/basic/system:gpu",
 		},
 		plugs: []string{
 			"test-sdk:data",
-			"project-test-sdk-2:photos",
-			"project-test-sdk-2:gpu",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
 		},
 		slots: []string{
-			"project-test-sdk-2:data-slot",
+			"test-sdk-2:data-slot",
 			"system:camera",
 			"system:desktop",
 			"system:gpu",
@@ -1816,7 +1816,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
 		"test-sdk",
-		"project-test-sdk-2",
+		"test-sdk-2",
 	})
 
 	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic_refreshed})
@@ -2300,21 +2300,21 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
-			{Name: "project-test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-1), InstallTime: &s.installTime},
-			{Name: "project-test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
-			"b8639dea/manysdks/project-test-sdk:data b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/project-test-sdk-2:photos b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/project-test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
 		plugs: []string{
-			"project-test-sdk:data",
-			"project-test-sdk-2:photos",
-			"project-test-sdk-2:gpu",
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
 		},
 		slots: []string{
-			"project-test-sdk-2:data-slot",
+			"test-sdk-2:data-slot",
 			"system:camera",
 			"system:desktop",
 			"system:gpu",
@@ -2346,21 +2346,21 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
-			{Name: "project-test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-2), InstallTime: &s.installTime},
-			{Name: "project-test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-2), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
-			"b8639dea/manysdks/project-test-sdk-2:photos b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/project-test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
 		},
 		plugs: []string{
-			"project-test-sdk:ssh-agent",
-			"project-test-sdk:desktop",
-			"project-test-sdk-2:photos",
-			"project-test-sdk-2:gpu",
+			"test-sdk:ssh-agent",
+			"test-sdk:desktop",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
 		},
 		slots: []string{
-			"project-test-sdk-2:data-slot",
+			"test-sdk-2:data-slot",
 			"system:camera",
 			"system:desktop",
 			"system:gpu",
@@ -2372,10 +2372,10 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
-		"project-test-sdk",
-		"project-test-sdk-2",
-		"project-test-sdk",
-		"project-test-sdk-2",
+		"test-sdk",
+		"test-sdk-2",
+		"test-sdk",
+		"test-sdk-2",
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_project})
@@ -2964,7 +2964,7 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
 		"test-sdk",
-		"project-test-sdk-2",
+		"test-sdk-2",
 	})
 
 	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})

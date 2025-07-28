@@ -13,14 +13,14 @@ import (
 
 var (
 	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
-	SdkName      = regexp.MustCompile(`^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$`)
+	sdkName      = regexp.MustCompile(`^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$`)
 	// Regular expression describing correct plug, slot and interface names.
 	validPlugSlotIface = regexp.MustCompile("^[a-z](?:-?[a-z0-9])*$")
 )
 
 func Validate(sdk *Info) error {
-	if !SdkName.MatchString(sdk.Name) {
-		return fmt.Errorf("invalid SDK name %q", sdk.Name)
+	if err := ValidateName(sdk.Name); err != nil {
+		return err
 	}
 
 	if sdk.Base != "" && !slices.Contains(AllowedBases, sdk.Base) {
@@ -50,6 +50,17 @@ func Validate(sdk *Info) error {
 		if err := ValidateInterfaceName(slot.Interface); err != nil {
 			return fmt.Errorf("invalid interface name %q for slot %q", slot.Interface, slotName)
 		}
+	}
+	return nil
+}
+
+// ValidateName checks if a string can be used as an SDK name.
+func ValidateName(name string) error {
+	if name == "agent" || strings.HasPrefix(name, "project-") {
+		return fmt.Errorf("%q is a reserved SDK name", name)
+	}
+	if !sdkName.MatchString(name) {
+		return fmt.Errorf("invalid SDK name %q", name)
 	}
 	return nil
 }

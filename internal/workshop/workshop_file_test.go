@@ -71,6 +71,7 @@ sdks:
     channel: latest/candidate
   - name: automotive
     channel: latest/beta
+  - name: project-linter
 scripts:
   oneline: echo one line
   multiline: |
@@ -82,14 +83,11 @@ scripts:
 	c.Assert(err, check.Equals, nil)
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
-	c.Assert(file.Sdks[0].Name, check.Equals, "huggingface")
-	c.Assert(file.Sdks[0].Channel, check.Equals, "latest/stable")
-	c.Assert(file.Sdks[1].Name, check.Equals, "cuda")
-	c.Assert(file.Sdks[1].Channel, check.Equals, "latest/edge")
-	c.Assert(file.Sdks[2].Name, check.Equals, "zookeeper")
-	c.Assert(file.Sdks[2].Channel, check.Equals, "latest/candidate")
-	c.Assert(file.Sdks[3].Name, check.Equals, "automotive")
-	c.Assert(file.Sdks[3].Channel, check.Equals, "latest/beta")
+	c.Assert(file.Sdks[0], check.DeepEquals, workshop.SdkRecord{Name: "huggingface", Channel: "latest/stable"})
+	c.Assert(file.Sdks[1], check.DeepEquals, workshop.SdkRecord{Name: "cuda", Channel: "latest/edge"})
+	c.Assert(file.Sdks[2], check.DeepEquals, workshop.SdkRecord{Name: "zookeeper", Channel: "latest/candidate"})
+	c.Assert(file.Sdks[3], check.DeepEquals, workshop.SdkRecord{Name: "automotive", Channel: "latest/beta"})
+	c.Assert(file.Sdks[4], check.DeepEquals, workshop.SdkRecord{Name: "linter", Source: "project"})
 	lines := len(strings.Split(yaml, "\n"))
 	skip := strings.Repeat("\n", lines-5)
 	c.Assert(string(file.Scripts["oneline"]), check.Equals, skip+"echo one line\n")
@@ -103,7 +101,7 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
 			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
-			{Name: "two", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
+			{Name: "two", Source: "project", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
 		},
 		Scripts: map[string]workshop.Script{
 			"oneline":   "\n\n\necho one line\n",
@@ -120,8 +118,7 @@ sdks:
       plugs:
         plug:
             bind: two:plug
-    - name: two
-      channel: latest/stable
+    - name: project-two
       plugs:
         plug:
             bind: one:plug
@@ -231,6 +228,18 @@ sdks:
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(file, check.IsNil)
 	c.Assert(err, check.ErrorMatches, `"cuda" SDK must only be included once`)
+
+	yaml = `name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  - name: cuda
+    channel: latest/stable
+  - name: project-cuda
+`
+	f.createWFile(c, "xbert-gpu", yaml)
+	file, err = f.project.Workshop("xbert-gpu")
+	c.Assert(file, check.IsNil)
+	c.Assert(err, check.ErrorMatches, `"cuda" SDK must only be included once`)
 }
 
 func (f *workshopFile) TestWorkshopFileReservedNames(c *check.C) {
@@ -243,6 +252,26 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
+	c.Assert(file, check.IsNil)
+
+	yaml = `name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  - name: project-agent
+`
+	f.createWFile(c, "xbert-gpu", yaml)
+	file, err = f.project.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
+	c.Assert(file, check.IsNil)
+
+	yaml = `name: xbert-gpu
+base: ubuntu@20.04
+sdks:
+  - name: project-project-foo
+`
+	f.createWFile(c, "xbert-gpu", yaml)
+	file, err = f.project.Workshop("xbert-gpu")
+	c.Assert(err, check.ErrorMatches, `"project-foo" is a reserved SDK name`)
 	c.Assert(file, check.IsNil)
 }
 

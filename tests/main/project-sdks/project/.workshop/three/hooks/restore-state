@@ -1,2 +1,2 @@
-[ "$SDK_STATE_DIR" = '/var/lib/workshop/state/sdk/project-three' ]
+[ "$SDK_STATE_DIR" = '/var/lib/workshop/state/sdk/three' ]
 cp "${SDK_STATE_DIR}/saved" /restored-state
