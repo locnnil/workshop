@@ -114,9 +114,11 @@ Each SDK is described with the following keys:
      - Name of an existing SDK,
        typically from the SDK Store.
 
-       The :ref:`system SDK <ref_system_sdk>` is named :samp:`system`.
+       - The :ref:`system SDK <ref_system_sdk>` is named :samp:`system`.
 
-       :ref:`In-project SDKs <ref_in_project_sdk>` should be prefixed by :samp:`project-`.
+       - When :ref:`trying out SDKs <ref_try_sdk>`, the name should be prefixed by :samp:`try-`.
+
+       - :ref:`In-project SDKs <ref_in_project_sdk>` should be prefixed by :samp:`project-`.
 
    * - :samp:`channel`
      - string
@@ -184,6 +186,22 @@ largely due to security considerations,
 because the system SDK exposes sensitive host system resources.
 To the contrary, plugs added under the system SDK can be auto-connected
 because they expose workshop internals.
+
+
+.. _ref_try_sdk:
+
+Trying out SDKs
+~~~~~~~~~~~~~~~
+
+.. @artefact sdkcraft (CLI)
+.. @artefact try SDK
+
+The :command:`sdkcraft try` command makes SDKs available locally
+without having to publish them in the Store.
+
+Workshops consume these SDKs
+using names like :samp:`try-<NAME>`;
+a :samp:`channel` is not required in this case.
 
 
 .. _ref_in_project_sdk:

@@ -59,6 +59,10 @@ func SketchSdkStash(userDataDir, pid, w string) string {
 	return filepath.Join(SketchSdkDir(userDataDir, pid, w), "stash")
 }
 
+func TrySdkDir(userDataDir, sdk string) string {
+	return filepath.Join(userDataDir, "try", sdk)
+}
+
 func ProjectCacheDir(pid string) string {
 	return filepath.Join(dirs.CacheDir, "id", pid)
 }
@@ -73,6 +77,8 @@ func AptCacheDir(pid, w string) string {
 
 func SdkSourcePath(userDataDir string, project Project, w, sk string, source sdk.Source) string {
 	switch source {
+	case sdk.TrySource:
+		return TrySdkDir(userDataDir, sk)
 	case sdk.ProjectSource:
 		return ProjectSdkPath(project.Path, sk)
 	case sdk.SketchSource:

@@ -83,6 +83,8 @@ type VolumeInfo struct {
 	Name string
 	// Kind of volume, e.g. "sdk" or "state-storage."
 	Kind string
+	// Hash of tarball used to create volume.
+	Sha3_384 string
 	// Name of SDK associated with volume, if any.
 	Sdk string
 	// Revision of SDK associated with volume, if any.

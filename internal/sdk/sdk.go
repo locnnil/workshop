@@ -32,7 +32,7 @@ func (s *Setup) filename() string {
 }
 
 func (s *Setup) IsVolume() bool {
-	return s.Source == StoreSource || s.Source == SystemSource
+	return s.Source == StoreSource || s.Source == SystemSource || s.Source == TrySource
 }
 
 func VolumeName(name string, revision Revision) string {
@@ -44,6 +44,7 @@ type Source int
 const (
 	StoreSource Source = iota
 	SystemSource
+	TrySource
 	ProjectSource
 	SketchSource
 )
@@ -55,6 +56,8 @@ func (s Source) MarshalText() ([]byte, error) {
 		text = "store"
 	case SystemSource:
 		text = "system"
+	case TrySource:
+		text = "try"
 	case ProjectSource:
 		text = "project"
 	case SketchSource:
@@ -71,6 +74,8 @@ func (s *Source) UnmarshalText(text []byte) error {
 		*s = StoreSource
 	case "system":
 		*s = SystemSource
+	case "try":
+		*s = TrySource
 	case "project":
 		*s = ProjectSource
 	case "sketch":

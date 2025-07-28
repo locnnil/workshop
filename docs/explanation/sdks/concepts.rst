@@ -192,6 +192,27 @@ Note that :samp:`sketch` is a reserved name,
 and the sketch SDK is always installed last.
 
 
+.. _exp_try_sdk:
+
+Trying out SDKs
+---------------
+
+.. @artefact sdkcraft (CLI)
+.. @artefact try SDK
+
+The :command:`sdkcraft try` command allows publishers to test SDKs
+before uploading them to the Store.
+Once installed in a workshop, these SDKs behave identically to SDKs from the Store.
+
+|sdk_markup| does not install SDKs in a workshop by itself;
+it simply copies packed SDKs to a directory called the *try area*.
+|ws_markup| looks in this directory when installing an SDK with the :samp:`try-` prefix.
+
+The try area has no channels;
+only one version of an SDK can be tested at a time.
+However, this version can be tested in multiple workshops with different :ref:`bases <exp_base>`.
+
+
 .. _exp_in_project_sdk:
 
 In-project SDKs

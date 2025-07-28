@@ -312,6 +312,9 @@ func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
 	config := map[string]string{
 		"user.kind": info.Kind,
 	}
+	if info.Sha3_384 != "" {
+		config["user.sha3-384"] = info.Sha3_384
+	}
 	if info.Sdk != "" {
 		config["user.sdk.name"] = info.Sdk
 	}
@@ -332,6 +335,7 @@ func volumeConfigToInfo(name string, config map[string]string) workshop.VolumeIn
 	return workshop.VolumeInfo{
 		Name:     name,
 		Kind:     config["user.kind"],
+		Sha3_384: config["user.sha3-384"],
 		Sdk:      config["user.sdk.name"],
 		Revision: revision,
 		Metadata: config["user.sdk.meta"],

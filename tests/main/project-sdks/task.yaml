@@ -1,4 +1,4 @@
-summary: Check workshop sketch-sdk
+summary: Check in-project SDKs
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove || true

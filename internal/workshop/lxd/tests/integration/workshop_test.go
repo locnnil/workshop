@@ -163,8 +163,9 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	// Execute
 	volume := workshop.VolumeInfo{
-		Name: "test",
-		Kind: "testkind",
+		Name:     "test",
+		Kind:     "testkind",
+		Sha3_384: "abc123",
 	}
 	err := f.bd.CreateVolume(f.ctx, volume)
 	c.Assert(err, check.IsNil)
