@@ -1,4 +1,4 @@
-.. _exp_interface:
+.. _exp_interfaces:
 
 .. meta::
    :description: Workshop interfaces documentation, providing

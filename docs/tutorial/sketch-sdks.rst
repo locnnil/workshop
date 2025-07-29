@@ -116,7 +116,7 @@ with empty :samp:`hooks`, :samp:`plugs`, and :samp:`slots`:
 
    For more details on these components,
    see the :ref:`explanation <exp_index>` section.
-   You may want to start with :ref:`exp_sdks` and :ref:`exp_interface`.
+   You may want to start with :ref:`exp_sdks` and :ref:`exp_interfaces`.
 
 
 To install new software, locate the commented :samp:`setup-base`.

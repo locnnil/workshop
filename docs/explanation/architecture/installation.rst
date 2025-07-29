@@ -61,6 +61,8 @@ The client supports both synchronous and asynchronous operations,
 with proper error reporting and progress tracking.
 
 
+.. _exp_arch_install_daemon:
+
 Daemon
 ~~~~~~
 
@@ -163,6 +165,8 @@ network isolation,
 and project isolation.
 
 
+.. _exp_arch_install_storage:
+
 Storage pool
 ~~~~~~~~~~~~
 
@@ -176,6 +180,8 @@ volumes for SDKs and SDK data persistence,
 snapshots for quick workshop updates and rollbacks,
 and cached container images.
 
+
+.. _exp_arch_install_images:
 
 Images
 ~~~~~~

@@ -15,8 +15,10 @@ Workshop concepts
 A *workshop*
 (lowercase; not to be confused with |ws_markup| itself)
 is a container that enables consistent environment builds.
-It is tied to a definition that lists SDKs
-and is stored as a :file:`.yaml` file under a project directory.
+A workshop is defined by a single YAML file
+that acts as the blueprint for |ws_markup| to implement at launch time.
+It describes how individual components fit together
+to create a cohesive development environment.
 A *project* is the working directory where workshop definitions are placed.
 When you start a workshop, the project directory is mounted inside it,
 so storing repositories, code, or data such as models in the project directory
@@ -114,33 +116,100 @@ A more complete definition would usually list several SDKs
 that use different :ref:`interfaces <exp_interface_concepts>`,
 software packages, and :ref:`hooks <exp_sdk_hooks>`.
 
-A workshop definition can be hidden by naming it
-:file:`.workshop.yaml` instead of :file:`workshop.yaml`.
-If a project has multiple workshops,
-the definitions should be stored in the :file:`.workshop/` directory
-(for example, :file:`.workshop/golang.yaml`).
-
 
 .. _exp_base:
 
 Base image
-~~~~~~~~~~
+----------
 
-The base is a supported OS image
-that is used as the basis for the workshop.
+The base specifies the underlying operating system image,
+such as a particular Ubuntu LTS release.
+This is the first layer of the workshop,
+upon which all other components are applied.
+
+For details of how the images are handled behind the scenes,
+see :ref:`exp_arch_install_images`.
+
+
+.. _exp_workshop_definition_sdks:
+
+SDKs
+----
+
+The :samp:`sdks` section brings in the features and tools,
+layering them on top of the base image.
+Each SDK listed here is a bundle of code, data, and configurations,
+pre-packaged with |sdk_markup| to be used with |ws_markup|;
+see :ref:`exp_sdk_concepts` for details.
+
+This layering is not just conceptual;
+at launch time,
+|ws_markup| uses ZFS snapshots to separate the SDKs:
+
+#. The :samp:`base` OS is installed.
+
+#. The :samp:`system` SDK is installed,
+   and its :samp:`setup-base` hook is run.
+
+#. A ZFS snapshot is taken.
+
+#. For each subsequent SDK
+   in the order of their appearance on the :samp:`sdks` list,
+   its :samp:`setup-base` hook is run
+   and another snapshot is taken.
+
+
+This will create a chain of snapshots,
+where each one represents a cumulative layer of the workshop.
+Snapshots makes operations like refreshing or reverting a workshop very fast,
+as |ws_markup| can simply restore a previous snapshot
+instead of rebuilding the environment from scratch.
+No snapshots are created for other hook types,
+such as :samp:`setup-project` or :samp:`save-state`.
+
+For details of how |ws_markup| leverages ZFS,
+see :ref:`exp_arch_install_storage`.
 
 
 .. _exp_workshop_definition_connections:
 
-Slots, plugs, connections
+Plugs, slots, connections
 -------------------------
 
-You can declare :ref:`slots or plugs <exp_plugs_slots>`
-and list connections in the workshop definition,
-subject to the usual :ref:`validation rules <exp_interfaces_validation>`.
-This reduces the need to run manual commands after starting the workshop.
+.. @artefact interface plug
+.. @artefact interface slot
+.. @artefact interface connection
 
-This example adds a slot, a plug and two connections to its SDKs:
+Once all the SDKs are installed,
+they often need to communicate with each other or with the host system.
+This is handled by establishing interface connections
+between plugs (service consumers) and slots (service providers);
+see :ref:`exp_interface_concepts` for details.
+
+These plugs and slots can be defined in two ways:
+
+- By the SDK itself:
+  An SDK can define its own plugs and slots in its :file:`sdk.yaml` file.
+  These are the standard capabilities the SDK offers.
+
+- Grafted by the workshop:
+  A workshop definition can add plugs or slots to an SDK it references.
+  This is done within an SDK's entry in the :file:`workshop.yaml` file.
+  Grafting allows for customizing or extending an SDK's capabilities locally,
+  without modifying the original SDK;
+  this reduces the need to run manual commands after starting the workshop.
+
+
+The :samp:`connections` section of the definition can explicitly link
+any plugs and slots available within the workshop,
+on top of what the :ref:`auto-connection mechanism <exp_interface_connections>`
+in |ws_markup| provides:
+eventually, all interface connections are
+:ref:`resolved, validated, and established <exp_interfaces_validation>`
+in a single task *after* all the SDK layers have been created,
+because all components must be in place before the wiring can be done.
+
+This example adds a slot, a plug, and two connections to its SDKs:
 
 .. code-block:: yaml
    :caption: .workshop/digits-cuda.yaml
@@ -193,6 +262,18 @@ Scripts
 
 Another optional part of a workshop definition is the :samp:`scripts` section;
 it contains named shell scripts to be copied and executed inside the workshop.
+This section provides a degree of convenience,
+allowing the users to define simple aliases
+for longer or more complex shell commands
+that they expect to run frequently inside the workshop,
+right in the definition file.
+
+Scripts are not part of the layered snapshot system at all.
+They stay in the definition,
+and are parsed by the :ref:`daemon <exp_arch_install_daemon>`
+every time the :command:`workshop run` command is executed.
+This means the users can add or modify scripts and use them immediately,
+without needing to refresh or restart the workshop.
 
 The following example adds four scripts,
 :samp:`lint`, :samp:`shellcheck`, :samp:`unit`, and :samp:`cover`,
@@ -244,11 +325,78 @@ This mechanism avoids the need to maintain helper scripts manually,
 ensuring instead that they are stored with the rest of the workshop's metadata.
 
 
+Origins and locations
+---------------------
+
+.. @artefact system SDK
+.. @artefact sketch SDK
+.. @artefact in-project SDK
+
+Workshop components, including the many SDK types,
+originate from different sources
+and end up in multiple locations.
+The workshop definition file acts as a blueprint
+that brings these distributed components together:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 10 25 30 35
+
+    * - Component
+      - Origin
+      - Storage location
+      - Description
+
+    * - :ref:`Workshop definition <exp_workshop_definition>`
+      - Created manually in YAML by |ws_markup| users
+      - Project directory on the host
+      - Defines the workshop environment
+        and how it should be built and run.
+
+    * - :ref:`System SDK <exp_system_sdk>`
+      - Built into |ws_markup|
+      - Automatically exposed in the workshop at launch
+      - Provides host system integration capabilities
+        (mounts, camera, GPU, networking, and so on).
+
+    * - :ref:`Regular SDKs <exp_sdk_concepts>`
+      - Distributed via the SDK Store
+        with :samp:`channel` versioning
+      - Downloaded, cached on the host,
+        and installed in the workshop at launch
+      - These SDKs are the most common variation,
+        providing tools and libraries from external publishers.
+
+    * - :ref:`In-project SDKs <exp_in_project_sdk>`
+      - Created manually or ejected with :command:`workshop sketch-sdk --eject`
+      - Defined in the project directory on the host;
+        installed in the workshop at launch
+      - Custom SDKs, specific to the workshop;
+        these are defined within the project directory
+        and can be identified by the :samp:`project-` prefix in their names
+        in the workshop definition.
+
+    * - :ref:`Sketch SDK <exp_sketch_sdk>`
+      - Generated with :command:`workshop sketch-sdk`
+      - Defined under :file:`$XDG_DATA_HOME/workshop/`;
+        installed in the workshop at refresh
+      - Encapsulates local, transient logic
+        in an SDK that can be quickly iterated upon
+        and later ejected as an in-project SDK.
+
+    * - :ref:`Scripts <exp_workshop_definition_scripts>`
+      - Defined by |ws_markup| users
+      - Listed directly in the workshop definition
+      - Utility scripts, specific to the workshop;
+        these are injected into the workshop at run time.
+
+
 See also
 --------
 
 Explanation:
 
+- :ref:`exp_interfaces`
 - :ref:`exp_projects`
 - :ref:`exp_sdks`
 
