@@ -16,10 +16,10 @@ Filename convention
 .. @artefact sdkcraft (CLI)
 
 The name of the SDK definition file must be :file:`sdk.yaml`;
-the file is usually created using the :command:`sdkcraft init` command
-in the source directory when :ref:`sketching a local SDK <tut_sketch_sdks>`
-or
-:ref:`crafting and publishing an SDK <tut_craft_sdks>`.
+the file is usually stored under :file:`$XDG_DATA_HOME/workshop/`
+when :ref:`sketching a local SDK <tut_sketch_sdks>`,
+or under an arbitrary source directory
+when :ref:`crafting and publishing a regular SDK <tut_craft_sdks>`.
 
 
 Structure
