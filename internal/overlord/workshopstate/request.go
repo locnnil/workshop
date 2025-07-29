@@ -9,7 +9,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/canonical/workshop/internal/osutil"
@@ -153,7 +152,7 @@ func (w *WorkshopManager) findAllStoreSdks(ctx context.Context, project workshop
 func findStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.Setup, error) {
 	acts := []sdk.SdkAction{}
 	for _, sd := range file.Sdks {
-		if workshop.IsImplicitSdk(sd.Name) || sd.Source != "" {
+		if sd.Source != sdk.StoreSource {
 			continue
 		}
 		act := sdk.SdkAction{ProjectId: projectid, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
@@ -166,9 +165,9 @@ func findStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *w
 	}
 
 	setups := make([]sdk.Setup, 1, len(infos)+1)
-	setups[0] = sdk.Setup{Name: "system", Revision: system.SystemSdkRevision}
+	setups[0] = sdk.Setup{Name: "system", Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
 	for _, s := range infos {
-		setups = append(setups, sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision})
+		setups = append(setups, sdk.Setup{Name: s.Name, Channel: s.Channel, Source: sdk.StoreSource, Revision: s.Revision})
 	}
 
 	return setups, nil
@@ -184,44 +183,42 @@ func (s *localSdkFinder) findLocalSdks(wp *workshop.Workshop, file *workshop.Fil
 	localSdks := []sdk.Setup{}
 
 	for _, sd := range file.Sdks {
-		if sd.Source != "project" {
+		if sd.Source != sdk.ProjectSource {
 			continue
 		}
-		setup, err := s.findInProjectSdk(wp, file.Name, sd.Name)
+		revision, err := s.findInProjectSdk(wp, file.Name, sd.Name)
 		if err != nil {
 			return nil, err
 		}
-		localSdks = append(localSdks, *setup)
+		localSdks = append(localSdks, sdk.Setup{Name: sd.Name, Source: sdk.ProjectSource, Revision: revision})
 	}
 
-	sketch, err := s.maybeFindSketchSdk(wp, file.Name)
+	revision, err := s.maybeFindSketchSdk(wp, file.Name)
 	if err != nil {
 		return nil, err
 	}
-	if sketch != nil {
-		localSdks = append(localSdks, *sketch)
+	if !revision.Unset() {
+		localSdks = append(localSdks, sdk.Setup{Name: sdk.Sketch, Source: sdk.SketchSource, Revision: revision})
 	}
 
 	return localSdks, nil
 }
 
-func (s *localSdkFinder) findInProjectSdk(wp *workshop.Workshop, w, sk string) (*sdk.Setup, error) {
-	relative := workshop.ProjectSdkPath("", sk)
-	escaped := strings.ReplaceAll(relative, "$", "$$")
-	source := filepath.Join("$PROJECT", escaped)
-	return s.commitRevision(wp, w, sk, source)
+func (s *localSdkFinder) findInProjectSdk(wp *workshop.Workshop, w, sk string) (sdk.Revision, error) {
+	sdkdir := workshop.ProjectSdkPath(s.project.Path, sk)
+	return s.commitRevision(wp, w, sk, sdkdir)
 }
 
-func (s *localSdkFinder) maybeFindSketchSdk(wp *workshop.Workshop, w string) (*sdk.Setup, error) {
+func (s *localSdkFinder) maybeFindSketchSdk(wp *workshop.Workshop, w string) (sdk.Revision, error) {
 	sketchdir := workshop.SketchSdkCurrent(s.userDataDir, s.project.ProjectId, w)
 
 	recs, err := os.ReadDir(sketchdir)
 	// no Sketch SDK exists for the workshop and it is not an error.
 	if (err == nil && len(recs) == 0) || osutil.IsDirNotExist(err) {
-		return nil, nil
+		return sdk.Revision{}, nil
 	}
 	if err != nil {
-		return nil, err
+		return sdk.Revision{}, err
 	}
 
 	if wp == nil {
@@ -229,30 +226,22 @@ func (s *localSdkFinder) maybeFindSketchSdk(wp *workshop.Workshop, w string) (*s
 		// No workshop exists currently; including the sketch SDK would be unexpected.
 		// We remove it (but keep the stash) to prevent future refreshes from including it.
 		if err = os.RemoveAll(sketchdir); err != nil {
-			return nil, err
+			return sdk.Revision{}, err
 		}
-		return nil, nil
+		return sdk.Revision{}, nil
 	}
 
-	source := strings.ReplaceAll(sketchdir, "$", "$$")
-	return s.commitRevision(wp, w, sdk.Sketch, source)
+	return s.commitRevision(wp, w, sdk.Sketch, sketchdir)
 }
 
-func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk, source string) (*sdk.Setup, error) {
+func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk, source string) (sdk.Revision, error) {
 	var installed sdk.Revision
 	if wp != nil {
 		installed = wp.Sdks[sk].Revision
 	}
 
-	sourcePath := workshop.ExpandSdkSource(source, s.project.Path)
 	target := workshop.LocalSdkDir(s.userDataDir, s.project.ProjectId, w, sk)
-
-	revision, err := sdk.CommitRevision(s.user, sourcePath, target, installed)
-	if err != nil {
-		return nil, err
-	}
-
-	return &sdk.Setup{Name: sk, Source: source, Revision: revision}, nil
+	return sdk.CommitRevision(s.user, source, target, installed)
 }
 
 func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
@@ -282,7 +271,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string
 	retrieve := state.NewTaskSet()
 	retrieveMap := map[string]string{}
 	for _, s := range sdks {
-		if s.Revision.Store() {
+		if s.Source.NeedsRetrieve() {
 			r := sdkstate.Retrieve(st, s)
 			retrieve.AddTask(r)
 			retrieveMap[s.Name] = r.ID()
@@ -311,12 +300,12 @@ func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveTasks
 		// guarantee safety of concurrent installations.
 		var install *state.Task
 		var retrieveTask string
-		if setup.Revision.Local() {
-			install = sdkstate.InstallLocalSdk(st, setup)
-			retrieveTask = install.ID()
-		} else {
+		if setup.Source.NeedsRetrieve() {
 			retrieveTask = retrieveTasks[setup.Name]
 			install = sdkstate.Install(st, setup.Name, retrieveTask)
+		} else {
+			install = sdkstate.InstallLocalSdk(st, setup)
+			retrieveTask = install.ID()
 		}
 		addTask(install)
 

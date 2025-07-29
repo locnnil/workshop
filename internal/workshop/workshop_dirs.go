@@ -70,3 +70,14 @@ func CacheDir(pid, w string) string {
 func AptCacheDir(pid, w string) string {
 	return filepath.Join(CacheDir(pid, w), "apt")
 }
+
+func SdkSourcePath(userDataDir string, project Project, w, sk string, source sdk.Source) string {
+	switch source {
+	case sdk.ProjectSource:
+		return ProjectSdkPath(project.Path, sk)
+	case sdk.SketchSource:
+		return SketchSdkCurrent(userDataDir, project.ProjectId, w)
+	default:
+		return ""
+	}
+}

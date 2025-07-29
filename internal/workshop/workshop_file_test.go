@@ -87,7 +87,7 @@ scripts:
 	c.Assert(file.Sdks[1], check.DeepEquals, workshop.SdkRecord{Name: "cuda", Channel: "latest/edge"})
 	c.Assert(file.Sdks[2], check.DeepEquals, workshop.SdkRecord{Name: "zookeeper", Channel: "latest/candidate"})
 	c.Assert(file.Sdks[3], check.DeepEquals, workshop.SdkRecord{Name: "automotive", Channel: "latest/beta"})
-	c.Assert(file.Sdks[4], check.DeepEquals, workshop.SdkRecord{Name: "linter", Source: "project"})
+	c.Assert(file.Sdks[4], check.DeepEquals, workshop.SdkRecord{Name: "linter", Source: sdk.ProjectSource})
 	lines := len(strings.Split(yaml, "\n"))
 	skip := strings.Repeat("\n", lines-5)
 	c.Assert(string(file.Scripts["oneline"]), check.Equals, skip+"echo one line\n")
@@ -101,7 +101,7 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: []workshop.SdkRecord{
 			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
-			{Name: "two", Source: "project", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
+			{Name: "two", Source: sdk.ProjectSource, Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
 		},
 		Scripts: map[string]workshop.Script{
 			"oneline":   "\n\n\necho one line\n",
@@ -549,7 +549,7 @@ sdks:
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
-		{Name: sdk.System.String(), Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
+		{Name: sdk.System.String(), Source: sdk.SystemSource, Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
 }
 
 func (f *workshopFile) TestWorkshopConnectionsOK(c *check.C) {

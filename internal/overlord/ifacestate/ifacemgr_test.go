@@ -119,7 +119,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	allsdks := []testSdkSetup{{Setup: sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(1)}, yaml: systemYaml}}
+	allsdks := []testSdkSetup{{Setup: sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: sdk.R(1)}, yaml: systemYaml}}
 	allsdks = append(allsdks, sdks...)
 
 	for _, setup := range allsdks {

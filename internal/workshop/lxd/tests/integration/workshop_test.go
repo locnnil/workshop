@@ -453,7 +453,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
-	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
 	err = system.RetrieveSystemSdk(setup, nil)
 	c.Assert(err, check.IsNil)
 

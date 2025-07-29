@@ -93,7 +93,7 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 
 	for _, sd := range sdks {
 		s.writeSDKMetaFile(c, wfs, sd.Name, fmt.Sprintf(sdkTemplate, sd.Name))
-		c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: sd.Name, Channel: sd.Channel}), check.IsNil)
+		c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: sd.Name, Source: sdk.StoreSource, Channel: sd.Channel}), check.IsNil)
 	}
 
 	return w

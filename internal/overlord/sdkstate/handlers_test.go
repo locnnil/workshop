@@ -259,7 +259,7 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	newSdk := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
 	t := s.state.NewTask("retrieve-sdk", "retrieve")
 	t.Set("sdk-setup", newSdk)
 

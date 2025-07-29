@@ -18,7 +18,7 @@ import (
 type Setup struct {
 	Name        string     `json:"name"`
 	Channel     string     `json:"channel,omitempty"`
-	Source      string     `json:"source,omitempty"`
+	Source      Source     `json:"source,omitempty"`
 	Revision    Revision   `json:"revision"`
 	InstallTime *time.Time `json:"install-time"`
 }
@@ -31,8 +31,58 @@ func (s *Setup) filename() string {
 	return fmt.Sprintf("%s_%s.sdk", s.Name, s.Revision.String())
 }
 
+func (s *Setup) IsVolume() bool {
+	return s.Source == StoreSource || s.Source == SystemSource
+}
+
 func VolumeName(name string, revision Revision) string {
 	return fmt.Sprintf("%s-%s", name, revision)
+}
+
+type Source int
+
+const (
+	StoreSource Source = iota
+	SystemSource
+	ProjectSource
+	SketchSource
+)
+
+func (s Source) MarshalText() ([]byte, error) {
+	var text string
+	switch s {
+	case StoreSource:
+		text = "store"
+	case SystemSource:
+		text = "system"
+	case ProjectSource:
+		text = "project"
+	case SketchSource:
+		text = "sketch"
+	default:
+		return nil, fmt.Errorf("invalid SDK source: %v", int(s))
+	}
+	return []byte(text), nil
+}
+
+func (s *Source) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "store":
+		*s = StoreSource
+	case "system":
+		*s = SystemSource
+	case "project":
+		*s = ProjectSource
+	case "sketch":
+		*s = SketchSource
+	default:
+		return fmt.Errorf("invalid SDK source: %q", string(text))
+	}
+	return nil
+}
+
+func (s Source) NeedsRetrieve() bool {
+	return s == StoreSource || s == SystemSource
 }
 
 type sdkYaml struct {
@@ -77,7 +127,7 @@ type Info struct {
 	Type      Type
 	Revision  Revision
 	Channel   string
-	Source    string
+	Source    Source
 	BuildTime *time.Time
 
 	Plugs     map[string]*PlugInfo

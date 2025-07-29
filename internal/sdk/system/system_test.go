@@ -48,7 +48,7 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 		done = d
 		total = t
 	}}
-	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
 	c.Assert(system.RetrieveSystemSdk(setup, report), check.IsNil)
 	c.Check(done, testutil.IntGreaterThan, 0)
 	c.Check(total, testutil.IntGreaterThan, 0)
@@ -68,7 +68,7 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 }
 
 func (s *systemSdk) TestRetrieveSystemSdkWrongRevision(c *check.C) {
-	setup := sdk.Setup{Name: sdk.System.String(), Revision: sdk.R(system.SystemSdkRevision.N - 1)}
+	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: sdk.R(system.SystemSdkRevision.N - 1)}
 	err := system.RetrieveSystemSdk(setup, nil)
 	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
 

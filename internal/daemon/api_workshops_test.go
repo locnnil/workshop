@@ -923,7 +923,7 @@ func (s *apiSuite) createWFile(c *check.C, name, yaml string) {
 }
 
 func storeDownloadWithSaveRestore(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
-	if err := storeDownload(ctx, setup, report); err != nil || sdk.IsSystem(setup.Name) {
+	if err := storeDownload(ctx, setup, report); err != nil || setup.Source == sdk.SystemSource {
 		return err
 	}
 	hooksdir := filepath.Join(setup.Filepath(), "sdk", "hooks")
@@ -945,7 +945,7 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 		return err
 	}
 
-	if sdk.IsSystem(setup.Name) {
+	if setup.Source == sdk.SystemSource {
 		return os.CopyFS(sdkdir, system.SystemSdkFs)
 	}
 	metadir := filepath.Join(sdkdir, "meta")
@@ -1670,7 +1670,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		name: "somebound",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "mount-conflict", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		}, connections: []string{
@@ -1695,7 +1695,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		name: "basic",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 		},
 		slots: []string{
 			"system:camera",
@@ -1708,7 +1708,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 		},
 		slots: []string{
 			"system:camera",
@@ -1787,9 +1787,9 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		name: "basic",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Source: sdk.ProjectSource, Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/basic/test-sdk:data b8639dea/basic/system:mount",
@@ -1863,7 +1863,7 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-3", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
@@ -1944,7 +1944,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
 		connections: []string{
@@ -2014,7 +2014,7 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/edge", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2104,7 +2104,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(2), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2299,9 +2299,9 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
-			{Name: "test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-1), InstallTime: &s.installTime},
-			{Name: "test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: "test-sdk", Source: sdk.ProjectSource, Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Source: sdk.ProjectSource, Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
@@ -2345,9 +2345,9 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
-			{Name: "test-sdk", Source: "$PROJECT/.workshop/test-sdk", Revision: sdk.R(-2), InstallTime: &s.installTime},
-			{Name: "test-sdk-2", Source: "$PROJECT/.workshop/test-sdk-2", Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: "test-sdk", Source: sdk.ProjectSource, Revision: sdk.R(-2), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Source: sdk.ProjectSource, Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
@@ -2422,7 +2422,7 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2498,7 +2498,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2576,7 +2576,7 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
 		connections: []string{
@@ -2647,7 +2647,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2721,7 +2721,7 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2797,7 +2797,7 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@24.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -2876,7 +2876,7 @@ func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
 		connections: []string{
@@ -2948,7 +2948,7 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 		name: "basic",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 		},
 		slots: []string{
 			"system:camera",
@@ -3012,7 +3012,7 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
 		},
@@ -3558,16 +3558,13 @@ base: ubuntu@22.04
 
 	s.runActionTest(c, requests, expected)
 
-	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
-	sketchdir := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, "manysdks")
-
 	want := []expectedWorkshop{{
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "sketch", Source: sketchdir, Revision: sdk.R(-1), InstallTime: &s.installTime},
+			{Name: "sketch", Source: sdk.SketchSource, Revision: sdk.R(-1), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
@@ -3586,6 +3583,8 @@ base: ubuntu@22.04
 
 	s.ensureWorskhops(c, want)
 
+	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
+	sketchdir := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, "manysdks")
 	c.Assert(os.RemoveAll(sketchdir), check.IsNil)
 	s.mockSketchSdk(c, "manysdks", `name: sketch
 base: ubuntu@22.04
@@ -3613,9 +3612,9 @@ plugs:
 		name: "manysdks",
 		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
-			{Name: "sketch", Source: sketchdir, Revision: sdk.R(-2), InstallTime: &s.installTime},
+			{Name: "sketch", Source: sdk.SketchSource, Revision: sdk.R(-2), InstallTime: &s.installTime},
 		},
 		connections: []string{
 			"b8639dea/manysdks/sketch:sketch-plug b8639dea/manysdks/system:mount",

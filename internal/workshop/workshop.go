@@ -135,10 +135,10 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 	var err error
 	var meta string
-	if setup.Revision.Local() {
-		meta, err = w.metaFromFile(ctx, setup)
-	} else {
+	if setup.IsVolume() {
 		meta, err = w.metaFromVolume(ctx, setup)
+	} else {
+		meta, err = w.metaFromFile(ctx, setup)
 	}
 
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 
 func Retrieve(st *state.State, s sdk.Setup) *state.Task {
 	summary := fmt.Sprintf("Retrieve %q SDK from channel %q", s.Name, s.Channel)
-	if sdk.IsSystem(s.Name) {
+	if s.Source != sdk.StoreSource {
 		summary = fmt.Sprintf("Retrieve %q SDK", s.Name)
 	}
 
