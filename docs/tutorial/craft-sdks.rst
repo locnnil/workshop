@@ -302,6 +302,13 @@ installing system packages and preparing the workshop for use.
    :command:`apt` is configured to exclude recommended or suggested packages
    and answer 'yes' to all confirmation prompts.
 
+   Also, the use of :command:`sudo -u workshop` here is important
+   because only the :samp:`setup-project` hook runs as a normal user by default;
+   other hooks, like :samp:`setup-base`, run as root.
+   Running commands as the non-root user
+   helps preserve the correct environment variables and file ownership,
+   and can be easier than adjusting permissions afterwards.
+
 
 In the same directory,
 create a file named :file:`setup-project`:
