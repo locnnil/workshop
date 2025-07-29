@@ -53,7 +53,7 @@ Structure and behavior
 
 These topics provide detailed guidance on various aspects
 of operating an SDK or a workshop at run-time.
-Workshops are essentially made of SDKs;
+Workshops are largely made of SDKs;
 to understand how a workshop runs and the status it has,
 it's crucial to know how SDKs are structured and operated:
 
