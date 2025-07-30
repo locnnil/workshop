@@ -93,7 +93,7 @@ func unlockVolume(volume string) {
 	}
 }
 
-func (s *Backend) CreateVolume(ctx context.Context, name string) error {
+func (s *Backend) CreateVolume(ctx context.Context, name, kind string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (s *Backend) CreateVolume(ctx context.Context, name string) error {
 	vol.Name = name
 	vol.Type = "custom"
 	vol.ContentType = "filesystem"
-	vol.Config = map[string]string{}
+	vol.Config = map[string]string{workshop.ConfigVolumeKind: kind}
 
 	err = conn.CreateStoragePoolVolume(storagePool, vol)
 	if api.StatusErrorCheck(err, http.StatusConflict) {
@@ -114,7 +114,7 @@ func (s *Backend) CreateVolume(ctx context.Context, name string) error {
 	return err
 }
 
-func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string) error {
+func (s *Backend) ImportVolume(ctx context.Context, name, kind string, tarball string) error {
 	// There could be multiple launches that require the same volume. We don't
 	// want to unpack and import the volume multiple times.
 	if err := lockVolume(ctx, name); err != nil {
@@ -141,7 +141,7 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	// following format:
 	//
 	// backup/
-	//	volume/
+	//  volume/
 	//  index.yaml
 
 	dir, err := os.MkdirTemp("", name)
@@ -184,14 +184,18 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 
 	newtar := filepath.Join(dir, filepath.Base(tarball))
 
-	// Read the metadata to store it as a volume's property. This is not ideal
-	// when the backend knows the name of the file with metadata as the volume
-	// manager should be able to import any tarball as a volume. But given that
-	// it is only applicable to SDKs in the nearest future, it should be acceptable
-	// as the alternative would be to change the interface to accept the metadata.
-	meta, err := os.ReadFile(filepath.Join(dir, "volume", "meta", "sdk.yaml"))
-	if err != nil {
-		return err
+	config := map[string]string{workshop.ConfigVolumeKind: kind}
+	if kind == "sdk" {
+		// Read the metadata to store it as a volume's property. This is not ideal
+		// when the backend knows the name of the file with metadata as the volume
+		// manager should be able to import any tarball as a volume. But given that
+		// it is only applicable to SDKs in the nearest future, it should be acceptable
+		// as the alternative would be to change the interface to accept the metadata.
+		meta, err := os.ReadFile(filepath.Join(dir, "volume", "meta", "sdk.yaml"))
+		if err != nil {
+			return err
+		}
+		config[workshop.ConfigVolumeMeta] = string(meta)
 	}
 
 	repack := exec.CommandContext(ctx, "tar",
@@ -234,10 +238,7 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 		return err
 	}
 
-	return conn.UpdateStoragePoolVolume(storagePool, "custom", name, api.StorageVolumePut{
-		Config: map[string]string{
-			workshop.ConfigVolumeMeta: string(meta),
-		}}, "")
+	return conn.UpdateStoragePoolVolume(storagePool, "custom", name, api.StorageVolumePut{Config: config}, "")
 }
 
 func (s *Backend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {

@@ -85,10 +85,10 @@ type VolumeManager interface {
 	// Create a temporary storage volume for the workshop. It does not
 	// mount the device to the workshop, it must be mounted to the required
 	// workshop as a separate operation.
-	CreateVolume(ctx context.Context, name string) error
+	CreateVolume(ctx context.Context, name, kind string) error
 
 	// Import a tarball into the volume. The tarball must be a valid tarball filepath.
-	ImportVolume(ctx context.Context, name string, tarball string) error
+	ImportVolume(ctx context.Context, name, kind string, tarball string) error
 
 	// Attach the volume to the workshop. The volume must be created before.
 	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error

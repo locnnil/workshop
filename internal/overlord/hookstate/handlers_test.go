@@ -144,7 +144,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.launchWorkshop(c, "one")
 
 	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
-	err := s.backend.CreateVolume(s.ctx, volume)
+	err := s.backend.CreateVolume(s.ctx, volume, "state-storage")
 	c.Assert(err, check.IsNil)
 	defer func() {
 		_ = s.backend.DeleteVolume(s.ctx, volume)
@@ -193,7 +193,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.launchWorkshop(c, "one")
 
 	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
-	err := s.backend.CreateVolume(s.ctx, volume)
+	err := s.backend.CreateVolume(s.ctx, volume, "state-storage")
 	c.Assert(err, check.IsNil)
 	defer func() {
 		_ = s.backend.DeleteVolume(s.ctx, volume)
@@ -233,7 +233,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	s.launchWorkshop(c, "one")
 
 	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
-	err := s.backend.CreateVolume(s.ctx, volume)
+	err := s.backend.CreateVolume(s.ctx, volume, "state-storage")
 	c.Assert(err, check.IsNil)
 	defer func() {
 		_ = s.backend.DeleteVolume(s.ctx, volume)

@@ -87,7 +87,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		}
 	}
 
-	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision), rec.Filepath())
+	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision), "sdk", rec.Filepath())
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
 		return nil

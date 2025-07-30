@@ -164,7 +164,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Execute
-	err := f.bd.CreateVolume(f.ctx, "test")
+	err := f.bd.CreateVolume(f.ctx, "test", "testkind")
 
 	// Validate
 	c.Assert(err, check.IsNil)
@@ -198,7 +198,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	wg.Add(5)
 	for i := 0; i < 5; i++ {
 		go func() {
-			err := f.bd.ImportVolume(f.ctx, "test-1", tarball)
+			err := f.bd.ImportVolume(f.ctx, "test-1", "sdk", tarball)
 			if err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
@@ -219,7 +219,11 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
 	c.Check(vinfo.Name, check.Equals, "test-1")
-	c.Check(vinfo.Config, check.DeepEquals, map[string]string{"user.sdk.meta": testsdk})
+	expected := map[string]string{
+		"user.kind":     "sdk",
+		"user.sdk.meta": testsdk,
+	}
+	c.Check(vinfo.Config, check.DeepEquals, expected)
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -246,7 +250,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 		}
 
 		go func() {
-			err := f.bd.ImportVolume(newctx, "test-1", tarball)
+			err := f.bd.ImportVolume(newctx, "test-1", "sdk", tarball)
 			if err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
@@ -270,7 +274,11 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
 	c.Check(vinfo.Name, check.Equals, "test-1")
-	c.Check(vinfo.Config, check.DeepEquals, map[string]string{"user.sdk.meta": testsdk})
+	expected := map[string]string{
+		"user.kind":     "sdk",
+		"user.sdk.meta": testsdk,
+	}
+	c.Check(vinfo.Config, check.DeepEquals, expected)
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -458,7 +466,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	volume := sdk.VolumeName(setup.Name, setup.Revision)
-	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
+	err = f.bd.ImportVolume(f.ctx, volume, "sdk", setup.Filepath())
 	c.Assert(err, check.IsNil)
 	defer func() { _ = f.bd.DeleteVolume(f.ctx, volume) }()
 

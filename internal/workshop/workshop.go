@@ -20,6 +20,7 @@ var (
 	ConfigProjectId         = "user.workshop.project-id"
 	ConfigWorkshopFile      = "user.workshop.file"
 	ConfigWorkshopSdks      = "user.workshop.sdks"
+	ConfigVolumeKind        = "user.kind"
 	ConfigVolumeMeta        = "user.sdk.meta"
 	ConfigProjectPathDevice = "workshop.project"
 )

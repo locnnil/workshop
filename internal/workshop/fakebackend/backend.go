@@ -70,7 +70,7 @@ type FakeWorkshopBackend struct {
 	StashedWorkshops map[string]map[string]*FakeWorkshop
 	// storage volumes, the key is a volume name
 	volumeLock                sync.Mutex
-	WorkshopVolumes           map[string]bool
+	WorkshopVolumes           map[string]map[string]string
 	WorkshopVolumeContents    map[string]string
 	WorkshopVolumeMountPoints map[string]string
 	// the key is a username
@@ -102,7 +102,7 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
-	be.WorkshopVolumes = make(map[string]bool)
+	be.WorkshopVolumes = make(map[string]map[string]string)
 	be.WorkshopVolumeContents = make(map[string]string)
 	be.WorkshopVolumeMountPoints = make(map[string]string)
 	be.projects = make(map[string][]workshop.Project)
@@ -511,11 +511,11 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	return nil
 }
 
-func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, name string) error {
+func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, name, kind string) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	if s.WorkshopVolumes[name] {
+	if _, ok := s.WorkshopVolumes[name]; ok {
 		return workshop.ErrVolumeAlreadyExists
 	}
 
@@ -525,7 +525,7 @@ func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, name string) err
 	}
 
 	s.WorkshopVolumeContents[name] = vfs
-	s.WorkshopVolumes[name] = true
+	s.WorkshopVolumes[name] = map[string]string{workshop.ConfigVolumeKind: kind}
 	return nil
 }
 
@@ -583,15 +583,24 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 // ImportVolume imports a tarball into the volume. The tarball must be a valid
 // directory (unpacked so that the tests could provide a temp directory instead
 // of a packed tarball).
-func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, name string, tarball string) error {
+func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, name, kind string, tarball string) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	if s.WorkshopVolumes[name] {
+	if _, ok := s.WorkshopVolumes[name]; ok {
 		return workshop.ErrVolumeAlreadyExists
 	}
+
+	config := map[string]string{workshop.ConfigVolumeKind: kind}
+	if kind == "sdk" {
+		meta, err := os.ReadFile(filepath.Join(tarball, "meta", "sdk.yaml"))
+		if err == nil {
+			config[workshop.ConfigVolumeMeta] = string(meta)
+		}
+	}
+
 	s.WorkshopVolumeContents[name] = tarball
-	s.WorkshopVolumes[name] = true
+	s.WorkshopVolumes[name] = config
 	return nil
 }
 
@@ -608,16 +617,12 @@ func (s *FakeWorkshopBackend) Volume(ctx context.Context, name string) (workshop
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	if !s.WorkshopVolumes[name] {
+	config, ok := s.WorkshopVolumes[name]
+	if !ok {
 		return workshop.VolumeInfo{}, workshop.ErrVolumeNotFound
 	}
 
-	meta, err := os.ReadFile(filepath.Join(s.WorkshopVolumeContents[name], "meta", "sdk.yaml"))
-	if err != nil {
-		return workshop.VolumeInfo{}, err
-	}
-
-	return workshop.VolumeInfo{Name: name, Config: map[string]string{workshop.ConfigVolumeMeta: string(meta)}}, nil
+	return workshop.VolumeInfo{Name: name, Config: config}, nil
 }
 
 func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, error) {
