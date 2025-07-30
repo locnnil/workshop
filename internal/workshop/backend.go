@@ -100,6 +100,9 @@ type VolumeManager interface {
 	// unmount the volume from the workshop if mounted.
 	DeleteVolume(ctx context.Context, name string) error
 
+	// List volumes of a given kind.
+	Volumes(ctx context.Context, kind string) ([]VolumeInfo, error)
+
 	// Get the volume information.
 	Volume(ctx context.Context, name string) (VolumeInfo, error)
 }

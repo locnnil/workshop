@@ -266,6 +266,29 @@ func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	return nil
 }
 
+func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeInfo, error) {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Disconnect()
+
+	filters := []string{
+		"type=custom",
+		fmt.Sprintf("config.%s=%s", workshop.ConfigVolumeKind, kind),
+	}
+	vols, err := conn.GetStoragePoolVolumesWithFilter(storagePool, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	infos := make([]workshop.VolumeInfo, 0, len(vols))
+	for _, vol := range vols {
+		infos = append(infos, workshop.VolumeInfo{Name: vol.Name, Config: vol.Config})
+	}
+	return infos, nil
+}
+
 func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {
 	var info workshop.VolumeInfo
 	conn, err := s.LxdClient(ctx)

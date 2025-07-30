@@ -613,6 +613,19 @@ func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) err
 	return nil
 }
 
+func (s *FakeWorkshopBackend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeInfo, error) {
+	s.volumeLock.Lock()
+	defer s.volumeLock.Unlock()
+
+	var infos []workshop.VolumeInfo
+	for name, config := range s.WorkshopVolumes {
+		if config[workshop.ConfigVolumeKind] == kind {
+			infos = append(infos, workshop.VolumeInfo{Name: name, Config: config})
+		}
+	}
+	return infos, nil
+}
+
 func (s *FakeWorkshopBackend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()

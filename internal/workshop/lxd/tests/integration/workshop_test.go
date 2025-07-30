@@ -160,20 +160,29 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
-	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
-
 	// Execute
 	err := f.bd.CreateVolume(f.ctx, "test", "testkind")
+	c.Assert(err, check.IsNil)
 
 	// Validate
+	vols, err := f.bd.Volumes(f.ctx, "testkind")
 	c.Assert(err, check.IsNil)
+	c.Check(vols, check.HasLen, 1)
+
+	expected := workshop.VolumeInfo{
+		Name:   "test",
+		Config: map[string]string{workshop.ConfigVolumeKind: "testkind"},
+	}
+	c.Check(vols[0], check.DeepEquals, expected)
 
 	// Execute
 	err = f.bd.DeleteVolume(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Validate
+	vols, err = f.bd.Volumes(f.ctx, "testkind")
 	c.Assert(err, check.IsNil)
+	c.Check(vols, check.HasLen, 0)
 }
 
 var testsdk = `name: test-sdk
