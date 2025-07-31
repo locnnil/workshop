@@ -20,9 +20,8 @@ Here, you will practice all the major steps
 in the life cycle of a *workshop*,
 from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`,
 and :ref:`refreshing <tut_refresh>` it
-to :ref:`executing commands <tut_exec>`,
-:ref:`shelling <tut_shell>` into the workshop,
-and finally :ref:`removing <tut_remove>` it.
+to :ref:`executing commands <tut_exec>` and
+:ref:`shelling <tut_shell>` into the workshop.
 The actions you're about to perform
 cover most of your daily needs with |ws_markup|.
 
@@ -556,44 +555,6 @@ pass the change ID to the command:
 This lists all the tasks and includes logs for some of them;
 each task expresses a simple token of logic,
 such as running a hook or connecting an interface.
-
-
-.. _tut_remove:
-
-Remove a workshop
------------------
-
-The only thing left to cover here is the cleanup.
-
-If you no longer need your workshop,
-remove it:
-
-.. @artefact workshop remove
-
-.. code-block:: console
-
-   $ workshop remove
-
-
-This doesn't affect the files in the project directory,
-including the workshop definition,
-or any other content that was stored outside the workshop
-(e.g. using the :ref:`mount interface <tut_interfaces>`
-with a custom :command:`workshop remount` location;
-however, the content in *default* mount locations will be deleted).
-
-.. important::
-
-   Don't delete the project directory without first removing the workshop.
-   Otherwise, you'll need to manually delete the orphaned workshops;
-   for help, see this how-to guide section: :ref:`how_troubleshoot_lxc`.
-
-
-Even if you remove the workshop completely,
-you can rebuild it with :command:`workshop launch`;
-this may come in handy if you have removed your workshop
-using the command above
-before proceeding to the other parts of the tutorial.
 
 
 Next steps
