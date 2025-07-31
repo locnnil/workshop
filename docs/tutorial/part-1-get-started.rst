@@ -108,7 +108,7 @@ and
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.17_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.20_amd64.snap
 
 
 Shell integration (optional)
@@ -164,30 +164,30 @@ At run-time, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
 
-For demonstration purposes, assume we want to build some Go code.
-To do this, let's use the sample :samp:`go` SDK,
-which was already defined, built and published in the SDK Store
-by the |ws_markup| team.
+For demonstration purposes, assume we want to work with AI models using Ollama.
+To do this, let's use the :samp:`ollama` SDK,
+which provides a local AI model server.
 
 .. note::
 
-   The tutorial uses Go samples for demonstration purposes only.
-   This doesn't imply that |ws_markup| is intended solely for Go;
+   The tutorial uses Ollama for demonstration purposes only.
+   This doesn't imply that |ws_markup| is intended solely for AI;
    quite the contrary, it's envisioned as language-neutral and framework-agnostic.
 
 
 .. @artefact project
 
-For the project directory, clone the official Go examples repository:
+For the project directory, create a new Python repository:
 
 .. code-block:: console
 
-   $ git clone https://github.com/golang/example.git
-   $ cd example
+   $ mkdir ollama-python-project
+   $ cd ollama-python-project
+   $ git init
 
 
 Everything you handle with your workshop goes here:
-your source code, custom assets, and so on.
+your Python code, custom assets, and so on.
 
 .. @artefact workshop definition
 
@@ -196,18 +196,18 @@ create a workshop definition named :file:`workshop.yaml`:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 4
+   :emphasize-lines: 4,5
 
    name: dev
-   base: ubuntu@22.04
+   base: ubuntu@24.04
    sdks:
-     - name: go
-       channel: jammy/stable
+     - name: ollama
+       channel: 24.04/edge
 
 
-Here, the SDK is referenced as :samp:`go`,
+Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
-comes from the :samp:`jammy/stable` channel.
+comes from the :samp:`24.04/edge` channel.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
@@ -218,18 +218,23 @@ list the workshops in the project directory:
 
    $ workshop list
 
-     Project                Workshop   Status  Notes
-     ~/example              dev        Off     -
+     Project                  Workshop  Status  Notes
+     ~/ollama-python-project  dev       Off     -
 
 
 As the output suggests, your newly defined workshop is *Off*,
 so it needs to be launched.
 
+.. note::
+
+   For a detailed explanation of the workshop status values,
+   see the :ref:`exp_workshop_status` section.
+
 
 .. _tut_launch:
 
-Launch, start and stop
-~~~~~~~~~~~~~~~~~~~~~~
+Launch, start, and stop
+~~~~~~~~~~~~~~~~~~~~~~~
 
 To get a workshop ready for use, you launch it:
 
@@ -239,9 +244,11 @@ To get a workshop ready for use, you launch it:
 
    $ workshop launch
 
+     "dev" launched
 
-Now, the workshop is *Ready*;
-you can start using it to build, debug and run your code.
+
+Once the workshop is launched,
+you can start using it to build, debug, and run your code.
 
 .. note::
 
@@ -260,18 +267,20 @@ to see what went into your workshop:
    $ workshop info
 
      name:     dev
-     base:     ubuntu@22.04
-     project:  /home/user/example
+     base:     ubuntu@24.04
+     project:  /home/user/ollama-python-project
      status:   ready
      notes:    -
      sdks:
-       go:
-         tracking:   jammy/stable
-         installed:  1.23.0  2024-08-15  (51)
+       system:
+         installed:  (1)
+       ollama:
+         tracking:   24.04/edge
+         installed:  0.9.6  2025-07-21  (516)
          mounts:
-           mod-cache:
-             host-source:      .../6b79e889/dev/mount/go/mod-cache
-             workshop-target:  /home/workshop/go/pkg/mod
+           models:
+             host-source:      .../6b79e889/dev/mount/ollama/models
+             workshop-target:  /home/workshop/.ollama/models
 
 
 The output looks like the :ref:`definition <tut_define>`
@@ -283,7 +292,7 @@ ignore these for now.
 After launch, |ws_markup| starts tracking the project directory.
 The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
-and not be copied or stored externally, e.g. in a repository.
+and not be copied or stored externally, e.g., in a repository.
 
 .. note::
 
@@ -295,7 +304,7 @@ and not be copied or stored externally, e.g. in a repository.
       $ echo ".workshop.lock" >> .gitignore
 
 
-   To the contrary, the definition and the :file:`.workshop/` directory
+   In contrast, the definition and the :file:`.workshop/` directory
    are *meant* to be stored in a repository;
    if your :file:`.gitignore` file uses rules
    such as "ignore everything except these files and directories,"
@@ -303,7 +312,8 @@ and not be copied or stored externally, e.g. in a repository.
 
 
 You only need to launch a workshop once after defining it;
-for any subsequent changes, you can do a :ref:`refresh <tut_refresh>`.
+after any substantial changes to it,
+you do a :ref:`refresh <tut_refresh>`.
 Otherwise, the workshop is just a fancy container
 that can be started and stopped.
 
@@ -351,11 +361,11 @@ listed in your :ref:`workshop definition <tut_define>`
 are updated by their publishers.
 Alternatively,
 you may have changed the definition to switch bases,
-add and remove SDKs or toggle their channels.
+add and remove SDKs, or toggle their channels.
 In either case,
 you must refresh the workshop to apply the updates.
 
-To do so, change the base and the SDK channel in your definition
+For example, change the base and the SDK channel in your definition
 and refresh the workshop:
 
 .. code-block:: yaml
@@ -363,10 +373,10 @@ and refresh the workshop:
    :emphasize-lines: 2,5
 
    name: dev
-   base: ubuntu@24.04
+   base: ubuntu@22.04
    sdks:
-     - name: go
-       channel: noble/stable
+     - name: ollama
+       channel: 22.04/edge
 
 .. @artefact workshop refresh
 
@@ -391,9 +401,9 @@ Execute commands
 
 When the workshop is *Ready*,
 you can run arbitrary commands in it.
-In this tutorial, we're building Go code,
-and we've already cloned the official Go examples repository
-to serve as our project directory.
+In this tutorial, we're working with Ollama AI models,
+and we've already created a Python project directory
+to serve as our workspace.
 
 .. note::
 
@@ -402,34 +412,34 @@ to serve as our project directory.
    :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
 
 
-Next, build the :samp:`hello` example *inside the workshop*
+First, let's download a simple AI model *inside the workshop*
 using the :command:`workshop exec` command.
-The source for this example is in the :file:`hello/` directory.
+We'll use the :samp:`tinyllama` model, which is small and quick to download:
 
 .. @artefact workshop exec
 
 .. code-block:: console
 
-   $ workshop exec dev -- sh -c "cd hello && go build"
+   $ workshop exec dev -- ollama run tinyllama
 
 
-This runs the Go version installed by the :samp:`go` SDK.
-The resulting binary, built within the workshop environment,
-is now available in the :file:`hello/` directory in your project.
-If the host system permits
-(mind that it can differ from the workshop base),
-you can run the binary directly:
+This downloads and then runs the :samp:`tinyllama` model.
+The model will be stored in the mounted :file:`models/` directory,
+so it persists between workshop refreshes.
+
+You can also list the available models:
 
 .. code-block:: console
 
-   $ ./hello/hello
+   $ workshop exec dev -- ollama list
 
-     Hello, world!
+     NAME                ID              SIZE      MODIFIED
+     tinyllama:latest    2644915ede35    637 MB    24 seconds ago
 
 
-**This is the single most important part of the tutorial**;
-your deliverables, however complex they are, end up on the host system,
-while the tool chain is transparently confined and managed by |ws_markup|.
+Furthermore, your work files and deliverables,
+however complex they may be, can reside on the host system,
+while the toolchain is transparently confined and managed by |ws_markup|.
 This enables you to focus on your project,
 switching when needed between language and framework versions or base images.
 
@@ -453,12 +463,19 @@ who's also named :samp:`workshop`:
 .. code-block:: console
 
    $ workshop shell
-   workshop@dev-6b79e889:~$ pwd
+   workshop@dev-6b79e889:/project$ pwd
 
-     /home/workshop
+     /project
 
-   workshop@dev-6b79e889:~$ uname -a
-   workshop@dev-6b79e889:~$ exit
+   workshop@dev-6b79e889:/project$ lsb_release -a
+
+     ...
+     Distributor ID: Ubuntu
+     Description:    Ubuntu 22.04.5 LTS
+     Release:        22.04
+     Codename:       jammy
+
+   workshop@dev-6b79e889:/project$ exit
 
 
 .. _tut_project_updates:
@@ -475,12 +492,17 @@ are visible in the project directory, and vice versa:
 
    $ touch created_outside.txt
    $ workshop exec dev -- ls /project/
+
+     ...  created_outside.txt  ...
+
    $ workshop exec dev -- touch /project/created_inside.txt
    $ ls
 
+     ...  created_inside.txt  created_outside.txt  ...
 
-This isn't the only way the host interacts with the workshop;
-let's dive into how interfaces operate.
+
+Next, let's dive into how changes and tasks work
+to track your workshop activities.
 
 
 .. _tut_changes_tasks:
@@ -499,33 +521,36 @@ with :command:`workshop changes`:
    $ workshop changes
 
      ID  Status  Spawn               Ready               Summary
-     34  Done    today at 11:32 GMT  today at 11:33 GMT  Launch "dev" workshop
+     33  Done    today at 11:20 GMT  today at 11:20 GMT  Refresh "dev" workshop
+     34  Done    today at 11:32 GMT  today at 11:32 GMT  Execute command "sudo"
 
 
 Changes are enacted atomically to ensure workshops stay operational.
 Any change must have all its smaller steps, or tasks, succeed;
 otherwise, it will be undone.
 
+To look at the latest change,
+run the :command:`workshop tasks` command without an argument.
 To find out which tasks went into a certain change,
-pass the change ID to the :command:`workshop tasks` command.
-To look at the latest change, run the command without an argument:
+pass the change ID to the command:
 
 .. @artefact workshop tasks
 
 .. code-block:: console
 
-   $ workshop tasks
+   $ workshop tasks 33
 
-     Status    Duration  Summary
-     Done          35ms  Retrieve "system" SDK
-     Done          35ms  Retrieve "go" SDK from channel "noble/stable"
+     Status   Duration  Summary
+     Done    2m17.389s  Download "ubuntu@22.04" base image
+     Done        113ms  Retrieve "system" SDK
+     Done    2m59.777s  Retrieve "ollama" SDK from channel "22.04/edge"
+     Done        443ms  Create SDK state storage
+     Done        581ms  Run hook "save-state" for "system" SDK
+     Done        449ms  Run hook "save-state" for "ollama" SDK
+     Done         54ms  Disconnect interfaces of "ollama" SDK
      ...
-     Done          95ms  Install "go" SDK
-     Done          31ms  Register "go" SDK plugs and slots
-     Done     1m44.117s  Run hook "setup-base" for "go" SDK
-     ...
-     ......................................................................
-     Run hook "setup-base" for "go" SDK
+     Done        528ms  Setup "system" SDK profile
+
 
 
 This lists all the tasks and includes logs for some of them;
@@ -538,8 +563,7 @@ such as running a hook or connecting an interface.
 Remove a workshop
 -----------------
 
-We're at the end of our tutorial;
-the only thing left is the cleanup.
+The only thing left to cover here is the cleanup.
 
 If you no longer need your workshop,
 remove it:
@@ -562,7 +586,7 @@ however, the content in *default* mount locations will be deleted).
 
    Don't delete the project directory without first removing the workshop.
    Otherwise, you'll need to manually delete the orphaned workshops;
-   for help, see this guide: :ref:`how_troubleshoot_lxc`.
+   for help, see this how-to guide section: :ref:`how_troubleshoot_lxc`.
 
 
 Even if you remove the workshop completely,
@@ -579,9 +603,5 @@ This was the last step in this tutorial section;
 you are now familiar with the essential operations provided by |ws_markup|
 and have had your first taste of what it can do for you.
 
-Your next step is to learn how to work with interfaces.
-
-To continue learning about |ws_markup|,
-proceed to the :ref:`tut_work_with_interfaces` tutorial section.
-It builds on what you've learned here
-and expands your |ws_markup| skills.
+Your next step is to learn how to work with interfaces;
+proceed to the :ref:`tut_work_with_interfaces` section.

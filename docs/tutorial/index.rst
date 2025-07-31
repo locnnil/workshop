@@ -21,7 +21,7 @@ Follow the sections of the tutorial in order.
 .. toctree::
    :maxdepth: 1
 
-   Part 1: Get started <get-started>
-   Part 2: Work with interfaces <work-with-interfaces>
-   Part 3: Sketch SDKs <sketch-sdks>
-   Part 4: Craft SDKs <craft-sdks>
+   Part 1: Get started <part-1-get-started>
+   Part 2: Work with interfaces <part-2-work-with-interfaces>
+   Part 3: Sketch SDKs <part-3-sketch-sdks>
+   Part 4: Craft SDKs <part-4-craft-sdks>
