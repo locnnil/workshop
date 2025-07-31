@@ -162,6 +162,7 @@ X11
 XAUTHORITY
 XDG
 yaml
+yq
 YYYY
 zfs
 ZFS

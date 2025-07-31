@@ -14,5 +14,6 @@ These articles cover the aspects of using |ws_markup| with developer tooling:
 
    Connect VS Code to a workshop <connect-vscode>
    Use workshops with Git <git>
+   Run GitHub Actions locally <run-github-actions-locally>
    Run JupyterLab in your browser <run-jupyterlab-in-browser>
    Run VS Code in your browser <run-vscode-in-browser>

@@ -25,9 +25,10 @@ Develop with workshops
 ----------------------
 
 These articles cover the aspects of using |ws_markup| with developer tooling,
-such as integrating IDEs or using Git with workshops:
+such as integrating IDEs, using Git, or running CI/CD workflows with workshops:
 
 - :doc:`Connect VS Code to a workshop <develop-with-workshops/connect-vscode>`
+- :doc:`Run GitHub Actions locally <develop-with-workshops/run-github-actions-locally>`
 - :doc:`Run JupyterLab in your browser <develop-with-workshops/run-jupyterlab-in-browser>`
 - :doc:`Run VS Code in your browser <develop-with-workshops/run-vscode-in-browser>`
 - :doc:`Use workshops with Git <develop-with-workshops/git>`
@@ -63,7 +64,7 @@ Use workshops
 -------------
 
 These topics address daily |ws_markup|-related scenarios,
-such as moving projects within the file system or using |ws_markup| with Git:
+such as moving projects within the file system or adding custom scripts:
 
 - :doc:`Add scripts to workshops <use-workshops/add-scripts>`
 - :doc:`Forward ports <use-workshops/forward-ports>`
