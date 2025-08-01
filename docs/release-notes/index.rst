@@ -23,8 +23,9 @@ Releases
 
 .. toctree::
    :hidden:
-
-   Workshop v0.1.20 <v0.1.20>
+   
+   Workshop v0.1.21 <v0.1.21>
+   Workshop v0.1.20 <v0.1.20>  
    Workshop v0.1.19 <v0.1.19>
    Workshop v0.1.18 <v0.1.18>
    Workshop v0.1.17 <v0.1.17>
@@ -53,11 +54,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.20 <v0.1.20>`
-
+- :doc:`Workshop v0.1.21 <v0.1.21>`
 
 Recent versions:
 
+- :doc:`Workshop v0.1.20 <v0.1.20>`
 - :doc:`Workshop v0.1.19 <v0.1.19>`
 - :doc:`Workshop v0.1.18 <v0.1.18>`
 - :doc:`Workshop v0.1.17 <v0.1.17>`
@@ -88,11 +89,11 @@ Older versions:
 
 Latest version:
 
-- `SDKcraft v0.1.9 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.9>`_
-
+- `SDKcraft v0.1.10 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.10>`_
 
 Recent versions:
 
+- `SDKcraft v0.1.9 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.9>`_
 - `SDKcraft v0.1.8 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.8>`_
 - `SDKcraft v0.1.7 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.7>`_
 - `SDKcraft v0.1.6 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.6>`_
