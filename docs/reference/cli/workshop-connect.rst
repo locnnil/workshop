@@ -25,11 +25,10 @@ that is specified as the second argument or deduced from the context.
 - If the second argument only names the slot itself, the target is
   <WORKSHOP>/system:<SLOT>; <WORKSHOP> comes from the first argument.
 
-- If the second argument only names the workshop and SDK, the target is
-  <WORKSHOP>/<SDK>:<INTERFACE>;
-  <INTERFACE> is the interface in the plug's definition.
-  However, if there are several candidate slots that match the interface,
-  the command fails.
+- If the second argument omits the <SLOT> name,
+  the target slot is the one that uses the same interface as the <PLUG>,
+  regardless of the slot's name. However, if there are several slots
+  that use the same interface, the command fails.
 
 - If the target slot is compatible with the plug, the command attempts
   to connect them and returns the result.
