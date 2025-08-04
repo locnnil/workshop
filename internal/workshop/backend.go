@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/user"
 	"time"
 
@@ -96,8 +97,8 @@ type VolumeManager interface {
 	// workshop as a separate operation.
 	CreateVolume(ctx context.Context, info VolumeInfo) error
 
-	// Import a tarball into the volume. The tarball must be a valid tarball filepath.
-	ImportVolume(ctx context.Context, info VolumeInfo, tarball string) error
+	// Import a tarball into the volume.
+	ImportVolume(ctx context.Context, info VolumeInfo, tarball *os.File) error
 
 	// Attach the volume to the workshop. The volume must be created before.
 	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"gopkg.in/tomb.v2"
 
@@ -93,7 +94,12 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		Sdk:      rec.Name,
 		Revision: rec.Revision,
 	}
-	err = m.backend.ImportVolume(ctx, volume, rec.Filepath())
+	file, err := os.Open(rec.Filepath())
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	err = m.backend.ImportVolume(ctx, volume, file)
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
 		return nil

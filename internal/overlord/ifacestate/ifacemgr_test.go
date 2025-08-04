@@ -101,7 +101,10 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sd
 		Revision: rev,
 		Metadata: sdkYaml,
 	}
-	if err := be.ImportVolume(s.ctx, volume, vfs); err != nil {
+	file, err := os.Open(vfs)
+	c.Assert(err, check.IsNil)
+	defer file.Close()
+	if err := be.ImportVolume(s.ctx, volume, file); err != nil {
 		c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeAlreadyExists)
 	}
 }

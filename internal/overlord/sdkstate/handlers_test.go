@@ -165,7 +165,10 @@ func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revisi
 		Revision: rev,
 		Metadata: sdkYaml,
 	}
-	err = s.backend.ImportVolume(s.ctx, volume, vfs)
+	file, err := os.Open(vfs)
+	c.Assert(err, check.IsNil)
+	defer file.Close()
+	err = s.backend.ImportVolume(s.ctx, volume, file)
 	c.Assert(err, check.IsNil)
 }
 

@@ -583,7 +583,7 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 // ImportVolume imports a tarball into the volume. The tarball must be a valid
 // directory (unpacked so that the tests could provide a temp directory instead
 // of a packed tarball).
-func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball string) error {
+func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball *os.File) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
@@ -593,13 +593,13 @@ func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.Vo
 
 	// TODO: Remove when we can reliably fetch metadata from the store.
 	if info.Kind == "sdk" && info.Metadata == "" {
-		meta, err := os.ReadFile(filepath.Join(tarball, "meta", "sdk.yaml"))
+		meta, err := os.ReadFile(filepath.Join(tarball.Name(), "meta", "sdk.yaml"))
 		if err == nil {
 			info.Metadata = string(meta)
 		}
 	}
 
-	s.WorkshopVolumeContents[info.Name] = tarball
+	s.WorkshopVolumeContents[info.Name] = tarball.Name()
 	s.WorkshopVolumes[info.Name] = info
 	return nil
 }

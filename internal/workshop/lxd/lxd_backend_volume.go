@@ -115,7 +115,7 @@ func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeInfo) er
 	return err
 }
 
-func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball string) error {
+func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball *os.File) error {
 	// There could be multiple launches that require the same volume. We don't
 	// want to unpack and import the volume multiple times.
 	if err := lockVolume(ctx, info.Name); err != nil {
@@ -163,12 +163,12 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, ta
 		"--no-same-owner",
 		"--no-same-permissions",
 		"--keep-old-files",
-		"--force-local",
-		"--file="+tarball,
+		"--file=/dev/stdin",
 		"--transform",
 		"s,^,volume/,",
 		"--directory="+dir,
 	)
+	unpack.Stdin = tarball
 
 	if _, err := unpack.Output(); err != nil {
 		var exitErr *exec.ExitError
@@ -182,8 +182,6 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, ta
 	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(info.Name)), 0644); err != nil {
 		return err
 	}
-
-	newtar := filepath.Join(dir, filepath.Base(tarball))
 
 	// TODO: Remove when we can reliably fetch metadata from the store.
 	if info.Kind == "sdk" && info.Metadata == "" {
@@ -199,6 +197,7 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, ta
 		info.Metadata = string(meta)
 	}
 
+	newtar := filepath.Join(dir, filepath.Base(tarball.Name()))
 	repack := exec.CommandContext(ctx, "tar",
 		"--create",
 		"--format=posix",

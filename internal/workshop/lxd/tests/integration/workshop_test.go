@@ -215,15 +215,17 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	wg.Add(5)
 	for i := 0; i < 5; i++ {
 		go func() {
-			err := f.bd.ImportVolume(f.ctx, volume, tarball)
-			if err == nil {
+			defer wg.Done()
+			file, err := os.Open(tarball)
+			c.Assert(err, check.IsNil)
+			defer file.Close()
+			if err := f.bd.ImportVolume(f.ctx, volume, file); err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 				atomic.AddInt32(&existCnt, 1)
 			} else {
-				c.Logf("unexpected error: %v", err)
+				c.Assert(err, check.IsNil)
 			}
-			wg.Done()
 		}()
 	}
 	wg.Wait()
@@ -269,17 +271,19 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 		}
 
 		go func() {
-			err := f.bd.ImportVolume(newctx, volume, tarball)
-			if err == nil {
+			defer wg.Done()
+			file, err := os.Open(tarball)
+			c.Assert(err, check.IsNil)
+			defer file.Close()
+			if err := f.bd.ImportVolume(newctx, volume, file); err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 				atomic.AddInt32(&existCnt, 1)
 			} else if errors.Is(err, context.Canceled) {
 				atomic.AddInt32(&canceled, 1)
 			} else {
-				c.Logf("unexpected error: %v", err)
+				c.Assert(err, check.IsNil)
 			}
-			wg.Done()
 		}()
 	}
 	wg.Wait()
@@ -488,9 +492,16 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 		Revision: setup.Revision,
 		Metadata: string(meta),
 	}
-	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
+	file, err := os.Open(setup.Filepath())
+	c.Assert(err, check.IsNil)
+	err = f.bd.ImportVolume(f.ctx, volume, file)
+	file.Close()
 	c.Assert(err, check.IsNil)
 	defer func() { _ = f.bd.DeleteVolume(f.ctx, volume.Name) }()
+
+	info, err := f.bd.Volume(f.ctx, volume.Name)
+	c.Assert(err, check.IsNil)
+	c.Check(info, check.DeepEquals, volume)
 
 	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir(setup.Name), true)
 	c.Assert(err, check.IsNil)
