@@ -370,7 +370,11 @@ func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.CreateVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId), "state-storage")
+	volume := workshop.VolumeInfo{
+		Name: workshop.WorkshopStateVolumeName(w, prj.ProjectId),
+		Kind: "state-storage",
+	}
+	return m.backend.CreateVolume(ctx, volume)
 }
 
 func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {

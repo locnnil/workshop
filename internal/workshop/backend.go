@@ -77,18 +77,22 @@ type Stash interface {
 }
 
 type VolumeInfo struct {
-	Name   string
-	Config map[string]string
+	// Volume name.
+	Name string
+	// Kind of volume, e.g. "sdk" or "state-storage."
+	Kind string
+	// For SDK volumes, a copy of meta/sdk.yaml.
+	Metadata string
 }
 
 type VolumeManager interface {
 	// Create a temporary storage volume for the workshop. It does not
 	// mount the device to the workshop, it must be mounted to the required
 	// workshop as a separate operation.
-	CreateVolume(ctx context.Context, name, kind string) error
+	CreateVolume(ctx context.Context, info VolumeInfo) error
 
 	// Import a tarball into the volume. The tarball must be a valid tarball filepath.
-	ImportVolume(ctx context.Context, name, kind string, tarball string) error
+	ImportVolume(ctx context.Context, info VolumeInfo, tarball string) error
 
 	// Attach the volume to the workshop. The volume must be created before.
 	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error

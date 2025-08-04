@@ -94,7 +94,12 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sd
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
-	if err := be.ImportVolume(s.ctx, sdk.VolumeName(name, rev), "sdk", vfs); err != nil {
+	volume := workshop.VolumeInfo{
+		Name:     sdk.VolumeName(name, rev),
+		Kind:     "sdk",
+		Metadata: sdkYaml,
+	}
+	if err := be.ImportVolume(s.ctx, volume, vfs); err != nil {
 		c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeAlreadyExists)
 	}
 }

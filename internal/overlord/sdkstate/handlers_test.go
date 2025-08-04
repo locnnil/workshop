@@ -158,7 +158,12 @@ func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revisi
 	c.Assert(err, check.IsNil)
 	err = os.WriteFile(filepath.Join(meta, "sdk.yaml"), []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
-	err = s.backend.ImportVolume(s.ctx, sdk.VolumeName(name, rev), "sdk", vfs)
+	volume := workshop.VolumeInfo{
+		Name:     sdk.VolumeName(name, rev),
+		Kind:     "sdk",
+		Metadata: sdkYaml,
+	}
+	err = s.backend.ImportVolume(s.ctx, volume, vfs)
 	c.Assert(err, check.IsNil)
 }
 
