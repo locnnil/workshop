@@ -90,6 +90,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	volume := workshop.VolumeInfo{
 		Name: sdk.VolumeName(rec.Name, rec.Revision),
 		Kind: "sdk",
+		Sdk:  rec.Name,
 	}
 	err = m.backend.ImportVolume(ctx, volume, rec.Filepath())
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {

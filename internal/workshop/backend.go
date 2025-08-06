@@ -81,6 +81,8 @@ type VolumeInfo struct {
 	Name string
 	// Kind of volume, e.g. "sdk" or "state-storage."
 	Kind string
+	// Name of SDK associated with volume, if any.
+	Sdk string
 	// For SDK volumes, a copy of meta/sdk.yaml.
 	Metadata string
 }

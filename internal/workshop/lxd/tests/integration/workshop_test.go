@@ -201,6 +201,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	volume := workshop.VolumeInfo{
 		Name:     "test-1",
 		Kind:     "sdk",
+		Sdk:      "test",
 		Metadata: testsdk,
 	}
 	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
@@ -245,6 +246,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 	volume := workshop.VolumeInfo{
 		Name:     "test-1",
 		Kind:     "sdk",
+		Sdk:      "test",
 		Metadata: testsdk,
 	}
 	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
@@ -480,6 +482,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	volume := workshop.VolumeInfo{
 		Name:     sdk.VolumeName(setup.Name, setup.Revision),
 		Kind:     "sdk",
+		Sdk:      setup.Name,
 		Metadata: string(meta),
 	}
 	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())

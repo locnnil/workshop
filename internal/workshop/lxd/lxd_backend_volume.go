@@ -312,6 +312,9 @@ func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
 	config := map[string]string{
 		"user.kind": info.Kind,
 	}
+	if info.Sdk != "" {
+		config["user.sdk.name"] = info.Sdk
+	}
 	if info.Metadata != "" {
 		config["user.sdk.meta"] = info.Metadata
 	}
@@ -322,6 +325,7 @@ func volumeConfigToInfo(name string, config map[string]string) workshop.VolumeIn
 	return workshop.VolumeInfo{
 		Name:     name,
 		Kind:     config["user.kind"],
+		Sdk:      config["user.sdk.name"],
 		Metadata: config["user.sdk.meta"],
 	}
 }
