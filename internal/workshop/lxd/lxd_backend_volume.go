@@ -13,6 +13,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -315,6 +316,9 @@ func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
 	if info.Sdk != "" {
 		config["user.sdk.name"] = info.Sdk
 	}
+	if !info.Revision.Unset() {
+		config["user.sdk.revision"] = info.Revision.String()
+	}
 	if info.Metadata != "" {
 		config["user.sdk.meta"] = info.Metadata
 	}
@@ -322,10 +326,15 @@ func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
 }
 
 func volumeConfigToInfo(name string, config map[string]string) workshop.VolumeInfo {
+	revision, err := sdk.ParseRevision(config["user.sdk.revision"])
+	if err != nil {
+		revision = sdk.Revision{}
+	}
 	return workshop.VolumeInfo{
 		Name:     name,
 		Kind:     config["user.kind"],
 		Sdk:      config["user.sdk.name"],
+		Revision: revision,
 		Metadata: config["user.sdk.meta"],
 	}
 }

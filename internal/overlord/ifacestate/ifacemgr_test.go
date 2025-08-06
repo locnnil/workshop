@@ -98,6 +98,7 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sd
 		Name:     sdk.VolumeName(name, rev),
 		Kind:     "sdk",
 		Sdk:      name,
+		Revision: rev,
 		Metadata: sdkYaml,
 	}
 	if err := be.ImportVolume(s.ctx, volume, vfs); err != nil {

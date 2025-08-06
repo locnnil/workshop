@@ -12,6 +12,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type ContextKeyProjectId string
@@ -83,6 +84,8 @@ type VolumeInfo struct {
 	Kind string
 	// Name of SDK associated with volume, if any.
 	Sdk string
+	// Revision of SDK associated with volume, if any.
+	Revision sdk.Revision
 	// For SDK volumes, a copy of meta/sdk.yaml.
 	Metadata string
 }

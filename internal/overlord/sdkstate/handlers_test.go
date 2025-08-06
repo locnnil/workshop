@@ -162,6 +162,7 @@ func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revisi
 		Name:     sdk.VolumeName(name, rev),
 		Kind:     "sdk",
 		Sdk:      name,
+		Revision: rev,
 		Metadata: sdkYaml,
 	}
 	err = s.backend.ImportVolume(s.ctx, volume, vfs)
