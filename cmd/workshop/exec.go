@@ -357,15 +357,31 @@ func (c *CmdRun) complete(cmd *cobra.Command, args []string, toComplete string) 
 	}
 
 	if scriptIdx > len(args) {
-		// Just complete workshop names, even though script names are valid
-		// if there's a single workshop.
-		return c.root.doCompleteWorkshopNames(args, []string{"Ready", "Waiting"})
+		names, directive := c.root.doCompleteWorkshopNames(args, []string{"Ready", "Waiting"})
+
+		// Try script names if no workshop names match partial argument.
+		partialMatch := func(name string) bool {
+			return strings.HasPrefix(name, toComplete)
+		}
+		if directive != cobra.ShellCompDirectiveError && !slices.ContainsFunc(names, partialMatch) {
+			names, directive := completeScripts(c.root, args)
+			if directive != cobra.ShellCompDirectiveError {
+				return names, directive
+			}
+
+		}
+
+		return names, directive
 	}
 	if scriptIdx < len(args) {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	scriptsCmd := CmdScripts{root: c.root}
+	return completeScripts(c.root, args)
+}
+
+func completeScripts(root *CmdRoot, args []string) ([]string, cobra.ShellCompDirective) {
+	scriptsCmd := CmdScripts{root: root}
 	scripts, err := scriptsCmd.scripts(args)
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
