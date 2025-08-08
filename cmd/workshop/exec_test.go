@@ -98,17 +98,17 @@ func (m *workshopExec) TestWorkshopRunCompletion(c *check.C) {
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3, 5, 7, 10:
+		case 1, 3, 5, 7, 10, 12, 14:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
 			fmt.Fprintln(w, r)
-		case 2, 8:
+		case 2, 8, 13, 15:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			w.WriteHeader(200)
 			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
-		case 4, 9, 11:
+		case 4, 9, 11, 16:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/scripts", m.prjId))
 			w.WriteHeader(200)
@@ -119,7 +119,7 @@ func (m *workshopExec) TestWorkshopRunCompletion(c *check.C) {
 			w.WriteHeader(404)
 			fmt.Fprintln(w, mockWorkshopScriptsError)
 		default:
-			c.Errorf("expected 11 calls, now on %d", n)
+			c.Errorf("expected 16 calls, now on %d", n)
 		}
 	})
 
@@ -171,5 +171,10 @@ func (m *workshopExec) TestWorkshopRunCompletion(c *check.C) {
 	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(result, check.HasLen, 0)
 
-	c.Check(n, check.Equals, 11)
+	os.Args = []string{"workshop", "__complete", "run", "f"}
+	result, compDirective = run.ValidArgsFunction(run, nil, "f")
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Check(result, check.DeepEquals, []string{"bar", "foo"})
+
+	c.Check(n, check.Equals, 16)
 }
