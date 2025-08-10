@@ -16,7 +16,7 @@ First, you'll need to have the `remote development extension pack
 <https://code.visualstudio.com/docs/remote/remote-overview>`__
 installed.
 
-After that, add the :samp:`code-remote` SDK to your workshop definition:
+After that, add the :samp:`vscode-remote` SDK to your workshop definition:
 
 .. code-block:: yaml
    :caption: workshop.yaml
