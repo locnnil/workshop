@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -260,6 +261,9 @@ func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	if err = conn.DeleteStoragePoolVolume(storagePool, "custom", name); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
+		}
+		if api.StatusErrorCheck(err, http.StatusBadRequest) && strings.Contains(err.Error(), "still in use") {
+			return workshop.ErrVolumeInUse
 		}
 		return err
 	}

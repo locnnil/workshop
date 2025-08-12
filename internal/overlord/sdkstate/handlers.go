@@ -263,3 +263,47 @@ func (m *SdkManager) doUnregisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	return m.repo.RemoveSdk(project.ProjectId, w, setup.Name)
 }
+
+func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+
+	user, prj, _, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	st.Lock()
+	defer st.Unlock()
+
+	var sdkSetup sdk.Setup
+	if err := task.Get("sdk-setup", &sdkSetup); err != nil {
+		logger.Debugf("On SdkManager.Cleanup: the %q task is not associated with a SDK setup", task.ID())
+		return nil
+	}
+
+	if !sdkSetup.IsVolume() || sdk.IsSystem(sdkSetup.Name) {
+		return nil
+	}
+
+	// No changes must be in progress, otherwise we cannot safely remove unused SDK volumes.
+	changes := st.Changes()
+	for _, change := range changes {
+		if change.Kind() != "launch" && change.Kind() != "refresh" {
+			continue
+		}
+		if !change.IsReady() {
+			return &state.Retry{}
+		}
+	}
+
+	err = m.backend.DeleteVolume(ctx, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+	if errors.Is(err, workshop.ErrVolumeInUse) {
+		logger.Debugf("On SdkManager.Cleanup: the %q volume is still in use", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+		return nil
+	}
+
+	return err
+}

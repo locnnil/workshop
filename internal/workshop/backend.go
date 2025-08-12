@@ -33,6 +33,7 @@ var (
 	ErrWorkshopNotLaunched = errors.New("workshop not launched")
 	ErrVolumeNotFound      = errors.New("volume not found")
 	ErrVolumeAlreadyExists = errors.New("volume already exists")
+	ErrVolumeInUse         = errors.New("volume is in use")
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
 	User = user.User{
