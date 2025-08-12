@@ -158,7 +158,17 @@ func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revisi
 	c.Assert(err, check.IsNil)
 	err = os.WriteFile(filepath.Join(meta, "sdk.yaml"), []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
-	err = s.backend.ImportVolume(s.ctx, sdk.VolumeName(name, rev), vfs)
+	volume := workshop.VolumeInfo{
+		Name:     sdk.VolumeName(name, rev),
+		Kind:     "sdk",
+		Sdk:      name,
+		Revision: rev,
+		Metadata: sdkYaml,
+	}
+	file, err := os.Open(vfs)
+	c.Assert(err, check.IsNil)
+	defer file.Close()
+	err = s.backend.ImportVolume(s.ctx, volume, file)
 	c.Assert(err, check.IsNil)
 }
 
@@ -259,7 +269,7 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	newSdk := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
 	t := s.state.NewTask("retrieve-sdk", "retrieve")
 	t.Set("sdk-setup", newSdk)
 

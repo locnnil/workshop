@@ -20,7 +20,6 @@ var (
 	ConfigProjectId         = "user.workshop.project-id"
 	ConfigWorkshopFile      = "user.workshop.file"
 	ConfigWorkshopSdks      = "user.workshop.sdks"
-	ConfigVolumeMeta        = "user.sdk.meta"
 	ConfigProjectPathDevice = "workshop.project"
 )
 
@@ -100,11 +99,10 @@ func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string,
 		return "", err
 	}
 
-	meta, ok := vinfo.Config[ConfigVolumeMeta]
-	if !ok {
+	if vinfo.Metadata == "" {
 		return "", fmt.Errorf("cannot find %q SDK metadata", setup.Name)
 	}
-	return meta, nil
+	return vinfo.Metadata, nil
 }
 
 func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, error) {
@@ -135,10 +133,10 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 
 	var err error
 	var meta string
-	if setup.Revision.Local() {
-		meta, err = w.metaFromFile(ctx, setup)
-	} else {
+	if setup.IsVolume() {
 		meta, err = w.metaFromVolume(ctx, setup)
+	} else {
+		meta, err = w.metaFromFile(ctx, setup)
 	}
 
 	if err != nil {

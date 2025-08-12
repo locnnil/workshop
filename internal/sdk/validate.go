@@ -56,7 +56,7 @@ func Validate(sdk *Info) error {
 
 // ValidateName checks if a string can be used as an SDK name.
 func ValidateName(name string) error {
-	if name == "agent" || strings.HasPrefix(name, "project-") {
+	if name == "agent" || strings.HasPrefix(name, "try-") || strings.HasPrefix(name, "project-") {
 		return fmt.Errorf("%q is a reserved SDK name", name)
 	}
 	if !sdkName.MatchString(name) {

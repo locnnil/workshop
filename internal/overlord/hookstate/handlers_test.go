@@ -143,11 +143,14 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
+	volume := workshop.VolumeInfo{
+		Name: workshop.WorkshopStateVolumeName("ws", s.project.ProjectId),
+		Kind: "state-storage",
+	}
 	err := s.backend.CreateVolume(s.ctx, volume)
 	c.Assert(err, check.IsNil)
 	defer func() {
-		_ = s.backend.DeleteVolume(s.ctx, volume)
+		_ = s.backend.DeleteVolume(s.ctx, volume.Name)
 	}()
 
 	s.state.Unlock()
@@ -164,7 +167,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	defer ws.Close()
-	err = s.backend.AttachVolume(s.ctx, "ws", volume, dirs.WorkshopStateDir, false)
+	err = s.backend.AttachVolume(s.ctx, "ws", volume.Name, dirs.WorkshopStateDir, false)
 	c.Check(err, check.IsNil)
 	info, err := ws.Stat("/var/lib/workshop/state/sdk/one")
 	c.Check(err, check.IsNil)
@@ -192,15 +195,18 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
+	volume := workshop.VolumeInfo{
+		Name: workshop.WorkshopStateVolumeName("ws", s.project.ProjectId),
+		Kind: "state-storage",
+	}
 	err := s.backend.CreateVolume(s.ctx, volume)
 	c.Assert(err, check.IsNil)
 	defer func() {
-		_ = s.backend.DeleteVolume(s.ctx, volume)
+		_ = s.backend.DeleteVolume(s.ctx, volume.Name)
 	}()
 	// Setup state storage (must be already set by the save-state in a real use
 	// case).
-	vfs := s.backend.WorkshopVolumeContents[volume]
+	vfs := s.backend.WorkshopVolumeContents[volume.Name]
 	c.Check(err, check.IsNil)
 	err = os.MkdirAll(filepath.Join(vfs, "sdk", "one"), 0755)
 	c.Check(err, check.IsNil)
@@ -232,11 +238,14 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	volume := workshop.WorkshopStateVolumeName("ws", s.project.ProjectId)
+	volume := workshop.VolumeInfo{
+		Name: workshop.WorkshopStateVolumeName("ws", s.project.ProjectId),
+		Kind: "state-storage",
+	}
 	err := s.backend.CreateVolume(s.ctx, volume)
 	c.Assert(err, check.IsNil)
 	defer func() {
-		_ = s.backend.DeleteVolume(s.ctx, volume)
+		_ = s.backend.DeleteVolume(s.ctx, volume.Name)
 	}()
 
 	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {

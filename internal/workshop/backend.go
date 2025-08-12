@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/user"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type ContextKeyProjectId string
@@ -77,18 +79,28 @@ type Stash interface {
 }
 
 type VolumeInfo struct {
-	Name   string
-	Config map[string]string
+	// Volume name.
+	Name string
+	// Kind of volume, e.g. "sdk" or "state-storage."
+	Kind string
+	// Hash of tarball used to create volume.
+	Sha3_384 string
+	// Name of SDK associated with volume, if any.
+	Sdk string
+	// Revision of SDK associated with volume, if any.
+	Revision sdk.Revision
+	// For SDK volumes, a copy of meta/sdk.yaml.
+	Metadata string
 }
 
 type VolumeManager interface {
 	// Create a temporary storage volume for the workshop. It does not
 	// mount the device to the workshop, it must be mounted to the required
 	// workshop as a separate operation.
-	CreateVolume(ctx context.Context, name string) error
+	CreateVolume(ctx context.Context, info VolumeInfo) error
 
-	// Import a tarball into the volume. The tarball must be a valid tarball filepath.
-	ImportVolume(ctx context.Context, name string, tarball string) error
+	// Import a tarball into the volume.
+	ImportVolume(ctx context.Context, info VolumeInfo, tarball *os.File) error
 
 	// Attach the volume to the workshop. The volume must be created before.
 	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error
@@ -99,6 +111,9 @@ type VolumeManager interface {
 	// Delete a temporary storage volume for the workshop. It does not
 	// unmount the volume from the workshop if mounted.
 	DeleteVolume(ctx context.Context, name string) error
+
+	// List volumes of a given kind.
+	Volumes(ctx context.Context, kind string) ([]VolumeInfo, error)
 
 	// Get the volume information.
 	Volume(ctx context.Context, name string) (VolumeInfo, error)

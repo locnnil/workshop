@@ -48,15 +48,15 @@ func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
 	w.Sdks = map[string]sdk.Setup{
 		"test-sdk-1": {Name: "test-sdk-1", Revision: sdk.R(1), Channel: "latest/stable"},
 		"test-sdk-2": {Name: "test-sdk-2", Revision: sdk.R(1), Channel: "latest/edge"},
-		"system":     {Name: "system", Revision: sdk.R(1)},
-		"sketch":     {Name: "sketch", Revision: sdk.R(-3)},
+		"system":     {Name: "system", Source: sdk.SystemSource, Revision: sdk.R(1)},
+		"sketch":     {Name: "sketch", Source: sdk.SketchSource, Revision: sdk.R(-3)},
 	}
 
 	sdks := w.SdksByInstallOrder()
 	c.Assert(sdks, check.DeepEquals, []sdk.Setup{
-		{Name: "system", Revision: sdk.R(1)},
+		{Name: "system", Source: sdk.SystemSource, Revision: sdk.R(1)},
 		{Name: "test-sdk-1", Revision: sdk.R(1), Channel: "latest/stable"},
 		{Name: "test-sdk-2", Revision: sdk.R(1), Channel: "latest/edge"},
-		{Name: "sketch", Revision: sdk.R(-3)},
+		{Name: "sketch", Source: sdk.SketchSource, Revision: sdk.R(-3)},
 	})
 }

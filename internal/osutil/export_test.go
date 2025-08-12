@@ -28,10 +28,11 @@ import (
 )
 
 var (
-	FilesAreEqualChunked = filesAreEqualChunked
-	StreamsEqualChunked  = streamsEqualChunked
-	ParseRawEnvironment  = parseRawEnvironment
-	DoCopyFile           = doCopyFile
+	FilesAreEqualChunked      = filesAreEqualChunked
+	StreamsEqualChunked       = streamsEqualChunked
+	ParseRawEnvironment       = parseRawEnvironment
+	ParseSystemctlEnvironment = parseSystemctlEnvironment
+	DoCopyFile                = doCopyFile
 )
 
 // ParseRawExpandableEnv returns a new expandable environment parsed from key=value strings.

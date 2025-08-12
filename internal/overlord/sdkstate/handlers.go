@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"gopkg.in/tomb.v2"
 
@@ -73,7 +74,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
-	if sdk.IsSystem(rec.Name) {
+	if rec.Source == sdk.SystemSource {
 		if err := system.RetrieveSystemSdk(rec, reporter); err != nil {
 			return err
 		}
@@ -87,7 +88,18 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		}
 	}
 
-	err = m.backend.ImportVolume(ctx, sdk.VolumeName(rec.Name, rec.Revision), rec.Filepath())
+	volume := workshop.VolumeInfo{
+		Name:     sdk.VolumeName(rec.Name, rec.Revision),
+		Kind:     "sdk",
+		Sdk:      rec.Name,
+		Revision: rec.Revision,
+	}
+	file, err := os.Open(rec.Filepath())
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	err = m.backend.ImportVolume(ctx, volume, file)
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
 		return nil
@@ -153,7 +165,7 @@ func (m *SdkManager) mountSdk(ctx context.Context, user string, project *worksho
 	name := sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision)
 	sdkPath := sdk.SdkDir(sdkSetup.Name)
 
-	if sdkSetup.Revision.Store() {
+	if sdkSetup.IsVolume() {
 		return m.backend.AttachVolume(ctx, w, name, sdkPath, true)
 	}
 
@@ -196,7 +208,7 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 func (m *SdkManager) unmountSdk(ctx context.Context, w string, sdkSetup sdk.Setup) error {
 	name := sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision)
-	if sdkSetup.Revision.Store() {
+	if sdkSetup.IsVolume() {
 		return m.backend.DetachVolume(ctx, w, name)
 	}
 	return m.backend.RemoveWorkshopMount(ctx, w, name)

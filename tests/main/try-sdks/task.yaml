@@ -1,0 +1,44 @@
+summary: Check support for trying out packed SDKs
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove || true
+  lxc storage volume delete workshop custom/test-sdk-basic-x1 || true
+  lxc storage volume delete workshop custom/test-sdk-basic-x2 || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Launch workshop with SDKs from try area"
+  store_area="$SDK_STORE_BUCKET_DIR/test-sdk-basic"
+  try_area='/home/ubuntu/.local/share/workshop/try/test-sdk-basic'
+  sudo -u ubuntu mkdir -p "$try_area"
+  sudo -u ubuntu cp "$store_area/latest/stable/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
+  echo fakehash | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
+  sudo -u ubuntu cp "$store_area/latest/stable/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
+
+  workshop_exec launch
+  workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
+  try_area_contracted="~${try_area#*ubuntu}"
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].tracking' | MATCH "^${try_area_contracted}\$"
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+
+  echo "Check try and in-project SDKs can share revision numbers"
+  sed 's/try-test-sdk-basic/project-test-sdk-basic/' -i .workshop/dev.yaml
+  workshop_exec exec -- test ! -f /in-project-marker
+  workshop_exec refresh
+  workshop_exec exec -- test -f /in-project-marker
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+
+  echo "Check existing try revisions are reused"
+  sed 's/project-test-sdk-basic/try-test-sdk-basic/' -i .workshop/dev.yaml
+  workshop_exec refresh
+  workshop_exec exec -- test ! -f /in-project-marker
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+
+  echo "Check SDKs in try area can be updated"
+  sudo -u ubuntu cp "$store_area/latest/edge/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
+  echo fakehash2 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
+  sudo -u ubuntu cp "$store_area/latest/edge/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
+
+  workshop_exec refresh
+  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
+  workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'

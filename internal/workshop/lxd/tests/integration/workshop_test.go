@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"os/user"
+	"path/filepath"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -160,20 +161,30 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
-	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
-	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
-
 	// Execute
-	err := f.bd.CreateVolume(f.ctx, "test")
+	volume := workshop.VolumeInfo{
+		Name:     "test",
+		Kind:     "testkind",
+		Sha3_384: "abc123",
+	}
+	err := f.bd.CreateVolume(f.ctx, volume)
+	c.Assert(err, check.IsNil)
 
 	// Validate
+	vols, err := f.bd.Volumes(f.ctx, "testkind")
 	c.Assert(err, check.IsNil)
+	c.Check(vols, check.HasLen, 1)
+
+	c.Check(vols[0], check.Equals, volume)
 
 	// Execute
 	err = f.bd.DeleteVolume(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Validate
+	vols, err = f.bd.Volumes(f.ctx, "testkind")
 	c.Assert(err, check.IsNil)
+	c.Check(vols, check.HasLen, 0)
 }
 
 var testsdk = `name: test-sdk
@@ -188,6 +199,13 @@ sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
 func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	// Execute
 	sdkfs := c.MkDir()
+	volume := workshop.VolumeInfo{
+		Name:     "test-1",
+		Kind:     "sdk",
+		Sdk:      "test",
+		Revision: sdk.R(1),
+		Metadata: testsdk,
+	}
 	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
 
 	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
@@ -198,15 +216,17 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	wg.Add(5)
 	for i := 0; i < 5; i++ {
 		go func() {
-			err := f.bd.ImportVolume(f.ctx, "test-1", tarball)
-			if err == nil {
+			defer wg.Done()
+			file, err := os.Open(tarball)
+			c.Assert(err, check.IsNil)
+			defer file.Close()
+			if err := f.bd.ImportVolume(f.ctx, volume, file); err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 				atomic.AddInt32(&existCnt, 1)
 			} else {
-				c.Logf("unexpected error: %v", err)
+				c.Assert(err, check.IsNil)
 			}
-			wg.Done()
 		}()
 	}
 	wg.Wait()
@@ -218,8 +238,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
-	c.Check(vinfo.Name, check.Equals, "test-1")
-	c.Check(vinfo.Config, check.DeepEquals, map[string]string{"user.sdk.meta": testsdk})
+	c.Check(vinfo, check.Equals, volume)
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -228,6 +247,13 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 	// Execute
 	sdkfs := c.MkDir()
+	volume := workshop.VolumeInfo{
+		Name:     "test-1",
+		Kind:     "sdk",
+		Sdk:      "test",
+		Revision: sdk.R(1),
+		Metadata: testsdk,
+	}
 	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
 
 	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
@@ -246,17 +272,19 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 		}
 
 		go func() {
-			err := f.bd.ImportVolume(newctx, "test-1", tarball)
-			if err == nil {
+			defer wg.Done()
+			file, err := os.Open(tarball)
+			c.Assert(err, check.IsNil)
+			defer file.Close()
+			if err := f.bd.ImportVolume(newctx, volume, file); err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 				atomic.AddInt32(&existCnt, 1)
 			} else if errors.Is(err, context.Canceled) {
 				atomic.AddInt32(&canceled, 1)
 			} else {
-				c.Logf("unexpected error: %v", err)
+				c.Assert(err, check.IsNil)
 			}
-			wg.Done()
 		}()
 	}
 	wg.Wait()
@@ -269,8 +297,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
-	c.Check(vinfo.Name, check.Equals, "test-1")
-	c.Check(vinfo.Config, check.DeepEquals, map[string]string{"user.sdk.meta": testsdk})
+	c.Check(vinfo, check.Equals, volume)
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -453,16 +480,31 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
-	setup := sdk.Setup{Name: sdk.System.String(), Revision: system.SystemSdkRevision}
+	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
 	err = system.RetrieveSystemSdk(setup, nil)
 	c.Assert(err, check.IsNil)
-
-	volume := sdk.VolumeName(setup.Name, setup.Revision)
-	err = f.bd.ImportVolume(f.ctx, volume, setup.Filepath())
+	meta, err := system.SystemSdkFs.ReadFile(filepath.Join("meta", "sdk.yaml"))
 	c.Assert(err, check.IsNil)
-	defer func() { _ = f.bd.DeleteVolume(f.ctx, volume) }()
 
-	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir(setup.Name), true)
+	volume := workshop.VolumeInfo{
+		Name:     sdk.VolumeName(setup.Name, setup.Revision),
+		Kind:     "sdk",
+		Sdk:      setup.Name,
+		Revision: setup.Revision,
+		Metadata: string(meta),
+	}
+	file, err := os.Open(setup.Filepath())
+	c.Assert(err, check.IsNil)
+	err = f.bd.ImportVolume(f.ctx, volume, file)
+	file.Close()
+	c.Assert(err, check.IsNil)
+	defer func() { _ = f.bd.DeleteVolume(f.ctx, volume.Name) }()
+
+	info, err := f.bd.Volume(f.ctx, volume.Name)
+	c.Assert(err, check.IsNil)
+	c.Check(info, check.DeepEquals, volume)
+
+	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir(setup.Name), true)
 	c.Assert(err, check.IsNil)
 
 	err = w.AddSdk(f.ctx, setup)
@@ -475,7 +517,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
 	c.Assert(err, check.IsNil)
 
-	err = f.bd.AttachVolume(f.ctx, "test", volume, sdk.SdkDir("sdk"), true)
+	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir("sdk"), true)
 	c.Assert(err, check.IsNil)
 
 	err = w.AddSdk(f.ctx, sdk.Setup{Name: "sdk", Revision: sdk.R(5)})

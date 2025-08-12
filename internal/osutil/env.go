@@ -107,6 +107,52 @@ func parseRawEnvironment(raw []string) (Environment, error) {
 	return env, nil
 }
 
+func parseSystemctlEnvironment(raw []string) (Environment, error) {
+	env, err := parseRawEnvironment(raw)
+	if err != nil {
+		return env, err
+	}
+
+	for key, value := range env {
+		unescaped, err := unescapeSystemctlValue(value)
+		if err != nil {
+			entry := fmt.Sprintf("%s=%s", key, value)
+			return nil, fmt.Errorf("cannot parse environment entry: %q", entry)
+		}
+		env[key] = unescaped
+	}
+
+	return env, nil
+}
+
+func unescapeSystemctlValue(value string) (string, error) {
+	s, found := strings.CutPrefix(value, "$'")
+	if !found {
+		return value, nil
+	}
+	s, found = strings.CutSuffix(s, "'")
+	if !found {
+		return "", strconv.ErrSyntax
+	}
+
+	var builder strings.Builder
+	for {
+		idx := strings.IndexByte(s, '\\')
+		if idx < 0 {
+			builder.WriteString(s)
+			return builder.String(), nil
+		}
+
+		builder.WriteString(s[:idx])
+		rune, _, tail, err := strconv.UnquoteChar(s[idx:], '\'')
+		if err != nil {
+			return "", err
+		}
+		builder.WriteRune(rune)
+		s = tail
+	}
+}
+
 func ParseEnvironment(raw []string) (Environment, error) {
 	return parseRawEnvironment(raw)
 }

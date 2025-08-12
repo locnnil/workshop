@@ -13,6 +13,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -93,7 +94,7 @@ func unlockVolume(volume string) {
 	}
 }
 
-func (s *Backend) CreateVolume(ctx context.Context, name string) error {
+func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeInfo) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -102,10 +103,10 @@ func (s *Backend) CreateVolume(ctx context.Context, name string) error {
 
 	// Create the storage volume entry
 	vol := api.StorageVolumesPost{}
-	vol.Name = name
+	vol.Name = info.Name
 	vol.Type = "custom"
 	vol.ContentType = "filesystem"
-	vol.Config = map[string]string{}
+	vol.Config = volumeInfoToConfig(info)
 
 	err = conn.CreateStoragePoolVolume(storagePool, vol)
 	if api.StatusErrorCheck(err, http.StatusConflict) {
@@ -114,13 +115,13 @@ func (s *Backend) CreateVolume(ctx context.Context, name string) error {
 	return err
 }
 
-func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string) error {
+func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball *os.File) error {
 	// There could be multiple launches that require the same volume. We don't
 	// want to unpack and import the volume multiple times.
-	if err := lockVolume(ctx, name); err != nil {
+	if err := lockVolume(ctx, info.Name); err != nil {
 		return err
 	}
-	defer unlockVolume(name)
+	defer unlockVolume(info.Name)
 
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -128,7 +129,7 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	}
 	defer conn.Disconnect()
 
-	_, _, err = conn.GetStoragePoolVolume(storagePool, "custom", name)
+	_, _, err = conn.GetStoragePoolVolume(storagePool, "custom", info.Name)
 	if err == nil {
 		return workshop.ErrVolumeAlreadyExists
 	}
@@ -141,10 +142,10 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	// following format:
 	//
 	// backup/
-	//	volume/
+	//  volume/
 	//  index.yaml
 
-	dir, err := os.MkdirTemp("", name)
+	dir, err := os.MkdirTemp("", info.Name)
 	if err != nil {
 		return err
 	}
@@ -162,12 +163,12 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 		"--no-same-owner",
 		"--no-same-permissions",
 		"--keep-old-files",
-		"--force-local",
-		"--file="+tarball,
+		"--file=/dev/stdin",
 		"--transform",
 		"s,^,volume/,",
 		"--directory="+dir,
 	)
+	unpack.Stdin = tarball
 
 	if _, err := unpack.Output(); err != nil {
 		var exitErr *exec.ExitError
@@ -178,22 +179,25 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 	}
 
 	// Generate index.yaml for the volume.
-	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(name)), 0644); err != nil {
+	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(info.Name)), 0644); err != nil {
 		return err
 	}
 
-	newtar := filepath.Join(dir, filepath.Base(tarball))
-
-	// Read the metadata to store it as a volume's property. This is not ideal
-	// when the backend knows the name of the file with metadata as the volume
-	// manager should be able to import any tarball as a volume. But given that
-	// it is only applicable to SDKs in the nearest future, it should be acceptable
-	// as the alternative would be to change the interface to accept the metadata.
-	meta, err := os.ReadFile(filepath.Join(dir, "volume", "meta", "sdk.yaml"))
-	if err != nil {
-		return err
+	// TODO: Remove when we can reliably fetch metadata from the store.
+	if info.Kind == "sdk" && info.Metadata == "" {
+		// Read the metadata to store it as a volume's property. This is not ideal
+		// when the backend knows the name of the file with metadata as the volume
+		// manager should be able to import any tarball as a volume. But given that
+		// it is only applicable to SDKs in the nearest future, it should be acceptable
+		// as the alternative would be to change the interface to accept the metadata.
+		meta, err := os.ReadFile(filepath.Join(dir, "volume", "meta", "sdk.yaml"))
+		if err != nil {
+			return err
+		}
+		info.Metadata = string(meta)
 	}
 
+	newtar := filepath.Join(dir, filepath.Base(tarball.Name()))
 	repack := exec.CommandContext(ctx, "tar",
 		"--create",
 		"--format=posix",
@@ -222,7 +226,7 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 
 	vol := lxd.StoragePoolVolumeBackupArgs{
 		BackupFile: f,
-		Name:       name,
+		Name:       info.Name,
 	}
 
 	op, err := conn.CreateStoragePoolVolumeFromBackup(storagePool, vol)
@@ -234,10 +238,8 @@ func (s *Backend) ImportVolume(ctx context.Context, name string, tarball string)
 		return err
 	}
 
-	return conn.UpdateStoragePoolVolume(storagePool, "custom", name, api.StorageVolumePut{
-		Config: map[string]string{
-			workshop.ConfigVolumeMeta: string(meta),
-		}}, "")
+	volPut := api.StorageVolumePut{Config: volumeInfoToConfig(info)}
+	return conn.UpdateStoragePoolVolume(storagePool, "custom", info.Name, volPut, "")
 }
 
 func (s *Backend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
@@ -265,24 +267,77 @@ func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {
-	var info workshop.VolumeInfo
+func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeInfo, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return info, err
+		return nil, err
+	}
+	defer conn.Disconnect()
+
+	filters := []string{
+		"type=custom",
+		fmt.Sprintf("config.user.kind=%s", kind),
+	}
+	vols, err := conn.GetStoragePoolVolumesWithFilter(storagePool, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	infos := make([]workshop.VolumeInfo, 0, len(vols))
+	for _, vol := range vols {
+		infos = append(infos, volumeConfigToInfo(vol.Name, vol.Config))
+	}
+	return infos, nil
+}
+
+func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return workshop.VolumeInfo{}, err
 	}
 	defer conn.Disconnect()
 
 	vol, _, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return info, workshop.ErrVolumeNotFound
+		return workshop.VolumeInfo{}, workshop.ErrVolumeNotFound
 	}
-
 	if err != nil {
-		return info, err
+		return workshop.VolumeInfo{}, err
 	}
 
-	info.Name = vol.Name
-	info.Config = vol.Config
-	return info, nil
+	return volumeConfigToInfo(vol.Name, vol.Config), nil
+}
+
+func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
+	config := map[string]string{
+		"user.kind": info.Kind,
+	}
+	if info.Sha3_384 != "" {
+		config["user.sha3-384"] = info.Sha3_384
+	}
+	if info.Sdk != "" {
+		config["user.sdk.name"] = info.Sdk
+	}
+	if !info.Revision.Unset() {
+		config["user.sdk.revision"] = info.Revision.String()
+	}
+	if info.Metadata != "" {
+		config["user.sdk.meta"] = info.Metadata
+	}
+	return config
+}
+
+func volumeConfigToInfo(name string, config map[string]string) workshop.VolumeInfo {
+	revision, err := sdk.ParseRevision(config["user.sdk.revision"])
+	if err != nil {
+		revision = sdk.Revision{}
+	}
+	return workshop.VolumeInfo{
+		Name:     name,
+		Kind:     config["user.kind"],
+		Sha3_384: config["user.sha3-384"],
+		Sdk:      config["user.sdk.name"],
+		Revision: revision,
+		Metadata: config["user.sdk.meta"],
+	}
 }

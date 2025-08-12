@@ -24,6 +24,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"unicode"
 
 	. "gopkg.in/check.v1"
 
@@ -147,6 +148,100 @@ func (s *envSuite) TestParseRawEnvironmentDuplicateKey(c *C) {
 	env, err := osutil.ParseRawEnvironment([]string{"K=1", "K=2"})
 	c.Assert(err, ErrorMatches, `cannot overwrite earlier value of "K"`)
 	c.Assert(env, IsNil)
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentHappy(c *C) {
+	for _, t := range []struct {
+		lines []string
+		env   map[string]string
+	}{
+		{
+			[]string{"K=V"},
+			map[string]string{"K": "V"},
+		},
+		{
+			[]string{"K=V=V=V"},
+			map[string]string{"K": "V=V=V"},
+		},
+		{
+			[]string{"K1=V1", "K2=V2"},
+			map[string]string{"K1": "V1", "K2": "V2"},
+		},
+	} {
+		env, err := osutil.ParseSystemctlEnvironment(t.lines)
+		c.Assert(err, IsNil)
+		c.Check(env, DeepEquals, osutil.Environment(t.env))
+	}
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentEscaped(c *C) {
+	var raw, escaped strings.Builder
+	for rune := range unicode.MaxASCII + 1 {
+		raw.WriteRune(rune)
+		switch rune {
+		case '\a':
+			escaped.WriteString(`\a`)
+		case '\b':
+			escaped.WriteString(`\b`)
+		case '\f':
+			escaped.WriteString(`\f`)
+		case '\n':
+			escaped.WriteString(`\n`)
+		case '\r':
+			escaped.WriteString(`\r`)
+		case '\t':
+			escaped.WriteString(`\t`)
+		case '\v':
+			escaped.WriteString(`\v`)
+		case '\\':
+			escaped.WriteString(`\\`)
+		case '\'':
+			escaped.WriteString(`\'`)
+		default:
+			if unicode.IsControl(rune) {
+				fmt.Fprintf(&escaped, `\%03o`, rune)
+			} else {
+				escaped.WriteRune(rune)
+			}
+		}
+	}
+
+	entry := fmt.Sprintf("K=$'%s'", escaped.String())
+	expected := map[string]string{"K": raw.String()}
+
+	env, err := osutil.ParseSystemctlEnvironment([]string{entry})
+	c.Assert(err, IsNil)
+	c.Check(env, DeepEquals, osutil.Environment(expected))
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentNotKeyValue(c *C) {
+	env, err := osutil.ParseSystemctlEnvironment([]string{"KEY"})
+	c.Assert(err, ErrorMatches, `cannot parse environment entry: "KEY"`)
+	c.Check(env, IsNil)
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentEmptyKey(c *C) {
+	env, err := osutil.ParseSystemctlEnvironment([]string{"=VALUE"})
+	c.Assert(err, ErrorMatches, `environment variable name cannot be empty: "=VALUE"`)
+	c.Check(env, IsNil)
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentDuplicateKey(c *C) {
+	env, err := osutil.ParseSystemctlEnvironment([]string{"K=1", "K=2"})
+	c.Assert(err, ErrorMatches, `cannot overwrite earlier value of "K"`)
+	c.Check(env, IsNil)
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentUnterminated(c *C) {
+	env, err := osutil.ParseSystemctlEnvironment([]string{"K=$'1"})
+	c.Assert(err, ErrorMatches, `cannot parse environment entry: "K=\$'1"`)
+	c.Check(env, IsNil)
+}
+
+func (s *envSuite) TestParseSystemctlEnvironmentInvalidEscape(c *C) {
+	env, err := osutil.ParseSystemctlEnvironment([]string{"K=$'1\\"})
+	c.Assert(err, ErrorMatches, `cannot parse environment entry: "K=\$'1\\\\"`)
+	c.Check(env, IsNil)
 }
 
 func (s *envSuite) TestOSEnvironment(c *C) {

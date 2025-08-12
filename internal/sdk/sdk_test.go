@@ -1,6 +1,7 @@
 package sdk_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -27,6 +28,18 @@ func (s *SdkSuite) SetUpTest(c *check.C) {
 
 func (s *SdkSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
+}
+
+func (s *SdkSuite) TestSourceMarshalUnmarshal(c *check.C) {
+	for i := range sdk.SketchSource + 1 {
+		setup := sdk.Setup{Name: "sdk", Source: i}
+		data, err := json.Marshal(setup)
+		c.Assert(err, check.IsNil)
+
+		var result sdk.Setup
+		c.Assert(json.Unmarshal(data, &result), check.IsNil)
+		c.Check(result, check.Equals, setup)
+	}
 }
 
 func (s *SdkSuite) TestSimple(c *check.C) {

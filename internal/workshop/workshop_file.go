@@ -39,21 +39,6 @@ func ProjectSdkPath(project, name string) string {
 	return filepath.Join(project, Directory, name)
 }
 
-func ExpandSdkSource(source, project string) string {
-	return os.Expand(source, func(s string) string {
-		switch s {
-		case "PROJECT":
-			return project
-		case "$":
-			// Unescape $$ -> $.
-			return "$"
-		default:
-			// Should never be reached because Workshop controls the source.
-			return ""
-		}
-	})
-}
-
 type PlugOrBind struct {
 	Bind *PlugRef
 	Plug interface{}
@@ -141,16 +126,19 @@ func (b PlugRef) MarshalYAML() (interface{}, error) {
 type SdkRecord struct {
 	Name    string                 `yaml:"name"`
 	Channel string                 `yaml:"channel,omitempty"`
-	Source  string                 `yaml:"source,omitempty"`
+	Source  sdk.Source             `yaml:"source,omitempty"`
 	Plugs   map[string]PlugOrBind  `yaml:"plugs,omitempty"`
 	Slots   map[string]interface{} `yaml:"slots,omitempty"`
 }
 
 func (s SdkRecord) MarshalYAML() (interface{}, error) {
-	if s.Source != "" {
-		s.Name = fmt.Sprintf("%s-%s", s.Source, s.Name)
-		s.Source = ""
+	switch s.Source {
+	case sdk.TrySource:
+		s.Name = fmt.Sprintf("try-%s", s.Name)
+	case sdk.ProjectSource:
+		s.Name = fmt.Sprintf("project-%s", s.Name)
 	}
+	s.Source = 0
 
 	type record SdkRecord
 	return (*record)(&s), nil
@@ -159,16 +147,30 @@ func (s SdkRecord) MarshalYAML() (interface{}, error) {
 func (s *SdkRecord) UnmarshalYAML(value *yaml.Node) error {
 	type record SdkRecord
 	err := value.Decode((*record)(s))
+	s.Name, s.Source = parseSdkName(s.Name)
+	return err
+}
 
-	name, found := strings.CutPrefix(s.Name, "project-")
-	if found {
-		s.Name = name
-		s.Source = "project"
-	} else {
-		s.Source = ""
+func parseSdkName(name string) (string, sdk.Source) {
+	if sdk.IsSystem(name) {
+		return name, sdk.SystemSource
 	}
 
-	return err
+	if sdk.IsSketch(name) {
+		return name, sdk.SketchSource
+	}
+
+	suffix, found := strings.CutPrefix(name, "try-")
+	if found {
+		return suffix, sdk.TrySource
+	}
+
+	suffix, found = strings.CutPrefix(name, "project-")
+	if found {
+		return suffix, sdk.ProjectSource
+	}
+
+	return name, sdk.StoreSource
 }
 
 type Connection struct {
