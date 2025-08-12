@@ -216,8 +216,9 @@ func userEnvironment(user *user.User) (map[string]string, error) {
 		return nil, fmt.Errorf("%s", string(errOut))
 	}
 
+	// TODO: use --output=json once systemd >= 250.
 	rawEnv := strings.FieldsFunc(string(out), func(r rune) bool { return r == '\n' })
-	return ParseEnvironment(rawEnv)
+	return parseSystemctlEnvironment(rawEnv)
 }
 
 func FakeUserEnvironment(f func(user *user.User) (map[string]string, error)) func() {
