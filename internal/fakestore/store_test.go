@@ -35,6 +35,9 @@ plugs:
     interface: gpu
 `
 
+var testSdkNoBase = `name: test-sdk
+`
+
 func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
 		var s = store.StoreSdk{
@@ -103,6 +106,34 @@ func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
 	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
 	c.Assert(err, check.ErrorMatches, "(?s).*test-sdk-broken: yaml: block sequence entries are not allowed in this context")
+}
+
+func (s *storeSuite) TestSdkActionInstallNoBase(c *check.C) {
+	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
+		var s = store.StoreSdk{
+			Name:     "test-sdk",
+			Channel:  channel,
+			Revision: sdk.Revision{N: 123},
+			SdkYAML:  testSdkNoBase,
+		}
+		return s, nil
+	})
+	defer r()
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	store := store.New()
+	acts := []sdk.SdkAction{{
+		ProjectId: "24242424",
+		Workshop:  "test-workshop",
+		Action:    sdk.Install,
+		Name:      "test-sdk",
+		Base:      "ubuntu@20.04",
+		Channel:   "latest/stable",
+	},
+	}
+	res, err := store.SdkAction(context.Background(), acts)
+	c.Assert(res, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *storeSuite) TestSdkActionInstallIncompatibleBase(c *check.C) {
