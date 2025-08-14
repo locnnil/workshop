@@ -109,8 +109,9 @@ type VolumeManager interface {
 	// Detach the volume from the workshop.
 	DetachVolume(ctx context.Context, wp, name string) error
 
-	// Delete a temporary storage volume for the workshop. It does not
-	// unmount the volume from the workshop if mounted.
+	// Delete a temporary storage volume for the workshop. It does not unmount
+	// the volume from the workshop if mounted. No error is returned if the
+	// volume does not exist.
 	DeleteVolume(ctx context.Context, name string) error
 
 	// List volumes of a given kind.

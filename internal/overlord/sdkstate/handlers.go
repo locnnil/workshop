@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/tomb.v2"
 
@@ -264,12 +265,34 @@ func (m *SdkManager) doUnregisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return m.repo.RemoveSdk(project.ProjectId, w, setup.Name)
 }
 
+type SdkVolumeCooldownTimeKey string
+
+func sameVolume(task *state.Task, other *state.Task) bool {
+	var sdkSetup sdk.Setup
+	if err := task.Get("sdk-setup", &sdkSetup); err != nil {
+		return false
+	}
+
+	var otherSdkSetup sdk.Setup
+	if err := other.Get("sdk-setup", &otherSdkSetup); err != nil {
+		return false
+	}
+
+	if !sdkSetup.IsVolume() || !otherSdkSetup.IsVolume() {
+		return false
+	}
+
+	return sdkSetup.Name == otherSdkSetup.Name && sdkSetup.Revision == otherSdkSetup.Revision
+}
+
 func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
 
 	user, prj, _, err := UserProjectWorkshop(task)
 	if err != nil {
-		return err
+		// Log as an internal error, no need to retry again.
+		logger.Debugf("On SdkManager.Cleanup: internal error: %v", err)
+		return nil
 	}
 
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
@@ -288,20 +311,79 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		return nil
 	}
 
-	// No changes must be in progress, otherwise we cannot safely remove unused SDK volumes.
-	changes := st.Changes()
-	for _, change := range changes {
-		if change.Kind() != "launch" && change.Kind() != "refresh" {
-			continue
-		}
-		if !change.IsReady() {
-			return &state.Retry{}
+	vk := SdkVolumeCooldownTimeKey(sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+	cooldownStart, ok := st.Cached(vk).(time.Time)
+	if !ok {
+		// No cooldown start time cached means that clean up has just started or
+		// workshopd was restarted.
+		st.Cache(vk, task.ReadyTime())
+		return &state.Retry{}
+	} else {
+		// Imagine the situation when a change with multiple tasks that use this
+		// volume is in progress. Every unregister-sdk task will initiate a
+		// cleanup after the change is ready. All cleanups are unarranged and
+		// can run concurrently. We need to ensure that only one of them will
+		// continue to track the volume cooldown time.
+		readyTime := task.ReadyTime()
+		if !readyTime.Equal(cooldownStart) {
+			if readyTime.Before(cooldownStart) {
+				// Another more recent task initiated cleanup for this SDK
+				// volume.
+				return nil
+			} else {
+				// Update the cooldown start time to the current task ready time.
+				st.Cache(vk, readyTime)
+				return &state.Retry{}
+			}
 		}
 	}
 
+	// Check if there are any tasks in progress that use the same SDK volume.
+	// Remember, cleanup tasks are attempted on every Ensure call, which can be
+	// either periodic or triggered by a new API request. If it's the latter,
+	// there could be a chance that the volume will be used again.
+	changes := st.Changes()
+	for _, change := range changes {
+		// Other changes like "exec" do not affect SDK volumes, so we can skip them.
+		if !change.IsReady() {
+			if change.Kind() == "launch" {
+				for _, t := range change.Tasks() {
+					if t.Kind() == "install-sdk" {
+						if sameVolume(task, t) {
+							// Launch may end up using the same SDK volume if successful,
+							// so skip the cleanup for now.
+							return &state.Retry{}
+						}
+					}
+				}
+			}
+			if change.Kind() == "refresh" || change.Kind() == "remove" {
+				for _, t := range change.Tasks() {
+					if t.Kind() == "unregister-sdk" {
+						if sameVolume(task, t) {
+							// Another task in the same change is using the same SDK volume.
+							// We can skip the cleanup for now.
+							logger.Debugf("On SdkManager.Cleanup: another task %q in the %q change is using the %q SDK volume, skip clean up",
+								t.ID(), change.ID(), sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+							return nil
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if time.Since(cooldownStart) < sdkVolumeCooldownTime {
+		return &state.Retry{}
+	}
+
+	// Delete volume ignores ErrVolumeNotFound.
 	err = m.backend.DeleteVolume(ctx, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
-	if errors.Is(err, workshop.ErrVolumeInUse) {
-		logger.Debugf("On SdkManager.Cleanup: the %q volume is still in use", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+	if err == nil || errors.Is(err, workshop.ErrVolumeInUse) {
+		if errors.Is(err, workshop.ErrVolumeInUse) {
+			logger.Debugf("On SdkManager.Cleanup: the %q volume is still in use, skip clean up", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+		}
+		st.Cache(vk, nil)
 		return nil
 	}
 

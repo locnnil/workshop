@@ -1,6 +1,8 @@
 package sdkstate
 
 import (
+	"time"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -11,6 +13,10 @@ type SdkManager struct {
 	backend workshop.Backend
 	repo    *interfaces.Repository
 }
+
+var (
+	sdkVolumeCooldownTime = 1 * time.Hour
+)
 
 func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) *SdkManager {
 	manager := &SdkManager{repo: repo}
@@ -31,4 +37,12 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 
 func (w *SdkManager) Ensure() error {
 	return nil
+}
+
+func FakeSdkVolumeCooldownTime(t time.Duration) (restore func()) {
+	old := sdkVolumeCooldownTime
+	sdkVolumeCooldownTime = t
+	return func() {
+		sdkVolumeCooldownTime = old
+	}
 }
