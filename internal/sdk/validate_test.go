@@ -73,6 +73,15 @@ func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 	c.Check(err, check.ErrorMatches, `invalid SDK name "foo.something"`)
 }
 
+func (s *ValidateSuite) TestNoSdkBase(c *check.C) {
+	info, err := sdk.ReadSdkInfo([]byte(`name: foo
+`), s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+
+	err = sdk.Validate(info)
+	c.Check(err, check.IsNil)
+}
+
 func (s *ValidateSuite) TestIllegalSdkBase(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo
 base: ubuntu@21.04
