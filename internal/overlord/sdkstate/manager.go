@@ -31,6 +31,7 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 	runner.AddHandler("unregister-sdk", OnDo(manager.doUnregisterSdk), OnUndo(manager.doRegisterSdk))
 
 	runner.AddCleanup("unregister-sdk", manager.doDeleteUnusedSdkVolumes)
+	runner.AddCleanup("install-sdk", manager.doDeleteUnusedSdkVolumes)
 
 	return manager
 }

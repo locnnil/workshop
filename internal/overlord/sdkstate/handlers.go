@@ -301,6 +301,11 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 	st.Lock()
 	defer st.Unlock()
 
+	if task.Kind() == "install-sdk" && task.Status() == state.DoneStatus {
+		// If the launch or refresh was successful, no need to clean up the SDK volume.
+		return nil
+	}
+
 	var sdkSetup sdk.Setup
 	if err := task.Get("sdk-setup", &sdkSetup); err != nil {
 		logger.Debugf("On SdkManager.Cleanup: the %q task is not associated with a SDK setup", task.ID())
@@ -365,6 +370,7 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 							// We can skip the cleanup for now.
 							logger.Debugf("On SdkManager.Cleanup: another task %q in the %q change is using the %q SDK volume, skip clean up",
 								t.ID(), change.ID(), sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+							st.Cache(vk, nil)
 							return nil
 						}
 					}

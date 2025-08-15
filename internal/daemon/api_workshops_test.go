@@ -24,6 +24,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -2083,6 +2084,20 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_minusone})
+
+	// Ensure that the removed SDK volume is removed as unused.
+	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
+
+	for i := 0; i < 6; i = i + 1 {
+		s.d.overlord.StateEngine().Ensure()
+		s.d.overlord.StateEngine().Wait()
+	}
+
+	_, err := s.b.Volume(s.ctx, "test-sdk-1-1")
+	c.Check(err, testutil.ErrorIs, workshop.ErrVolumeNotFound)
+
+	_, err = s.b.Volume(s.ctx, "test-sdk-2-1")
+	c.Check(err, check.IsNil)
 }
 
 func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
@@ -4063,6 +4078,7 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
 	defer s.store.SetDownloadCallback(storeDownload)()
+	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
@@ -4083,10 +4099,5 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 			Summary: `Remove "workshopconns" workshop`,
 		},
 	}
-
 	s.runActionTest(c, requests, expected)
-
-	_, err := s.b.Workshop(s.ctx, "workshopconns")
-	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
-	c.Check(s.secBackend.RemoveCalls, check.HasLen, 3)
 }

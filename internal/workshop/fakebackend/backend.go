@@ -60,6 +60,11 @@ type RestoreCall struct {
 	File     *workshop.File
 }
 
+type WorkshopVolumeMount struct {
+	Workshop   string
+	VolumeName string
+}
+
 type WorkshopFsCallback func(ctx context.Context, name string) (workshop.WorkshopFs, error)
 
 type FakeWorkshopBackend struct {
@@ -72,7 +77,7 @@ type FakeWorkshopBackend struct {
 	volumeLock                sync.Mutex
 	WorkshopVolumes           map[string]workshop.VolumeInfo
 	WorkshopVolumeContents    map[string]string
-	WorkshopVolumeMountPoints map[string]string
+	WorkshopVolumeMountPoints map[WorkshopVolumeMount]string
 	// the key is a username
 	projects map[string][]workshop.Project
 
@@ -104,7 +109,7 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
 	be.WorkshopVolumes = make(map[string]workshop.VolumeInfo)
 	be.WorkshopVolumeContents = make(map[string]string)
-	be.WorkshopVolumeMountPoints = make(map[string]string)
+	be.WorkshopVolumeMountPoints = make(map[WorkshopVolumeMount]string)
 	be.projects = make(map[string][]workshop.Project)
 
 	be.ExecCallback = DoExecDefault
@@ -559,7 +564,7 @@ func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where 
 		return err
 	}
 
-	s.WorkshopVolumeMountPoints[name] = where
+	s.WorkshopVolumeMountPoints[WorkshopVolumeMount{Workshop: wp, VolumeName: name}] = where
 	return nil
 }
 
@@ -567,7 +572,7 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	target := s.WorkshopVolumeMountPoints[name]
+	target := s.WorkshopVolumeMountPoints[WorkshopVolumeMount{Workshop: wp, VolumeName: name}]
 
 	wfs, err := s.WorkshopFs(ctx, wp)
 	if err != nil {
@@ -576,7 +581,7 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 	defer wfs.Close()
 
 	err = wfs.Remove(target)
-	delete(s.WorkshopVolumeMountPoints, name)
+	delete(s.WorkshopVolumeMountPoints, WorkshopVolumeMount{Workshop: wp, VolumeName: name})
 	return err
 }
 
@@ -607,6 +612,12 @@ func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.Vo
 func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
+
+	for volume := range s.WorkshopVolumeMountPoints {
+		if volume.VolumeName == name {
+			return workshop.ErrVolumeInUse
+		}
+	}
 
 	delete(s.WorkshopVolumes, name)
 	delete(s.WorkshopVolumeContents, name)
