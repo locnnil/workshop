@@ -304,9 +304,9 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	// workshop.
 	workshopctl := workshop.Mount{
 		Name:     "workshop.workshopctl",
+		Type:     workshop.HostWorkshop,
 		What:     filepath.Join(dirs.ExecDir, "workshopctl"),
 		Where:    "/usr/bin/workshopctl",
-		Type:     workshop.HostWorkshop,
 		ReadOnly: true,
 	}
 

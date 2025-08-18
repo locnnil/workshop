@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/spf13/afero"
+
+	"github.com/canonical/workshop/internal/revert"
 )
 
 type BasePathFile struct {
@@ -33,6 +35,30 @@ func NewBasePathFs(path string) Fs {
 
 func (f *BasePathFs) Close() error {
 	return nil
+}
+
+func (f *BasePathFs) MkdirChmodChown(path string, perm os.FileMode, uid, gid int) error {
+	rev := revert.New()
+	defer rev.Fail()
+
+	if err := f.Mkdir(path, perm); err != nil {
+		return err
+	}
+	rev.Add(func() {
+		_ = f.Remove(path)
+	})
+
+	if err := f.Chmod(path, perm); err != nil {
+		return err
+	}
+
+	if err := f.Chown(path, uid, gid); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
+
 }
 
 func (f *BasePathFs) Open(path string) (File, error) {

@@ -178,7 +178,13 @@ func (m *SdkManager) mountSdk(ctx context.Context, user string, project *worksho
 	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
 	what := workshop.LocalSdkRevision(userDataDir, project.ProjectId, w, sdkSetup.Name, sdkSetup.Revision)
 
-	mnt := workshop.Mount{Name: name, What: what, Where: sdkPath, MakeWhere: true, Type: workshop.HostWorkshop, ReadOnly: true}
+	mnt := workshop.Mount{
+		Name:     name,
+		Type:     workshop.HostWorkshop,
+		What:     what,
+		Where:    sdkPath,
+		ReadOnly: true,
+	}
 	return m.backend.AddWorkshopMount(ctx, w, mnt)
 }
 

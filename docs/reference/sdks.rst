@@ -239,7 +239,7 @@ Mount interface
 
 .. @artefact mount interface
 
-A mount plug in the definition must specify the plug name, the interface, the target directory and optionally whether to be read-only:
+A mount plug in the definition must specify the plug name, the interface, the target directory, its permissions and ownership, and optionally whether to be read-only:
 
 .. code-block:: yaml
    :caption: sdk.yaml
@@ -249,6 +249,9 @@ A mount plug in the definition must specify the plug name, the interface, the ta
       <NAME>:
         interface: mount
         workshop-target: <WORKSHOP DIRECTORY>
+        mode: <OCTAL FILE MODE> # optional
+        uid: <USER ID> # optional
+        gid: <GROUP ID> # optional
         read-only: <true | false> # optional
 
 
@@ -256,6 +259,7 @@ This mounts a directory automatically created by |ws_markup| on the host
 to the :samp:`workshop-target` directory.
 The host directory will be created under the path
 designated by the :envvar:`$XDG_DATA_HOME` variable.
+The workshop directory will be created using the given :samp:`mode`, :samp:`uid`, and :samp:`gid`.
 
 A mount *slot* in the definition must specify the slot name, the interface,
 and the *source* directory:

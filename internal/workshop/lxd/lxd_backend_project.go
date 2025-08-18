@@ -370,11 +370,10 @@ func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Conte
 
 	for _, i := range workshops {
 		mount := workshop.Mount{
-			Name:      workshop.ConfigProjectPathDevice,
-			What:      project.Path,
-			Where:     workshop.WorkshopProjectPath,
-			MakeWhere: true,
-			Type:      workshop.HostWorkshop,
+			Name:  workshop.ConfigProjectPathDevice,
+			Type:  workshop.HostWorkshop,
+			What:  project.Path,
+			Where: workshop.WorkshopProjectPath,
 		}
 		err = s.AddWorkshopMount(projectCtx, workshopName(i.Name), mount)
 		if err != nil {

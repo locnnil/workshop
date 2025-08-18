@@ -192,17 +192,36 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `unknown attribute for system mount interface slot: "host-source"`)
 }
 
-func (s *mountSuite) TestSanitizePlugSimple(c *check.C) {
+func (s *mountSuite) TestSanitizePlugHome(c *check.C) {
 	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
 plugs:
  mount-plug:
   interface: mount
-  workshop-target: import
+  workshop-target: /home/workshop/.cache/mount
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["mount-plug"]
 	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["mode"], check.Equals, int64(0775))
+	c.Check(plug.Attrs["uid"], check.Equals, int64(1000))
+	c.Check(plug.Attrs["gid"], check.Equals, int64(1000))
+}
+
+func (s *mountSuite) TestSanitizePlugRoot(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+plugs:
+ mount-plug:
+  interface: mount
+  workshop-target: /root/.cache/mount
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["mode"], check.Equals, int64(0755))
+	c.Check(plug.Attrs["uid"], check.Equals, int64(0))
+	c.Check(plug.Attrs["gid"], check.Equals, int64(0))
 }
 
 func (s *mountSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
@@ -223,11 +242,142 @@ base: ubuntu@22.04
 plugs:
  mount-plug:
   interface: mount
-  workshop-target: ../foo
+  workshop-target: foo/bar
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["mount-plug"]
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "mount interface path is not clean:.*")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, `mount plug "workshop-target" must be absolute: "foo/bar"`)
+}
+
+func (s *mountSuite) TestSanitizePlugSimpleTargetUnclean(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+plugs:
+ mount-plug:
+  interface: mount
+  workshop-target: /usr/../etc/passwd
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, `mount plug "workshop-target" is not clean: "/usr/../etc/passwd"`)
+}
+
+func (s *mountSuite) TestSanitizePlugModeOwner(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  mode: 0o642
+  uid: 123
+  gid: 456
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["mode"], check.Equals, int64(0642))
+	c.Check(plug.Attrs["uid"], check.Equals, int64(123))
+	c.Check(plug.Attrs["gid"], check.Equals, int64(456))
+}
+
+func (s *mountSuite) TestSanitizePlugModeOwnerOldYAML(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  mode: 0753
+  uid: 1_000
+  gid: 4_321
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["mode"], check.Equals, int64(0753))
+	c.Check(plug.Attrs["uid"], check.Equals, int64(1000))
+	c.Check(plug.Attrs["gid"], check.Equals, int64(4321))
+}
+
+func (s *mountSuite) TestSanitizePlugModeInvalid(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  mode: rwxrwxrwx
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"rwxrwxrwx\" in key \"mode\" for mount interface plug.*")
+}
+
+func (s *mountSuite) TestSanitizePlugModeNegative(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  mode: -1
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "invalid value -01 in key \"mode\" for mount interface plug: permissions limited to 0777")
+}
+
+func (s *mountSuite) TestSanitizePlugModeSticky(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  mode: 0o1000
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "invalid value 01000 in key \"mode\" for mount interface plug: permissions limited to 0777")
+}
+
+func (s *mountSuite) TestSanitizePlugUidInvalid(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  uid: workshop
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"workshop\" in key \"uid\" for mount interface plug.*")
+}
+
+func (s *mountSuite) TestSanitizePlugUidNegative(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  uid: -1
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "invalid value -1 in key \"uid\" for mount interface plug: must be between 0 and 0xffffffff")
+}
+
+func (s *mountSuite) TestSanitizePlugGidInvalid(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  gid: video
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "unknown value \"video\" in key \"gid\" for mount interface plug.*")
+}
+
+func (s *mountSuite) TestSanitizePlugGidNegative(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+ mount:
+  interface: mount
+  workshop-target: /project/training
+  gid: -1
+`, s.projectId, "ws", "consumer", "mount")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "invalid value -1 in key \"gid\" for mount interface plug: must be between 0 and 0xffffffff")
 }
 
 func (s *mountSuite) TestSanitizePlugReadOnlyBool(c *check.C) {
@@ -315,7 +465,7 @@ slots:
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["mount-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute: "root"`)
 }
 
 func (s *mountSuite) TestSanitizeSlotNonLocalSourceFails(c *check.C) {
@@ -328,7 +478,20 @@ slots:
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["mount-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute`)
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" must be absolute: "../../../../../../../../root/"`)
+}
+
+func (s *mountSuite) TestSanitizeSlotUncleanSourceFails(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+slots:
+ mount-slot:
+  interface: mount
+  workshop-source: /tmp/../etc/shadow
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["mount-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot \"workshop-source\" is not clean: "/tmp/../etc/shadow"`)
 }
 
 func (s *mountSuite) TestConnectHostWorkshopXdgUnset(c *check.C) {
@@ -360,11 +523,11 @@ slots:
 	sourceDir := filepath.Join(testuser.HomeDir, ".local/share/workshop/id/42424242/ws/mount/consumer/mount")
 	expectedMnt := workshop.Mount{
 		Name:      plug.Name,
-		What:      sourceDir,
-		Where:     "/project/training",
-		MakeWhat:  true,
-		MakeWhere: true,
 		Type:      workshop.HostWorkshop,
+		What:      sourceDir,
+		MakeWhat:  true,
+		Where:     "/project/training",
+		MakeWhere: true,
 	}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
@@ -376,6 +539,9 @@ plugs:
  mount:
   interface: mount
   workshop-target: /project/training
+  mode: 0o755
+  uid: 123
+  gid: 321
 `, s.projectId, "ws", "consumer", "mount")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
@@ -398,11 +564,14 @@ slots:
 	sourceDir := filepath.Join(s.env["XDG_DATA_HOME"], "/workshop/id/42424242/ws/mount/consumer/mount")
 	expectedMnt := workshop.Mount{
 		Name:      plug.Name,
-		What:      sourceDir,
-		Where:     "/project/training",
-		MakeWhat:  true,
-		MakeWhere: true,
 		Type:      workshop.HostWorkshop,
+		What:      sourceDir,
+		MakeWhat:  true,
+		Where:     "/project/training",
+		MakeWhere: true,
+		Mode:      0755,
+		Owner:     123,
+		Group:     321,
 	}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
@@ -432,7 +601,13 @@ slots:
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
 
 	// Validate the mount specification.
-	expectedMnt := workshop.Mount{Name: plug.Name, What: "/var/lib/workshop/sdk/producer/training", Where: "/project/training", Type: workshop.WorkshopWorkshop}
+	expectedMnt := workshop.Mount{
+		Name:      plug.Name,
+		Type:      workshop.WorkshopWorkshop,
+		What:      "/var/lib/workshop/sdk/producer/training",
+		Where:     "/project/training",
+		MakeWhere: true,
+	}
 	c.Assert(deviceSpec.Profile.Mounts, check.DeepEquals, map[string]workshop.Mount{plug.Name: expectedMnt})
 }
 

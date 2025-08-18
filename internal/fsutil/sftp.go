@@ -55,6 +55,33 @@ func (s *sftpFs) Mkdir(path string, perm os.FileMode) error {
 	return nil
 }
 
+func (s *sftpFs) MkdirChmodChown(path string, perm os.FileMode, uid, gid int) error {
+	rev := revert.New()
+	defer rev.Fail()
+
+	if err := s.mkdir(path); err != nil {
+		return err
+	}
+	rev.Add(func() {
+		_ = s.Remove(path)
+	})
+
+	if perm != serverMkdirMode {
+		if err := s.Chmod(path, perm); err != nil {
+			return err
+		}
+	}
+
+	if uid != 0 || gid != 0 {
+		if err := s.Chown(path, uid, gid); err != nil {
+			return err
+		}
+	}
+
+	rev.Success()
+	return nil
+}
+
 func (s *sftpFs) mkdir(path string) error {
 	err := s.client.Mkdir(path)
 	return maybePathError("mkdir", path, err)

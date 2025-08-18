@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -170,56 +171,98 @@ func containsWorkshopWorkshop(mounts map[string]workshop.Mount) bool {
 }
 
 func prepareMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
-	if mnt.Type == workshop.HostWorkshop {
-		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(mnt.What)
+	switch mnt.Type {
+	case workshop.HostWorkshop:
+		return prepareHostWorkshopMount(fs, user, mnt)
+	case workshop.WorkshopWorkshop:
+		return prepareWorkshopWorkshopMount(fs, mnt)
+	default:
+		return fmt.Errorf(`unknown device type: %v`, mnt.Type)
+	}
+}
+
+func prepareHostWorkshopMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
+	whatIsDir := true
+	if mnt.MakeWhat {
+		uid, gid, err := osutil.UidGid(user)
 		if err != nil {
 			return err
 		}
 
-		if mnt.MakeWhat && !sourceExists {
-			uid, gid, err := osutil.UidGid(user)
-			if err != nil {
-				return err
-			}
-
-			if err = osutil.MkdirAllChown(mnt.What, 0755, uid, gid); err != nil {
-				return err
-			}
-		}
-
-		if !mnt.MakeWhere || !sourceIsDir {
-			return nil
-		}
-
-		if _, err := fs.Stat(mnt.Where); !osutil.IsDirNotExist(err) {
+		if err := osutil.MkdirAllChown(mnt.What, 0755, uid, gid); err != nil {
 			return err
 		}
-		// FIXME: workaround LXD empty directory issue (which, if the
-		// connection was disconnected earlier, was removed by LXD).
-		return fs.MkdirAll(mnt.Where, os.ModePerm)
-	}
-
-	if mnt.Type != workshop.WorkshopWorkshop {
-		return fmt.Errorf(`unknown device type: %v`, mnt.Type)
-	}
-
-	if _, err := fs.Stat(mnt.What); osutil.IsDirNotExist(err) && mnt.MakeWhat {
-		if err := fs.MkdirAll(mnt.What, os.ModePerm); err != nil {
+		// Only change permissions for mounted directory, and ignore umask.
+		if err := os.Chmod(mnt.What, mnt.Mode); err != nil {
 			return err
 		}
-	} else if err != nil {
+	} else {
+		info, err := os.Stat(mnt.What)
+		if err != nil {
+			return err
+		}
+		whatIsDir = info.IsDir()
+	}
+
+	return prepareMountWhere(fs, mnt, whatIsDir)
+}
+
+func prepareWorkshopWorkshopMount(fs fsutil.Fs, mnt workshop.Mount) error {
+	whatIsDir := true
+	if mnt.MakeWhat {
+		if err := fs.MkdirAllChmodChown(mnt.What, mnt.Mode, int(mnt.Owner), int(mnt.Group)); err != nil {
+			return err
+		}
+	} else {
+		info, err := fs.Stat(mnt.What)
+		if err != nil {
+			return err
+		}
+		whatIsDir = info.IsDir()
+	}
+
+	return prepareMountWhere(fs, mnt, whatIsDir)
+}
+
+func prepareMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
+	if !mnt.MakeWhere {
+		return checkMountWhere(fs, mnt, whatIsDir)
+	}
+
+	if whatIsDir {
+		return fs.MkdirAllChmodChown(mnt.Where, mnt.Mode, int(mnt.Owner), int(mnt.Group))
+	}
+
+	parent := filepath.Dir(mnt.Where)
+	if err := fs.MkdirAllChmodChown(parent, mnt.Mode, int(mnt.Owner), int(mnt.Group)); err != nil {
 		return err
 	}
 
-	if _, err := fs.Stat(mnt.Where); osutil.IsDirNotExist(err) && mnt.MakeWhere {
-		if err := fs.MkdirAll(mnt.Where, os.ModePerm); err != nil {
-			return err
-		}
-	} else if err != nil {
+	file, err := fs.OpenFile(mnt.Where, os.O_RDWR|os.O_CREATE|os.O_EXCL, mnt.Mode)
+	if errors.Is(err, os.ErrExist) {
+		return checkMountWhere(fs, mnt, whatIsDir)
+	}
+	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	return nil
+	if err := file.Chmod(mnt.Mode); err != nil {
+		return err
+	}
+	return file.Chown(int(mnt.Owner), int(mnt.Group))
+}
+
+func checkMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
+	info, err := fs.Stat(mnt.Where)
+	if err != nil || info.IsDir() == whatIsDir {
+		return err
+	}
+	err = syscall.ENOTDIR
+	if info.IsDir() {
+		err = syscall.EISDIR
+	}
+	return &os.PathError{Op: "mount", Path: mnt.Where, Err: err}
 }
 
 func addMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
@@ -448,7 +491,7 @@ func sftpFs(conn lxd.InstanceServer, pid, w string) (fsutil.Fs, error) {
 	if err != nil {
 		return fsutil.Fs{}, err
 	}
-	return fsutil.NewSftpFs(sftp, workshop.Umask), nil
+	return fsutil.NewSftpFs(sftp, workshop.RootUmask), nil
 }
 
 func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.Ref) (*revert.Reverter, error) {
@@ -519,12 +562,6 @@ func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]strin
 	rev := revert.New()
 	defer rev.Fail()
 
-	r, err := setupMounts(conn, fs, user, sdkRef.ProjectId, sdkRef.Workshop, prev.Mounts, next.Mounts)
-	if err != nil {
-		return nil, err
-	}
-	revert.Copy(rev, r)
-
 	if err := setupSshAgent(fs, prev.Agent, next.Agent); err != nil {
 		return nil, err
 	}
@@ -543,6 +580,13 @@ func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]strin
 		}
 	})
 
+	// Setup mounts last so other interfaces can create directories to mount.
+	r, err := setupMounts(conn, fs, user, sdkRef.ProjectId, sdkRef.Workshop, prev.Mounts, next.Mounts)
+	if err != nil {
+		return nil, err
+	}
+	revert.Copy(rev, r)
+
 	clone := rev.Clone()
 	rev.Success()
 	return clone, nil
@@ -560,9 +604,9 @@ func cleanupProfile(conn lxd.InstanceServer, sdkRef sdk.Ref) error {
 	}
 	defer fs.Close()
 
-	err = removeDesktop(fs, prof.Desktop)
-	err2 := removeSshAgent(fs, prof.Agent)
-	err3 := removeMounts(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Mounts)
+	err = removeMounts(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Mounts)
+	err2 := removeDesktop(fs, prof.Desktop)
+	err3 := removeSshAgent(fs, prof.Agent)
 	return cmp.Or(err, err2, err3)
 }
 

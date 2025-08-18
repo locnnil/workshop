@@ -948,7 +948,7 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error
 		return fsutil.Fs{}, err
 	}
 
-	return fsutil.NewSftpFs(sftp, workshop.Umask), nil
+	return fsutil.NewSftpFs(sftp, workshop.RootUmask), nil
 }
 
 func ConnectLxd(ctx context.Context) (lxd.InstanceServer, error) {

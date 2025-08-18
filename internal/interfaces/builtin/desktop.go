@@ -21,6 +21,7 @@ package builtin
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -143,10 +144,11 @@ func (iface *desktopInterface) MountConnectedPlug(spec *lxd_device.Specification
 	if xauth != "" {
 		m := workshop.Mount{
 			Name:      fmt.Sprintf("%s_xauth", plug.Name()),
+			Type:      workshop.HostWorkshop,
 			What:      workshopdXauth,
 			Where:     filepath.Join(dirs.WorkshopRunDir, "Xauthority"),
 			MakeWhere: true,
-			Type:      workshop.HostWorkshop,
+			Mode:      os.ModePerm &^ workshop.RootUmask,
 			ReadOnly:  true,
 		}
 		spec.AddMountEntry(m)

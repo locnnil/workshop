@@ -73,6 +73,13 @@ func (f *fsSuite) TestMkdirAllWeirdPaths(c *check.C) {
 	c.Check(filepath.Join(f.path, "one", "two"), testutil.DirEquals, []string{})
 }
 
+func (f *fsSuite) TestMkdirAllChmodChown(c *check.C) {
+	c.Assert(f.fs.MkdirAllChmodChown("one/two", os.ModePerm, os.Geteuid(), os.Getegid()), check.IsNil)
+	c.Check(f.path, testutil.DirEquals, []string{"drwxrwxrwx one"})
+	c.Check(filepath.Join(f.path, "one"), testutil.DirEquals, []string{"drwxrwxrwx two"})
+	c.Check(filepath.Join(f.path, "one", "two"), testutil.DirEquals, []string{})
+}
+
 func (f *fsSuite) TestMkdirTemp(c *check.C) {
 	dir, err := f.fs.MkdirTemp("", "test.*.d", os.ModePerm)
 	c.Assert(err, check.IsNil)

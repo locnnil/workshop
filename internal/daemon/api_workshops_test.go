@@ -558,9 +558,12 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 
 	p = workshop.NewSdkProfile("test-sdk")
 	p.Mounts["data"] = workshop.Mount{Name: "data",
-		What:  testSDKSource,
-		Where: "/opt/data",
-		Type:  workshop.HostWorkshop,
+		Type:      workshop.HostWorkshop,
+		What:      testSDKSource,
+		MakeWhat:  true,
+		Where:     "/opt/data",
+		MakeWhere: true,
+		Mode:      0755,
 	}
 	p.Tunnels = []workshop.Tunnel{{ProxyEntry: workshop.ProxyEntry{
 		Name:      "dns",
@@ -574,14 +577,17 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 
 	p = workshop.NewSdkProfile("test-sdk-2")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
-		What:  testSDKSource2,
-		Where: "/opt/data2",
-		Type:  workshop.HostWorkshop,
+		Type:      workshop.HostWorkshop,
+		What:      testSDKSource2,
+		MakeWhat:  true,
+		Where:     "/opt/data2",
+		MakeWhere: true,
+		Mode:      0755,
 	}
 	p.Mounts["photos2"] = workshop.Mount{Name: "photos2",
-		What:  "/photos",
-		Where: "/opt/data2",
 		Type:  workshop.WorkshopWorkshop,
+		What:  "/photos",
+		Where: "/opt/data3",
 	}
 	w.Profiles["test-sdk-2"] = p
 
@@ -700,7 +706,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 						},
 						{
 							WorkshopSource: "/photos",
-							WorkshopTarget: "/opt/data2",
+							WorkshopTarget: "/opt/data3",
 							Plug: sdk.PlugRef{
 								ProjectId: s.project.ProjectId,
 								Workshop:  "tunnels",
@@ -729,9 +735,12 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 	testSDKSource := workshop.SdkMountHostSource(s.user.HomeDir, s.project.ProjectId, "somebound", "mount-conflict", "photos")
 	p := workshop.NewSdkProfile("mount-conflict")
 	p.Mounts["photos"] = workshop.Mount{Name: "photos",
-		What:  testSDKSource,
-		Where: "/opt/data",
-		Type:  workshop.HostWorkshop,
+		Type:      workshop.HostWorkshop,
+		What:      testSDKSource,
+		MakeWhat:  true,
+		Where:     "/opt/data",
+		MakeWhere: true,
+		Mode:      0755,
 	}
 	w.Profiles["mount-conflict"] = p
 

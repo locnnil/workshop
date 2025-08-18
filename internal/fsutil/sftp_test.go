@@ -67,6 +67,11 @@ func (s *sftpSuite) TestMkdir(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `mkdir notexist/dir: file does not exist`)
 }
 
+func (s *sftpSuite) TestMkdirChmodChown(c *check.C) {
+	c.Assert(s.fs.MkdirChmodChown("testdir", 0717, os.Geteuid(), os.Getegid()), check.IsNil)
+	c.Check(s.path, testutil.DirEquals, []string{"drwx--xrwx testdir"})
+}
+
 func (s *sftpSuite) TestOpen(c *check.C) {
 	file, err := s.fs.Open("notexist")
 	c.Assert(err, check.ErrorMatches, `open notexist: file does not exist`)

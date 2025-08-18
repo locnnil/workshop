@@ -32,6 +32,7 @@ type FsBackend interface {
 	io.Closer
 
 	Mkdir(path string, perm os.FileMode) error
+	MkdirChmodChown(path string, perm os.FileMode, uid, gid int) error
 	Open(path string) (File, error)
 	OpenFile(path string, flag int, perm os.FileMode) (File, error)
 	Symlink(old, new string) error
@@ -71,6 +72,34 @@ func (f Fs) MkdirAll(path string, perm os.FileMode) error {
 	}
 
 	err = f.Mkdir(path, perm)
+	if err != nil {
+		info, err1 := f.Lstat(path)
+		if err1 == nil && info.IsDir() {
+			// Already exists.
+			err = nil
+		}
+	}
+	return err
+}
+
+// MkdirAllChmodChown creates a directory named path, along with any necessary parents.
+// New directories will have the specified permissions (ignoring umask) and ownership.
+func (f Fs) MkdirAllChmodChown(path string, perm os.FileMode, uid, gid int) error {
+	info, err := f.Stat(path)
+	if err == nil {
+		if info.IsDir() {
+			return nil
+		}
+		return &os.PathError{Op: "mkdir", Path: path, Err: syscall.ENOTDIR}
+	}
+
+	if parent := parentDir(path); len(parent) > len(filepath.VolumeName(path)) {
+		if err := f.MkdirAllChmodChown(parent, perm, uid, gid); err != nil {
+			return err
+		}
+	}
+
+	err = f.MkdirChmodChown(path, perm, uid, gid)
 	if err != nil {
 		info, err1 := f.Lstat(path)
 		if err1 == nil && info.IsDir() {

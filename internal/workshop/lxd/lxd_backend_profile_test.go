@@ -28,10 +28,13 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 			Mounts: map[string]workshop.Mount{
 				"userdisk": {
 					Name:      "userdisk",
+					Type:      workshop.HostWorkshop,
 					What:      "/home",
 					Where:     "/opt",
 					MakeWhere: true,
-					Type:      workshop.HostWorkshop}},
+					Mode:      0123,
+					Owner:     45,
+					Group:     67}},
 		}, {
 			Sdk:    "sdk",
 			Mounts: map[string]workshop.Mount{},
@@ -129,7 +132,10 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					"source":           "/home",
 					"path":             "/opt",
 					"user.make-source": "false",
-					"user.make-path":   "true"}},
+					"user.make-path":   "true",
+					"user.path-mode":   "0o123",
+					"user.path-owner":  "45",
+					"user.path-group":  "67"}},
 			map[string]string{},
 		}, {
 			"sdk",

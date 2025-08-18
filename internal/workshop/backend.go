@@ -29,7 +29,8 @@ const (
 	Uid = 1000
 	Gid = 1000
 
-	Umask = os.FileMode(0022)
+	RootUmask   = os.FileMode(0022)
+	NormalUmask = os.FileMode(0002)
 )
 
 var (
