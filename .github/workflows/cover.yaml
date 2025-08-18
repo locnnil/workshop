@@ -55,11 +55,22 @@ jobs:
           mkdir .coverage
           gocov-xml < coverage.json > .coverage/coverage.xml
 
+      - name: Determine TICS mode
+        id: tics-mode
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" =~ ^(push|schedule)$ ]]; then
+            mode=qserver
+          else
+            mode=client
+          fi
+          printf 'mode=%s\n' "$mode" >>"$GITHUB_OUTPUT"
+
       - name: TICS GitHub Action
         uses: tiobe/tics-github-action@v3
         with:
-          mode: qserver
+          mode: ${{ steps.tics-mode.outputs.mode }}
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=GoProjects
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           project: workshop
           installTics: true
+          branchname: ${{ github.ref_name }}
