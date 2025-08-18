@@ -11,7 +11,6 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/pkg/term v1.1.0
 	github.com/spf13/afero v1.14.0
-	github.com/spf13/afero/sftpfs v1.14.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 	golang.org/x/sys v0.34.0

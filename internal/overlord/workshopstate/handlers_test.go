@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -32,7 +32,6 @@ base: ubuntu@22.04
 `
 
 type workshopHandlers struct {
-	fs             afero.Fs
 	backend        *fakebackend.FakeWorkshopBackend
 	state          *state.State
 	runner         *state.TaskRunner
@@ -71,7 +70,6 @@ var ErrTrigger = errors.New("error out")
 
 func (s *workshopHandlers) SetUpTest(c *check.C) {
 	var err error
-	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
 	s.backend, err = fakebackend.New(c.MkDir())
@@ -346,8 +344,8 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsJammy)
 
-	reset := s.backend.SetWorkshopFsCallback(func(ctx context.Context, name string) (workshop.WorkshopFs, error) {
-		return nil, errors.New("fs is unavailable")
+	reset := s.backend.SetWorkshopFsCallback(func(ctx context.Context, name string) (fsutil.Fs, error) {
+		return fsutil.Fs{}, errors.New("fs is unavailable")
 	})
 	defer reset()
 

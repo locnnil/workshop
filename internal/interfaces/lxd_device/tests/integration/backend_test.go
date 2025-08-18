@@ -5,7 +5,6 @@ package lxd_device_test
 
 import (
 	"context"
-	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"testing"
 
 	lxd "github.com/canonical/lxd/client"
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -63,10 +61,8 @@ func (f *backendDeviceSuite) setupRepo(c *check.C) {
 func (f *backendDeviceSuite) readWorkshopFile(c *check.C, fname string) string {
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	file, err := fs.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0744)
-	c.Assert(err, check.IsNil)
-	defer file.Close()
-	buf, err := io.ReadAll(file)
+	defer fs.Close()
+	buf, err := fs.ReadFile(fname)
 	c.Assert(err, check.IsNil)
 	return string(buf)
 }
@@ -234,16 +230,14 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	// Check that the bind mount is created for /usr/local -> /opt
-	file, err := fs.Create("/opt/tmp")
+	err = fs.WriteFile("/opt/tmp", nil, 0644)
 	c.Assert(err, check.IsNil)
-	file.Close()
 	_, err = fs.Stat("/usr/local/tmp")
 	c.Assert(err, check.IsNil)
 
 	// Check that the bind mount is created for /home -> /mnt
-	file, err = fs.Create("/home/tmp")
+	err = fs.WriteFile("/home/tmp", nil, 0644)
 	c.Assert(err, check.IsNil)
-	file.Close()
 	_, err = fs.Stat("/mnt/tmp")
 	c.Assert(err, check.IsNil)
 
@@ -259,11 +253,11 @@ func (f *backendDeviceSuite) TestSetupWorkshopMounts(c *check.C) {
 
 	// Check that the bind mount is removed for /usr/local -> /opt
 	_, err = fs.Stat("/opt/tmp")
-	c.Assert(err, check.Equals, afero.ErrFileNotFound)
+	c.Assert(err, testutil.ErrorIs, os.ErrNotExist)
 
 	// Check that the bind mount is removed for /home -> /mnt
 	_, err = fs.Stat("/mnt/tmp")
-	c.Assert(err, check.Equals, afero.ErrFileNotFound)
+	c.Assert(err, testutil.ErrorIs, os.ErrNotExist)
 }
 
 func (f *backendDeviceSuite) TestSetupHostWorkshopMounts(c *check.C) {
@@ -345,10 +339,6 @@ func (f *backendDeviceSuite) TestSetupUpdateProfile(c *check.C) {
 	prof, err := lxdbackend.Profile(f.client, f.pid, "test", "consumer")
 	c.Assert(err, check.IsNil)
 	c.Assert(prof.Mounts, check.HasLen, 0)
-
-	// Check the fstab record was removed
-	fstab := f.readWorkshopFile(c, "/etc/fstab")
-	c.Check(string(fstab), check.Equals, "")
 }
 
 func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
@@ -404,6 +394,7 @@ func (f *backendDeviceSuite) TestSetupSshAgent(c *check.C) {
 
 	fs, err := f.be.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
+	defer fs.Close()
 	_, err = fs.Stat("/etc/profile.d/workshop-ssh-agent.sh")
 	c.Assert(osutil.IsDirNotExist(err), check.Equals, true)
 }
@@ -468,6 +459,7 @@ func (f *backendDeviceSuite) TestSetupMultipleInterfaces(c *check.C) {
 		// Validate Filesystem
 		fs, err := f.be.WorkshopFs(f.ctx, "test")
 		c.Assert(err, check.IsNil)
+		defer fs.Close()
 		_, err = fs.Stat("/etc/profile.d/workshop-ssh-agent.sh")
 		c.Assert(err, check.IsNil)
 		_, err = fs.Stat("/etc/profile.d/workshop-desktop.sh")

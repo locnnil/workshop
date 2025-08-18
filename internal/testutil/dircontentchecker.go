@@ -21,7 +21,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/osutil"
@@ -63,21 +62,8 @@ func (c *dirContentChecker) Check(params []interface{}, names []string) (bool, s
 			return false, fmt.Sprintf("Cannot read directory %q: %v", dir, err)
 		}
 		slices.SortFunc(infos, func(a, b os.FileInfo) int { return cmp.Compare(a.Name(), b.Name()) })
-	case afero.Fs:
-		var err error
-		infos, err = afero.ReadDir(dir, "/")
-		if err != nil {
-			return false, fmt.Sprintf("Cannot read directory %q: %v", dir.Name(), err)
-		}
-	case afero.File:
-		var err error
-		infos, err = dir.Readdir(-1)
-		if err != nil {
-			return false, fmt.Sprintf("Cannot read directory %q: %v", dir.Name(), err)
-		}
-		slices.SortFunc(infos, func(a, b os.FileInfo) int { return cmp.Compare(a.Name(), b.Name()) })
 	default:
-		return false, "Directory must be a string or afero.Fs"
+		return false, "Directory must be a string or file handle"
 	}
 
 	obtained := make([]string, 0, len(infos))

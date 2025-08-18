@@ -18,6 +18,7 @@ import (
 	"github.com/canonical/x-go/strutil/shlex"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -46,14 +47,14 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 	return interfaces.SecurityLxdDevice
 }
 
-func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.User, pid, w string, prev, next map[string]workshop.Mount) (*revert.Reverter, error) {
+func setupMounts(conn lxd.InstanceServer, fs fsutil.Fs, user *user.User, pid, w string, prev, next map[string]workshop.Mount) (*revert.Reverter, error) {
 	var mounts *osutil.MountProfile
 	var content []byte
 	if containsWorkshopWorkshop(prev) || containsWorkshopWorkshop(next) {
 		var err error
 		mounts, content, err = readMountProfile(fs)
 		if err != nil {
-			return nil, fmt.Errorf("read filesystem table: %w", err)
+			return nil, err
 		}
 	}
 
@@ -122,13 +123,13 @@ func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.Use
 	return clone, nil
 }
 
-func removeMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, prev map[string]workshop.Mount) error {
+func removeMounts(conn lxd.InstanceServer, fs fsutil.Fs, pid, w string, prev map[string]workshop.Mount) error {
 	var mounts *osutil.MountProfile
 	if containsWorkshopWorkshop(prev) {
 		var err error
 		mounts, _, err = readMountProfile(fs)
 		if err != nil {
-			return fmt.Errorf("read filesystem table: %w", err)
+			return err
 		}
 	}
 
@@ -168,7 +169,7 @@ func containsWorkshopWorkshop(mounts map[string]workshop.Mount) bool {
 	return false
 }
 
-func prepareMount(fs workshop.WorkshopFs, user *user.User, mnt workshop.Mount) error {
+func prepareMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
 	if mnt.Type == workshop.HostWorkshop {
 		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(mnt.What)
 		if err != nil {
@@ -207,7 +208,7 @@ func prepareMount(fs workshop.WorkshopFs, user *user.User, mnt workshop.Mount) e
 			return err
 		}
 	} else if err != nil {
-		return fmt.Errorf(`stat workshop-source %q: %v`, mnt.What, err)
+		return err
 	}
 
 	if _, err := fs.Stat(mnt.Where); osutil.IsDirNotExist(err) && mnt.MakeWhere {
@@ -215,7 +216,7 @@ func prepareMount(fs workshop.WorkshopFs, user *user.User, mnt workshop.Mount) e
 			return err
 		}
 	} else if err != nil {
-		return fmt.Errorf(`stat workshop-target %q: %v`, mnt.Where, err)
+		return err
 	}
 
 	return nil
@@ -256,7 +257,7 @@ func removeMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
 	return cnt != len(mounts.Entries)
 }
 
-func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, []byte, error) {
+func readMountProfile(fs fsutil.Fs) (*osutil.MountProfile, []byte, error) {
 	fstab, err := fs.Open("/etc/fstab")
 	if errors.Is(err, os.ErrNotExist) {
 		return &osutil.MountProfile{}, nil, nil
@@ -273,8 +274,8 @@ func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, []byte, err
 	return mounts, content.Bytes(), nil
 }
 
-func writeMountProfile(fs workshop.WorkshopFs, mounts io.WriterTo) error {
-	return workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644)
+func writeMountProfile(fs fsutil.Fs, mounts io.WriterTo) error {
+	return fs.AtomicWriteTo(mounts, "/etc/fstab", 0644)
 }
 
 func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
@@ -322,7 +323,7 @@ func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
 	return runMountCommand(conn, pid, w, []string{"systemctl", "restart", "local-fs.target"})
 }
 
-func setupSshAgent(fs workshop.WorkshopFs, prev, next *workshop.SshAgent) error {
+func setupSshAgent(fs fsutil.Fs, prev, next *workshop.SshAgent) error {
 	if prev.Equal(next) {
 		return nil
 	}
@@ -338,10 +339,10 @@ func setupSshAgent(fs workshop.WorkshopFs, prev, next *workshop.SshAgent) error 
 	}
 
 	envVars := map[string]string{"SSH_AUTH_SOCK": next.Listen.Address}
-	return workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+	return fs.AtomicWriteTo(envScript(envVars), script, 0644)
 }
 
-func removeSshAgent(fs workshop.WorkshopFs, prev *workshop.SshAgent) error {
+func removeSshAgent(fs fsutil.Fs, prev *workshop.SshAgent) error {
 	if prev == nil {
 		return nil
 	}
@@ -350,7 +351,7 @@ func removeSshAgent(fs workshop.WorkshopFs, prev *workshop.SshAgent) error {
 	return fs.RemoveIfExists(script)
 }
 
-func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string, prev, next *workshop.Desktop) error {
+func setupDesktop(fs fsutil.Fs, user *user.User, env map[string]string, prev, next *workshop.Desktop) error {
 	if prev.Equal(next) {
 		return nil
 	}
@@ -366,10 +367,10 @@ func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string
 	}
 
 	envVars := desktopEnvironment(user, env, *next)
-	return workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+	return fs.AtomicWriteTo(envScript(envVars), script, 0644)
 }
 
-func removeDesktop(fs workshop.WorkshopFs, prev *workshop.Desktop) error {
+func removeDesktop(fs fsutil.Fs, prev *workshop.Desktop) error {
 	if prev == nil {
 		return nil
 	}
@@ -442,12 +443,12 @@ func (e envScript) WriteTo(w io.Writer) (int64, error) {
 	return n, nil
 }
 
-func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
+func sftpFs(conn lxd.InstanceServer, pid, w string) (fsutil.Fs, error) {
 	sftp, err := conn.GetInstanceFileSFTP(lxdbackend.InstanceName(w, pid))
 	if err != nil {
-		return nil, err
+		return fsutil.Fs{}, err
 	}
-	return workshop.NewWorkshopFs(sftp), nil
+	return fsutil.NewSftpFs(sftp, workshop.Umask), nil
 }
 
 func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.Ref) (*revert.Reverter, error) {
@@ -711,7 +712,7 @@ func (b *Backend) NewSpecification(user string, sdk string) (interfaces.Specific
 	return NewSpecification(user, sdk)
 }
 
-func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)) func() {
+func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (fsutil.Fs, error)) func() {
 	old := workshopFs
 	workshopFs = f
 	return func() {

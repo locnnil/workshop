@@ -21,6 +21,7 @@ import (
 	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
@@ -930,24 +931,24 @@ func (s *Backend) Restore(ctx context.Context, name, snapid string, file *worksh
 	return nil
 }
 
-func (s *Backend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
+func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return nil, err
+		return fsutil.Fs{}, err
 	}
 	defer conn.Disconnect()
 
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
-		return nil, fmt.Errorf("context key project-id not found")
+		return fsutil.Fs{}, fmt.Errorf("context key project-id not found")
 	}
 
 	sftp, err := conn.GetInstanceFileSFTP(InstanceName(name, projectId))
 	if err != nil {
-		return nil, err
+		return fsutil.Fs{}, err
 	}
 
-	return workshop.NewWorkshopFs(sftp), nil
+	return fsutil.NewSftpFs(sftp, workshop.Umask), nil
 }
 
 func ConnectLxd(ctx context.Context) (lxd.InstanceServer, error) {

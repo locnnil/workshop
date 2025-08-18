@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -27,6 +28,8 @@ const (
 
 	Uid = 1000
 	Gid = 1000
+
+	Umask = os.FileMode(0022)
 )
 
 var (
@@ -183,7 +186,7 @@ type Backend interface {
 	Workshop(ctx context.Context, name string) (*Workshop, error)
 
 	// Returns a workshop's file system interface.
-	WorkshopFs(ctx context.Context, name string) (WorkshopFs, error)
+	WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error)
 
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
