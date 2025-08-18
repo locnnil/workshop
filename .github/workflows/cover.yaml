@@ -73,4 +73,3 @@ jobs:
           ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
           project: workshop
           installTics: true
-          branchname: ${{ github.ref_name }}

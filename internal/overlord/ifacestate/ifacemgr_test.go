@@ -94,7 +94,7 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sd
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     sdk.VolumeName(name, rev),
 		Kind:     "sdk",
 		Sdk:      name,

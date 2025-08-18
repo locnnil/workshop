@@ -307,7 +307,7 @@ func (s *Backend) projectFsRoot(conn lxd.InstanceServer, ctx context.Context, pr
 		}
 
 		execCtx := context.WithValue(ctx, workshop.ContextProjectId, projectId)
-		meta, err := s.execCommand(conn, execCtx, workshop.WorkshopName(i.Name), &args)
+		meta, err := s.execCommand(conn, execCtx, workshopName(i.Name), &args)
 		if err != nil {
 			logger.Debugf("cannot check %q bind-mounts: %v", i.Name, err)
 			continue
@@ -376,7 +376,7 @@ func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Conte
 			MakeWhere: true,
 			Type:      workshop.HostWorkshop,
 		}
-		err = s.AddWorkshopMount(projectCtx, workshop.WorkshopName(i.Name), mount)
+		err = s.AddWorkshopMount(projectCtx, workshopName(i.Name), mount)
 		if err != nil {
 			return fmt.Errorf("cannot update workshop %q project directory: %w", i.Name, err)
 		}

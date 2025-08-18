@@ -163,7 +163,7 @@ func (s *sdkStateSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revisi
 	c.Assert(err, check.IsNil)
 	err = os.WriteFile(filepath.Join(meta, "sdk.yaml"), []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     sdk.VolumeName(name, rev),
 		Kind:     "sdk",
 		Sdk:      name,
@@ -208,15 +208,15 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	chg.AddTask(t)
 
 	s.state.Unlock()
-	s.se.Ensure()
+	c.Check(s.se.Ensure(), check.IsNil)
 	s.se.Wait()
 	s.state.Lock()
 
 	c.Check(chg.Err(), check.IsNil)
 	c.Check(chg.Status(), check.Equals, state.DoneStatus)
 
-	c.Assert(s.backend.WorkshopVolumeMountPoints, check.HasLen, 1)
-	c.Assert(s.backend.WorkshopVolumeMountPoints[fakebackend.WorkshopVolumeMount{Workshop: "ws", VolumeName: "test-2"}], check.Equals, "/var/lib/workshop/sdk/test")
+	c.Assert(s.backend.SdkVolumeMountPoints, check.HasLen, 1)
+	c.Assert(s.backend.SdkVolumeMountPoints[fakebackend.WorkshopVolumeMount{ProjectId: "projectId", Workshop: "ws", VolumeName: "test-2"}], check.Equals, "/var/lib/workshop/sdk/test")
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
@@ -258,14 +258,14 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		_ = s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
 
 	c.Check(t1.Status(), check.Equals, state.UndoneStatus)
 
-	c.Assert(s.backend.WorkshopVolumeMountPoints, check.HasLen, 0)
+	c.Assert(s.backend.SdkVolumeMountPoints, check.HasLen, 0)
 }
 
 func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
@@ -284,7 +284,7 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	chg.AddTask(t)
 
 	s.state.Unlock()
-	c.Assert(s.se.Ensure(), check.IsNil)
+	c.Check(s.se.Ensure(), check.IsNil)
 	s.se.Wait()
 	s.state.Lock()
 
@@ -346,7 +346,7 @@ func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		_ = s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -437,7 +437,7 @@ func (s *sdkStateSuite) TestDoUnregisterSdk(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -478,7 +478,7 @@ func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -507,7 +507,7 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
 
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 
@@ -516,6 +516,64 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
+	c.Assert(t.IsClean(), check.Equals, true)
+}
+
+func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
+	s.state.Lock()
+	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
+	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	t := s.state.NewTask("install-sdk", "...")
+	t.Set("sdk-retrieve-task", t.ID())
+	t.Set("sdk-setup", newSdk)
+
+	t2 := s.state.NewTask("error-trigger", "...")
+	t2.WaitFor(t)
+
+	chg := s.state.NewChange("launch", "...")
+	chg.Set("user", "testuser")
+	setWorkshopProject("ws", s.project, t, t2)
+	chg.AddTask(t)
+	chg.AddTask(t2)
+	s.state.Unlock()
+
+	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
+
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
+	c.Assert(t.IsClean(), check.Equals, true)
+}
+
+func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C) {
+	s.state.Lock()
+	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
+	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	t := s.state.NewTask("install-sdk", "...")
+	t.Set("sdk-retrieve-task", t.ID())
+	t.Set("sdk-setup", newSdk)
+
+	chg := s.state.NewChange("launch", "...")
+	chg.Set("user", "testuser")
+	setWorkshopProject("ws", s.project, t)
+	chg.AddTask(t)
+	s.state.Unlock()
+
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	c.Assert(err, check.IsNil)
 	c.Assert(t.IsClean(), check.Equals, true)
 }
 
@@ -537,7 +595,7 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	defer sdkstate.FakeSdkVolumeCooldownTime(24 * time.Hour)()
 
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 
@@ -550,7 +608,7 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	c.Assert(t.IsClean(), check.Equals, false)
 }
 
-func (s *sdkStateSuite) TestTaskQuitsCleanupIfOtherVolumeUsersExist(c *check.C) {
+func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
@@ -563,35 +621,31 @@ func (s *sdkStateSuite) TestTaskQuitsCleanupIfOtherVolumeUsersExist(c *check.C) 
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 
-	other := s.state.NewChange("refresh", "...")
+	other := s.state.NewChange("launch", "...")
 	other.Set("user", "testuser")
-	t2 := s.state.NewTask("unregister-sdk", "t2")
+	t2 := s.state.NewTask("install-sdk", "t2")
 	t2.Set("sdk-retrieve-task", t2.ID())
 	t2.Set("sdk-setup", newSdk)
-	retry := s.state.NewTask("retry-task", "...")
-	retry.WaitFor(t2)
-	setWorkshopProject("ws", s.project, t2, retry)
+	setWorkshopProject("ws", s.project, t2)
 	other.AddTask(t2)
-	other.AddTask(retry)
+	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
 
 	s.state.Unlock()
 
-	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
-
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 
 	s.state.Lock()
-	defer s.state.Unlock()
+
 	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
 	c.Assert(err, check.IsNil)
 	c.Assert(t.IsClean(), check.Equals, true)
-	c.Assert(t2.IsClean(), check.Equals, false)
+	c.Assert(t2.IsClean(), check.Equals, true)
 }
 
-func (s *sdkStateSuite) TestTaskRetriesCleanupIfOtherVolumeUsersExist(c *check.C) {
+func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePresent(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
@@ -610,7 +664,6 @@ func (s *sdkStateSuite) TestTaskRetriesCleanupIfOtherVolumeUsersExist(c *check.C
 	t2.Set("sdk-retrieve-task", t2.ID())
 	t2.Set("sdk-setup", newSdk)
 	t2.SetToWait(state.DoStatus)
-	// Make the launch unsuccessful, so the cleanup can stop as the SDK is "used".
 	t3 := s.state.NewTask("error-trigger", "t3")
 	t3.WaitFor(t2)
 	setWorkshopProject("ws", s.project, t2, t3)
@@ -620,7 +673,7 @@ func (s *sdkStateSuite) TestTaskRetriesCleanupIfOtherVolumeUsersExist(c *check.C
 	s.state.Unlock()
 
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 
@@ -638,7 +691,7 @@ func (s *sdkStateSuite) TestTaskRetriesCleanupIfOtherVolumeUsersExist(c *check.C
 	s.state.Unlock()
 
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -646,45 +699,10 @@ func (s *sdkStateSuite) TestTaskRetriesCleanupIfOtherVolumeUsersExist(c *check.C
 	c.Check(t.IsClean(), check.Equals, true)
 	_, err = s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
+	c.Check(t2.IsClean(), check.Equals, true)
 }
 
-func (s *sdkStateSuite) TestTaskExitCleanupOnSDKUsedAgain(c *check.C) {
-	s.state.Lock()
-	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
-	t := s.state.NewTask("unregister-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk)
-
-	chg := s.state.NewChange("sample", "...")
-	chg.Set("user", "testuser")
-	setWorkshopProject("ws", s.project, t)
-	chg.AddTask(t)
-
-	other := s.state.NewChange("launch", "...")
-	other.Set("user", "testuser")
-	t2 := s.state.NewTask("install-sdk", "t2")
-	t2.Set("sdk-retrieve-task", t2.ID())
-	t2.Set("sdk-setup", newSdk)
-	setWorkshopProject("ws", s.project, t2)
-	other.AddTask(t2)
-	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
-
-	s.state.Unlock()
-
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-
-	s.state.Lock()
-
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
-	c.Assert(err, check.IsNil)
-	c.Assert(t.IsClean(), check.Equals, true)
-}
-
-func (s *sdkStateSuite) TestSDKVolumeCleanupWithLaterUnregisterTask(c *check.C) {
+func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
@@ -699,7 +717,7 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupWithLaterUnregisterTask(c *check.C) 
 	t2.WaitFor(t1)
 
 	// Add both tasks to their own changes
-	chg1 := s.state.NewChange("launch", "chg1")
+	chg1 := s.state.NewChange("refresh", "chg1")
 	chg1.Set("user", "testuser")
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
@@ -713,7 +731,7 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupWithLaterUnregisterTask(c *check.C) 
 
 	// Use default cooldown (1h), so t2 will not be clean (cooldown not passed)
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 
@@ -728,86 +746,27 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupWithLaterUnregisterTask(c *check.C) 
 	c.Assert(err, check.IsNil)
 }
 
-func (s *sdkStateSuite) TestSDKVolumeCleanupWithDifferentRevisions(c *check.C) {
+func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	s.mockSdk(c, "test", sdkYaml, sdk.R(2))
-	sdk1 := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
-	sdk2 := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 2}, Source: sdk.StoreSource}
-
-	t1 := s.state.NewTask("unregister-sdk", "t1")
-	t1.Set("sdk-retrieve-task", t1.ID())
-	t1.Set("sdk-setup", sdk1)
-	chg1 := s.state.NewChange("refresh", "chg1")
-	chg1.Set("user", "testuser")
-	setWorkshopProject("ws", s.project, t1)
-	chg1.AddTask(t1)
-
-	t2 := s.state.NewTask("unregister-sdk", "t2")
-	t2.Set("sdk-retrieve-task", t2.ID())
-	t2.Set("sdk-setup", sdk2)
-	t3 := s.state.NewTask("retry-task", "t3")
-	t3.WaitFor(t2)
-	chg2 := s.state.NewChange("refresh", "chg2")
-	chg2.Set("user", "testuser")
-	setWorkshopProject("ws", s.project, t2, t3)
-	chg2.AddTask(t2)
-	chg2.AddTask(t3)
-
-	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-	defer s.state.Unlock()
-	c.Assert(t1.IsClean(), check.Equals, true)
-	c.Assert(t2.IsClean(), check.Equals, false)
-	// The volume should still exist
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(2)))
-	c.Assert(err, check.IsNil)
-}
-
-func (s *sdkStateSuite) TestSDKVolumeCleanupWithSameRevisionDifferentSource(c *check.C) {
-	s.state.Lock()
-	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	sdkStore := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.TrySource}
 	sdkProject := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.ProjectSource}
 
 	t1 := s.state.NewTask("unregister-sdk", "t1")
 	t1.Set("sdk-retrieve-task", t1.ID())
-	t1.Set("sdk-setup", sdkStore)
+	t1.Set("sdk-setup", sdkProject)
 	chg1 := s.state.NewChange("launch", "chg1")
 	chg1.Set("user", "testuser")
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
 
-	t2 := s.state.NewTask("unregister-sdk", "t2")
-	t2.Set("sdk-retrieve-task", t2.ID())
-	t2.Set("sdk-setup", sdkProject)
-	t2.WaitFor(t1)
-	t3 := s.state.NewTask("retry-task", "t3")
-	t3.WaitFor(t2)
-	chg2 := s.state.NewChange("refresh", "chg2")
-	chg2.Set("user", "testuser")
-	setWorkshopProject("ws", s.project, t2, t3)
-	chg2.AddTask(t2)
-	chg2.AddTask(t3)
-
 	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
 	defer s.state.Unlock()
 	c.Assert(t1.IsClean(), check.Equals, true)
-	// t2's change is not ready, so not clean.
-	c.Assert(t2.IsClean(), check.Equals, false)
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
-	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
 }

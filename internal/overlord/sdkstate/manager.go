@@ -15,7 +15,7 @@ type SdkManager struct {
 }
 
 var (
-	sdkVolumeCooldownTime = 1 * time.Hour
+	sdkVolumeCooldownTime = 1 * time.Hour // Time to wait before deleting unused SDK volumes.
 )
 
 func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) *SdkManager {

@@ -79,16 +79,6 @@ func (w *Workshop) RemoveSdk(ctx context.Context, name string) error {
 	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
 }
 
-func WorkshopName(instance string) string {
-	idx := strings.LastIndex(instance, "-")
-	if idx == -1 {
-		return ""
-	}
-
-	// drop the project id from the name
-	return instance[:idx]
-}
-
 func WorkshopStateVolumeName(ws, pid string) string {
 	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
 }

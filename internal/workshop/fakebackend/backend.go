@@ -61,6 +61,7 @@ type RestoreCall struct {
 }
 
 type WorkshopVolumeMount struct {
+	ProjectId  string
 	Workshop   string
 	VolumeName string
 }
@@ -74,10 +75,10 @@ type FakeWorkshopBackend struct {
 	// workshops put to stash (e.g. during refresh)
 	StashedWorkshops map[string]map[string]*FakeWorkshop
 	// storage volumes, the key is a volume name
-	volumeLock                sync.Mutex
-	WorkshopVolumes           map[string]workshop.VolumeInfo
-	WorkshopVolumeContents    map[string]string
-	WorkshopVolumeMountPoints map[WorkshopVolumeMount]string
+	volumeLock           sync.Mutex
+	SdkVolumes           map[string]workshop.VolumeInfo
+	SdkVolumeContents    map[string]string
+	SdkVolumeMountPoints map[WorkshopVolumeMount]string
 	// the key is a username
 	projects map[string][]workshop.Project
 
@@ -107,9 +108,9 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
-	be.WorkshopVolumes = make(map[string]workshop.VolumeInfo)
-	be.WorkshopVolumeContents = make(map[string]string)
-	be.WorkshopVolumeMountPoints = make(map[WorkshopVolumeMount]string)
+	be.SdkVolumes = make(map[string]workshop.VolumeInfo)
+	be.SdkVolumeContents = make(map[string]string)
+	be.SdkVolumeMountPoints = make(map[WorkshopVolumeMount]string)
 	be.projects = make(map[string][]workshop.Project)
 
 	be.ExecCallback = DoExecDefault
@@ -216,13 +217,23 @@ func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string, f
 	prj := f.project(user, projectId)
 
 	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
-	if _, ok := f.Workshops[prj.ProjectId][name]; !ok {
+	wp, ok := f.Workshops[prj.ProjectId][name]
+	f.workshopLock.Unlock()
+	if !ok {
 		return workshop.ErrWorkshopNotLaunched
 	}
 
+	for _, sk := range wp.Sdks {
+		if sk.IsVolume() {
+			if err := f.DetachVolume(ctx, name, sdk.VolumeName(sk.Name, sk.Revision)); err != nil {
+				return err
+			}
+		}
+	}
+
+	f.workshopLock.Lock()
 	delete(f.Workshops[prj.ProjectId], name)
+	f.workshopLock.Unlock()
 	return nil
 }
 
@@ -516,11 +527,11 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	return nil
 }
 
-func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, info workshop.VolumeInfo) error {
+func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, info workshop.VolumeSetup) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	if _, ok := s.WorkshopVolumes[info.Name]; ok {
+	if _, ok := s.SdkVolumes[info.Name]; ok {
 		return workshop.ErrVolumeAlreadyExists
 	}
 
@@ -529,14 +540,19 @@ func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, info workshop.Vo
 		return err
 	}
 
-	s.WorkshopVolumeContents[info.Name] = vfs
-	s.WorkshopVolumes[info.Name] = info
+	s.SdkVolumeContents[info.Name] = vfs
+	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string)}
 	return nil
 }
 
 func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
 
 	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: wp, Name: name})
 
@@ -551,7 +567,7 @@ func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where 
 		return err
 	}
 
-	volumeFs := s.WorkshopVolumeContents[name]
+	volumeFs := s.SdkVolumeContents[name]
 	if volumeFs == "" {
 		return fmt.Errorf("volume %q not found", name)
 	}
@@ -564,7 +580,8 @@ func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where 
 		return err
 	}
 
-	s.WorkshopVolumeMountPoints[WorkshopVolumeMount{Workshop: wp, VolumeName: name}] = where
+	s.SdkVolumes[name].Workshops[projectId] = append(s.SdkVolumes[name].Workshops[projectId], wp)
+	s.SdkVolumeMountPoints[WorkshopVolumeMount{ProjectId: projectId, Workshop: wp, VolumeName: name}] = where
 	return nil
 }
 
@@ -572,7 +589,12 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	target := s.WorkshopVolumeMountPoints[WorkshopVolumeMount{Workshop: wp, VolumeName: name}]
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	target := s.SdkVolumeMountPoints[WorkshopVolumeMount{ProjectId: projectId, Workshop: wp, VolumeName: name}]
 
 	wfs, err := s.WorkshopFs(ctx, wp)
 	if err != nil {
@@ -581,18 +603,25 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 	defer wfs.Close()
 
 	err = wfs.Remove(target)
-	delete(s.WorkshopVolumeMountPoints, WorkshopVolumeMount{Workshop: wp, VolumeName: name})
+	if err != nil {
+		return err
+	}
+	delete(s.SdkVolumeMountPoints, WorkshopVolumeMount{ProjectId: projectId, Workshop: wp, VolumeName: name})
+
+	s.SdkVolumes[name].Workshops[projectId] = slices.DeleteFunc(s.SdkVolumes[name].Workshops[projectId], func(w string) bool {
+		return w == wp
+	})
 	return err
 }
 
 // ImportVolume imports a tarball into the volume. The tarball must be a valid
 // directory (unpacked so that the tests could provide a temp directory instead
 // of a packed tarball).
-func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball *os.File) error {
+func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, tarball *os.File) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	if _, ok := s.WorkshopVolumes[info.Name]; ok {
+	if _, ok := s.SdkVolumes[info.Name]; ok {
 		return workshop.ErrVolumeAlreadyExists
 	}
 
@@ -604,8 +633,8 @@ func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.Vo
 		}
 	}
 
-	s.WorkshopVolumeContents[info.Name] = tarball.Name()
-	s.WorkshopVolumes[info.Name] = info
+	s.SdkVolumeContents[info.Name] = tarball.Name()
+	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string)}
 	return nil
 }
 
@@ -613,14 +642,14 @@ func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) err
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	for volume := range s.WorkshopVolumeMountPoints {
+	for volume := range s.SdkVolumeMountPoints {
 		if volume.VolumeName == name {
 			return workshop.ErrVolumeInUse
 		}
 	}
 
-	delete(s.WorkshopVolumes, name)
-	delete(s.WorkshopVolumeContents, name)
+	delete(s.SdkVolumes, name)
+	delete(s.SdkVolumeContents, name)
 	return nil
 }
 
@@ -629,11 +658,12 @@ func (s *FakeWorkshopBackend) Volumes(ctx context.Context, kind string) ([]works
 	defer s.volumeLock.Unlock()
 
 	var infos []workshop.VolumeInfo
-	for _, info := range s.WorkshopVolumes {
+	for _, info := range s.SdkVolumes {
 		if info.Kind == kind {
 			infos = append(infos, info)
 		}
 	}
+
 	return infos, nil
 }
 
@@ -641,11 +671,10 @@ func (s *FakeWorkshopBackend) Volume(ctx context.Context, name string) (workshop
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	info, ok := s.WorkshopVolumes[name]
+	info, ok := s.SdkVolumes[name]
 	if !ok {
 		return workshop.VolumeInfo{}, workshop.ErrVolumeNotFound
 	}
-
 	return info, nil
 }
 
@@ -710,10 +739,17 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 
 	// Remove SDKs from after the snapshot.
 	for _, sk := range unwantedSdks {
-		if err = fs.RemoveAll(sdk.SdkDir(sk.Name)); err != nil {
-			return err
-		}
 		delete(wp.Sdks, sk.Name)
+		// Restore would detach the volume attached after the snapshot.
+		if sk.IsVolume() {
+			if err = s.DetachVolume(ctx, name, sdk.VolumeName(sk.Name, sk.Revision)); err != nil {
+				return err
+			}
+		} else {
+			if err = fs.RemoveAll(sdk.SdkDir(sk.Name)); err != nil {
+				return err
+			}
+		}
 	}
 	value, err := json.Marshal(wp.Sdks)
 	if err != nil {
