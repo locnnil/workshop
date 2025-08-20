@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -635,11 +636,13 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
 
 		plan := resolveRefresh(wp, req.file, sdks)
-		tasks := refresh(w.state, plan, wp, req.file, req.fileText)
-		if len(tasks.Tasks()) == 0 {
-			continue
+		if plan.HasUpdates() {
+			tasks := refresh(w.state, plan, wp, req.file, req.fileText)
+			if len(tasks.Tasks()) == 0 {
+				continue
+			}
+			taskset = append(taskset, tasks)
 		}
-		taskset = append(taskset, tasks)
 	}
 
 	for _, ts := range taskset {
@@ -683,6 +686,10 @@ type refreshPlan struct {
 	sdkSnapshot    string
 	installOrder   []string
 	installedOrder []string
+
+	// Indicates if the Workshop definition was updated, i.e. if any new plugs,
+	// slots or connections were added.
+	workshopDefinitionUpdated bool
 }
 
 func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
@@ -706,6 +713,10 @@ func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 
 func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh, p.intact)
+}
+
+func (p refreshPlan) HasUpdates() bool {
+	return len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 || p.workshopDefinitionUpdated
 }
 
 func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []sdk.Setup) *refreshPlan {
@@ -766,6 +777,9 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []s
 	for _, s := range candidates {
 		plan.installOrder = append(plan.installOrder, s.Name)
 	}
+
+	plan.workshopDefinitionUpdated = !reflect.DeepEqual(w.File.Sdks, newfile.Sdks) ||
+		!reflect.DeepEqual(w.File.Connections, newfile.Connections)
 
 	return plan
 }

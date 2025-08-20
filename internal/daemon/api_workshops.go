@@ -494,6 +494,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 	if len(change.Tasks()) == 0 {
 		change.SetStatus(state.DoneStatus)
+		return WorkshopUnchanged()
 	}
 
 	ensureStateSoon(st, 0)

@@ -169,7 +169,12 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		av = []string{name}
 	}
 
-	if err := c.RunRefresh(cli, project, av); err != nil {
+	err = c.RunRefresh(cli, project, av)
+	if client.IsNoUpdatesAvailable(err) {
+		fmt.Fprintf(Stdout, "no updates available for %s\n", strutil.Quoted(av))
+		return nil
+	}
+	if err != nil {
 		return err
 	}
 

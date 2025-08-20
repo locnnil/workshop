@@ -325,7 +325,7 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		st.Cache(vk, task.ReadyTime())
 		// We need to return here to give other competing cleanup tasks a chance
 		// to find out who was the last one to initiate the cleanup.
-		return &state.Retry{}
+		return fmt.Errorf("New cooldown start time for %q SDK volume: %v", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), task.ReadyTime())
 	} else {
 		// Imagine the situation when a change with multiple tasks that use this
 		// volume is in progress. Every unregister-sdk task will initiate a
@@ -344,12 +344,14 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 			// We need to return here to give other competing cleanup tasks
 			// a chance to find out who was the last one to initiate the
 			// cleanup.
-			return &state.Retry{}
+			return fmt.Errorf("New cooldown start time for %q SDK volume: %v", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), readyTime)
 		}
 	}
 
 	if time.Since(cooldownStart) < sdkVolumeCooldownTime {
-		return &state.Retry{}
+		remaining := sdkVolumeCooldownTime - time.Since(cooldownStart)
+		return fmt.Errorf("Cooldown period for %q SDK volume has not elapsed yet, time remaining: %s",
+			sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), remaining.Round(time.Second))
 	}
 
 	// Check if there are any tasks in progress that use the same SDK volume.
@@ -369,9 +371,9 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 	err = m.backend.DeleteVolume(ctx, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
 	if err == nil || errors.Is(err, workshop.ErrVolumeInUse) {
 		if errors.Is(err, workshop.ErrVolumeInUse) {
-			logger.Debugf("On SdkManager.Cleanup: the %q volume is still in use, skip clean up", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+			logger.Debugf("On SdkManager.Cleanup: the %q SDK volume is still in use, skip clean up", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
 		} else {
-			logger.Debugf("On SdkManager.Cleanup: the %q volume was deleted", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+			logger.Debugf("On SdkManager.Cleanup: the %q SDK volume was deleted", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
 		}
 		st.Cache(vk, nil)
 		return nil

@@ -499,6 +499,10 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh.verbose = c.verbose
 
 	if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+		// Nor other SDKs / definition, nor the sketch itself was changed.
+		if client.IsNoUpdatesAvailable(err) {
+			return nil
+		}
 		return err
 	}
 	fmt.Fprintf(Stdout, "%q sketch refreshed\n", wp.Name)
