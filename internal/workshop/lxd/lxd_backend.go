@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -80,6 +81,24 @@ func InstanceName(name string, project_id string) string {
 
 func instanceStashName(name string, pid string) string {
 	return "stash-" + InstanceName(name, pid)
+}
+
+func workshopName(instance string) string {
+	idx := strings.LastIndex(instance, "-")
+	if idx == -1 {
+		return ""
+	}
+
+	// drop the project id from the name
+	return instance[:idx]
+}
+
+func workshopProjectId(instance string) (string, string) {
+	idx := strings.LastIndex(instance, "-")
+	if idx == -1 {
+		return "", ""
+	}
+	return instance[:idx], instance[idx+1:]
 }
 
 func ImageAlias(name string) string {

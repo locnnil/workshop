@@ -143,7 +143,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name: workshop.WorkshopStateVolumeName("ws", s.project.ProjectId),
 		Kind: "state-storage",
 	}
@@ -195,7 +195,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name: workshop.WorkshopStateVolumeName("ws", s.project.ProjectId),
 		Kind: "state-storage",
 	}
@@ -206,7 +206,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	}()
 	// Setup state storage (must be already set by the save-state in a real use
 	// case).
-	vfs := s.backend.WorkshopVolumeContents[volume.Name]
+	vfs := s.backend.SdkVolumeContents[volume.Name]
 	c.Check(err, check.IsNil)
 	err = os.MkdirAll(filepath.Join(vfs, "sdk", "one"), 0755)
 	c.Check(err, check.IsNil)
@@ -238,7 +238,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 
 	s.launchWorkshop(c, "one")
 
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name: workshop.WorkshopStateVolumeName("ws", s.project.ProjectId),
 		Kind: "state-storage",
 	}

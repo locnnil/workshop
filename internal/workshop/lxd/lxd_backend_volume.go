@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/lxd/shared/entity"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/sdk"
@@ -94,7 +97,7 @@ func unlockVolume(volume string) {
 	}
 }
 
-func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeInfo) error {
+func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeSetup) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -106,7 +109,7 @@ func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeInfo) er
 	vol.Name = info.Name
 	vol.Type = "custom"
 	vol.ContentType = "filesystem"
-	vol.Config = volumeInfoToConfig(info)
+	vol.Config = volumeSetupToConfig(info)
 
 	err = conn.CreateStoragePoolVolume(storagePool, vol)
 	if api.StatusErrorCheck(err, http.StatusConflict) {
@@ -115,7 +118,7 @@ func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeInfo) er
 	return err
 }
 
-func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, tarball *os.File) error {
+func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, tarball *os.File) error {
 	// There could be multiple launches that require the same volume. We don't
 	// want to unpack and import the volume multiple times.
 	if err := lockVolume(ctx, info.Name); err != nil {
@@ -238,7 +241,7 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeInfo, ta
 		return err
 	}
 
-	volPut := api.StorageVolumePut{Config: volumeInfoToConfig(info)}
+	volPut := api.StorageVolumePut{Config: volumeSetupToConfig(info)}
 	return conn.UpdateStoragePoolVolume(storagePool, "custom", info.Name, volPut, "")
 }
 
@@ -260,6 +263,9 @@ func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	if err = conn.DeleteStoragePoolVolume(storagePool, "custom", name); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
+		}
+		if api.StatusErrorCheck(err, http.StatusBadRequest) && strings.Contains(err.Error(), "still in use") {
+			return workshop.ErrVolumeInUse
 		}
 		return err
 	}
@@ -285,7 +291,7 @@ func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeIn
 
 	infos := make([]workshop.VolumeInfo, 0, len(vols))
 	for _, vol := range vols {
-		infos = append(infos, volumeConfigToInfo(vol.Name, vol.Config))
+		infos = append(infos, volumeToInfo(&vol))
 	}
 	return infos, nil
 }
@@ -305,10 +311,10 @@ func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo,
 		return workshop.VolumeInfo{}, err
 	}
 
-	return volumeConfigToInfo(vol.Name, vol.Config), nil
+	return volumeToInfo(vol), nil
 }
 
-func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
+func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
 	config := map[string]string{
 		"user.kind": info.Kind,
 	}
@@ -327,17 +333,41 @@ func volumeInfoToConfig(info workshop.VolumeInfo) map[string]string {
 	return config
 }
 
-func volumeConfigToInfo(name string, config map[string]string) workshop.VolumeInfo {
-	revision, err := sdk.ParseRevision(config["user.sdk.revision"])
+func volumeToInfo(volume *api.StorageVolume) workshop.VolumeInfo {
+	revision, err := sdk.ParseRevision(volume.Config["user.sdk.revision"])
 	if err != nil {
 		revision = sdk.Revision{}
 	}
+
+	workshops := make(map[string][]string)
+	for _, u := range volume.UsedBy {
+		parsedURL, err := url.Parse(u)
+		if err != nil {
+			logger.Debugf("Failed to parse URL %q: %v", u, err)
+			continue
+		}
+		entityType, _, _, pathArgs, err := entity.ParseURL(*parsedURL)
+		if err != nil {
+			logger.Debugf("Failed to parse entity from URL %q: %v", parsedURL.String(), err)
+			continue
+		}
+		if entityType != entity.TypeInstance || len(pathArgs) == 0 {
+			logger.Debugf("URL %q does not point to an instance, skipping", parsedURL.String())
+			continue
+		}
+		wp, pid := workshopProjectId(pathArgs[0])
+		workshops[pid] = append(workshops[pid], wp)
+	}
+
 	return workshop.VolumeInfo{
-		Name:     name,
-		Kind:     config["user.kind"],
-		Sha3_384: config["user.sha3-384"],
-		Sdk:      config["user.sdk.name"],
-		Revision: revision,
-		Metadata: config["user.sdk.meta"],
+		VolumeSetup: workshop.VolumeSetup{
+			Name:     volume.Name,
+			Kind:     volume.Config["user.kind"],
+			Sha3_384: volume.Config["user.sha3-384"],
+			Sdk:      volume.Config["user.sdk.name"],
+			Revision: revision,
+			Metadata: volume.Config["user.sdk.meta"],
+		},
+		Workshops: workshops,
 	}
 }

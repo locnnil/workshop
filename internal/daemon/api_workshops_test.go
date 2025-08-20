@@ -24,6 +24,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
+	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -1166,6 +1167,8 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
 }
 
 func (s *apiSuite) TestLaunchWorkshopNoTrySdk(c *check.C) {
@@ -1433,6 +1436,8 @@ func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(conns, check.HasLen, 1)
 	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplug/test-sdk:training-plug %s/workshopplug/system:mount`, s.project.ProjectId, s.project.ProjectId))
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
@@ -1680,6 +1685,29 @@ func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
 	}
 }
 
+// ensureSdkVolumesAfterCooldown ensures that the SDK volumes are removed if unused by
+// setting the cooldown time to 0 and running the state engine multiple times to
+// trigger the garbage collection.
+func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
+	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
+
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.d.overlord.StateEngine().Ensure(), check.IsNil)
+		s.d.overlord.StateEngine().Wait()
+	}
+
+	vols, err := s.b.Volumes(s.ctx, "sdk")
+	c.Assert(err, check.IsNil)
+	c.Assert(vols, check.HasLen, len(want))
+
+	for _, wv := range want {
+		v := slices.IndexFunc(vols, func(v workshop.VolumeInfo) bool {
+			return v.Name == wv
+		})
+		c.Assert(v, check.Not(check.Equals), -1)
+	}
+}
+
 func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
 	wpCalls := []fakebackend.SnapshotCall{}
 	for _, sc := range s.b.SnapshotCalls {
@@ -1762,6 +1790,8 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		},
 	}
 	s.runActionTest(c, requests, expected)
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1", "mount-conflict-1"})
 
 	s.createWFile(c, "manysdks", manysdks_allremoved)
 	requests = []*bytes.Buffer{
@@ -1852,6 +1882,8 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})
 	s.checkRestoreCalls(c, "somebound", []string{}, []string{})
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_allremoved})
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "mount-conflict-1"})
 }
 
 func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
@@ -2012,6 +2044,8 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_extended})
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1", "test-sdk-3-1"})
 }
 
 func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
@@ -2083,6 +2117,8 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_minusone})
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", "system-1"})
 }
 
 func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
@@ -2250,6 +2286,12 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{
+		"system-1",
+		"test-sdk-2",
+		"test-sdk-2-1",
+	})
 }
 
 func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
@@ -2976,6 +3018,8 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 	})
 
 	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks})
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
 }
 
 func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
@@ -4083,10 +4127,36 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 			Summary: `Remove "workshopconns" workshop`,
 		},
 	}
+	s.runActionTest(c, requests, expected)
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
+}
 
+func (s *apiSuite) TestRemoveWorkshopNotFound(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	// Setup
+	s.createWFile(c, "workshopconns", workshopconns)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["workshopconns"],"action":"remove"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot remove "workshopconns": workshop not launched`,
+		},
+	}
 	s.runActionTest(c, requests, expected)
 
-	_, err := s.b.Workshop(s.ctx, "workshopconns")
-	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
-	c.Check(s.secBackend.RemoveCalls, check.HasLen, 3)
+	s.d.state.Lock()
+	defer s.d.state.Unlock()
+	changes := s.d.state.Changes()
+	removeChange := changes[len(changes)-1]
+	c.Check(removeChange.Kind(), check.Equals, "remove")
+	c.Assert(removeChange.IsReady(), check.Equals, true)
 }

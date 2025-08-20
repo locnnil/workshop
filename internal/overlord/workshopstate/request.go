@@ -264,7 +264,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (sdk.R
 	}
 
 	revision := sdk.Revision{N: minRevision.N - 1}
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     sdk.VolumeName(sk, revision),
 		Kind:     "sdk",
 		Sha3_384: digest,
@@ -296,11 +296,11 @@ func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.VolumeInfo, er
 	return vols, nil
 }
 
-func (s *localSdkFinder) importVolume(ctx context.Context, info workshop.VolumeInfo, tarball *os.File) error {
-	if err := s.backend.ImportVolume(ctx, info, tarball); err != nil {
+func (s *localSdkFinder) importVolume(ctx context.Context, setup workshop.VolumeSetup, tarball *os.File) error {
+	if err := s.backend.ImportVolume(ctx, setup, tarball); err != nil {
 		return err
 	}
-	s.sdkVolumes = append(s.sdkVolumes, info)
+	s.sdkVolumes = append(s.sdkVolumes, workshop.VolumeInfo{VolumeSetup: setup, Workshops: make(map[string][]string)})
 	return nil
 }
 
@@ -1145,6 +1145,8 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	remove.Set("forget", true)
 	addTaskSet(state.NewTaskSet(remove))
 
+	// The point of no return starts after the workshop is removed. If any of the tasks
+	// after this fails, we can only report the error, but cannot undo the removal.
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 	addTaskSet(state.NewTaskSet(removeStateStorage))
 
@@ -1159,6 +1161,8 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	// If an error occurs when removing the directories, it will not affect the other tasks.
 	cleanupLane := st.NewLane()
 	removeDirs.JoinLane(cleanupLane)
+	removeStash.JoinLane(cleanupLane)
+	removeStateStorage.JoinLane(cleanupLane)
 
 	for _, task := range removeSet.Tasks() {
 		task.Set("workshop", w.Name)

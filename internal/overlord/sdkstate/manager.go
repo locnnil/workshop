@@ -1,6 +1,8 @@
 package sdkstate
 
 import (
+	"time"
+
 	"github.com/canonical/workshop/internal/interfaces"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -11,6 +13,10 @@ type SdkManager struct {
 	backend workshop.Backend
 	repo    *interfaces.Repository
 }
+
+var (
+	sdkVolumeCooldownTime = 1 * time.Hour // Time to wait before deleting unused SDK volumes.
+)
 
 func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) *SdkManager {
 	manager := &SdkManager{repo: repo}
@@ -24,9 +30,20 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 	runner.AddHandler("register-sdk", OnDo(manager.doRegisterSdk), OnUndo(manager.doUnregisterSdk))
 	runner.AddHandler("unregister-sdk", OnDo(manager.doUnregisterSdk), OnUndo(manager.doRegisterSdk))
 
+	runner.AddCleanup("unregister-sdk", manager.doDeleteUnusedSdkVolumes)
+	runner.AddCleanup("install-sdk", manager.doDeleteUnusedSdkVolumes)
+
 	return manager
 }
 
 func (w *SdkManager) Ensure() error {
 	return nil
+}
+
+func FakeSdkVolumeCooldownTime(t time.Duration) (restore func()) {
+	old := sdkVolumeCooldownTime
+	sdkVolumeCooldownTime = t
+	return func() {
+		sdkVolumeCooldownTime = old
+	}
 }

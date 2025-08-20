@@ -33,6 +33,7 @@ var (
 	ErrWorkshopNotLaunched = errors.New("workshop not launched")
 	ErrVolumeNotFound      = errors.New("volume not found")
 	ErrVolumeAlreadyExists = errors.New("volume already exists")
+	ErrVolumeInUse         = errors.New("volume is in use")
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
 
 	User = user.User{
@@ -78,7 +79,7 @@ type Stash interface {
 	RemoveWorkshopStash(ctx context.Context, name string) error
 }
 
-type VolumeInfo struct {
+type VolumeSetup struct {
 	// Volume name.
 	Name string
 	// Kind of volume, e.g. "sdk" or "state-storage."
@@ -93,14 +94,20 @@ type VolumeInfo struct {
 	Metadata string
 }
 
+type VolumeInfo struct {
+	VolumeSetup
+	// Project ID / Workshop pairs that the volume is attached to.
+	Workshops map[string][]string
+}
+
 type VolumeManager interface {
 	// Create a temporary storage volume for the workshop. It does not
 	// mount the device to the workshop, it must be mounted to the required
 	// workshop as a separate operation.
-	CreateVolume(ctx context.Context, info VolumeInfo) error
+	CreateVolume(ctx context.Context, info VolumeSetup) error
 
 	// Import a tarball into the volume.
-	ImportVolume(ctx context.Context, info VolumeInfo, tarball *os.File) error
+	ImportVolume(ctx context.Context, info VolumeSetup, tarball *os.File) error
 
 	// Attach the volume to the workshop. The volume must be created before.
 	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error
@@ -108,8 +115,9 @@ type VolumeManager interface {
 	// Detach the volume from the workshop.
 	DetachVolume(ctx context.Context, wp, name string) error
 
-	// Delete a temporary storage volume for the workshop. It does not
-	// unmount the volume from the workshop if mounted.
+	// Delete a temporary storage volume for the workshop. It does not unmount
+	// the volume from the workshop if mounted. No error is returned if the
+	// volume does not exist.
 	DeleteVolume(ctx context.Context, name string) error
 
 	// List volumes of a given kind.

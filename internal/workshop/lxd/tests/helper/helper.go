@@ -130,8 +130,8 @@ func RemoveTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend) {
 	c.Assert(err, check.IsNil)
 }
 
-func MockSdkTarball(c *check.C, name, path, meta string) string {
-	sdkfs := filepath.Join(path, name)
+func MockSdkTarball(c *check.C, sdkname, path, meta string) string {
+	sdkfs := filepath.Join(path, sdkname)
 
 	metadir := filepath.Join(sdkfs, "meta")
 	err := os.MkdirAll(metadir, 0755)
@@ -144,7 +144,7 @@ func MockSdkTarball(c *check.C, name, path, meta string) string {
 	err = os.MkdirAll(hooksdir, 0755)
 	c.Assert(err, check.IsNil)
 
-	tarball := filepath.Join(path, fmt.Sprintf("%s_1.sdk", name))
+	tarball := filepath.Join(path, fmt.Sprintf("%s_1.sdk", sdkname))
 	pack := exec.CommandContext(context.Background(), "tar",
 		"--create",
 		"--format=posix",

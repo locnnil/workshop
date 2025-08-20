@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 	"os/user"
-	"path/filepath"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -19,7 +18,6 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -40,6 +38,8 @@ type wsOps struct {
 var _ = check.Suite(&wsOps{})
 
 func (f *wsOps) SetUpSuite(c *check.C) {
+	dirs.SetRootDir(c.MkDir())
+	dirs.SetCacheDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
 	var err error
@@ -162,7 +162,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	// Execute
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     "test",
 		Kind:     "testkind",
 		Sha3_384: "abc123",
@@ -175,7 +175,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(vols, check.HasLen, 1)
 
-	c.Check(vols[0], check.Equals, volume)
+	c.Check(vols[0], check.DeepEquals, workshop.VolumeInfo{VolumeSetup: volume, Workshops: map[string][]string{}})
 
 	// Execute
 	err = f.bd.DeleteVolume(f.ctx, "test")
@@ -199,14 +199,14 @@ sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
 func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	// Execute
 	sdkfs := c.MkDir()
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     "test-1",
 		Kind:     "sdk",
 		Sdk:      "test",
 		Revision: sdk.R(1),
 		Metadata: testsdk,
 	}
-	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
+	tarball := helper.MockSdkTarball(c, volume.Sdk, sdkfs, testsdk)
 
 	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
 
@@ -238,7 +238,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
-	c.Check(vinfo, check.Equals, volume)
+	c.Check(vinfo, check.DeepEquals, workshop.VolumeInfo{VolumeSetup: volume, Workshops: make(map[string][]string)})
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -247,14 +247,14 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 	// Execute
 	sdkfs := c.MkDir()
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     "test-1",
 		Kind:     "sdk",
 		Sdk:      "test",
 		Revision: sdk.R(1),
 		Metadata: testsdk,
 	}
-	tarball := helper.MockSdkTarball(c, "test", sdkfs, testsdk)
+	tarball := helper.MockSdkTarball(c, volume.Sdk, sdkfs, testsdk)
 
 	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
 
@@ -297,7 +297,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
-	c.Check(vinfo, check.Equals, volume)
+	c.Check(vinfo, check.DeepEquals, workshop.VolumeInfo{VolumeSetup: volume, Workshops: make(map[string][]string)})
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -473,43 +473,49 @@ func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
+func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
-	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
-	err = system.RetrieveSystemSdk(setup, nil)
+	sdkfs := c.MkDir()
+	setup := sdk.Setup{
+		Name:     "test-sdk",
+		Revision: sdk.R(5),
+		Source:   sdk.StoreSource,
+	}
+	err = w.AddSdk(f.ctx, setup)
 	c.Assert(err, check.IsNil)
-	meta, err := system.SystemSdkFs.ReadFile(filepath.Join("meta", "sdk.yaml"))
-	c.Assert(err, check.IsNil)
+	c.Check(w.Sdks, check.HasLen, 1)
 
-	volume := workshop.VolumeInfo{
+	volume := workshop.VolumeSetup{
 		Name:     sdk.VolumeName(setup.Name, setup.Revision),
 		Kind:     "sdk",
 		Sdk:      setup.Name,
 		Revision: setup.Revision,
-		Metadata: string(meta),
+		Metadata: testsdk,
 	}
-	file, err := os.Open(setup.Filepath())
+	tarball := helper.MockSdkTarball(c, setup.Name, sdkfs, testsdk)
+	file, err := os.Open(tarball)
 	c.Assert(err, check.IsNil)
+	defer file.Close()
+
 	err = f.bd.ImportVolume(f.ctx, volume, file)
-	file.Close()
 	c.Assert(err, check.IsNil)
 	defer func() { _ = f.bd.DeleteVolume(f.ctx, volume.Name) }()
 
-	info, err := f.bd.Volume(f.ctx, volume.Name)
-	c.Assert(err, check.IsNil)
-	c.Check(info, check.DeepEquals, volume)
-
 	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir(setup.Name), true)
 	c.Assert(err, check.IsNil)
+	defer func() { _ = f.bd.DetachVolume(f.ctx, "test", volume.Name) }()
 
-	err = w.AddSdk(f.ctx, setup)
+	info, err := f.bd.Volume(f.ctx, volume.Name)
 	c.Assert(err, check.IsNil)
-	c.Check(w.Sdks, check.HasLen, 1)
+	c.Check(info, check.DeepEquals, workshop.VolumeInfo{
+		VolumeSetup: volume,
+		Workshops:   map[string][]string{f.project.ProjectId: {"test"}},
+	})
 
 	err = f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
@@ -517,31 +523,98 @@ func (f *wsOps) TestLxdBackendWorkshopRestore(c *check.C) {
 	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
 	c.Assert(err, check.IsNil)
 
-	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir("sdk"), true)
+	// Attach the SDK volume as "test-sdk-2" to the workshop after the snapshot
+	// to immitate further SDK configuration changes. These should be gone after
+	// Restore.
+	setup2 := sdk.Setup{Name: "test-sdk-2", Revision: sdk.R(5)}
+	err = w.AddSdk(f.ctx, setup2)
+	c.Assert(err, check.IsNil)
+	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir(setup2.Name), true)
 	c.Assert(err, check.IsNil)
 
-	err = w.AddSdk(f.ctx, sdk.Setup{Name: "sdk", Revision: sdk.R(5)})
-	c.Assert(err, check.IsNil)
-	c.Check(w.Sdks, check.HasLen, 2)
-
-	wf := &workshop.File{
-		Name: "test",
-		Base: "ubuntu@24.04",
-	}
-	// The instance's configuration only has the system SDK after this.
+	// Restore the workshop from the snapshot.
+	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
 	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)
 	c.Assert(err, check.IsNil)
 
 	w, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	c.Check(w.Running, check.Equals, false)
-	// Check that Restore uses the provided "user.workshop.file" and removes "sdk".
+
+	// Check that Restore uses the provided "user.workshop.file" and removes
+	// "test-sdk-2" setup from the workshop.
 	c.Check(w.File, check.DeepEquals, wf)
 	c.Check(w.Sdks, check.HasLen, 1)
+	c.Check(w.Sdks[setup2.Name], check.DeepEquals, sdk.Setup{})
 
+	// Check that "test-sdk-2" volume is not present in the workshop filesystem
+	// anymore.
 	fs, err := f.bd.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	defer fs.Close()
-	_, err = fs.Stat(sdk.SdkDir("sdk"))
+	_, err = fs.Stat(sdk.SdkDir(setup2.Name))
 	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
+}
+
+func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
+	// First workshop
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	// Second workshop
+	other := workshop.Project{ProjectId: "24242424", Path: c.MkDir()}
+	otherCtx := helper.CreateTestContext(f.usr.Username, other.ProjectId)
+	helper.LaunchTestWorkshop(c, otherCtx, f.bd, other.Path)
+	defer helper.RemoveTestWorkshop(c, otherCtx, f.bd)
+
+	sdkfs := c.MkDir()
+	volume := workshop.VolumeSetup{
+		Name:     "test-sdk-1",
+		Kind:     "sdk",
+		Sdk:      "test-sdk",
+		Revision: sdk.R(1),
+		Metadata: testsdk,
+	}
+
+	tarball := helper.MockSdkTarball(c, volume.Sdk, sdkfs, testsdk)
+	file, err := os.Open(tarball)
+	c.Assert(err, check.IsNil)
+	defer file.Close()
+
+	err = f.bd.ImportVolume(f.ctx, volume, file)
+	c.Assert(err, check.IsNil)
+	defer func() { c.Check(f.bd.DeleteVolume(f.ctx, volume.Name), check.IsNil) }()
+
+	// Attach the volume to both workshops.
+	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir(volume.Sdk), true)
+	c.Assert(err, check.IsNil)
+	err = f.bd.AttachVolume(otherCtx, "test", volume.Name, sdk.SdkDir(volume.Sdk), true)
+	c.Assert(err, check.IsNil)
+
+	// Ensure the volume cannot be deleted while attached to workshops.
+	err = f.bd.DeleteVolume(f.ctx, volume.Name)
+	c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeInUse)
+
+	// Validate UsedBy in VolumeInfo.
+	info, err := f.bd.Volume(f.ctx, volume.Name)
+	c.Assert(err, check.IsNil)
+	c.Check(info, check.DeepEquals, workshop.VolumeInfo{
+		VolumeSetup: volume,
+		Workshops:   map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}},
+	})
+
+	// Detach the volume from the first workshop.
+	err = f.bd.DetachVolume(f.ctx, "test", volume.Name)
+	c.Assert(err, check.IsNil)
+
+	// Validate UsedBy in VolumeInfo.
+	info, err = f.bd.Volume(f.ctx, volume.Name)
+	c.Assert(err, check.IsNil)
+	c.Check(info, check.DeepEquals, workshop.VolumeInfo{
+		VolumeSetup: volume,
+		Workshops:   map[string][]string{other.ProjectId: {"test"}},
+	})
+
+	err = f.bd.DetachVolume(otherCtx, "test", volume.Name)
+	c.Assert(err, check.IsNil)
 }

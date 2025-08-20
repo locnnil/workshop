@@ -483,6 +483,9 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	if err != nil {
+		if change != nil {
+			change.SetStatus(state.ErrorStatus)
+		}
 		return statusBadRequest("%w", err)
 	}
 
