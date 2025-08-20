@@ -27,6 +27,7 @@ type CmdSketch struct {
 	eject   bool
 	name    string
 	remove  bool
+	verbose bool
 }
 
 func (c *CmdSketch) Command() *cobra.Command {
@@ -74,6 +75,7 @@ $ workshop sketch-sdk nimble --stash`,
 	cmd.Flags().BoolVar(&c.eject, "eject", false, "Promote the sketch SDK to an in-project SDK.")
 	cmd.Flags().StringVar(&c.name, "name", "", "Name for the ejected SDK.")
 	cmd.Flags().BoolVar(&c.remove, "remove", false, "Remove the sketch SDK from the workshop.")
+	cmd.Flags().BoolVar(&c.verbose, "verbose", false, "Combine stdout and stderr output from hooks.")
 
 	cmd.MarkFlagsMutuallyExclusive("stash", "restore", "eject", "remove")
 
@@ -412,6 +414,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
+		cmdrefresh.verbose = c.verbose
 		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			// Refresh failed, revert the stash operation so a possible subsequent
 			// refresh won't fail due to the lack of a sketch SDK definition.
@@ -425,6 +428,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	if c.restore {
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.WaitOnError = true
+		cmdrefresh.verbose = c.verbose
 
 		stashdir := workshop.SketchSdkStash(userDataDir, p.Id, wp.Name)
 
@@ -465,6 +469,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		defer reverter.Fail()
 
 		cmdrefresh := &CmdRefresh{root: c.root}
+		cmdrefresh.verbose = c.verbose
 		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			return err
 		}
@@ -491,7 +496,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 	cmdrefresh := &CmdRefresh{root: c.root}
 	cmdrefresh.WaitOnError = true
-	cmdrefresh.verbose = true
+	cmdrefresh.verbose = c.verbose
 
 	if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 		return err
