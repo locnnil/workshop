@@ -1111,6 +1111,10 @@ write_files:
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
+  # Create XDG base directories so SDKs don't need an extra mode=700 step.
+  - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
+  # Create PATH entries so SDKs don't need to source ~/.profile again.
+  - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/bin /home/workshop/.local/bin
   - systemctl daemon-reload
   - systemctl enable --now xauth-copy.service
   - systemctl enable --now xauth-watch.path
