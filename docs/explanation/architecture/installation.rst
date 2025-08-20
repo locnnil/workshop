@@ -1,7 +1,15 @@
 .. _exp_arch_install:
 
+.. meta::
+   :description: Explanation article on installing and understanding the
+                 architecture of Workshop, including its CLI, daemon, and
+                 containerized components, with details on LXD, ZFS, networking,
+                 and system isolation.
+
 Initial installation
 ====================
+
+.. @artefact installation
 
 |ws_markup| is designed to run on Linux systems.
 It is primarily distributed as a `snap <https://snapcraft.io/>`_
@@ -11,6 +19,10 @@ and ZFS for efficient storage management.
 
 Main components
 ---------------
+
+.. @artefact workshop (CLI)
+.. @artefact workshopd
+.. @artefact workshopctl
 
 |ws_markup| installation on your host system includes three primary components:
 
@@ -39,6 +51,8 @@ while :program:`workshopd` interfaces with LXD through the latter's native API.
 CLI
 ~~~
 
+.. @artefact workshop (CLI)
+
 The :program:`workshop` CLI provides a comprehensive command-line interface
 for managing workshops and interacting with :program:`workshopd`.
 It is organized into logical command groups
@@ -61,24 +75,30 @@ The client supports both synchronous and asynchronous operations,
 with proper error reporting and progress tracking.
 
 
+.. _exp_arch_install_daemon:
+
 Daemon
 ~~~~~~
 
-The :program:`workshopd` is the core component of |ws_markup|
-responsible for managing the complete workshop life cycle. It uses LXD as its container backend.
+.. @artefact workshopd
 
-The :program:`workshopd` daemon is a :program:`systemd` service
-responsible for the complete workshop life cycle.
-At its core, it relies on the proven state package from :program:`snapd`
+The :program:`workshopd` daemon, a core component of |ws_markup|,
+is a :program:`systemd` service responsible for the complete workshop life cycle.
+It uses LXD as its container backend
+and relies on the proven state package from :program:`snapd`
 to ensure that any changes to a workshop are handled in a transactional manner:
 safely, consistently, and reversibly.
 
 When integrated with :program:`systemd`,
-:program:`workshopd` implements the watchdog notification mechanism for health monitoring and supports socket activation to reduce memory footprint.
+:program:`workshopd` implements the watchdog notification mechanism
+for health monitoring
+and supports socket activation to reduce memory footprint.
 
 
 REST API
 ^^^^^^^^
+
+.. @artefact API
 
 The :program:`workshopd` daemon exposes a versioned REST API (v1) over Unix domain sockets
 for secure local communication with the CLI.
@@ -107,6 +127,8 @@ with appropriate HTTP status codes.
 
 LXD communication
 ^^^^^^^^^^^^^^^^^
+
+.. @artefact workshopd
 
 The :program:`workshopd` daemon maintains a persistent connection to LXD
 through its Unix domain socket at :file:`/var/snap/lxd/common/lxd/unix.socket`,
@@ -144,6 +166,8 @@ and resource constraints.
 Control interface
 ~~~~~~~~~~~~~~~~~
 
+.. @artefact workshopctl
+
 The :program:`workshopctl` tool serves as a secure bridge
 between workshop containers and the host system.
 It operates with the workshop user's permissions (UID 1000)
@@ -156,12 +180,15 @@ at :file:`/var/lib/workshop/run/workshop.socket.untrusted`.
 Management and isolation
 ------------------------
 
+.. @artefact workshopd
+
 The :program:`workshopd` daemon manages the complete workshop life cycle,
 including storage pool management,
 image management,
 network isolation,
 and project isolation.
 
+.. _exp_arch_install_storage:
 
 Storage pool
 ~~~~~~~~~~~~
@@ -176,6 +203,8 @@ volumes for SDKs and SDK data persistence,
 snapshots for quick workshop updates and rollbacks,
 and cached container images.
 
+
+.. _exp_arch_install_images:
 
 Images
 ~~~~~~
