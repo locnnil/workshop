@@ -110,10 +110,11 @@ func NewSdkProfile(sdkName string) SdkProfile {
 
 func defaultDevices(pid, w string) ([]Mount, []ProxyEntry) {
 	mounts := []Mount{{
-		Name:  "workshop.workshopctl",
-		What:  filepath.Join(dirs.ExecDir, "workshopctl"),
-		Where: "/usr/bin/workshopctl",
-		Type:  HostWorkshop,
+		Name:     "workshop.workshopctl",
+		What:     filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where:    "/usr/bin/workshopctl",
+		Type:     HostWorkshop,
+		ReadOnly: true,
 	}, {
 		Name:  "cache.apt",
 		What:  AptCacheDir(pid, w),

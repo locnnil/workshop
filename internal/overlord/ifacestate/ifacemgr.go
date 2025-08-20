@@ -303,10 +303,11 @@ func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string
 	// workshopctl was updated to a new version and is shown as /deleted in a
 	// workshop.
 	workshopctl := workshop.Mount{
-		Name:  "workshop.workshopctl",
-		What:  filepath.Join(dirs.ExecDir, "workshopctl"),
-		Where: "/usr/bin/workshopctl",
-		Type:  workshop.HostWorkshop,
+		Name:     "workshop.workshopctl",
+		What:     filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where:    "/usr/bin/workshopctl",
+		Type:     workshop.HostWorkshop,
+		ReadOnly: true,
 	}
 
 	_ = m.backend.RemoveWorkshopMount(pctx, w, workshopctl.Name)

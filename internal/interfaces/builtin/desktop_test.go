@@ -181,7 +181,14 @@ slots:
 	c.Assert(err, check.IsNil)
 
 	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
-	expectedMount := &workshop.Mount{Name: "desktop_xauth", What: filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, "Xauthority"), Where: "/var/lib/workshop/run/Xauthority", MakeWhere: true, Type: workshop.HostWorkshop}
+	expectedMount := &workshop.Mount{
+		Name:      "desktop_xauth",
+		What:      filepath.Join(dirs.WorkshopdRunDir, deviceSpec.User.Uid, "Xauthority"),
+		Where:     "/var/lib/workshop/run/Xauthority",
+		MakeWhere: true,
+		Type:      workshop.HostWorkshop,
+		ReadOnly:  true,
+	}
 	c.Assert(deviceSpec.Profile.Mounts["desktop_xauth"], check.DeepEquals, *expectedMount)
 }
 
