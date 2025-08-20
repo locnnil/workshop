@@ -42,38 +42,33 @@ A workshop's life-cycle can see it switch between several statuses:
 
    * - State
      - Description
-     - Definition
-     - Container
 
    * - *Off*
-     - Initial state; just defined
-     - In the project directory
-     - Doesn't exist
+     - Just defined, not operational;
+       the workshop container does not exist yet.
 
    * - *Ready*
-     - Can perform meaningful work
-     - In the project directory
-     - Running
+     - Operational;
+       the workshop container is running and ready for use.
 
    * - *Stopped*
-     - Temporarily stopped, can be restarted
-     - In the project directory
-     - Stopped
+     - Operational;
+       the workshop container is stopped and can be restarted.
 
    * - *Pending*
-     - Being updated, not ready for work
-     - In the project directory
-     - Running, being updated
+     - Not operational;
+       the workshop container is running
+       but is being updated and is not ready for use.
 
    * - *Waiting*
-     - Paused for debugging a launch or refresh error
-     - In the project directory
-     - Running
+     - Operational;
+       the workshop container is running and available for command execution,
+       typically for debugging a launch or refresh error;
+       the current :ref:`change <exp_changes_tasks>` is in progress.
 
    * - *Error*
-     - Non-operational
-     - Can be missing
-     - Can be non-operational
+     - Not operational;
+       the workshop is in a non-functional state due to an error.
 
 
 Status diagrams in the `See also`_ section below
@@ -212,11 +207,11 @@ because all components must be in place before the wiring can be done.
 This example adds a slot, a plug, and two connections to its SDKs:
 
 .. code-block:: yaml
-   :caption: .workshop/digits-cuda.yaml
-   :emphasize-lines: 6-9, 12-15, 18-22
+   :caption: .workshop/dev.yaml
+   :emphasize-lines: 6-9, 12-14
 
    base: ubuntu@22.04
-   name: digits-cuda
+   name: dev
    sdks:
      - name: tensorflow
        channel: latest/stable
@@ -224,35 +219,28 @@ This example adds a slot, a plug, and two connections to its SDKs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
-     - name: imagenet
-       channel: latest/stable
-       slots:
-         images:
-           interface: mount
-           workshop-source: $SDK/images
      - name: cuda
        channel: latest/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs
-     - plug: tensorflow:images
-       slot: imagenet:images
 
 
-Here, :samp:`imagenet:images`
-is a :ref:`mount interface <exp_mount_interface>` slot,
-whose :samp:`workshop-source` attribute points to a directory in the workshop.
-At run-time, the :samp:`tensorflow:images` plug is connected to the slot
-to consume the data from it.
+This extends the :samp:`tensorflow` SDK
+with a standard path for CUDA runtime libraries.
+In :samp:`connections`,
+we explicitly connect the :samp:`cuda` plug,
+newly defined under the :samp:`tensorflow` SDK,
+to the :samp:`libs` slot from the :samp:`cuda` SDK.
+Thus, upon workshop creation,
+the plug will be connected
+not to a default system SDK location on the host
+(for example, :file:`.../<ID>/<WORKSHOP>/...`),
+but to a library path *inside* the workshop,
+which is set by :samp:`workshop-target`.
 
-In turn, :samp:`tensorflow:cuda`
-is a :ref:`mount interface <exp_mount_interface>` plug
-that sets its :samp:`workshop-target` to a directory in the workshop.
-At run-time, the plug is connected to the :samp:`cuda:libs` slot,
-so the libraries exposed by the slot are available at the plug's target path.
-
-Also, both connections established here
-are no different from those created via the command line.
+Mind that the connection established in this way
+is no different from those created via the command line.
 
 
 .. _exp_workshop_definition_scripts:
