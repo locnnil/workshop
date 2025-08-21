@@ -27,7 +27,7 @@ execute: |
   echo "Check workshop refresh --no-wait"
   echo -e "sdks:\n  - name: test-sdk-health-waiting\n    channel: latest/stable" >> workshop.yaml
   workshop_exec refresh --no-wait
-  
+
   # The refresh process here takes about 10s. 
   # The hook check-health should fail four times before final success.
   # Check tests/lib/sdk/test-sdk-health-waiting/latest/stable/sdk/hooks/check-health for details
@@ -50,6 +50,9 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check workshop refresh when no updates are available"
+  workshop_exec refresh ws-refresh-sdk | MATCH "no updates available for \"ws-refresh-sdk\""
 
   validate_snapshots() {
     local expected_output="$1"

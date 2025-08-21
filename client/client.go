@@ -443,11 +443,11 @@ const (
 )
 
 func IsNoUpdatesAvailable(err error) bool {
-	e, ok := err.(*Error)
-	if !ok || e == nil {
-		return false
+	var e *Error
+	if errors.As(err, &e) {
+		return e.Kind == ErrorKindNoUpdatesAvailable
 	}
-	return e.Kind == ErrorKindNoUpdatesAvailable
+	return false
 }
 
 func (rsp *response) err(cli *Client) error {

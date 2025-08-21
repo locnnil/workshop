@@ -12,6 +12,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -106,7 +107,7 @@ func (s *managerSuite) TestRefreshManyOK(c *check.C) {
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 
-	_, err := s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
+	_, err := s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 }
 
@@ -118,7 +119,7 @@ func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
 	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
 	c.Assert(err, check.IsNil)
 
-	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
+	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not running`)
 }
 
@@ -130,6 +131,6 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
 	err := s.backend.RemoveWorkshop(s.ctx, workshop2.Name, true)
 	c.Assert(err, check.IsNil)
 
-	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"})
+	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not launched`)
 }

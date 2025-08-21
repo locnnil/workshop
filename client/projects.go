@@ -13,6 +13,8 @@ type Project struct {
 
 type WorkshopActionOptions struct {
 	Mode string `json:"mode,omitempty"`
+	// Supported refresh options: "update", "restore".
+	RefreshOption string `json:"refresh-option,omitempty"`
 }
 
 type WorkshopActionSetup struct {
@@ -80,12 +82,13 @@ func (client *Client) Launch(projectId string, names []string, mode string) (cha
 	})
 }
 
-func (client *Client) Refresh(projectId string, names []string, mode string) (changeId string, err error) {
+func (client *Client) Refresh(projectId string, names []string, mode string, option string) (changeId string, err error) {
 	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "refresh",
 		Names:  names,
 		Options: &WorkshopActionOptions{
-			Mode: mode,
+			Mode:          mode,
+			RefreshOption: option,
 		},
 	})
 }

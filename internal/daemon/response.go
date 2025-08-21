@@ -212,7 +212,7 @@ var (
 	statusGatewayTimeout   = makeErrorResponder(504)
 )
 
-func WorkshopUnchanged() Response {
+func workshopUnchanged() Response {
 	res := &errorResult{Message: "no updates available", Kind: errorKindNoUpdatesAvailable}
 	return &resp{
 		Type:   ResponseTypeError,

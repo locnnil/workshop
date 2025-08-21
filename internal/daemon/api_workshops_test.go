@@ -459,6 +459,7 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
 	st.Lock()
 	change := st.Change(rsp.Change)
 	st.Unlock()
+	c.Assert(change, check.NotNil)
 	<-change.Ready()
 
 	st.Lock()
@@ -1622,7 +1623,7 @@ type expectedWorkshop struct {
 	slots       []string
 }
 
-func (s *apiSuite) ensureWorskhops(c *check.C, want []expectedWorkshop) {
+func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 	got, err := s.b.ProjectWorkshops(s.ctx)
 	c.Assert(err, check.IsNil)
 	c.Assert(got, check.HasLen, len(want), check.Commentf("expected %d workshops, got %d", len(want), len(got)))
@@ -1861,7 +1862,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
@@ -1879,8 +1880,8 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		"mount-conflict",
 	})
 
-	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})
-	s.checkRestoreCalls(c, "somebound", []string{}, []string{})
+	s.checkRestoreCalls(c, "basic", nil, nil)
+	s.checkRestoreCalls(c, "somebound", nil, nil)
 	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_allremoved})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "mount-conflict-1"})
@@ -1955,7 +1956,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
@@ -2032,7 +2033,7 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2108,7 +2109,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2185,7 +2186,7 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 			"system:ssh-agent",
 		},
 	}}
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2275,7 +2276,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 			"system:ssh-agent",
 		},
 	}}
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2318,9 +2319,9 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 
 	s.checkHookCalls(c, "manysdks", nil, nil)
 
-	// Refresh saves and restores state for intact SDKs
+	// Refresh saves and restores state for intact SDKs.
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"transactional","refresh-option":"restore"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -2346,11 +2347,11 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 	})
 	s.b.ExecCalls = nil
 
-	// Refresh saves and restores state for updated SDKs
+	// Refresh saves and restores state for updated SDKs.
 	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2)()
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"transactional","refresh-option":"update"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -2376,11 +2377,11 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 	})
 	s.b.ExecCalls = nil
 
-	// Refresh doesn't save or restore state for removed SDKs
+	// Refresh doesn't save or restore state for removed SDKs.
 	s.createWFile(c, "manysdks", manysdks_minusone)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"transactional","refresh-option":"update"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -2401,11 +2402,11 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 	})
 	s.b.ExecCalls = nil
 
-	// Refresh doesn't save or restore state for installed SDKs
+	// Refresh doesn't save or restore state for newly installed SDKs.
 	s.createWFile(c, "manysdks", manysdks)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"transactional","refresh-option":"update"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -2416,6 +2417,11 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 		},
 	}
 	s.runActionTest(c, requests, expected)
+
+	wp, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+	_, err = wp.SdkInfo(s.ctx, "test-sdk-2")
+	c.Assert(err, check.IsNil)
 
 	s.checkHookCalls(c, "manysdks", []string{
 		"test-sdk",
@@ -2476,7 +2482,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 			"system:ssh-agent",
 		},
 	}}
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 	c.Assert(os.RemoveAll(workshop.TrySdkDir(userDataDir, "test-sdk")), check.IsNil)
@@ -2523,7 +2529,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 			"system:ssh-agent",
 		},
 	}}
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2586,7 +2592,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 			"system:ssh-agent",
 		},
 	}}
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	c.Assert(os.RemoveAll(workshop.ProjectSdkPath(s.project.Path, "test-sdk")), check.IsNil)
 	s.mockProjectSdk(c, "test-sdk", testsdk_r2)
@@ -2632,7 +2638,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 			"system:ssh-agent",
 		},
 	}}
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2710,7 +2716,7 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2788,7 +2794,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2859,7 +2865,7 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2935,7 +2941,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -2969,6 +2975,82 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: "no updates available",
+			Kind:    string(errorKindNoUpdatesAvailable),
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+
+	s.ensureWorkshops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", nil, nil)
+
+	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
+}
+
+func (s *apiSuite) TestRefreshRestore(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer func() { _ = s.d.Overlord().Stop() }()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"transactional","refresh-option":"restore"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -3009,7 +3091,7 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -3087,7 +3169,7 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -3160,7 +3242,7 @@ func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -3225,7 +3307,7 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "basic", []string{
 		"system",
@@ -3302,7 +3384,7 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	s.checkSnapshotCalls(c, "manysdks", []string{
 		"system",
@@ -3477,7 +3559,7 @@ func (s *apiSuite) TestRefreshAbort(c *check.C) {
 
 // Tests the input validation logic of v1PostProjectWorkshop. Excludes any
 // dispatch validation, these are covered by their own tests.
-func (s *apiSuite) TestValidateActionModeInputs(c *check.C) {
+func (s *apiSuite) TestValidateIncorrectActionModeInputs(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -3486,6 +3568,8 @@ func (s *apiSuite) TestValidateActionModeInputs(c *check.C) {
 		cmd    string
 		result map[string]string
 	}
+
+	s.vars = map[string]string{"id": s.project.ProjectId}
 
 	// Note we are explicitly testing the validation up until dispatch here. All
 	// error messages are desired. 'mode' errors represent an invalid
@@ -3546,16 +3630,17 @@ func (s *apiSuite) TestValidateActionModeInputs(c *check.C) {
 	}
 
 	for _, cmd := range cmds {
-		for mode, error := range cmd.result {
+		for mode, experr := range cmd.result {
 			// Construct request
-			req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s", "options": {"mode":"%s"}}`, cmd.cmd, mode)))
+			body := strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s", "options": {"mode":"%s"}}`, cmd.cmd, mode))
+			req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", body)
 			c.Assert(err, check.IsNil)
 
 			// Construct response
 			exp := expectedResp{
 				Type:    ResponseTypeError,
 				Status:  http.StatusBadRequest,
-				Message: error,
+				Message: experr,
 			}
 
 			// Execute
@@ -3566,6 +3651,65 @@ func (s *apiSuite) TestValidateActionModeInputs(c *check.C) {
 			c.Check(rsp.Status, check.Equals, exp.Status)
 			c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
 		}
+	}
+}
+
+func (s *apiSuite) TestValidateIncorrectRefreshOption(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.vars = map[string]string{"id": s.project.ProjectId}
+
+	type table struct {
+		action string
+		mode   string
+		option string
+		result string
+	}
+
+	cmds := []table{
+		{
+			action: "refresh",
+			mode:   "continue",
+			option: "update",
+			result: `cannot refresh: "refresh-option" is only applicable to "transactional" and "wait-on-error" modes; given: "continue"`,
+		},
+		{
+			action: "refresh",
+			mode:   "abort",
+			option: "update",
+			result: `cannot refresh: "refresh-option" is only applicable to "transactional" and "wait-on-error" modes; given: "abort"`,
+		},
+		{
+			action: "launch",
+			mode:   "abort",
+			option: "update",
+			result: `cannot launch: "refresh-option" is only valid for refresh actions`,
+		},
+	}
+
+	for _, cmd := range cmds {
+		// Construct request
+		reqBody := strings.NewReader(fmt.Sprintf(`{"names":["basic"],"action":"%s", "options": {"mode":"%s","refresh-option":"%s"}}`, cmd.action, cmd.mode, cmd.option))
+		req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops", reqBody)
+		c.Assert(err, check.IsNil)
+
+		// Construct response
+		exp := expectedResp{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: cmd.result,
+		}
+
+		// Execute
+		rsp := v1PostProjectWorkshop(apiCmd("/v1/projects/{id}/workshops"), req, nil).(*resp)
+
+		// Validate
+		c.Check(rsp.Type, check.Equals, exp.Type)
+		c.Check(rsp.Status, check.Equals, exp.Status)
+		c.Check(rsp.Result.(*errorResult).Message, check.Matches, exp.Message)
+
 	}
 }
 
@@ -3847,7 +3991,7 @@ base: ubuntu@22.04
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 	sketchdir := workshop.SketchSdkCurrent(userDataDir, s.project.ProjectId, "manysdks")
@@ -3899,10 +4043,10 @@ plugs:
 		},
 	}}
 
-	s.ensureWorskhops(c, want)
+	s.ensureWorkshops(c, want)
 }
 
-func (s *apiSuite) TestRefreshPartialConflictChange(c *check.C) {
+func (s *apiSuite) TestRefreshConflictChange(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
@@ -3930,6 +4074,7 @@ base: ubuntu@22.04
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh", "options": {"mode":"transactional", "refresh-option":"restore"}}`),
 	}
 	expected = []*expectedResp{
 		{
@@ -3938,6 +4083,12 @@ base: ubuntu@22.04
 			Kind:      "refresh",
 			Summary:   `Refresh "manysdks" workshop`,
 			ChangeErr: `(?s).*\(SDK must be named "sketch" \(now: "illegal-sketch-name"\)\)`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot refresh "manysdks": waiting on error`,
+			Summary: `Refresh "manysdks" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,

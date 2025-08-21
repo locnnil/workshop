@@ -9,11 +9,9 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Install empty sketch SDK"
-  output="$(sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   q
   EOF
-  )"
-  [ -z "$output" ]
 
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].tracking' | MATCH '^~/.local/share/workshop/id/.*/ws-sketch/sdk/sketch'
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
@@ -64,11 +62,9 @@ execute: |
   workshop_exec sketch-sdk --remove
 
   echo "Install empty sketch SDK"
-  output="$(sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   q
   EOF
-  )"
-  [ -z "$output" ]
 
   echo "Add a breaking change to sketch"
   ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
