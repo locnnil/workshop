@@ -279,6 +279,20 @@ slots:
 	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
 }
 
+func (s *mountSuite) TestSanitizeSlotSDKVariable(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+slots:
+ mount-slot:
+  interface: mount
+  workshop-source: $SDK/training
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	slot := info.Slots["mount-slot"]
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.IsNil)
+	c.Check(slot.Attrs["workshop-source"], check.Equals, "/var/lib/workshop/sdk/mount-slot-sdk/training")
+}
+
 func (s *mountSuite) TestSanitizeSlotNoSource(c *check.C) {
 	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
@@ -408,7 +422,7 @@ base: ubuntu@22.04
 slots:
  mount:
   interface: mount
-  workshop-source: $SDK/training
+  workshop-source: /var/lib/workshop/sdk/producer/training
 `, s.projectId, "ws", "producer", "mount")
 	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
 

@@ -173,6 +173,8 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	if !filepath.IsAbs(path) {
 		return fmt.Errorf(`mount slot "workshop-source" must be absolute`)
 	}
+
+	slot.Attrs["workshop-source"] = path
 	return nil
 }
 
@@ -196,10 +198,6 @@ func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (str
 	err := slot.Attr("workshop-source", &source)
 	if err != nil {
 		return "", err
-	}
-
-	if strings.HasPrefix(source, "$SDK/") {
-		return strings.Replace(source, "$SDK", sdk.SdkDir(slot.Sdk().Name), 1), nil
 	}
 	return source, nil
 }
