@@ -2,9 +2,8 @@ name: dev
 base: ubuntu@24.04
 sdks:
   - name: go
-    channel: noble/stable
+    channel: all/edge
   - name: project-tools
-  - name: project-starter-pack
   - name: system
     plugs:
       fake-store:
@@ -29,7 +28,7 @@ scripts:
     git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
     "$HOME"/snapd-testing-tools/utils/spread-shellcheck tests/integration
   cover: |
-    go test ./... -coverprofile=coverage.out
+    go test -covermode=count -coverpkg=./... -coverprofile=coverage.out ./...
   fake-store: |
     STORE_DIR=/tmp/sdkstore
     source tests/lib/utils.sh
