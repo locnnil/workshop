@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gopkg.in/tomb.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
@@ -66,12 +67,17 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	var wf workshop.File
+	var fileText string
 	st.Lock()
-	err = task.Get("workshop-file", &wf)
+	err = task.Get("workshop-file", &fileText)
 	st.Unlock()
 	if err != nil {
 		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+	}
+
+	var wf workshop.File
+	if err := yaml.Unmarshal([]byte(fileText), &wf); err != nil {
+		return fmt.Errorf("invalid workshop file: %w", err)
 	}
 
 	var sdkSnapshot string

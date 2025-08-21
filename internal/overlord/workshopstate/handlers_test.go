@@ -322,11 +322,10 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsJammy)
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
-	t1.Set("workshop-file", wf)
+	t1.Set("workshop-file", wsJammy)
 	t1.Set("forget", true)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
@@ -346,7 +345,6 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsJammy)
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@22.04"}
 
 	reset := s.backend.SetWorkshopFsCallback(func(ctx context.Context, name string) (workshop.WorkshopFs, error) {
 		return nil, errors.New("fs is unavailable")
@@ -355,7 +353,7 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
-	t1.Set("workshop-file", wf)
+	t1.Set("workshop-file", wsJammy)
 	t1.Set("forget", true)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
