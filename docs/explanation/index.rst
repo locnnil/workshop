@@ -37,8 +37,10 @@ Workshops and projects
 .. @artefact workshop (container)
 .. @artefact workshop definition
 
-Workshops are containers for consistent environment builds,
-and projects are the working directories where workshop definitions are placed.
+Workshops are development environments, each running in a container,
+mapping your project to its contained dependencies.
+In turn, a project is a working directory
+where multiple workshop definitions can be placed.
 
 .. toctree::
    :hidden:

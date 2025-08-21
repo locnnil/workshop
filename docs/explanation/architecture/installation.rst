@@ -190,6 +190,8 @@ and project isolation.
 
 .. _exp_arch_install_storage:
 
+.. _exp_arch_install_storage:
+
 Storage pool
 ~~~~~~~~~~~~
 

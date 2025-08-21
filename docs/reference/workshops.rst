@@ -16,8 +16,9 @@ What a workshop is
 .. @artefact workshop (container)
 .. @artefact workshopd
 
-A workshop is an container-based environment intended for a single user,
-fully described in a :ref:`definition file <ref_workshop_definition>`.
+A workshop is a development environment running in a container,
+mapping your project to its contained dependencies.
+It is fully described in a :ref:`definition file <ref_workshop_definition>`.
 
 |ws_markup| currently uses LXD as its container engine,
 communicating to it via the socket-activated :program:`workshopd` backend,
@@ -34,7 +35,7 @@ which provide tools for development and runtime tasks.
 SDKs are downloaded from the SDK Store that is specific to |ws_markup|.
 
 After the SDKs are installed, their :samp:`setup-base` hooks run
-in the order the SDK are listed;
+in the order the SDKs are listed;
 this serves to customize the workshop and prepare the SDKs for use.
 
 The host user running |ws_markup| is mapped to the default workshop user,

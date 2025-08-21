@@ -10,7 +10,7 @@ Workshop definition
 .. @artefact project
 
 A project which defines a single workshop can store a definition file
-named :file:`workshop.yaml` or :file:`.workshop.yaml`
+named :file:`workshop.yaml` or :file:`.workshop.yaml` (the latter is hidden)
 in the project directory.
 
 

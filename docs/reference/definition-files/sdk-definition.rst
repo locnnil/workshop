@@ -16,10 +16,10 @@ Filename convention
 .. @artefact sdkcraft (CLI)
 
 The name of the SDK definition file must be :file:`sdk.yaml`;
-the file is usually created using the :command:`sdkcraft init` command
-in the source directory when :ref:`sketching a local SDK <tut_sketch_sdks>`
-or
-:ref:`crafting and publishing an SDK <tut_craft_sdks>`.
+the file is usually stored under :file:`$XDG_DATA_HOME/workshop/`
+when :ref:`sketching a local SDK <tut_sketch_sdks>`,
+or under an arbitrary source directory
+when :ref:`crafting and publishing a regular SDK <tut_craft_sdks>`.
 
 
 Structure
@@ -124,30 +124,36 @@ For example:
    :caption: sdk.yaml
 
    name: go
+   build-base: ubuntu@24.04
    title: Go SDK
-   base: ubuntu@22.04
    summary: The Go programming language
    description: |
-     Go is an open source programming language that enables the production
+     Go is an open source programming language
+     that enables the production
      of simple, efficient and reliable software at scale.
-   version: '0.1'
+   version: "1.24.6"
    license: LGPL-2.1
    platforms:
      amd64:
-
-   parts:
-     go-part:
-       plugin: nil
-
+       build-on: [amd64]
+       build-for: [amd64]
+     arm64:
+       build-on: [amd64]
+       build-for: [arm64]
+     riscv64:
+       build-on: [amd64]
+       build-for: [riscv64]
+   
    plugs:
      mod-cache:
        interface: mount
        workshop-target: /home/workshop/go/pkg/mod
-
-   slots:
-      tools:
-        interface:  mount
-        workshop-source: $SDK/go
+   
+   parts:
+     go:
+       plugin: dump
+       source: https://go.dev/dl/go$CRAFT_PROJECT_VERSION.linux-$CRAFT_ARCH_BUILD_FOR.tar.gz
+       source-type: tar
 
 
 JSON Schema

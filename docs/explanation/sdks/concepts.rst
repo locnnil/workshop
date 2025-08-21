@@ -242,7 +242,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_interface`
+- :ref:`exp_interfaces`
 - :ref:`exp_projects`
 - :ref:`exp_workshop`
 
