@@ -4,12 +4,12 @@ import (
 	"cmp"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/client"
 )

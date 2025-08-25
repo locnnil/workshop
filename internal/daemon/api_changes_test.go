@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"time"
 
-	"golang.org/x/exp/slices"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 

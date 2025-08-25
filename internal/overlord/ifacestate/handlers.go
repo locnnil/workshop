@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"syscall"
 
-	"golang.org/x/exp/maps"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -152,7 +153,7 @@ func (m *InterfaceManager) batchAutoConnectTasks(wp *workshop.Workshop, info *sd
 	}
 
 	setup := m.state.NewTask("setup-profiles", fmt.Sprintf("Setup %q SDK profile", info.Name))
-	setup.Set("sdks", maps.Keys(affected))
+	setup.Set("sdks", slices.Collect(maps.Keys(affected)))
 	setup.WaitAll(connectTs)
 
 	if len(connectTs.Tasks()) > 0 {

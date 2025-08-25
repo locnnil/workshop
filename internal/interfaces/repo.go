@@ -22,11 +22,11 @@ package interfaces
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
@@ -955,7 +955,7 @@ func (r *Repository) DisconnectSdk(projectId, workshop, sdkName string) ([]*sdk.
 		}
 	}
 
-	return maps.Keys(seen), nil
+	return slices.Collect(maps.Keys(seen)), nil
 }
 
 // SideArity conveys the arity constraints for an allowed auto-connection.

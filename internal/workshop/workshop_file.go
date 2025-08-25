@@ -4,13 +4,13 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/sdk"
@@ -329,7 +329,7 @@ func validateBinding(sdks []SdkRecord) error {
 	}
 
 	// Ensure that there are no "multi-level" binds, e.g. s1 bind to m1 bind to m2.
-	slaveKeysOrdered := maps.Keys(slaves)
+	slaveKeysOrdered := slices.Collect(maps.Keys(slaves))
 	slices.SortFunc(slaveKeysOrdered, func(a, b PlugRef) int {
 		c := cmp.Compare(a.Sdk, b.Sdk)
 		if c == 0 {

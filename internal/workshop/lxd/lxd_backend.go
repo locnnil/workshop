@@ -315,9 +315,12 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 
-		maps.Copy(rebuilt.Config, config)
-		clear(rebuilt.Devices)
-		maps.Copy(rebuilt.Devices, devices)
+		if rebuilt.Config == nil {
+			rebuilt.Config = config
+		} else {
+			maps.Copy(rebuilt.Config, config)
+		}
+		rebuilt.Devices = devices
 
 		op, err := conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
 		if err != nil {
