@@ -71,7 +71,7 @@ sdks:
   - name: try-rocm
   - name: project-linter
   - name: sketch
-scripts:
+actions:
   oneline: echo one line
   multiline: |
     echo multi
@@ -92,9 +92,9 @@ scripts:
 	c.Assert(file.Sdks[7], check.DeepEquals, workshop.SdkRecord{Name: "sketch", Source: sdk.SketchSource})
 	lines := len(strings.Split(yaml, "\n"))
 	skip := strings.Repeat("\n", lines-5)
-	c.Assert(string(file.Scripts["oneline"]), check.Equals, skip+"echo one line\n")
+	c.Assert(string(file.Actions["oneline"]), check.Equals, skip+"echo one line\n")
 	skip = strings.Repeat("\n", lines-3)
-	c.Assert(string(file.Scripts["multiline"]), check.Equals, skip+"echo multi\necho line\n")
+	c.Assert(string(file.Actions["multiline"]), check.Equals, skip+"echo multi\necho line\n")
 }
 
 func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
@@ -105,7 +105,7 @@ func (f *workshopFile) TestWorkshopFileSave(c *check.C) {
 			{Name: "one", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "two", Name: "plug"}}}},
 			{Name: "two", Source: sdk.ProjectSource, Plugs: map[string]workshop.PlugOrBind{"plug": {Bind: &workshop.PlugRef{Sdk: "one", Name: "plug"}}}},
 		},
-		Scripts: map[string]workshop.Script{
+		Actions: map[string]workshop.Action{
 			"oneline":   "\n\n\necho one line\n",
 			"multiline": "\n\n\n\n\necho multi\necho line\n",
 		},
@@ -124,7 +124,7 @@ sdks:
       plugs:
         plug:
             bind: one:plug
-scripts:
+actions:
     multiline: |
         echo multi
         echo line

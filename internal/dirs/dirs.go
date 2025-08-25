@@ -32,8 +32,8 @@ var (
 	// Run directory inside workshop
 	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "run")
 
-	// Directory for scripts inside workshop
-	WorkshopScriptsDir = filepath.Join(WorkshopRunDir, "scripts")
+	// Directory for actions inside workshop
+	WorkshopActionsDir = filepath.Join(WorkshopRunDir, "actions")
 
 	// Cache directory for deb packages
 	AptCacheDir = "/var/cache/apt/archives"

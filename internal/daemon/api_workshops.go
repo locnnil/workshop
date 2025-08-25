@@ -102,7 +102,7 @@ type Workshop struct {
 	Path string `json:"path"`
 }
 
-type Script struct {
+type Action struct {
 	Script string `json:"script"`
 }
 
@@ -575,7 +575,7 @@ func v1GetProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	return SyncResponse(rsp, http.StatusOK)
 }
 
-func v1GetProjectWorkshopScripts(c *Command, r *http.Request, _ *userState) Response {
+func v1GetProjectWorkshopActions(c *Command, r *http.Request, _ *userState) Response {
 	projectId := muxVars(r)["id"]
 	name := muxVars(r)["name"]
 
@@ -598,9 +598,9 @@ func v1GetProjectWorkshopScripts(c *Command, r *http.Request, _ *userState) Resp
 	}
 
 	// Convert strings to objects to allow extra fields in future.
-	compat := make(map[string]Script, len(file.Scripts))
-	for name, script := range file.Scripts {
-		compat[name] = Script{Script: script.String()}
+	compat := make(map[string]Action, len(file.Actions))
+	for name, action := range file.Actions {
+		compat[name] = Action{Script: action.String()}
 	}
 
 	return SyncResponse(compat, http.StatusOK)

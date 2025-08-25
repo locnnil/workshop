@@ -17,8 +17,8 @@ type workshopExec struct {
 
 var _ = check.Suite(&workshopExec{})
 
-var mockWorkshopNoScripts = `{"type":"sync","status-code":200,"status":"OK","result":{}}`
-var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","result":{
+var mockWorkshopNoActions = `{"type":"sync","status-code":200,"status":"OK","result":{}}`
+var mockWorkshopWithActions = `{"type":"sync","status-code":200,"status":"OK","result":{
     "foo":{
         "script":"echo foo"
     },
@@ -26,7 +26,7 @@ var mockWorkshopWithScripts = `{"type":"sync","status-code":200,"status":"OK","r
         "script":"echo bar\n"
     }
 }}`
-var mockWorkshopScriptsError = `{"type":"error","status-code":404,"status":"Not Found","result":{
+var mockWorkshopActionsError = `{"type":"error","status-code":404,"status":"Not Found","result":{
     "message":"workshop not found"
 }}`
 
@@ -37,8 +37,8 @@ func (m *workshopExec) SetUpTest(c *check.C) {
 	m.prjId = "42424242"
 }
 
-func (m *workshopExec) TestWorkshopScripts(c *check.C) {
-	cmd := &CmdScripts{root: &CmdRoot{}}
+func (m *workshopExec) TestWorkshopActions(c *check.C) {
+	cmd := &CmdActions{root: &CmdRoot{}}
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
@@ -55,18 +55,18 @@ func (m *workshopExec) TestWorkshopScripts(c *check.C) {
 			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
 		case 3, 5:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/scripts", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/actions", m.prjId))
 			w.WriteHeader(200)
 			if n == 3 {
-				fmt.Fprintln(w, mockWorkshopNoScripts)
+				fmt.Fprintln(w, mockWorkshopNoActions)
 			} else {
-				fmt.Fprintln(w, mockWorkshopWithScripts)
+				fmt.Fprintln(w, mockWorkshopWithActions)
 			}
 		case 7:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/wrong-name/scripts", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/wrong-name/actions", m.prjId))
 			w.WriteHeader(404)
-			fmt.Fprintln(w, mockWorkshopScriptsError)
+			fmt.Fprintln(w, mockWorkshopActionsError)
 		default:
 			c.Errorf("expected 7 calls, now on %d", n)
 		}
@@ -110,14 +110,14 @@ func (m *workshopExec) TestWorkshopRunCompletion(c *check.C) {
 			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
 		case 4, 9, 11, 16:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/scripts", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/ws/actions", m.prjId))
 			w.WriteHeader(200)
-			fmt.Fprintln(w, mockWorkshopWithScripts)
+			fmt.Fprintln(w, mockWorkshopWithActions)
 		case 6:
 			c.Check(r.Method, check.Equals, "GET")
-			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/wrong-name/scripts", m.prjId))
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/wrong-name/actions", m.prjId))
 			w.WriteHeader(404)
-			fmt.Fprintln(w, mockWorkshopScriptsError)
+			fmt.Fprintln(w, mockWorkshopActionsError)
 		default:
 			c.Errorf("expected 16 calls, now on %d", n)
 		}

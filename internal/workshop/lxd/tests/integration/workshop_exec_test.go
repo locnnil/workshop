@@ -147,11 +147,11 @@ func (f *wsExec) TestLxdBackendExecTrivial(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsExec) TestLxdBackendExecScript(c *check.C) {
+func (f *wsExec) TestLxdBackendExecAction(c *check.C) {
 	// Setup
 	opts := &client.ExecOptions{
 		Command:    []string{"info", "-arg"},
-		Script:     true,
+		Action:     true,
 		WorkingDir: "/",
 	}
 	stdout, _, err := f.exec("", "test", f.project.ProjectId, opts)
@@ -159,18 +159,18 @@ func (f *wsExec) TestLxdBackendExecScript(c *check.C) {
 	c.Assert(stdout, check.Equals, "/\nworkshop\n-arg\n")
 }
 
-func (f *wsExec) TestLxdBackendExecMissingScript(c *check.C) {
+func (f *wsExec) TestLxdBackendExecMissingAction(c *check.C) {
 	// Setup
 	opts := &client.ExecOptions{
 		Command:    []string{"missing"},
-		Script:     true,
+		Action:     true,
 		WorkingDir: "/",
 	}
 	_, _, err := f.exec("", "test", f.project.ProjectId, opts)
-	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Install script "missing" \(script not found\)`)
+	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Install action "missing" \(action not found\)`)
 }
 
-func (f *wsExec) TestLxdBackendExecCannotReadScript(c *check.C) {
+func (f *wsExec) TestLxdBackendExecCannotReadAction(c *check.C) {
 	otherFile := filepath.Join(f.project.Path, ".workshop.yaml")
 	_, err := os.Create(otherFile)
 	c.Assert(err, check.IsNil)
@@ -179,11 +179,11 @@ func (f *wsExec) TestLxdBackendExecCannotReadScript(c *check.C) {
 	// Setup
 	opts := &client.ExecOptions{
 		Command:    []string{"info", "-arg"},
-		Script:     true,
+		Action:     true,
 		WorkingDir: "/",
 	}
 	_, _, err = f.exec("", "test", f.project.ProjectId, opts)
-	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Install script "info" \(multiple workshops found.*\)`)
+	c.Assert(err, check.ErrorMatches, `(?s)cannot perform the following tasks:.*Install action "info" \(multiple workshops found.*\)`)
 }
 
 func (f *wsExec) TestLxdBackendExecWorkingDirectoryDoesNotExist(c *check.C) {

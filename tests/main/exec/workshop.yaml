@@ -5,7 +5,7 @@ sdks:
     channel: latest/stable
   - name: test-sdk-environment
     channel: latest/stable
-scripts:
+actions:
   oneline: echo one line
   multiline: |
     echo multi

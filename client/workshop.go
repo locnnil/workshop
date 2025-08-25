@@ -76,7 +76,7 @@ type Workshop struct {
 	Path string `json:"path"`
 }
 
-type Script struct {
+type Action struct {
 	Script string `json:"script"`
 }
 
@@ -176,13 +176,13 @@ func (client *Client) singleWorkshopOrFile(project *Project) (*WorkshopInfo, *Wo
 	return workshop, file, nil
 }
 
-func (client *Client) ListScripts(projectId, name string) (map[string]Script, error) {
-	var scripts map[string]Script
-	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workshops/"+name+"/scripts", nil, nil, nil, &scripts)
+func (client *Client) ListActions(projectId, name string) (map[string]Action, error) {
+	var actions map[string]Action
+	_, err := client.doSync("GET", "/v1/projects/"+projectId+"/workshops/"+name+"/actions", nil, nil, nil, &actions)
 	if err != nil {
 		return nil, err
 	}
-	return scripts, nil
+	return actions, nil
 }
 
 func (client *Client) Remount(plug *PlugRef, source string) (changeId string, err error) {

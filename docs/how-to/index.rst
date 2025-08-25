@@ -64,8 +64,8 @@ Use workshops
 -------------
 
 These topics address daily |ws_markup|-related scenarios,
-such as moving projects within the file system or adding custom scripts:
+such as moving projects within the file system or adding custom actions:
 
-- :doc:`Add scripts to workshops <use-workshops/add-scripts>`
+- :doc:`Add actions to workshops <use-workshops/add-actions>`
 - :doc:`Forward ports <use-workshops/forward-ports>`
 - :doc:`Move projects around <use-workshops/move-projects>`

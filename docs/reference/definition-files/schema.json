@@ -127,9 +127,9 @@
         "additionalProperties": false
       }
     },
-    "scripts": {
+    "actions": {
       "type": "object",
-      "description": "List of scripts to be run in the workshop.",
+      "description": "List of actions to be run in the workshop.",
       "patternProperties": {
         "^[a-z](-?[a-z0-9])*$": {
           "type": "string",
@@ -137,7 +137,7 @@
         }
       },
       "additionalProperties": false,
-      "errorMessage": "Script names must be unique and only appear once."
+      "errorMessage": "Action names must be unique and only appear once."
     }
   },
   "required": [

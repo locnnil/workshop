@@ -14,7 +14,7 @@ import (
 
 type execPayload struct {
 	Command     []string          `json:"command"`
-	Script      bool              `json:"script"`
+	Action      bool              `json:"action"`
 	Environment map[string]string `json:"environment"`
 	WorkingDir  string            `json:"working-dir"`
 	Timeout     string            `json:"timeout"`
@@ -60,9 +60,9 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 
 	action := "exec"
 	subject := "command"
-	if reqData.Script {
+	if reqData.Action {
 		action = "run"
-		subject = "script"
+		subject = "action"
 	}
 
 	if len(reqData.Command) < 1 {
@@ -142,7 +142,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	wsmgr := c.d.overlord.WorkshopManager()
-	taskset, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs, reqData.Script)
+	taskset, err := wsmgr.Exec(r.Context(), wrkspc, projectId, execArgs, reqData.Action)
 	if err != nil {
 		return statusBadRequest("cannot %s %s in %q: %w", action, subject, wrkspc, err)
 	}

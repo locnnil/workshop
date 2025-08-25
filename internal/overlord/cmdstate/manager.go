@@ -42,11 +42,11 @@ func New(st *state.State, runner *state.TaskRunner) *CommandManager {
 	st.Unlock()
 
 	runner.AddHandler("exec", manager.doExec, nil)
-	runner.AddHandler("install-script", manager.doInstallScript, nil)
+	runner.AddHandler("install-action", manager.doInstallAction, nil)
 
 	// Delete in-memory ExecArgs objects when the tasks are done.
 	runner.AddCleanup("exec", deleteExecArgs)
-	runner.AddCleanup("install-script", deleteExecArgs)
+	runner.AddCleanup("install-action", deleteExecArgs)
 
 	return manager
 }

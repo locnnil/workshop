@@ -315,6 +315,12 @@
     - SK007
     - SK008
 
+"workshop actions":
+  category: "workshop (CLI)"
+  type: command
+  specs:
+    - SK046
+
 "workshop base image":
   category: workshop (container)
   type: file
@@ -431,12 +437,6 @@
   type: schema
   specs:
     - SK001
-
-"workshop scripts":
-  category: "workshop (CLI)"
-  type: command
-  specs:
-    - SK046
 
 "workshop shell":
   category: "workshop (CLI)"
