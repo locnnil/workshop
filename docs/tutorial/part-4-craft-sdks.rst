@@ -414,7 +414,7 @@ However, the Ollama SDK doesn't need these hooks because:
 - No custom user configuration needs to be preserved
 
 
-.. important::
+.. warning::
 
    The SDK is also refreshed as a part of any workshop refresh operation,
    so any breaking changes in its save-restore logic will cause an error;

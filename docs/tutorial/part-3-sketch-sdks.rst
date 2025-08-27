@@ -37,7 +37,9 @@ We'll use the following scenario to demonstrate
 how to iterate on an SDK to add missing functionality.
 
 Suppose you're running the :samp:`dev` workshop
-from the :ref:`tut_get_started` tutorial section:
+from the :ref:`tut_get_started` tutorial section,
+additionally augmented with the :samp:`jupyter` SDK
+when we discussed :ref:`tut_work_with_interfaces`:
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -275,7 +277,7 @@ to revert your workshop to its pre-sketching state:
 
    $ workshop sketch-sdk --stash
 
-.. important::
+.. warning::
 
    Stashing does not delete the SDK,
    allowing you to restore it and continue working later.
