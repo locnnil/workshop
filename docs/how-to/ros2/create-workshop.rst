@@ -61,7 +61,7 @@ put this file in the project root:
    base: ubuntu@22.04
    sdks:
      - name: ros2
-       channel: latest/edge
+       channel: 22.04/edge
 
 
 Here, :samp:`base` must be the same as the SDK base,

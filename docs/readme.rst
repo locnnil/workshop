@@ -81,7 +81,7 @@ then run ``workshop launch``:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: jammy/stable
+       channel: 22.04/stable
 
 
 .. code-block:: console

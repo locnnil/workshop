@@ -29,7 +29,7 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
            interface: tunnel
            endpoint: 8090
      - name: code-server
-       channel: noble/stable
+       channel: 24.04/stable
 
 
 Launch the workshop.

@@ -29,7 +29,7 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
           interface: tunnel
           endpoint: 127.0.0.1:8989
     - name: jupyter
-      channel: noble/edge
+      channel: 24.04/edge
 
 
 Launch the workshop.

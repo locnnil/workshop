@@ -104,7 +104,7 @@ Here's a corresponding workshop definition:
    base: ubuntu@22.04
    sdks:
      - name: data-science
-       channel: latest/stable
+       channel: 22.04/stable
 
 
 The default host location

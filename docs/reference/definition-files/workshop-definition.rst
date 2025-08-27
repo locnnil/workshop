@@ -474,7 +474,7 @@ and some useful scripts:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/stable
+       channel: 22.04/stable
    scripts:
      lint: |
        go vet
@@ -495,7 +495,7 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/candidate
+       channel: 22.04/stable
      - name: project-tunnel
        plugs:
          data:
@@ -519,19 +519,19 @@ and two connections:
    name: digits-cuda
    sdks:
      - name: tensorflow
-       channel: latest/stable
+       channel: 22.04/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
      - name: imagenet
-       channel: latest/stable
+       channel: 22.04/stable
        slots:
          images:
            interface: mount
            workshop-source: $SDK/images
      - name: cuda
-       channel: latest/stable
+       channel: 22.04/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs

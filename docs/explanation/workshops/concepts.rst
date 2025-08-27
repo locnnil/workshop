@@ -100,7 +100,7 @@ A simple definition might look like this:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: jammy/stable
+       channel: 22.04/stable
 
 
 .. @artefact SDK
@@ -214,13 +214,19 @@ This example adds a slot, a plug, and two connections to its SDKs:
    name: dev
    sdks:
      - name: tensorflow
-       channel: latest/stable
+       channel: 22.04/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
+     - name: imagenet
+       channel: 22.04/stable
+       slots:
+         images:
+           interface: mount
+           workshop-source: $SDK/images
      - name: cuda
-       channel: latest/stable
+       channel: 22.04/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs
@@ -275,7 +281,7 @@ intended as utility helpers for a development environment:
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: jammy/stable
+       channel: 22.04/stable
    scripts:
      lint: |
        golangci-lint run  --out-format=colored-line-number -c .golangci.yaml
