@@ -308,7 +308,7 @@ shareable with your team;
 a good step before deciding to publish it to the SDK Store for wider use.
 
 To convert the sketch, you *eject* it with the :option:`!--eject` option.
-This creates a new *in-project SDK*
+This creates a new in-project SDK
 by moving the sketch's definition files
 into the :file:`.workshop/` subdirectory of your project.
 The original sketch SDK is removed from the workshop.
