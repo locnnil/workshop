@@ -2,6 +2,7 @@ package lxd_device
 
 import (
 	"encoding/json"
+	"fmt"
 	"os/user"
 	"strconv"
 
@@ -89,9 +90,12 @@ func (s *Specification) AddMountEntry(dev workshop.Mount) error {
 		s.devices[name] = map[string]string{
 			"type":             "disk",
 			"source":           dev.What,
-			"path":             dev.Where,
 			"user.make-source": strconv.FormatBool(dev.MakeWhat),
+			"path":             dev.Where,
 			"user.make-path":   strconv.FormatBool(dev.MakeWhere),
+			"user.path-mode":   fmt.Sprintf("%#o", dev.Mode),
+			"user.path-owner":  strconv.FormatUint(uint64(dev.Owner), 10),
+			"user.path-group":  strconv.FormatUint(uint64(dev.Group), 10),
 			"readonly":         strconv.FormatBool(dev.ReadOnly),
 		}
 	}

@@ -12,12 +12,14 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"github.com/canonical/x-go/strutil/shlex"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -46,14 +48,14 @@ func (b *Backend) Name() interfaces.SecuritySystem {
 	return interfaces.SecurityLxdDevice
 }
 
-func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.User, pid, w string, prev, next map[string]workshop.Mount) (*revert.Reverter, error) {
+func setupMounts(conn lxd.InstanceServer, fs fsutil.Fs, user *user.User, pid, w string, prev, next map[string]workshop.Mount) (*revert.Reverter, error) {
 	var mounts *osutil.MountProfile
 	var content []byte
 	if containsWorkshopWorkshop(prev) || containsWorkshopWorkshop(next) {
 		var err error
 		mounts, content, err = readMountProfile(fs)
 		if err != nil {
-			return nil, fmt.Errorf("read filesystem table: %w", err)
+			return nil, err
 		}
 	}
 
@@ -122,13 +124,13 @@ func setupMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, user *user.Use
 	return clone, nil
 }
 
-func removeMounts(conn lxd.InstanceServer, fs workshop.WorkshopFs, pid, w string, prev map[string]workshop.Mount) error {
+func removeMounts(conn lxd.InstanceServer, fs fsutil.Fs, pid, w string, prev map[string]workshop.Mount) error {
 	var mounts *osutil.MountProfile
 	if containsWorkshopWorkshop(prev) {
 		var err error
 		mounts, _, err = readMountProfile(fs)
 		if err != nil {
-			return fmt.Errorf("read filesystem table: %w", err)
+			return err
 		}
 	}
 
@@ -168,57 +170,99 @@ func containsWorkshopWorkshop(mounts map[string]workshop.Mount) bool {
 	return false
 }
 
-func prepareMount(fs workshop.WorkshopFs, user *user.User, mnt workshop.Mount) error {
-	if mnt.Type == workshop.HostWorkshop {
-		sourceExists, sourceIsDir, err := osutil.ExistsIsDir(mnt.What)
+func prepareMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
+	switch mnt.Type {
+	case workshop.HostWorkshop:
+		return prepareHostWorkshopMount(fs, user, mnt)
+	case workshop.WorkshopWorkshop:
+		return prepareWorkshopWorkshopMount(fs, mnt)
+	default:
+		return fmt.Errorf(`unknown device type: %v`, mnt.Type)
+	}
+}
+
+func prepareHostWorkshopMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
+	whatIsDir := true
+	if mnt.MakeWhat {
+		uid, gid, err := osutil.UidGid(user)
 		if err != nil {
 			return err
 		}
 
-		if mnt.MakeWhat && !sourceExists {
-			uid, gid, err := osutil.UidGid(user)
-			if err != nil {
-				return err
-			}
-
-			if err = osutil.MkdirAllChown(mnt.What, 0755, uid, gid); err != nil {
-				return err
-			}
-		}
-
-		if !mnt.MakeWhere || !sourceIsDir {
-			return nil
-		}
-
-		if _, err := fs.Stat(mnt.Where); !osutil.IsDirNotExist(err) {
+		if err := osutil.MkdirAllChown(mnt.What, 0755, uid, gid); err != nil {
 			return err
 		}
-		// FIXME: workaround LXD empty directory issue (which, if the
-		// connection was disconnected earlier, was removed by LXD).
-		return fs.MkdirAll(mnt.Where, os.ModePerm)
-	}
-
-	if mnt.Type != workshop.WorkshopWorkshop {
-		return fmt.Errorf(`unknown device type: %v`, mnt.Type)
-	}
-
-	if _, err := fs.Stat(mnt.What); osutil.IsDirNotExist(err) && mnt.MakeWhat {
-		if err := fs.MkdirAll(mnt.What, os.ModePerm); err != nil {
+		// Only change permissions for mounted directory, and ignore umask.
+		if err := os.Chmod(mnt.What, mnt.Mode); err != nil {
 			return err
 		}
-	} else if err != nil {
-		return fmt.Errorf(`stat workshop-source %q: %v`, mnt.What, err)
-	}
-
-	if _, err := fs.Stat(mnt.Where); osutil.IsDirNotExist(err) && mnt.MakeWhere {
-		if err := fs.MkdirAll(mnt.Where, os.ModePerm); err != nil {
+	} else {
+		info, err := os.Stat(mnt.What)
+		if err != nil {
 			return err
 		}
-	} else if err != nil {
-		return fmt.Errorf(`stat workshop-target %q: %v`, mnt.Where, err)
+		whatIsDir = info.IsDir()
 	}
 
-	return nil
+	return prepareMountWhere(fs, mnt, whatIsDir)
+}
+
+func prepareWorkshopWorkshopMount(fs fsutil.Fs, mnt workshop.Mount) error {
+	whatIsDir := true
+	if mnt.MakeWhat {
+		if err := fs.MkdirAllChmodChown(mnt.What, mnt.Mode, int(mnt.Owner), int(mnt.Group)); err != nil {
+			return err
+		}
+	} else {
+		info, err := fs.Stat(mnt.What)
+		if err != nil {
+			return err
+		}
+		whatIsDir = info.IsDir()
+	}
+
+	return prepareMountWhere(fs, mnt, whatIsDir)
+}
+
+func prepareMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
+	if !mnt.MakeWhere {
+		return checkMountWhere(fs, mnt, whatIsDir)
+	}
+
+	if whatIsDir {
+		return fs.MkdirAllChmodChown(mnt.Where, mnt.Mode, int(mnt.Owner), int(mnt.Group))
+	}
+
+	parent := filepath.Dir(mnt.Where)
+	if err := fs.MkdirAllChmodChown(parent, mnt.Mode, int(mnt.Owner), int(mnt.Group)); err != nil {
+		return err
+	}
+
+	file, err := fs.OpenFile(mnt.Where, os.O_RDWR|os.O_CREATE|os.O_EXCL, mnt.Mode)
+	if errors.Is(err, os.ErrExist) {
+		return checkMountWhere(fs, mnt, whatIsDir)
+	}
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if err := file.Chmod(mnt.Mode); err != nil {
+		return err
+	}
+	return file.Chown(int(mnt.Owner), int(mnt.Group))
+}
+
+func checkMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
+	info, err := fs.Stat(mnt.Where)
+	if err != nil || info.IsDir() == whatIsDir {
+		return err
+	}
+	err = syscall.ENOTDIR
+	if info.IsDir() {
+		err = syscall.EISDIR
+	}
+	return &os.PathError{Op: "mount", Path: mnt.Where, Err: err}
 }
 
 func addMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
@@ -256,7 +300,7 @@ func removeMountEntry(mounts *osutil.MountProfile, mnt workshop.Mount) bool {
 	return cnt != len(mounts.Entries)
 }
 
-func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, []byte, error) {
+func readMountProfile(fs fsutil.Fs) (*osutil.MountProfile, []byte, error) {
 	fstab, err := fs.Open("/etc/fstab")
 	if errors.Is(err, os.ErrNotExist) {
 		return &osutil.MountProfile{}, nil, nil
@@ -273,8 +317,8 @@ func readMountProfile(fs workshop.WorkshopFs) (*osutil.MountProfile, []byte, err
 	return mounts, content.Bytes(), nil
 }
 
-func writeMountProfile(fs workshop.WorkshopFs, mounts io.WriterTo) error {
-	return workshop.AtomicWrite(fs, "/etc/fstab", mounts, 0644)
+func writeMountProfile(fs fsutil.Fs, mounts io.WriterTo) error {
+	return fs.AtomicWriteTo(mounts, "/etc/fstab", 0644)
 }
 
 func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
@@ -322,7 +366,7 @@ func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
 	return runMountCommand(conn, pid, w, []string{"systemctl", "restart", "local-fs.target"})
 }
 
-func setupSshAgent(fs workshop.WorkshopFs, prev, next *workshop.SshAgent) error {
+func setupSshAgent(fs fsutil.Fs, prev, next *workshop.SshAgent) error {
 	if prev.Equal(next) {
 		return nil
 	}
@@ -338,10 +382,10 @@ func setupSshAgent(fs workshop.WorkshopFs, prev, next *workshop.SshAgent) error 
 	}
 
 	envVars := map[string]string{"SSH_AUTH_SOCK": next.Listen.Address}
-	return workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+	return fs.AtomicWriteTo(envScript(envVars), script, 0644)
 }
 
-func removeSshAgent(fs workshop.WorkshopFs, prev *workshop.SshAgent) error {
+func removeSshAgent(fs fsutil.Fs, prev *workshop.SshAgent) error {
 	if prev == nil {
 		return nil
 	}
@@ -350,7 +394,7 @@ func removeSshAgent(fs workshop.WorkshopFs, prev *workshop.SshAgent) error {
 	return fs.RemoveIfExists(script)
 }
 
-func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string, prev, next *workshop.Desktop) error {
+func setupDesktop(fs fsutil.Fs, user *user.User, env map[string]string, prev, next *workshop.Desktop) error {
 	if prev.Equal(next) {
 		return nil
 	}
@@ -366,10 +410,10 @@ func setupDesktop(fs workshop.WorkshopFs, user *user.User, env map[string]string
 	}
 
 	envVars := desktopEnvironment(user, env, *next)
-	return workshop.AtomicWrite(fs, script, envScript(envVars), 0644)
+	return fs.AtomicWriteTo(envScript(envVars), script, 0644)
 }
 
-func removeDesktop(fs workshop.WorkshopFs, prev *workshop.Desktop) error {
+func removeDesktop(fs fsutil.Fs, prev *workshop.Desktop) error {
 	if prev == nil {
 		return nil
 	}
@@ -442,12 +486,12 @@ func (e envScript) WriteTo(w io.Writer) (int64, error) {
 	return n, nil
 }
 
-func sftpFs(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error) {
+func sftpFs(conn lxd.InstanceServer, pid, w string) (fsutil.Fs, error) {
 	sftp, err := conn.GetInstanceFileSFTP(lxdbackend.InstanceName(w, pid))
 	if err != nil {
-		return nil, err
+		return fsutil.Fs{}, err
 	}
-	return workshop.NewWorkshopFs(sftp), nil
+	return fsutil.NewSftpFs(sftp, workshop.RootUmask), nil
 }
 
 func assignNewProfile(ctx context.Context, conn lxd.InstanceServer, sdkRef sdk.Ref) (*revert.Reverter, error) {
@@ -518,12 +562,6 @@ func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]strin
 	rev := revert.New()
 	defer rev.Fail()
 
-	r, err := setupMounts(conn, fs, user, sdkRef.ProjectId, sdkRef.Workshop, prev.Mounts, next.Mounts)
-	if err != nil {
-		return nil, err
-	}
-	revert.Copy(rev, r)
-
 	if err := setupSshAgent(fs, prev.Agent, next.Agent); err != nil {
 		return nil, err
 	}
@@ -542,6 +580,13 @@ func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]strin
 		}
 	})
 
+	// Setup mounts last so other interfaces can create directories to mount.
+	r, err := setupMounts(conn, fs, user, sdkRef.ProjectId, sdkRef.Workshop, prev.Mounts, next.Mounts)
+	if err != nil {
+		return nil, err
+	}
+	revert.Copy(rev, r)
+
 	clone := rev.Clone()
 	rev.Success()
 	return clone, nil
@@ -559,9 +604,9 @@ func cleanupProfile(conn lxd.InstanceServer, sdkRef sdk.Ref) error {
 	}
 	defer fs.Close()
 
-	err = removeDesktop(fs, prof.Desktop)
-	err2 := removeSshAgent(fs, prof.Agent)
-	err3 := removeMounts(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Mounts)
+	err = removeMounts(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Mounts)
+	err2 := removeDesktop(fs, prof.Desktop)
+	err3 := removeSshAgent(fs, prof.Agent)
 	return cmp.Or(err, err2, err3)
 }
 
@@ -711,7 +756,7 @@ func (b *Backend) NewSpecification(user string, sdk string) (interfaces.Specific
 	return NewSpecification(user, sdk)
 }
 
-func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (workshop.WorkshopFs, error)) func() {
+func MockWorkshopFs(f func(conn lxd.InstanceServer, pid, w string) (fsutil.Fs, error)) func() {
 	old := workshopFs
 	workshopFs = f
 	return func() {

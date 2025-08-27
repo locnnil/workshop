@@ -282,6 +282,27 @@ They are described by the following attributes:
      - A path inside the workshop
        to be used as the plug's target directory.
 
+   * - :samp:`mode`
+     - integer
+     - File permissions to use when creating :samp:`workshop-target`
+       and any parent directories.
+       Default is 0o775 for normal users,
+       but changes to 0o755 if :samp:`uid` is zero.
+
+   * - :samp:`uid`
+     - integer
+     - User ID to apply when creating :samp:`workshop-target`
+       and any parent directories.
+       Default is 1000 if :samp:`workshop-target` is in
+       :file:`/home/workshop/`, :file:`/project/`, or :file:`/run/user/1000/`.
+       Otherwise the default is 0.
+
+   * - :samp:`gid`
+     - integer
+     - Group ID to use when creating :samp:`workshop-target`
+       and any parent directories.
+       Matches :samp:`uid` by default.
+
    * - :samp:`read-only`
      - Boolean
      - Whether the target directory should be read-only.

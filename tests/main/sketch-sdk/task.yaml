@@ -47,7 +47,7 @@ execute: |
 
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x3\)$'
   workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
-  workshop_exec exec -- test -d /home/workshop/ws-sketch-test
+  workshop_exec exec -- mountpoint /home/workshop/ws-sketch-test
 
   echo "Remove the sketch"
   workshop_exec sketch-sdk --remove

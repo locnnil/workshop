@@ -29,6 +29,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -65,7 +66,7 @@ const mountBaseDeclarationPlugs = `
           auto-explicit: true
 `
 
-var knownPlugAttributes = []string{"workshop-target", "read-only"}
+var knownPlugAttributes = []string{"workshop-target", "mode", "uid", "gid", "read-only"}
 var knownSlotAttributes = []string{"workshop-source"}
 
 // mountInterface allows sharing content between sdks
@@ -84,17 +85,6 @@ func (iface *mountInterface) StaticInfo() interfaces.StaticInfo {
 	}
 }
 
-func cleanSubPath(path string) bool {
-	return filepath.Clean(path) == path && path != ".." && !strings.HasPrefix(path, "../")
-}
-
-func validatePath(path string) error {
-	if ok := cleanSubPath(path); !ok {
-		return fmt.Errorf("mount interface path is not clean: %q", path)
-	}
-	return nil
-}
-
 func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	for name := range plug.Attrs {
 		if !slices.Contains(knownPlugAttributes, name) {
@@ -107,28 +97,99 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 		return fmt.Errorf("mount plug must contain target path")
 	}
 
-	if err := validatePath(target); err != nil {
+	if !filepath.IsAbs(target) {
+		return fmt.Errorf(`mount plug "workshop-target" must be absolute: %q`, target)
+	}
+	if filepath.Clean(target) != target {
+		return fmt.Errorf(`mount plug "workshop-target" is not clean: %q`, target)
+	}
+
+	if _, err := parseBool(plug.Attrs, "read-only", false); err != nil {
 		return err
 	}
 
-	ro, ok := plug.Attrs["read-only"]
-	if !ok {
-		ro = false
+	var fallbackUid, fallbackGid int64
+	for _, prefix := range []string{"/home/workshop", "/project", "/run/user/1000"} {
+		if target == prefix || strings.HasPrefix(target, prefix+string(filepath.Separator)) {
+			fallbackUid = workshop.Uid
+			fallbackGid = workshop.Gid
+			break
+		}
 	}
 
-	switch ro := ro.(type) {
-	case bool:
-		plug.Attrs["read-only"] = ro
-	case string:
-		roBool, err := strconv.ParseBool(ro)
-		if err != nil {
-			return fmt.Errorf(`unknown value %q in key "read-only" for mount interface plug. Accepted values are 'true' or 'false'. String representations (e.g., '"true"') are also permitted`, ro)
-		}
-		plug.Attrs["read-only"] = roBool
-	default:
-		return fmt.Errorf(`unknown value type %T in key "read-only" for mount interface plug. Accepted types are 'bool' or 'string'`, ro)
+	uid, err := parseInt(plug.Attrs, "uid", fallbackUid)
+	if err != nil {
+		return err
 	}
+	if uid < 0 || uid >= sys.FlagID {
+		return fmt.Errorf(`invalid value %v in key "uid" for mount interface plug: must be between 0 and %#x`, uid, sys.FlagID)
+	}
+
+	gid, err := parseInt(plug.Attrs, "gid", fallbackGid)
+	if err != nil {
+		return err
+	}
+	if gid < 0 || gid >= sys.FlagID {
+		return fmt.Errorf(`invalid value %v in key "gid" for mount interface plug: must be between 0 and %#x`, gid, sys.FlagID)
+	}
+
+	fallbackMode := os.ModePerm &^ workshop.NormalUmask
+	if uid == 0 {
+		fallbackMode = os.ModePerm &^ workshop.RootUmask
+	}
+	mode, err := parseInt(plug.Attrs, "mode", int64(fallbackMode))
+	if err != nil {
+		return err
+	}
+	if mode < 0 || uint64(mode)&^uint64(os.ModePerm) != 0 {
+		return fmt.Errorf(`invalid value %#o in key "mode" for mount interface plug: permissions limited to %#o`, mode, os.ModePerm)
+	}
+
 	return nil
+}
+
+func parseBool(attrs map[string]interface{}, key string, fallback bool) (bool, error) {
+	object, ok := attrs[key]
+	if !ok {
+		attrs[key] = fallback
+		return fallback, nil
+	}
+
+	switch value := object.(type) {
+	case bool:
+		return value, nil
+	case string:
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return false, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted values are 'true' or 'false'. String representations (e.g., '"true"') are also permitted`, value, key)
+		}
+		attrs[key] = parsed
+		return parsed, nil
+	default:
+		return false, fmt.Errorf(`unknown value type %T in key %q for mount interface plug. Accepted types are 'bool' or 'string'`, object, key)
+	}
+}
+
+func parseInt(attrs map[string]interface{}, key string, fallback int64) (int64, error) {
+	object, ok := attrs[key]
+	if !ok {
+		attrs[key] = fallback
+		return fallback, nil
+	}
+
+	switch value := object.(type) {
+	case int64:
+		return value, nil
+	case string:
+		parsed, err := strconv.ParseInt(value, 0, 64)
+		if err != nil {
+			return 0, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted types are 'int64'`, value, key)
+		}
+		attrs[key] = parsed
+		return parsed, nil
+	default:
+		return 0, fmt.Errorf(`unknown value type %T in key %q for mount interface plug. Accepted types are 'int64' or 'string'`, object, key)
+	}
 }
 
 func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
@@ -171,49 +232,50 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	}
 
 	if !filepath.IsAbs(path) {
-		return fmt.Errorf(`mount slot "workshop-source" must be absolute`)
+		return fmt.Errorf(`mount slot "workshop-source" must be absolute: %q`, path)
 	}
+	if filepath.Clean(path) != path {
+		return fmt.Errorf(`mount slot "workshop-source" is not clean: %q`, path)
+	}
+
+	slot.Attrs["workshop-source"] = path
 	return nil
 }
 
-func (iface *mountInterface) target(attrs interfaces.Attrer) string {
-	var target string
+func (iface *mountInterface) setPlugAttrs(mount *workshop.Mount, plug *interfaces.ConnectedPlug) {
+	_ = plug.Attr("workshop-target", &mount.Where)
+	mount.MakeWhere = true
 
-	if err := attrs.Attr("workshop-target", &target); err == nil {
-		return target
-	}
-	return ""
+	var value int64
+	_ = plug.Attr("mode", &value)
+	mount.Mode = os.FileMode(value)
+
+	_ = plug.Attr("uid", &value)
+	mount.Owner = sys.UserID(value)
+
+	_ = plug.Attr("gid", &value)
+	mount.Group = sys.GroupID(value)
+
+	_ = plug.Attr("read-only", &mount.ReadOnly)
 }
 
-func (iface *mountInterface) readOnly(attrs interfaces.Attrer) bool {
-	var ro bool
-	attrs.Attr("read-only", &ro)
-	return ro
+func (iface *mountInterface) setRegularSlotAttrs(mount *workshop.Mount, slot *interfaces.ConnectedSlot) {
+	mount.Type = workshop.WorkshopWorkshop
+
+	_ = slot.Attr("workshop-source", &mount.What)
 }
 
-func (iface *mountInterface) workshopSource(slot *interfaces.ConnectedSlot) (string, error) {
-	var source string
-	err := slot.Attr("workshop-source", &source)
-	if err != nil {
-		return "", err
-	}
+func (iface *mountInterface) setSystemSlotAttrs(mount *workshop.Mount, spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) {
+	mount.Type = workshop.HostWorkshop
 
-	if strings.HasPrefix(source, "$SDK/") {
-		return strings.Replace(source, "$SDK", sdk.SdkDir(slot.Sdk().Name), 1), nil
-	}
-	return source, nil
-}
-
-func (iface *mountInterface) hostSource(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) (string, bool) {
-	var source string
-	if err := slot.Attr("host-source", &source); err == nil {
-		return source, false
+	if err := slot.Attr("host-source", &mount.What); err == nil {
+		return
 	}
 
 	// default dir: <sdk>/<plug>
 	userDataDir := workshop.UserDataRootDir(spec.User.HomeDir, spec.Environment)
-	source = workshop.SdkMountHostSource(userDataDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
-	return source, true
+	mount.What = workshop.SdkMountHostSource(userDataDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
+	mount.MakeWhat = true
 }
 
 func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -223,30 +285,15 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
+	mount := workshop.Mount{Name: plug.Name()}
+	iface.setPlugAttrs(&mount, plug)
 	if slot.Sdk().Type == sdk.System {
-		source, auto := iface.hostSource(spec, plug, slot)
-		return spec.AddMountEntry(workshop.Mount{
-			Name:      plug.Name(),
-			What:      source,
-			Where:     iface.target(plug),
-			MakeWhat:  auto,
-			MakeWhere: true,
-			Type:      workshop.HostWorkshop,
-			ReadOnly:  iface.readOnly(plug),
-		})
+		iface.setSystemSlotAttrs(&mount, spec, plug, slot)
+	} else {
+		iface.setRegularSlotAttrs(&mount, slot)
 	}
 
-	source, err := iface.workshopSource(slot)
-	if err != nil {
-		return err
-	}
-	return spec.AddMountEntry(workshop.Mount{
-		Name:     plug.Name(),
-		What:     source,
-		Where:    iface.target(plug),
-		Type:     workshop.WorkshopWorkshop,
-		ReadOnly: iface.readOnly(plug),
-	})
+	return spec.AddMountEntry(mount)
 }
 
 func init() {

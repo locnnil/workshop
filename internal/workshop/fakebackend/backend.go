@@ -11,10 +11,9 @@ import (
 	"sync"
 
 	"github.com/canonical/lxd/shared/api"
-	"github.com/canonical/x-go/randutil"
-	"github.com/spf13/afero"
 	"golang.org/x/exp/slices"
 
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
@@ -28,7 +27,7 @@ type FakeWorkshop struct {
 	*workshop.Workshop
 	Config             map[string]string
 	Devices            map[string]map[string]string
-	WorkshopFilesystem *FakeInstanceFs
+	WorkshopFilesystem fsutil.Fs
 }
 
 type ExecCall struct {
@@ -66,7 +65,7 @@ type WorkshopVolumeMount struct {
 	VolumeName string
 }
 
-type WorkshopFsCallback func(ctx context.Context, name string) (workshop.WorkshopFs, error)
+type WorkshopFsCallback func(ctx context.Context, name string) (fsutil.Fs, error)
 
 type FakeWorkshopBackend struct {
 	workshopLock sync.Mutex
@@ -193,10 +192,11 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 		f.Workshops[projectId][file.Name] = ws
 	}
 
-	ws.WorkshopFilesystem, err = NewWorkshopFs(f.BaseDir)
+	wfspath, err := os.MkdirTemp(f.BaseDir, "*")
 	if err != nil {
 		return err
 	}
+	ws.WorkshopFilesystem = fsutil.NewBasePathFs(wfspath)
 
 	ws.Config = make(map[string]string)
 	ws.Config[workshop.ConfigWorkshopSdks] = `{}`
@@ -269,13 +269,13 @@ func (f *FakeWorkshopBackend) AddWorkshopMount(ctx context.Context, name string,
 	}
 	defer wfs.Close()
 
-	mnt, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(mount.Where)
+	mnt, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath(mount.Where)
 	if err != nil {
 		return err
 	}
 
 	if mount.MakeWhere {
-		if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(mnt), mount.Mode); err != nil {
 			return err
 		}
 	}
@@ -317,7 +317,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name, mou
 	}
 	defer wfs.Close()
 
-	where, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(device["path"])
+	where, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath(device["path"])
 	if err != nil {
 		return err
 	}
@@ -429,7 +429,7 @@ func (s *FakeWorkshopBackend) SetWorkshopFsCallback(c WorkshopFsCallback) func()
 	}
 }
 
-func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (workshop.WorkshopFs, error) {
+func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error) {
 	s.workshopFsLock.Lock()
 	s.WorkshopFsCalls = append(s.WorkshopFsCalls, &FsCall{Name: name})
 	if s.WorkshopFsCallback != nil {
@@ -440,7 +440,7 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (work
 
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {
-		return nil, err
+		return fsutil.Fs{}, err
 	}
 
 	s.workshopLock.Lock()
@@ -448,7 +448,7 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (work
 
 	fs, exists := s.Workshops[projectId][name]
 	if !exists {
-		return nil, fmt.Errorf(`%q filesystem is not available`, name)
+		return fsutil.Fs{}, fmt.Errorf(`%q filesystem is not available`, name)
 	}
 	return fs.WorkshopFilesystem, nil
 }
@@ -562,7 +562,7 @@ func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where 
 	}
 	defer wfs.Close()
 
-	mnt, err := wfs.(*FakeInstanceFs).Fs.(*afero.BasePathFs).RealPath(where)
+	mnt, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath(where)
 	if err != nil {
 		return err
 	}
@@ -770,41 +770,4 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 		return s.RestoreCallback(ctx, name, snapid, file)
 	}
 	return nil
-}
-
-/* Fake workshop fs implementation for tests */
-
-type FakeInstanceFs struct {
-	afero.Fs
-}
-
-func NewWorkshopFs(baseDir string) (*FakeInstanceFs, error) {
-	var fs FakeInstanceFs
-	osfs := afero.NewOsFs()
-	rndstring := randutil.RandomString(10)
-	wfspath := filepath.Join(baseDir, rndstring)
-	err := os.MkdirAll(wfspath, 0700)
-	if err != nil {
-		return nil, err
-	}
-	fs.Fs = afero.NewBasePathFs(osfs, wfspath)
-	return &fs, nil
-}
-
-func (w *FakeInstanceFs) RemoveIfExists(name string) error {
-	if err := w.Remove(name); !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	return nil
-}
-
-func (w *FakeInstanceFs) Symlink(source, target string) error {
-	return w.Fs.(*afero.BasePathFs).SymlinkIfPossible(source, target)
-}
-
-func (w *FakeInstanceFs) ReadLink(p string) (string, error) {
-	return w.Fs.(*afero.BasePathFs).ReadlinkIfPossible(p)
-}
-
-func (w *FakeInstanceFs) Close() {
 }

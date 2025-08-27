@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -118,13 +117,14 @@ func (s *healthSuite) launchWorkshopWithSDKs(c *check.C, sdks []workshop.SdkReco
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
+	defer ws.Close()
 
 	for _, sk := range sdks {
 		err = ws.MkdirAll(sdk.SdkHooksDir(sk.Name), 0744)
 		c.Check(err, check.IsNil)
 
 		for name, hook := range hooks[sk.Name] {
-			c.Assert(afero.WriteFile(ws, sdk.SdkHookPath(sk.Name, name), []byte(hook), 0644), check.IsNil)
+			c.Assert(ws.WriteFile(sdk.SdkHookPath(sk.Name, name), []byte(hook), 0644), check.IsNil)
 		}
 	}
 

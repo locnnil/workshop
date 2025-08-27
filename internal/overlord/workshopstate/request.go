@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
@@ -107,7 +109,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		}
 		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
 
-		tasks := launch(w.state, req.file, sdks, project)
+		tasks := launch(w.state, req.file, req.fileText, sdks, project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
@@ -116,6 +118,8 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 type workshopReq struct {
 	// Up to date workshop definitions from the project directory.
 	file *workshop.File
+	// Marshalled file (to prevent data loss when passing through the state).
+	fileText string
 	// All possible SDKs (including sketch) in installation order.
 	installOrder []string
 	// Up to date SDK setups from the store.
@@ -139,6 +143,11 @@ func (w *WorkshopManager) findAllStoreSdks(ctx context.Context, project workshop
 			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
 
+		fileBlob, err := yaml.Marshal(file)
+		if err != nil {
+			return nil, fmt.Errorf("cannot %s %q: invalid workshop file: %w", action, name, err)
+		}
+
 		installOrder := make([]string, 1, len(file.Sdks)+2)
 		installOrder[0] = sdk.System.String()
 		for _, sk := range file.Sdks {
@@ -152,7 +161,13 @@ func (w *WorkshopManager) findAllStoreSdks(ctx context.Context, project workshop
 		if err != nil {
 			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
-		reqs = append(reqs, workshopReq{file: file, installOrder: installOrder, storeSdks: storeSdks})
+		req := workshopReq{
+			file:         file,
+			fileText:     string(fileBlob),
+			installOrder: installOrder,
+			storeSdks:    storeSdks,
+		}
+		reqs = append(reqs, req)
 	}
 
 	return reqs, nil
@@ -462,7 +477,7 @@ func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveTasks
 	return all
 }
 
-func launchWorkshop(st *state.State, file *workshop.File) *state.TaskSet {
+func launchWorkshop(st *state.State, name string, fileText string) *state.TaskSet {
 	construct := state.NewTaskSet()
 
 	var prev *state.Task
@@ -474,18 +489,18 @@ func launchWorkshop(st *state.State, file *workshop.File) *state.TaskSet {
 		prev = t
 	}
 
-	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
+	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", name))
 	addTask(create)
-	create.Set("workshop-file", file)
+	create.Set("workshop-file", fileText)
 	create.Set("forget", true)
 
-	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
+	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
 	addTask(start)
 
 	return construct
 }
 
-func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *state.TaskSet {
+func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot string) *state.TaskSet {
 	construct := state.NewTaskSet()
 
 	var prev *state.Task
@@ -499,27 +514,27 @@ func rebuildWorkshop(st *state.State, file *workshop.File, sdkSnapshot string) *
 
 	var summary string
 	if sdkSnapshot == "" {
-		summary = fmt.Sprintf("Rebuild %q workshop", file.Name)
+		summary = fmt.Sprintf("Rebuild %q workshop", name)
 	} else {
-		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", file.Name, sdkSnapshot)
+		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", name, sdkSnapshot)
 	}
 
 	create := st.NewTask("create-workshop", summary)
 	addTask(create)
-	create.Set("workshop-file", file)
+	create.Set("workshop-file", fileText)
 	create.Set("forget", false)
 
 	if sdkSnapshot != "" {
 		create.Set("sdk-snapshot", sdkSnapshot)
 	}
 
-	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", file.Name))
+	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
 	addTask(start)
 
 	return construct
 }
 
-func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
+func launch(st *state.State, file *workshop.File, fileText string, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
 
@@ -544,7 +559,7 @@ func launch(st *state.State, file *workshop.File, sdks []sdk.Setup, project work
 	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", file.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	create := launchWorkshop(st, file)
+	create := launchWorkshop(st, file.Name, fileText)
 	addTaskSet(create)
 
 	install := installSdks(st, project.ProjectId, file.Name, sdks, rmap)
@@ -620,7 +635,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
 
 		plan := resolveRefresh(wp, req.file, sdks)
-		tasks := refresh(w.state, plan, wp, req.file)
+		tasks := refresh(w.state, plan, wp, req.file, req.fileText)
 		if len(tasks.Tasks()) == 0 {
 			continue
 		}
@@ -755,7 +770,7 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []s
 	return plan
 }
 
-func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *workshop.File) *state.TaskSet {
+func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *workshop.File, fileText string) *state.TaskSet {
 	refresh := state.NewTaskSet()
 	prev := (*state.TaskSet)(nil)
 	addTaskSet := func(ts *state.TaskSet) {
@@ -802,7 +817,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file, plan.sdkSnapshot)
+	rebuild := rebuildWorkshop(st, file.Name, fileText, plan.sdkSnapshot)
 	addTaskSet(rebuild)
 
 	// Re-register intact SDKs (the workshop definition can change plugs and slots).

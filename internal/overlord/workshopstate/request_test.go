@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -59,14 +59,14 @@ var sdkTemplate = `name: %s
 base: ubuntu@20.04
 `
 
-func (s *requestSuite) writeSDKMetaFile(c *check.C, fs workshop.WorkshopFs, name, yaml string) {
+func (s *requestSuite) writeSDKMetaFile(c *check.C, fs fsutil.Fs, name, yaml string) {
 	sdkPath := sdk.SdkMetaDir(name)
 	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
 	metaPath := filepath.Join(sdkPath, "sdk.yaml")
-	c.Assert(afero.WriteFile(fs, metaPath, []byte(yaml), 0644), check.IsNil)
+	c.Assert(fs.WriteFile(metaPath, []byte(yaml), 0644), check.IsNil)
 }
 
-func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) *workshop.Workshop {
+func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) {
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
 	c.Assert(err, check.IsNil)
 
@@ -90,13 +90,12 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 
 	wfs, err := s.backend.WorkshopFs(s.ctx, w.Name)
 	c.Assert(err, check.IsNil)
+	defer wfs.Close()
 
 	for _, sd := range sdks {
 		s.writeSDKMetaFile(c, wfs, sd.Name, fmt.Sprintf(sdkTemplate, sd.Name))
 		c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: sd.Name, Source: sdk.StoreSource, Channel: sd.Channel}), check.IsNil)
 	}
-
-	return w
 }
 
 func (s *requestSuite) TestStartMany(c *check.C) {

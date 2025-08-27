@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -58,27 +61,48 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 
 		switch dev["type"] {
 		case "disk":
-			makeWhat, err := boolFromString(dev["user.make-source"])
+			mount := workshop.Mount{
+				Name:  name,
+				Type:  workshop.HostWorkshop,
+				What:  dev["source"],
+				Where: dev["path"],
+			}
+
+			var err error
+			mount.MakeWhat, err = boolFromString(dev["user.make-source"])
 			if err != nil {
 				return pr, err
 			}
-			makeWhere, err := boolFromString(dev["user.make-path"])
+
+			mount.MakeWhere, err = boolFromString(dev["user.make-path"])
 			if err != nil {
 				return pr, err
 			}
-			readOnly, err := boolFromString(dev["readonly"])
+
+			mode, err := uintFromString(dev["user.path-mode"], unsafe.Sizeof(mount.Mode))
 			if err != nil {
 				return pr, err
 			}
-			pr.Mounts[name] = workshop.Mount{
-				Name:      name,
-				What:      dev["source"],
-				Where:     dev["path"],
-				MakeWhat:  makeWhat,
-				MakeWhere: makeWhere,
-				Type:      workshop.HostWorkshop,
-				ReadOnly:  readOnly,
+			mount.Mode = os.FileMode(mode)
+
+			owner, err := uintFromString(dev["user.path-owner"], unsafe.Sizeof(mount.Owner))
+			if err != nil {
+				return pr, err
 			}
+			mount.Owner = sys.UserID(owner)
+
+			group, err := uintFromString(dev["user.path-group"], unsafe.Sizeof(mount.Group))
+			if err != nil {
+				return pr, err
+			}
+			mount.Group = sys.GroupID(group)
+
+			mount.ReadOnly, err = boolFromString(dev["readonly"])
+			if err != nil {
+				return pr, err
+			}
+
+			pr.Mounts[name] = mount
 		case "gpu":
 			pr.Gpu = &workshop.Gpu{Name: name}
 		case "proxy":
@@ -160,6 +184,13 @@ func boolFromString(s string) (bool, error) {
 		return false, nil
 	}
 	return strconv.ParseBool(s)
+}
+
+func uintFromString(s string, byteSize uintptr) (uint64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.ParseUint(s, 0, int(byteSize*8))
 }
 
 // Constructs a ProxyEntry from an LXD device entry

@@ -246,7 +246,7 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 }
 
 func (s *Backend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
-	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, What: name, Where: where, Type: workshop.Volume, ReadOnly: ro})
+	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, Type: workshop.Volume, What: name, Where: where, ReadOnly: ro})
 }
 
 func (s *Backend) DetachVolume(ctx context.Context, wp, name string) error {

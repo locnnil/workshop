@@ -413,8 +413,7 @@ func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) erro
 		return err
 	}
 
-	err = workshop.AtomicWrite(wfs, path, strings.NewReader(string(script)), 0644)
-	if err != nil {
+	if err := wfs.AtomicWriteTo(strings.NewReader(string(script)), path, 0644); err != nil {
 		return err
 	}
 

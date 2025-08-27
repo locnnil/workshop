@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spf13/afero"
 	"gopkg.in/check.v1"
 	"gopkg.in/tomb.v2"
 
@@ -31,7 +30,6 @@ import (
 )
 
 type sdkStateSuite struct {
-	fs          afero.Fs
 	backend     *fakebackend.FakeWorkshopBackend
 	state       *state.State
 	runner      *state.TaskRunner
@@ -102,7 +100,6 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	dirs.SetCacheDir(c.MkDir())
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
-	s.fs = afero.NewMemMapFs()
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
 
@@ -394,6 +391,7 @@ func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
 	// not in the fs (removed)
 	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
+	defer wfs.Close()
 	_, err = wfs.Stat(sdk.SdkDir("test-broken"))
 	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
 

@@ -43,11 +43,10 @@ var _ = check.Suite(&wsExec{})
 
 func execTestDevices(projectDir string) func(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
 	mounts := []workshop.Mount{{
-		Name:      workshop.ConfigProjectPathDevice,
-		What:      projectDir,
-		Where:     workshop.WorkshopProjectPath,
-		MakeWhere: true,
-		Type:      workshop.HostWorkshop,
+		Name:  workshop.ConfigProjectPathDevice,
+		Type:  workshop.HostWorkshop,
+		What:  projectDir,
+		Where: workshop.WorkshopProjectPath,
 	}}
 	return func(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
 		return mounts, nil

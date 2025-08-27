@@ -5,11 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/canonical/x-go/strutil"
-	"github.com/spf13/afero"
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
@@ -202,7 +202,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, hook *H
 
 	info, err := wsFs.Stat(hookPath)
 	wsFs.Close()
-	if errors.Is(err, afero.ErrFileNotFound) || !info.Mode().IsRegular() {
+	if errors.Is(err, os.ErrNotExist) || !info.Mode().IsRegular() {
 		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk, hook.Type())
 		return nil
 	}

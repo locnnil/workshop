@@ -1,9 +1,11 @@
 package workshop
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/osutil/sys"
 )
 
 var DefaultDevices = defaultDevices
@@ -48,13 +50,16 @@ type Camera struct {
 }
 
 type Mount struct {
-	Name      string    `json:"name"`
-	What      string    `json:"what"`
-	Where     string    `json:"where"`
-	MakeWhat  bool      `json:"make-what,omitempty"`
-	MakeWhere bool      `json:"make-where,omitempty"`
-	Type      MountType `json:"type"`
-	ReadOnly  bool      `json:"readonly"`
+	Name      string      `json:"name"`
+	Type      MountType   `json:"type"`
+	What      string      `json:"what"`
+	MakeWhat  bool        `json:"make-what,omitempty"`
+	Where     string      `json:"where"`
+	MakeWhere bool        `json:"make-where,omitempty"`
+	Mode      os.FileMode `json:"mode,omitempty"`
+	Owner     sys.UserID  `json:"owner,omitempty"`
+	Group     sys.GroupID `json:"group,omitempty"`
+	ReadOnly  bool        `json:"readonly"`
 }
 
 type Tunnel struct {
@@ -110,15 +115,16 @@ func NewSdkProfile(sdkName string) SdkProfile {
 
 func defaultDevices(pid, w string) ([]Mount, []ProxyEntry) {
 	mounts := []Mount{{
-		Name:  "workshop.workshopctl",
-		What:  filepath.Join(dirs.ExecDir, "workshopctl"),
-		Where: "/usr/bin/workshopctl",
-		Type:  HostWorkshop,
+		Name:     "workshop.workshopctl",
+		Type:     HostWorkshop,
+		What:     filepath.Join(dirs.ExecDir, "workshopctl"),
+		Where:    "/usr/bin/workshopctl",
+		ReadOnly: true,
 	}, {
 		Name:  "cache.apt",
+		Type:  HostWorkshop,
 		What:  AptCacheDir(pid, w),
 		Where: dirs.AptCacheDir,
-		Type:  HostWorkshop,
 	}}
 
 	socketHost := dirs.SocketPath + ".untrusted"

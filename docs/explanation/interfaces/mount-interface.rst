@@ -46,6 +46,11 @@ the interface (:samp:`mount`)
 the intended target path inside the workshop (:samp:`workshop-target`)
 and, optionally, whether the mount should be read-only (:samp:`read-only`).
 
+|ws_markup| will create the target path if it doesn't exist.
+Plugs may customize the permissions (:samp:`mode`) and ownership (:samp:`uid`, :samp:`gid`)
+of any directories created.
+
+
 Defining the plug in an SDK designates the target directory inside the workshop;
 a directory on the host system that |ws_markup| will create at run-time
 will be mounted to it.
