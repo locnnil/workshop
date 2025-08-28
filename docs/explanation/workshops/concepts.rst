@@ -122,7 +122,7 @@ such as a particular Ubuntu LTS release.
 This is the first layer of the workshop,
 upon which all other components are applied.
 
-For details of how the images are handled behind the scenes,
+For details on how the images are handled behind the scenes,
 see :ref:`exp_arch_install_images`.
 
 
@@ -162,7 +162,7 @@ instead of rebuilding the environment from scratch.
 No snapshots are created for other hook types,
 such as :samp:`setup-project` or :samp:`save-state`.
 
-For details of how |ws_markup| leverages ZFS,
+For details on how |ws_markup| leverages ZFS,
 see :ref:`exp_arch_install_storage`.
 
 

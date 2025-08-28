@@ -114,7 +114,7 @@ Don't forget to add the :file:`.lock` file to your :file:`.gitignore` file:
    $ echo ".workshop.lock" >> .gitignore
 
 
-To the contrary, the definition and the :file:`.workshop/` directory
+In contrast, the definition and the :file:`.workshop/` directory
 are *meant* to be stored in a repository;
 if your :file:`.gitignore` file uses rules
 such as "ignore everything except these files and directories,"
