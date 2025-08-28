@@ -69,7 +69,7 @@ Don't forget to launch or refresh the workshop.
    If a workflow-based run fails because of missing software,
    we recommend installing it as part of the workflow.
    This makes local and remote runs more consistent.
-   Some actions (e.g. `setup-python <https://github.com/actions/setup-python>`_)
+   Some actions (e.g., `setup-python <https://github.com/actions/setup-python>`_)
    provide additional features like caching.
 
    Some tools (notably Docker) aren't as easy to install during a job,
@@ -167,11 +167,11 @@ Start the Runner client inside the workshop:
    $ workshop exec ci github-runner --label=workshop <OWNER>[/<REPO>]
 
 Replace :samp:`<OWNER>/<REPO>` with the full repository name
-(e.g. :samp:`canonical/workshop`).
+(e.g., :samp:`canonical/workshop`).
 If omitted,
 the script tries to detect this information from the local repository.
 For organization-level runners,
-make sure to provide the organization name (e.g. :samp:`canonical`).
+make sure to provide the organization name (e.g., :samp:`canonical`).
 
 The :option:`!--label` option adds a label to the runner,
 to distinguish it from GitHub-hosted runners

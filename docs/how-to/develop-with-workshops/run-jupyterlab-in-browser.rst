@@ -34,7 +34,7 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
 
 Launch the workshop.
 After that, JupyterLab will be available in your browser at the plug address,
-e.g. http://localhost:8989.
+e.g., http://localhost:8989.
 It starts as a user service
 with :file:`/project/` as the default working directory to serve from.
 You can immediately start using it with any other SDKs you have installed.

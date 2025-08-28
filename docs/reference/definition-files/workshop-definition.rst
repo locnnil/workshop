@@ -421,7 +421,7 @@ Endpoints are formatted as follows:
 
        :envvar:`$HOME` expands into the user's home directory and
        :envvar:`$XDG_RUNTIME_DIR` expands into the user runtime directory
-       (e.g. :file:`/run/user/1000`).
+       (e.g., :file:`/run/user/1000`).
 
        For security reasons,
        tunnel interface plugs in the system SDK

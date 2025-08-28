@@ -23,7 +23,7 @@ after creating a tunnel from the host system to the workshop.
 
 SDKs request access to services using tunnel interface plugs.
 Some services have dedicated interfaces
-(e.g. the :ref:`SSH interface <exp_ssh_interface>`),
+(e.g., the :ref:`SSH interface <exp_ssh_interface>`),
 which should be used instead.
 
 

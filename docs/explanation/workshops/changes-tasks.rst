@@ -14,7 +14,7 @@ Changes, tasks
 
 A *change* is a core concept of the workshop state management system.
 Any long-running or invasive operation
-(e.g. :ref:`launch <ref_workshop_launch>`)
+(e.g., :ref:`launch <ref_workshop_launch>`)
 that changes the state of a workshop
 is planned and applied as a change,
 which consists of specific tasks
