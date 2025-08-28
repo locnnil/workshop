@@ -68,6 +68,7 @@ IPv
 iteratively
 jonathan
 jose
+jupyter
 Jupyter
 JupyterLab
 jy
@@ -86,6 +87,8 @@ moby
 modularize
 Multipass
 ns
+ollama
+Ollama
 onboarding
 OpenVINO
 pathname

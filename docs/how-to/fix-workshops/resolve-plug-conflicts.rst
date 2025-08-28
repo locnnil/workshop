@@ -25,9 +25,9 @@ where the SDKs store their models
       base: ubuntu@22.04
       sdks:
         - name: torchaudio
-          channel: latest/stable
+          channel: 22.04/stable
         - name: torchvision
-          channel: latest/stable
+          channel: 22.04/stable
 
 
    Launching this workshop would cause a conflict
@@ -46,9 +46,9 @@ where the SDKs store their models
       base: ubuntu@22.04
       sdks:
         - name: torchaudio
-          channel: latest/stable
+          channel: 22.04/stable
         - name: torchvision
-          channel: latest/stable
+          channel: 22.04/stable
           plugs:
             hub:
               bind: torchaudio:hub

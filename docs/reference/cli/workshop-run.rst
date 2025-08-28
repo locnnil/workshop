@@ -92,7 +92,7 @@ if a separator or a workshop name is provided:
 
 --env
 
-   Set an environment variable, e.g. 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.
+   Set an environment variable, e.g., 'FOO=bar'; if only the name is provided, the value is inherited from the CLI environment.
 
 
 --uid

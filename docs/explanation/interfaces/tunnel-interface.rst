@@ -23,7 +23,7 @@ after creating a tunnel from the host system to the workshop.
 
 SDKs request access to services using tunnel interface plugs.
 Some services have dedicated interfaces
-(e.g. the :ref:`SSH interface <exp_ssh_interface>`),
+(e.g., the :ref:`SSH interface <exp_ssh_interface>`),
 which should be used instead.
 
 
@@ -199,14 +199,14 @@ provided by :samp:`service-sdk`.
              from:  0.0.0.0:8081/tcp
              to:    127.0.0.1:8080/tcp
        client-sdk:
-         tracking:   latest/stable
+         tracking:   22.04/stable
          installed:  2024-03-02  (1)
          tunnels:
            shared:
              from:  [::1]:1080/tcp
              to:    127.0.0.1:18080/tcp
        service-sdk:
-         tracking:   latest/edge
+         tracking:   22.04/edge
          installed:  2025-06-07  (2)
 
 

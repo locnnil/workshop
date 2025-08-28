@@ -90,7 +90,7 @@ In Workshop, commit messages differ from conventional commits in capitalization:
 
 
 The messages rarely, if ever, state the type of the commit
-(e.g. ``fix``, ``feat``, etc.);
+(e.g., ``fix``, ``feat``, etc.);
 these are used for branch naming, for example:
 
 - ``canonical/feat/workspace-start``
@@ -342,19 +342,19 @@ however, the remainder of the structure and naming convention is mandatory.
 
 Here:
 
-- ``<SDK>`` is the SDK name (e.g. ``my-sdk``)
+- ``<SDK>`` is the SDK name (e.g., ``my-sdk``)
 
-- ``<RELEASE>`` is the SDK release (e.g. ``latest``)
+- ``<RELEASE>`` is the SDK release (e.g., ``latest``)
 
-- ``<CHANNEL>`` is the SDK channel (e.g. ``edge``)
+- ``<CHANNEL>`` is the SDK channel (e.g., ``edge``)
 
 
 Copy the SDK
 ~~~~~~~~~~~~
 
 Place the SDK files in the deepest directory from the previous step
-(e.g. ``fake-store/sdkstore/my-sdk/latest/edge/my-sdk/``).
-Rename the SDK definition (e.g. ``my-sdk.yaml``) to ``sdk.yaml``
+(e.g., ``fake-store/sdkstore/my-sdk/latest/edge/my-sdk/``).
+Rename the SDK definition (e.g., ``my-sdk.yaml``) to ``sdk.yaml``
 and place it at the same nesting level:
 
 .. code-block:: console

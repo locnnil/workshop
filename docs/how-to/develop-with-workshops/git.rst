@@ -33,7 +33,7 @@ in your repository:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/stable
+       channel: 22.04/stable
 
 
 Next,
@@ -114,7 +114,7 @@ Don't forget to add the :file:`.lock` file to your :file:`.gitignore` file:
    $ echo ".workshop.lock" >> .gitignore
 
 
-To the contrary, the definition and the :file:`.workshop/` directory
+In contrast, the definition and the :file:`.workshop/` directory
 are *meant* to be stored in a repository;
 if your :file:`.gitignore` file uses rules
 such as "ignore everything except these files and directories,"
@@ -165,7 +165,7 @@ to change the base image:
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: noble/stable
+       channel: 24.04/stable
 
 
 Next, launch the redefined workshop to work on the problem:

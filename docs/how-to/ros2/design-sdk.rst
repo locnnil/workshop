@@ -204,7 +204,7 @@ Configure :program:`colcon` defaults
 Creates directories and a default configuration file for :program:`colcon`
 with build, install, and log file paths.
 
-.. important::
+.. warning::
 
    This is where the :samp:`colcon-artifacts` plug from :file:`sdk.yaml`
    comes into play;
@@ -242,7 +242,7 @@ updates it for our ROS 2 distribution,
 then installs dependencies for the project located under :file:`/project/`,
 if any.
 
-.. important::
+.. warning::
 
    This means that the intended way of using this SDK
    is to put the ROS 2 sources in the *project directory* of the workshop

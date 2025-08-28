@@ -75,7 +75,7 @@ The example shares the host's PostgreSQL server
 
    sdks:
      - name: mlflow
-       channel: latest/stable
+       channel: 22.04/stable
        plugs:
          postgres:
            interface: tunnel

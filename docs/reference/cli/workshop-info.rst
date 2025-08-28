@@ -21,7 +21,7 @@ details for a workshop, formatting them as YAML. Specifically, it prints:
 
 - Essential workshop attributes, such as name, base and project directory
 
-- Current status (e.g. 'Ready', 'Pending', 'Stopped') and notes for the workshop
+- Current status (e.g., 'Ready', 'Pending', 'Stopped') and notes for the workshop
 
 - Individual SDK details, such as name, channel, installation date and revision
 

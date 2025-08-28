@@ -29,12 +29,12 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
           interface: tunnel
           endpoint: 127.0.0.1:8989
     - name: jupyter
-      channel: noble/edge
+      channel: 24.04/edge
 
 
 Launch the workshop.
 After that, JupyterLab will be available in your browser at the plug address,
-e.g. http://localhost:8989.
+e.g., http://localhost:8989.
 It starts as a user service
 with :file:`/project/` as the default working directory to serve from.
 You can immediately start using it with any other SDKs you have installed.

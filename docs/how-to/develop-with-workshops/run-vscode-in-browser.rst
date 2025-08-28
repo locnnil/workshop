@@ -29,12 +29,12 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
            interface: tunnel
            endpoint: 8090
      - name: code-server
-       channel: noble/stable
+       channel: 24.04/stable
 
 
 Launch the workshop.
 After that, VS Code will be available in your browser at the plug address,
-e.g. http://localhost:8090.
+e.g., http://localhost:8090.
 In the terminal prompt, you'll see that the IDE is running inside your workshop.
 
 

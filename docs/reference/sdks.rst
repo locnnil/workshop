@@ -79,7 +79,7 @@ More complex scenarios can be described using the following attributes:
 
        If the SDK has no :samp:`base` or :samp:`build-base`,
        each entry must be prefixed by a valid base and a colon,
-       e.g. :samp:`ubuntu@22.04:amd64`.
+       e.g., :samp:`ubuntu@22.04:amd64`.
        This has no effect on the supported build machines,
        because |sdk_markup| performs builds in containers.
        The prefix must match :samp:`build-for`.
@@ -92,7 +92,7 @@ More complex scenarios can be described using the following attributes:
 
        If the SDK has no :samp:`base` or :samp:`build-base`,
        each entry must be prefixed by a valid base and a colon,
-       e.g. :samp:`ubuntu@24.04:riscv64`.
+       e.g., :samp:`ubuntu@24.04:riscv64`.
        The prefix must match every entry in :samp:`build-on`.
 
 
@@ -542,11 +542,11 @@ SDK channels
 
 When SDKs are published by their creators and consumed by workshops,
 different versions and releases are tracked through the use of channels.
-A channel is a combination of a track and a risk, e.g. :samp:`latest/beta`.
+A channel is a combination of a track and a risk, e.g., :samp:`latest/beta`.
 
 Tracks allow multiple published versions of an SDK to exist in parallel;
 while no specific scheme is enforced,
-it is desirable to use a semantic version, e.g. :samp:`1.2.3`,
+it is desirable to use a semantic version, e.g., :samp:`1.2.3`,
 or the :samp:`latest` keyword,
 which maps to the latest published version and serves as the default.
 

@@ -28,7 +28,7 @@ establishes the relationship between the two
 that's required to actually start a workshop.
 This is achieved with a hidden :file:`.lock` file,
 which must remain in the project directory
-and must not be copied or stored externally, e.g. in a repository.
+and must not be copied or stored externally, e.g., in a repository.
 
 You can store workshop definitions in two ways:
 

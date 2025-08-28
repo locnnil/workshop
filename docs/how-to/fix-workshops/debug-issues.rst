@@ -30,7 +30,7 @@ from the :samp:`latest/edge` channel:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: latest/edge
+       channel: 22.04/edge
 
 
 Suppose something goes wrong during :command:`workshop refresh`:

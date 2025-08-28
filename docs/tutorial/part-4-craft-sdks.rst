@@ -17,7 +17,7 @@ you'll learn how to create full-featured SDKs
 that can be published and shared with others using |sdk_markup|.
 It relies on the knowledge gained in the :ref:`tut_get_started` section,
 where you learned how to create and run workshops,
-and also leverages the :ref:`tut_sketch_sdks` section,
+and also builds on the :ref:`tut_sketch_sdks` section,
 where you learned how to sketch local SDKs.
 
 Here, you will initialize, define, pack, and publish an :ref:`SDK <exp_sdks>`:
@@ -92,7 +92,7 @@ options, for example:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./sdkcraft_0.1.2_amd64.snap
+   $ sudo snap install --dangerous --classic ./sdkcraft_0.1.9_amd64.snap
 
 
 The snap installs the :program:`sdkcraft` CLI tool.
@@ -109,14 +109,15 @@ Initialize the SDK
 ------------------
 
 Once you have installed |sdk_markup|,
-use it to initialize, define and pack your first :ref:`SDK <exp_sdks>`.
-Here, we'll build an SDK that installs a version of Go in the workshop.
+use it to initialize, define, and pack your first :ref:`SDK <exp_sdks>`.
+Here, we'll build an SDK that installs Ollama
+for running large language models in the workshop.
 
-First, create a directory named :file:`go/`:
+First, create a directory named :file:`ollama/`:
 
 .. code-block:: console
 
-   $ mkdir go/
+   $ mkdir ollama/
 
 
 .. @artefact SDK definition
@@ -128,7 +129,7 @@ Next, browse to the SDK directory and initialize it:
 
 .. code-block:: console
 
-   $ cd go/
+   $ cd ollama/
    $ sdkcraft init
 
 
@@ -151,15 +152,16 @@ adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
    :caption: sdk.yaml
    :emphasize-lines: 1,4-6
 
-   name: go
-   base: ubuntu@24.04
-   version: '0.1'
-   summary: Go SDK
+   name: ollama
+   version: "0.9.6"
+   summary: Get up and running with large language models
    description: |
-     This is my Go SDK description.
-   license: GPL-3.0
+     Get up and running with Llama 3.3, DeepSeek-R1, Phi-4, 
+     Gemma 3, Mistral Small 3.1 and other large language models.
+   license: MIT
    platforms:
-     amd64:
+     ubuntu@22.04:amd64:
+     ubuntu@24.04:amd64:
 
    parts:
      my-part:
@@ -175,26 +177,74 @@ Define parts
 to obtain data from different sources, process it in various ways,
 and prepare an SDK package for publishing.
 
-In our example, the :samp:`parts` section of the definition can be used as is:
+In our Ollama SDK, we'll define two parts:
+one to download the Ollama binary
+and another for the :program:`systemd` service file:
 
 .. code-block:: yaml
    :caption: sdk.yaml
 
    # ...
    parts:
-     my-part:
-       plugin: nil
+     ollama:
+       plugin: dump
+       source: https://github.com/ollama/ollama/releases/download/v0.9.6/ollama-linux-amd64.tgz
+       source-type: tar
+     user-service:
+       plugin: dump
+       source: ollama.service
+       source-type: file
 
 
-For in-depth details,
-refer to the `Parts
-<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts/>`_
-section in Craft Parts documentation.
+The :samp:`ollama` part uses the :samp:`dump` plugin
+to download and extract the official Ollama binary from GitHub releases.
+The :samp:`user-service` part includes a :program:`systemd` service file
+that will be used to manage the Ollama daemon.
+
+.. note::
+
+   For in-depth details,
+   refer to the `Parts
+   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts/>`_
+   section in Craft Parts documentation.
+
+
+The first :samp:`dump` downloads the file automatically.
+However, we need to create the :program:`systemd` service file
+that was referenced in the :samp:`user-service` part.
+
+In the :file:`ollama/` directory,
+create a file named :file:`ollama.service`:
+
+.. code-block:: ini
+   :caption: ollama.service
+
+   [Unit]
+   Description=Ollama Service
+   After=network-online.target
+
+   [Service]
+   ExecStart=/bin/bash -lc "ollama serve"
+   Restart=always
+   RestartSec=3
+
+   [Install]
+   WantedBy=multi-user.target
+
+
+This defines how the Ollama daemon should run:
+
+- :samp:`ExecStart` starts the server with a login shell
+  to pick up the environment
+
+- :samp:`Restart` ensures the service is restarted on failure
+
+- :samp:`After` makes it depend on network connectivity
 
 
 .. _how_sdkcraft_mount_interface:
 
-Add interface plugs
+Add plugs and slots
 -------------------
 
 .. @artefact interface plug
@@ -205,48 +255,54 @@ of exposing the resources of the host system to the workshops,
 and you can use them in a variety of ways
 to extend the functionality of your SDK.
 
-Suppose you want to preserve the Go module cache
-when a workshop using your SDK is rebuilt from scratch, or *refreshed*.
-You can use a :ref:`mount interface <exp_mount_interface>` plug for that:
-it mounts a host directory to a target directory in the workshop,
-so that the files remain on the host.
+For the Ollama SDK, we need several interfaces:
+a mount interface to preserve models,
+a GPU interface for acceleration,
+and a tunnel interface to expose the API server.
+The latter is a resource that the SDK itself exposes,
+so it will be defined as a slot;
+the former two are plugs because they access external resources.
 
 Open :file:`sdk.yaml` again
-and add a plug named :samp:`mod-cache` to the :samp:`plugs` section:
+and add two plugs and a slot to the appropriate sections:
 
 .. code-block:: yaml
    :caption: sdk.yaml
-   :emphasize-lines: 15-18
+   :emphasize-lines: 12-22
 
-   name: go
-   base: ubuntu@24.04
-   version: '0.1'
-   summary: Go SDK
+   name: ollama
+   version: "0.9.6"
+   summary: Get up and running with large language models
    description: |
-     This is my Go SDK description.
-   license: GPL-3.0
+     Get up and running with Llama 3.3, DeepSeek-R1, Phi-4, 
+     Gemma 3, Mistral Small 3.1 and other large language models.
+   license: MIT
    platforms:
-     amd64:
-
-   parts:
-     my-part:
-       plugin: nil
+     ubuntu@22.04:amd64:
+     ubuntu@24.04:amd64:
 
    plugs:
-     mod-cache:
+     gpu:
+       interface: gpu
+     models:
        interface: mount
-       workshop-target: /home/workshop/go/pkg/mod
+       workshop-target: /home/workshop/.ollama/models
+
+   slots:
+     ollama-server:
+       interface: tunnel
+       endpoint: 11434
 
 
-Now, when a workshop using this SDK will be started,
-|ws_markup| will map the plug's :samp:`target` in the workshop
-to a host directory that will be automatically created
-and maintained between refresh operations.
+The :samp:`models` plug preserves downloaded models between workshop refreshes.
+The :samp:`gpu` plug provides access to GPU acceleration for faster inference,
+and the :samp:`ollama-server` slot exposes the Ollama API on port 11434.
 
 .. note::
 
-   You can't explicitly set the *host* directory here;
-   this prevents SDKs from accessing any arbitrary data on the host file system.
+   You can't explicitly set the *host* directory for mount plugs here;
+   this restriction prevents SDKs
+   from accessing any arbitrary data on the host file system.
    However, users who add your SDK to their workshops
    will be able to remount the plug elsewhere at run-time.
 
@@ -261,7 +317,7 @@ add the :ref:`hooks <exp_sdk_hooks>`
 that run at different stages of the workshop's life cycle,
 preparing the SDK for use or preserving its state during updates.
 
-Under :file:`go/`,
+Under :file:`ollama/`,
 create a subdirectory
 named :file:`hooks/`:
 
@@ -273,24 +329,22 @@ named :file:`hooks/`:
 This directory stores all the hooks for an SDK.
 
 
-Build: setup base and project
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Build: setup base, project
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. @artefact setup-base
 .. @artefact setup-project
 
-Under :file:`go/hooks/`,
+Under :file:`ollama/hooks/`,
 create a file
 named :file:`setup-base`:
 
 .. code-block:: shell
    :caption: setup-base
 
-   snap install --classic go
-   
-   # Create a mod cache directory to be mounted using the mount interface
-   cache=$(sudo -u workshop -- go env GOMODCACHE)
-   sudo -u workshop -- mkdir -p "$cache"
+   cat <<EOF >/etc/profile.d/ollama.sh
+   export PATH="$SDK/bin:\$PATH"
+   EOF
 
 
 It runs when the workshop is launched or refreshed,
@@ -316,16 +370,17 @@ create a file named :file:`setup-project`:
 .. code-block:: shell
    :caption: setup-project
 
-   go mod download
+   install -D --mode=644 --target-directory ~/.config/systemd/user "$SDK/ollama.service"
 
-   echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile
+   systemctl --user daemon-reload
+   systemctl --user enable --now ollama
 
 
 It runs after :file:`setup-base`,
 once the project directory is mounted
 and interfaces are connected.
-This can be used to install project-specific packages
-or setup the :samp:`workshop` user's environment.
+This hook installs and starts the Ollama service as a user service,
+ensuring the AI model server is running and ready to use.
 
 
 Persist: save and restore
@@ -334,40 +389,36 @@ Persist: save and restore
 .. @artefact restore-state
 .. @artefact save-state
 
-Also under :file:`go/hooks/`,
-create two files
-named :file:`save-state` and :file:`restore-state`:
-
-.. code-block:: shell
-   :caption: save-state
-
-   sudo -u workshop go env -changed | sed "s/='\(.*\)'/=\1/" | tee "$SDK_STATE_DIR"/env-vars
-
-
-.. code-block:: shell
-   :caption: restore-state
-
-   while IFS='=' read -r key value; do
-     sudo -u workshop go env -w "$key=$value"
-   done < "$SDK_STATE_DIR"/env-vars
-
+Some SDKs need to preserve internal state during workshop refresh operations,
+such as configuration settings or temporary data that shouldn't be lost.
+For these cases,
+you would create :file:`save-state` and :file:`restore-state` hooks.
 
 During a :command:`workshop refresh` operation:
 
 - The :file:`save-state` hook runs *before* the workshop is refreshed,
-  saving the state of the SDK.
+  saving the state of the SDK to :envvar:`$SDK_STATE_DIR`.
 
 - The :file:`restore-state` hook recovers the state
   *after* the workshop has been successfully updated.
 
-- Both hooks use :envvar:`$SDK_STATE_DIR`
-  for the workshop directory where the state is stored.
+
+However, the Ollama SDK doesn't need these hooks because:
+
+- Downloaded models are stored in the mounted :file:`models/` directory,
+  which persists across refreshes
+
+- The :program:`systemd` service configuration
+  is stateless and recreated on each refresh
+
+- No custom user configuration needs to be preserved
 
 
-.. important::
+.. warning::
 
-   The SDK is also refreshed as a part of the workshop,
-   so any breaking changes in its save-restore logic will cause an error.
+   The SDK is also refreshed as a part of any workshop refresh operation,
+   so any breaking changes in its save-restore logic will cause an error;
+   make sure to allow for this in your SDK design.
 
 
 Report: check health
@@ -382,20 +433,22 @@ Finally, create a hook named :file:`check-health`:
 .. code-block:: shell
    :caption: check-health
 
-   if go version > /dev/null 2>&1; then
+   output=$(sudo -u workshop --login ollama list 2>&1)
+   if [[ $? -eq 0 ]]; then
      workshopctl set-health okay
-   else
-     workshopctl set-health --code=installation-fails error "Go installation fails"
+     exit 0
    fi
+   workshopctl set-health error "$output"
 
 
-It checks whether the Go installation is functional.
-If it is, the health is set to :samp:`okay`
-using the :ref:`workshopctl set-health <exp_workshopctl>` command;
-otherwise, a similar command reports an error.
+It checks whether the Ollama installation is functional
+by running :command:`ollama list`.
+If it succeeds, the health is set to :samp:`okay`
+using the :ref:`workshopctl set-health <exp_workshopctl>` command;
+otherwise, it reports the error output from the failed command.
 
 In general, the hook should set the health to :samp:`okay`
-and return a zero code if everything is fine.
+and return a zero code if its health checks succeed.
 To signal an error, set the health to :samp:`error`
 or return a non-zero code.
 
@@ -407,10 +460,10 @@ the health is eventually set to :samp:`error` automatically.
 
 .. _how_sdkcraft_build_sdk:
 
-Build and pack
---------------
+Package the SDK
+---------------
 
-Under :file:`go/`, run:
+Under :file:`ollama/`, run:
 
 .. code-block:: console
 
@@ -421,7 +474,7 @@ Under :file:`go/`, run:
 
 This builds all :ref:`SDK parts <exp_sdk_parts>`
 defined in the :file:`sdk.yaml` file,
-e.g. pulling source code, applying patches, configuring and compiling it
+e.g., pulling source code, applying patches, configuring and compiling it
 according to the part definition.
 
 .. note::
@@ -441,10 +494,11 @@ Optionally, you can clean the build cache before a build attempt:
 
 .. @artefact SDK metadata
 
-Ran without arguments,
-:command:`sdkcraft` builds and packs the SDK into the :file:`go_amd64_ubuntu@24.04.sdk` file,
+When run without arguments,
+:command:`sdkcraft` builds and packs the SDK into files
+such as :file:`ollama_amd64_ubuntu@24.04.sdk`,
 which contains the build artifacts from the previous step
-along with SDK metadata, hooks and other components.
+along with SDK metadata, hooks, and other components.
 
 
 .. _how_sdkcraft_publish:
@@ -460,11 +514,11 @@ for use with |ws_markup|:
 
 .. code-block:: console
 
-   $ sdkcraft.publish ./go_amd64_ubuntu@24.04.sdk latest/beta
+   $ sdkcraft.publish ./ollama_amd64_ubuntu@24.04.sdk 24.04/beta
 
 
 This publishes the newly created SDK
-under the :samp:`latest/beta` channel in the SDK Store.
+under the :samp:`24.04/beta` channel in the SDK Store.
 
 
 Use the SDK
@@ -474,16 +528,17 @@ The resulting SDK can be accessed by |ws_markup| as follows:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 2,4,5
+   :emphasize-lines: 4,5
 
    name: dev
    base: ubuntu@24.04
    sdks:
-     - name: go
-       channel: latest/beta
+     - name: ollama
+       channel: 24.04/beta
 
 
-Mind that the :samp:`base` of the workshop must match the SDK :samp:`base`.
+Note that the workshop :samp:`base`
+must match one of the SDK's supported :samp:`platforms`.
 
 .. note::
 
@@ -500,7 +555,7 @@ This was the last step of the entire tutorial series.
 You have learned how to create a workshop,
 add SDKs to it, and use them in practice.
 You have also learned how to sketch a local SDK
-and how to craft and publish a full-featured SDK;
-you are now familiar with all the basic operations
+and how to craft and publish a full-featured SDK.
+You are now familiar with all the basic operations
 that |ws_markup| and |sdk_markup| provide
 and have had an extensive tour of their capabilities.
