@@ -5,11 +5,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +17,6 @@ import (
 	"github.com/canonical/lxd/shared/units"
 
 	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 )
@@ -29,7 +26,7 @@ var (
 	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
 )
 
-func (b *Backend) Download(ctx context.Context, base string, report *progress.Reporter) error {
+func (b *Backend) Download(ctx context.Context, base string, report *progress.Reporter) (string, error) {
 	defer func() {
 		if report != nil {
 			imageLock.Lock()
@@ -62,8 +59,9 @@ func (b *Backend) Download(ctx context.Context, base string, report *progress.Re
 	return waitDownloadOp(ctx, op)
 }
 
-func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (err error) {
+func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (fingerprint string, err error) {
 	defer func() {
+		op.fingerprint = fingerprint
 		op.err = err
 		close(op.waitCh)
 
@@ -72,72 +70,130 @@ func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (er
 		imageLock.Unlock()
 	}()
 
+	copyArgs := lxd.ImageCopyArgs{
+		AutoUpdate: false,
+		Public:     false,
+		Type:       string(api.InstanceTypeContainer),
+	}
+
+	source, err := BaseImageSource(base)
+	if err != nil {
+		return "", err
+	}
+
+	imageServer, err := connectImageServer(*source)
+	if err != nil {
+		return "", err
+	}
+	defer imageServer.Disconnect()
+
+	// TODO: For simplestreams, lxc image copy immediately calls CopyImage,
+	// without looking up the alias first. For LXD image servers, it does
+	// look up the alias. The only fields in the response it uses are
+	// Aliases, Profiles and Public. We only care about the latter, which
+	// is likely always true. For now, we have to query anyway, to retrieve
+	// the image size. Once LXD starts reporting more detailed progress
+	// information, we should drop this query for simplestreams, and
+	// possibly also LXD servers.
+	alias, _, err := imageServer.GetImageAliasType(copyArgs.Type, source.Alias)
+	if err != nil {
+		return "", fmt.Errorf("%q download failed: %w", base, err)
+	}
+
+	aliasInfo, _, err := imageServer.GetImage(alias.Target)
+	if err != nil {
+		return "", fmt.Errorf("%q download failed: %w", base, err)
+	}
+
+	// We use an alias instead of a fingerprint here so that LXD populates
+	// the api.Image.UpdateSource field locally. This field shows us where
+	// the image came from without having to add our own config or aliases.
+	// In any case, we won't know the fingerprint once we remove the above
+	// alias lookup.
+	imageInfo := api.Image{
+		Fingerprint: source.Alias,
+		Public:      aliasInfo.Public || source.Protocol == "simplestreams",
+	}
+
 	// LXD cannot cancel download operations
 	child := context.WithoutCancel(ctx)
 
 	conn, err := b.LxdClient(child)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer conn.Disconnect()
 
-	alias, _, err := conn.GetImageAlias(ImageAlias(base))
-	if err == nil {
-		logger.Debugf("BaseImageManager on Download: %q image already exists (%s)", alias.Name, alias.Target)
-		return
-	}
+	// Reset the connection's project to the default. Without this line,
+	// the image is still copied to the default project, because our
+	// projects specify features.images=false. The reason we reset the
+	// project is to ensure that the downloaded image has cached=false.
+	// This tells LXD not to prune the image when it expires. If the image
+	// already exists with cached=true, then CopyImage only unsets it if
+	// the connection uses the default project.
+	// TODO: remove this when we remove features.images=false.
+	conn = conn.UseProject("")
 
-	names := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
-	if len(names) != 2 {
-		return fmt.Errorf("%q is not a correct base name", base)
-	}
-
-	imageServer, err := connectImageServer(imageServer)
+	copyop, err := conn.CopyImage(imageServer, imageInfo, &copyArgs)
 	if err != nil {
-		return err
-	}
-	defer imageServer.Disconnect()
-
-	var imageInfo *api.Image
-	alias, _, err = imageServer.GetImageAlias(fmt.Sprintf("%s/%s", names[1], runtime.GOARCH))
-	if err != nil {
-		return fmt.Errorf("%q download failed: %w", base, err)
-	}
-
-	imageInfo, _, err = imageServer.GetImage(alias.Target)
-	if err != nil {
-		return fmt.Errorf("%q download failed: %w", base, err)
-	}
-
-	copyArgs := lxd.ImageCopyArgs{
-		AutoUpdate: true,
-		Public:     false,
-		Type:       "container",
-	}
-
-	copyop, err := conn.CopyImage(imageServer, *imageInfo, &copyArgs)
-	if err != nil {
-		return fmt.Errorf("%q download failed: %w", base, err)
+		return "", fmt.Errorf("%q download failed: %w", base, err)
 	}
 
 	copyop.AddHandler(func(o api.Operation) {
-		if o.Metadata == nil || imageInfo.Size <= 0 {
+		if o.Metadata == nil || aliasInfo.Size <= 0 {
 			return
 		}
-		if upd := handleLaunchUpdate(o.Metadata, int(imageInfo.Size)); upd != nil {
+		if upd := handleLaunchUpdate(o.Metadata, int(aliasInfo.Size)); upd != nil {
 			op.Update(*upd)
 		}
 	})
 
-	if err = copyop.Wait(); err == nil {
-		// The LXD image alias must be updated separately as if provided to CopyImage in
-		// multiple concurrent calls it will fail with "Alias already exists" once the
-		// image is downloaded. This happens because LXD's CopyImage handles image
-		// download and creating an alias separately and not as a single transaction.
-		b.maybeUpdateAlias(conn, base, imageInfo.Fingerprint)
+	if err := copyop.Wait(); err != nil {
+		return "", fmt.Errorf("%q download failed: %w", base, err)
 	}
 
-	return err
+	target, err := copyop.GetTarget()
+	if err != nil {
+		return "", fmt.Errorf("fingerprint not found for %q: %w", base, err)
+	}
+
+	fingerprint, ok := target.Metadata["fingerprint"].(string)
+	if !ok {
+		return "", fmt.Errorf("fingerprint not found for %q", base)
+	}
+
+	return fingerprint, nil
+}
+
+func BaseImageSource(base string) (*api.ImageSource, error) {
+	parts := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid base %q (expected <NAME>@<VERSION>)", base)
+	}
+	if parts[0] != "ubuntu" {
+		return nil, fmt.Errorf("base %q not supported", base)
+	}
+
+	protocol, url, found := strings.Cut(imageServer, ":")
+	if !found {
+		return nil, fmt.Errorf("invalid image server URL %q", imageServer)
+	}
+
+	// As of LXD 6.5, images are given 2 aliases, <NAME> and <NAME>/<ARCH>.
+	// The more reliable one is <NAME>. The reason is that <ARCH> is taken
+	// from api.Image.Properties["architecture"], which in turn comes
+	// directly from the image server without any normalization (e.g. the
+	// server could use amd64 or x86_64, we don't know). To choose which
+	// image to abbreviate as <NAME>, LXD compares api.Image.Architecture
+	// (which is normalized using LXD's osarch package) with `uname -m`.
+	// There's a risk this doesn't work correctly for some 32-bit ARM
+	// variants, but it should be OK for x86_64, aarch64 and riscv64.
+	source := api.ImageSource{
+		Alias:    parts[1],
+		Protocol: protocol,
+		Server:   url,
+	}
+	return &source, nil
 }
 
 // For the test purposes only
@@ -198,54 +254,38 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 	return args, nil
 }
 
-func connectImageServer(url string) (lxd.ImageServer, error) {
-	server, found := strings.CutPrefix(url, "simplestreams:")
-	if found {
-		conn, err := ConnectSimpleStreams(server, nil)
+func connectImageServer(source api.ImageSource) (lxd.ImageServer, error) {
+	switch source.Protocol {
+	case "simplestreams":
+		conn, err := ConnectSimpleStreams(source.Server, nil)
 		if err != nil {
 			return nil, fmt.Errorf("image server is not available: %w", err)
 		}
 		return conn, err
-	}
-
-	server, found = strings.CutPrefix(url, "lxd:")
-	if found {
+	case "lxd":
 		args, err := lxdConnectionArgs()
 		if err != nil {
 			return nil, err
 		}
-		conn, err := lxd.ConnectPublicLXD(server, args)
+		conn, err := lxd.ConnectPublicLXD(source.Server, args)
 		if err != nil {
 			return nil, fmt.Errorf("image server is not available: %w", err)
 		}
 		return conn, err
+	default:
+		return nil, fmt.Errorf("unknown image server URL prefix (supported: simplestreams, lxd)")
 	}
-
-	return nil, fmt.Errorf("unknown image server URL prefix (supported: simplestreams, lxd)")
 }
 
-func waitDownloadOp(ctx context.Context, op *downloadOp) error {
+func waitDownloadOp(ctx context.Context, op *downloadOp) (string, error) {
 	select {
 	case <-ctx.Done():
 		// Do not try to cancel the target op here as LXD is unable to cancel
 		// image download properly. Instead, we'll wait for it to finish if
 		// the task will be restarted.
-		return ctx.Err()
+		return "", ctx.Err()
 	case <-op.waitCh:
-		return op.err
-	}
-}
-
-func (b *Backend) maybeUpdateAlias(conn lxd.InstanceServer, base, fingerprint string) {
-	alias := api.ImageAliasesPost{}
-	alias.Target = fingerprint
-	alias.Name = ImageAlias(base)
-
-	_, _, err := conn.GetImageAlias(alias.Name)
-	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		if err = conn.CreateImageAlias(alias); err != nil {
-			logger.Noticef("BaseImageManager on Download: Failed to create an alias %q for %q base: %v", alias.Name, base, err)
-		}
+		return op.fingerprint, op.err
 	}
 }
 
@@ -309,8 +349,9 @@ type downloadUpdate struct {
 }
 
 type downloadOp struct {
-	waitCh chan struct{}
-	err    error
+	waitCh      chan struct{}
+	fingerprint string
+	err         error
 
 	reportersLock sync.Mutex
 	reporters     map[string]*progress.Reporter

@@ -26,7 +26,7 @@ actions:
     printf '%s\n' "$@"
 `
 
-var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases/"
+var MinimalImageServer = "simplestreams:https://cloud-images.ubuntu.com/minimal/releases"
 
 func DefaultTestDevices(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry) {
 	return nil, nil
@@ -89,9 +89,7 @@ func CreateTestContext(username, projectId string) context.Context {
 }
 
 func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, dir string) {
-	var err error
-
-	err = bd.Download(ctx, "ubuntu@24.04", nil)
+	image, err := bd.Download(ctx, "ubuntu@24.04", nil)
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{
@@ -118,7 +116,7 @@ printf '%s\n' "$@"
 	_, _, err = bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
 
-	err = bd.LaunchOrRebuildWorkshop(ctx, wf)
+	err = bd.LaunchOrRebuildWorkshop(ctx, wf, image)
 	c.Assert(err, check.IsNil)
 
 	err = bd.StartWorkshop(ctx, "test")
