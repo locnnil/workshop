@@ -323,7 +323,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 				Config:  config,
 			},
 			Name: InstanceName(file.Name, projectId),
-			Type: api.InstanceType("container"),
+			Type: api.InstanceTypeContainer,
 			Source: api.InstanceSource{
 				Type:        "image",
 				Fingerprint: image.Fingerprint,

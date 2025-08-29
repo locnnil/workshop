@@ -44,7 +44,7 @@ func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 		}
 	}
 
-	instances, err := cli.GetInstances(api.InstanceType("container"))
+	instances, err := cli.GetInstances(api.InstanceTypeContainer)
 	c.Check(err, check.IsNil)
 	for _, i := range instances {
 		if i.Status == "Running" {
