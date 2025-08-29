@@ -467,7 +467,7 @@ Under :file:`ollama/`, run:
 
 .. code-block:: console
 
-   $ sdkcraft
+   $ sdkcraft pack
 
 
 .. @artefact SDK part
@@ -489,7 +489,7 @@ Optionally, you can clean the build cache before a build attempt:
 
 .. code-block:: console
 
-   $ sdkcraft clean && sdkcraft
+   $ sdkcraft clean && sdkcraft pack
 
 
 .. @artefact SDK metadata
