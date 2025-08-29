@@ -131,12 +131,17 @@ plugs:
     one:
         interface: mount
         workshop-target: /opt
+        mode: 0
+        uid: 0
+        gid: 0
+        read-only: false
     two:
         interface: mount
         workshop-target: /mnt/a/b
         mode: 0o777
         uid: 0
         gid: 100
+        read-only: false
     ssh-agent:
         interface: ssh-agent
     desktop:

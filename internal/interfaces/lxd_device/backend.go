@@ -182,8 +182,10 @@ func prepareMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
 }
 
 func prepareHostWorkshopMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
-	whatIsDir := true
-	if mnt.MakeWhat {
+	info, err := os.Stat(mnt.What)
+	isDir := err == nil && info.IsDir()
+
+	if mnt.MakeWhat && !isDir {
 		uid, gid, err := osutil.UidGid(user)
 		if err != nil {
 			return err
@@ -196,19 +198,16 @@ func prepareHostWorkshopMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount)
 		if err := os.Chmod(mnt.What, mnt.Mode); err != nil {
 			return err
 		}
-	} else {
-		info, err := os.Stat(mnt.What)
-		if err != nil {
-			return err
-		}
-		whatIsDir = info.IsDir()
+		isDir = true
+	} else if err != nil {
+		return err
 	}
 
-	return prepareMountWhere(fs, mnt, whatIsDir)
+	return prepareMountWhere(fs, mnt, isDir)
 }
 
 func prepareWorkshopWorkshopMount(fs fsutil.Fs, mnt workshop.Mount) error {
-	whatIsDir := true
+	isDir := true
 	if mnt.MakeWhat {
 		if err := fs.MkdirAllChmodChown(mnt.What, mnt.Mode, int(mnt.Owner), int(mnt.Group)); err != nil {
 			return err
@@ -218,18 +217,18 @@ func prepareWorkshopWorkshopMount(fs fsutil.Fs, mnt workshop.Mount) error {
 		if err != nil {
 			return err
 		}
-		whatIsDir = info.IsDir()
+		isDir = info.IsDir()
 	}
 
-	return prepareMountWhere(fs, mnt, whatIsDir)
+	return prepareMountWhere(fs, mnt, isDir)
 }
 
-func prepareMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
+func prepareMountWhere(fs fsutil.Fs, mnt workshop.Mount, isDir bool) error {
 	if !mnt.MakeWhere {
-		return checkMountWhere(fs, mnt, whatIsDir)
+		return checkMountWhere(fs, mnt, isDir)
 	}
 
-	if whatIsDir {
+	if isDir {
 		return fs.MkdirAllChmodChown(mnt.Where, mnt.Mode, int(mnt.Owner), int(mnt.Group))
 	}
 
@@ -240,7 +239,7 @@ func prepareMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
 
 	file, err := fs.OpenFile(mnt.Where, os.O_RDWR|os.O_CREATE|os.O_EXCL, mnt.Mode)
 	if errors.Is(err, os.ErrExist) {
-		return checkMountWhere(fs, mnt, whatIsDir)
+		return checkMountWhere(fs, mnt, isDir)
 	}
 	if err != nil {
 		return err
@@ -253,9 +252,9 @@ func prepareMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
 	return file.Chown(int(mnt.Owner), int(mnt.Group))
 }
 
-func checkMountWhere(fs fsutil.Fs, mnt workshop.Mount, whatIsDir bool) error {
+func checkMountWhere(fs fsutil.Fs, mnt workshop.Mount, isDir bool) error {
 	info, err := fs.Stat(mnt.Where)
-	if err != nil || info.IsDir() == whatIsDir {
+	if err != nil || info.IsDir() == isDir {
 		return err
 	}
 	err = syscall.ENOTDIR
