@@ -118,6 +118,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 func (s *apiSuite) TearDownTest(c *check.C) {
 	s.d = nil
 	s.workshopDir = ""
+	s.vars = nil
 	s.restoreMuxVars()
 	s.restoreRetrieve()
 	s.restoreProjectId()

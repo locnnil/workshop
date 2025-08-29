@@ -35,6 +35,15 @@ execute: |
 
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
 
+  echo "Check refresh is not run if no updates to the sketch"
+  output="$(sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  q
+  EOF
+  )"
+  [ -z "$output" ]
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
+
+
   echo "Add a new mount"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   1/^plugs:$/a

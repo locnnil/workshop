@@ -43,6 +43,28 @@ func ParseMode(s string) (Mode, error) {
 	return -1, errors.New(`change mode must be any of: "transactional", "wait-on-error", "continue", "abort"`)
 }
 
+type RefreshOption int
+
+const (
+	RefreshUpdate RefreshOption = iota
+	RefreshRestore
+)
+
+func (s RefreshOption) String() string {
+	return [...]string{"update", "restore"}[s]
+}
+
+func ParseRefreshSetting(s string) (RefreshOption, error) {
+	refreshMap := map[string]RefreshOption{
+		RefreshUpdate.String():  RefreshUpdate,
+		RefreshRestore.String(): RefreshRestore,
+	}
+	if val, ok := refreshMap[s]; ok {
+		return val, nil
+	}
+	return -1, errors.New(`refresh behaviour must be any of: "update", "restore"`)
+}
+
 // ChangeConflictError represents an error because of snap conflicts between changes.
 type ChangeConflictError struct {
 	ProjectId  string

@@ -52,7 +52,7 @@ func (cs *clientSuite) TestClientLaunch(c *check.C) {
 func (cs *clientSuite) TestClientRefresh(c *check.C) {
 	cs.rsp = `{"type": "async", "status-code": 202, "change": "24"}`
 
-	id, err := cs.cli.Refresh("42ws42ws", []string{"ws"}, "transactional")
+	id, err := cs.cli.Refresh("42ws42ws", []string{"ws"}, "transactional", "update")
 
 	c.Check(cs.req.Method, check.Equals, "POST")
 	c.Assert(id, check.Equals, "24")
@@ -61,7 +61,7 @@ func (cs *clientSuite) TestClientRefresh(c *check.C) {
 	body, err := io.ReadAll(cs.req.Body)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"mode":"transactional"}}\n`)
+	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"mode":"transactional","refresh-option":"update"}}\n`)
 }
 
 func (cs *clientSuite) TestClientStart(c *check.C) {

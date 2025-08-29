@@ -163,7 +163,7 @@ func (m *workshopSketch) mockSketchHappyRefreshPath(c *check.C, refreshname stri
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{refreshname}, "options": map[string]interface{}{"mode": mode}})
+				"names": []interface{}{refreshname}, "options": map[string]interface{}{"mode": mode, "refresh-option": "update"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 4:
@@ -413,8 +413,14 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
-			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode}})
+
+			if mode == "wait-on-error" {
+				c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
+					"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode, "refresh-option": "update"}})
+			} else {
+				c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
+					"names": []interface{}{name}, "options": map[string]interface{}{"mode": mode}})
+			}
 			w.WriteHeader(202)
 			fmt.Fprintln(w, response)
 		case 4, 8, 10:
@@ -540,7 +546,7 @@ func (m *workshopSketch) TestSketchSdkStashRevertOnFail(c *check.C) {
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "transactional"}})
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "transactional", "refresh-option": "update"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 4:
@@ -793,7 +799,7 @@ func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]interface{}{"action": "refresh",
-				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "transactional"}})
+				"names": []interface{}{"ws"}, "options": map[string]interface{}{"mode": "transactional", "refresh-option": "update"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 4:

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -585,7 +586,7 @@ func launch(st *state.State, file *workshop.File, fileText string, sdks []sdk.Se
 	return all
 }
 
-func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, names []string) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, names []string, option conflict.RefreshOption) ([]*state.TaskSet, error) {
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key user not found")
@@ -601,45 +602,70 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 	if err != nil {
 		return nil, err
 	}
-	finder := localSdkFinder{
-		backend:     w.backend,
-		user:        usr,
-		userDataDir: userDataDir,
-		project:     project,
-	}
 
-	reqs, err := w.findAllStoreSdks(ctx, project, names, "refresh")
-	if err != nil {
-		return nil, err
-	}
-
-	taskset := make([]*state.TaskSet, 0, len(reqs))
+	taskset := make([]*state.TaskSet, 0, len(names))
 	allowed := []healthstate.Status{healthstate.ReadyStatus}
-	for _, req := range reqs {
-		name := req.file.Name
-		wp, err := w.Workshop(ctx, name, projectId)
+
+	switch option {
+	case conflict.RefreshUpdate:
+		reqs, err := w.findAllStoreSdks(ctx, project, names, "refresh")
 		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			return nil, err
 		}
 
-		// Check for conflicting changes.
-		// Has to happen after calling findAllStoreSdks (because it unlocks the state).
-		if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+		finder := localSdkFinder{
+			backend:     w.backend,
+			user:        usr,
+			userDataDir: userDataDir,
+			project:     project,
 		}
 
-		localSdks, err := finder.findLocalSdks(ctx, wp, req.file)
-		if err != nil {
-			return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-		}
-		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
+		for _, req := range reqs {
+			name := req.file.Name
+			wp, err := w.Workshop(ctx, name, projectId)
+			if err != nil {
+				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			}
 
-		plan := resolveRefresh(wp, req.file, sdks)
-		tasks := refresh(w.state, plan, wp, req.file, req.fileText)
-		if len(tasks.Tasks()) == 0 {
-			continue
+			// Check for conflicting changes. Has to happen after calling
+			// findAllStoreSdks (because it unlocks the state).
+			if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			}
+
+			localSdks, err := finder.findLocalSdks(ctx, wp, req.file)
+			if err != nil {
+				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			}
+			sdks := ordered(req.installOrder, req.storeSdks, localSdks)
+
+			plan := resolveRefresh(wp, req.file, sdks)
+			if plan.HasUpdates() {
+				tasks := refresh(w.state, plan, wp, req.file, req.fileText)
+				taskset = append(taskset, tasks)
+			}
 		}
-		taskset = append(taskset, tasks)
+	case conflict.RefreshRestore:
+		for _, name := range names {
+			wp, err := w.Workshop(ctx, name, projectId)
+			if err != nil {
+				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			}
+
+			if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			}
+
+			fileBlob, err := yaml.Marshal(wp.File)
+			if err != nil {
+				return nil, fmt.Errorf("cannot refresh %q: invalid workshop file: %w", name, err)
+			}
+
+			sdks := wp.SdksByInstallOrder()
+			plan := resolveRefresh(wp, wp.File, sdks)
+			tasks := refresh(w.state, plan, wp, wp.File, string(fileBlob))
+			taskset = append(taskset, tasks)
+		}
 	}
 
 	for _, ts := range taskset {
@@ -683,6 +709,10 @@ type refreshPlan struct {
 	sdkSnapshot    string
 	installOrder   []string
 	installedOrder []string
+
+	// Indicates if the Workshop definition was updated, i.e. if any new plugs,
+	// slots or connections were added.
+	workshopDefinitionUpdated bool
 }
 
 func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
@@ -706,6 +736,10 @@ func (p refreshPlan) IntactOrRemove() []sdk.Setup {
 
 func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh, p.intact)
+}
+
+func (p refreshPlan) HasUpdates() bool {
+	return len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 || p.workshopDefinitionUpdated
 }
 
 func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []sdk.Setup) *refreshPlan {
@@ -766,6 +800,9 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []s
 	for _, s := range candidates {
 		plan.installOrder = append(plan.installOrder, s.Name)
 	}
+
+	plan.workshopDefinitionUpdated = !reflect.DeepEqual(w.File.Sdks, newfile.Sdks) ||
+		!reflect.DeepEqual(w.File.Connections, newfile.Connections)
 
 	return plan
 }

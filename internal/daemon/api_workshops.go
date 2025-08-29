@@ -25,7 +25,11 @@ import (
 )
 
 type actionOpts struct {
+	// Supported action modes: "transactional", "wait-on-error", "continue",
+	// "abort".
 	Mode string `json:"mode"`
+	// Supported refresh options: "update", "restore".
+	RefreshOption string `json:"refresh-option"`
 }
 
 type workshopReq struct {
@@ -405,11 +409,32 @@ func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 	return mode, nil
 }
 
+func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
+	if reqData.Options.RefreshOption == "" {
+		reqData.Options.RefreshOption = "update"
+	}
+
+	return conflict.ParseRefreshSetting(reqData.Options.RefreshOption)
+}
+
 func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+	refreshOption, err := refreshOption(reqData)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	change := newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
-	taskset, err := mgr.RefreshMany(ctx, pid, reqData.Names)
+	taskset, err := mgr.RefreshMany(ctx, pid, reqData.Names, refreshOption)
 
 	return change, taskset, err
+}
+
+var validActions = []string{
+	"launch",
+	"refresh",
+	"start",
+	"stop",
+	"remove",
 }
 
 func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
@@ -427,14 +452,6 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 
 	reqData.Names = strutil.Deduplicate(reqData.Names)
 
-	validActions := []string{
-		"launch",
-		"refresh",
-		"start",
-		"stop",
-		"remove",
-	}
-
 	if !slices.Contains(validActions, reqData.Action) {
 		return statusBadRequest(fmt.Sprintf("unknown action %q", reqData.Action))
 	}
@@ -442,6 +459,14 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	mode, err := actionMode(&reqData)
 	if err != nil {
 		return statusBadRequest("%w", err)
+	}
+
+	if reqData.Options.RefreshOption != "" && reqData.Action != "refresh" {
+		return statusBadRequest(`cannot %s: "refresh-option" is only valid for refresh actions`, reqData.Action)
+	}
+
+	if reqData.Options.RefreshOption != "" && (mode != conflict.ChangeTransactional && mode != conflict.ChangeWaitOnError) {
+		return statusBadRequest(`cannot %s: "refresh-option" is only applicable to "transactional" and "wait-on-error" modes; given: %q`, reqData.Action, mode)
 	}
 
 	user, ok := r.Context().Value(workshop.ContextUser).(string)
@@ -452,7 +477,6 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	st := c.d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	wsmgr := c.d.overlord.WorkshopManager()
 
 	var change *state.Change
 	var taskset []*state.TaskSet
@@ -460,6 +484,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	if mode.Resume() {
 		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], projectId, mode, reqData.Action)
 	} else {
+		wsmgr := c.d.overlord.WorkshopManager()
 		switch reqData.Action {
 		case "launch":
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
@@ -494,6 +519,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 	if len(change.Tasks()) == 0 {
 		change.SetStatus(state.DoneStatus)
+		return workshopUnchanged()
 	}
 
 	ensureStateSoon(st, 0)

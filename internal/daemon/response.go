@@ -118,13 +118,14 @@ func (r *resp) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 type errorKind string
 
 const (
-	errorKindLoginRequired     = errorKind("login-required")
-	errorKindDaemonRestart     = errorKind("daemon-restart")
-	errorKindSystemRestart     = errorKind("system-restart")
-	errorKindNoDefaultServices = errorKind("no-default-services")
-	errorKindNotFound          = errorKind("not-found")
-	errorKindPermissionDenied  = errorKind("permission-denied")
-	errorKindGenericFileError  = errorKind("generic-file-error")
+	errorKindLoginRequired      = errorKind("login-required")
+	errorKindDaemonRestart      = errorKind("daemon-restart")
+	errorKindSystemRestart      = errorKind("system-restart")
+	errorKindNoDefaultServices  = errorKind("no-default-services")
+	errorKindNotFound           = errorKind("not-found")
+	errorKindPermissionDenied   = errorKind("permission-denied")
+	errorKindGenericFileError   = errorKind("generic-file-error")
+	errorKindNoUpdatesAvailable = errorKind("no-updates-available")
 )
 
 type errorValue interface{}
@@ -210,3 +211,12 @@ var (
 	statusNotImplemented   = makeErrorResponder(501)
 	statusGatewayTimeout   = makeErrorResponder(504)
 )
+
+func workshopUnchanged() Response {
+	res := &errorResult{Message: "no updates available", Kind: errorKindNoUpdatesAvailable}
+	return &resp{
+		Type:   ResponseTypeError,
+		Result: res,
+		Status: 400,
+	}
+}

@@ -434,12 +434,21 @@ func (e *Error) Error() string {
 }
 
 const (
-	ErrorKindLoginRequired     = "login-required"
-	ErrorKindSystemRestart     = "system-restart"
-	ErrorKindDaemonRestart     = "daemon-restart"
-	ErrorKindNoDefaultServices = "no-default-services"
-	ErrorKindUnsuccessful      = "unsuccessful"
+	ErrorKindLoginRequired      = "login-required"
+	ErrorKindSystemRestart      = "system-restart"
+	ErrorKindDaemonRestart      = "daemon-restart"
+	ErrorKindNoDefaultServices  = "no-default-services"
+	ErrorKindUnsuccessful       = "unsuccessful"
+	ErrorKindNoUpdatesAvailable = "no-updates-available"
 )
+
+func IsNoUpdatesAvailable(err error) bool {
+	var e *Error
+	if errors.As(err, &e) {
+		return e.Kind == ErrorKindNoUpdatesAvailable
+	}
+	return false
+}
 
 func (rsp *response) err(cli *Client) error {
 	if cli != nil {

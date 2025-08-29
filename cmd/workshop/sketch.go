@@ -90,22 +90,22 @@ type SketchFile struct {
 }
 
 var sketchTemplate = `# Sketch SDK for %s
-# Sketch SDK provides local customisation of this specific workshop.
+# Sketch SDK provides local customization of this specific workshop.
 
-# To read more about the sketch SDK, its and syntax, see:
+# To read more about the sketch SDK and its syntax, see:
 # https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
 hooks:
-  # EXAMPLE: setup-base runs once at workshop launch, use it to install some packages.
+  # EXAMPLE: setup-base runs once at workshop launch; use it to install some packages.
   # setup-base: |
     # apt-get update
     # apt-get install PACKAGE...
     # snap install SNAP...
-  # EXAMPLE: setup-project runs after connecting plugs and slots, use it to install the project environment.
+  # EXAMPLE: setup-project runs after connecting plugs and slots; use it to install the project environment.
   # setup-project: |
     # go mod download
     # uv sync
-  # EXAMPLE: check-health runs after all SDK setup completes, call 'workshopctl set-health okay' for OK.
+  # EXAMPLE: check-health runs after entire SDK setup completes; run 'workshopctl set-health okay' if OK.
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
     #   workshopctl set-health okay
@@ -113,7 +113,7 @@ hooks:
     #   workshopctl set-health --code=installation-failed error "Installation failed"
     # fi
 plugs:
-  # EXAMPLE: forward your SSH agent into the workshop enabling 'git push' inside the workshop.
+  # EXAMPLE: forward your SSH agent into the workshop, enabling 'git push' inside the workshop.
   # ssh-agent:
   #   interface: ssh-agent
   # EXAMPLE: expose well-known config file locations to the workshop
@@ -243,7 +243,7 @@ func ejectSketch(project, sketchdir string, name string) (*revert.Reverter, erro
 		return nil, err
 	}
 
-	// This won't be cleaned up on failure. In most cases the user
+	// This won't be cleaned up on failure. In most cases, the user
 	// is likely to retry the eject after fixing the underlying issue.
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		return nil, err
@@ -439,7 +439,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// Run refresh with the stashed sketch SDK. We do not revert dirs exchange
 		// on a failed refresh here as it is run with the content from "stored"
 		// and with --wait-on-error. Hence, there is always a possibility to
-		// workshop refresh --abort and workshop sketch-sdk --stash to restore the
+		// run 'workshop refresh --abort' and 'workshop sketch-sdk --stash' to restore the
 		// original stash content.
 		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
 			return err
@@ -499,6 +499,10 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh.verbose = c.verbose
 
 	if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+		// Neither other SDKs and definitions nor the sketch itself were changed.
+		if client.IsNoUpdatesAvailable(err) {
+			return nil
+		}
 		return err
 	}
 	fmt.Fprintf(Stdout, "%q sketch refreshed\n", wp.Name)
