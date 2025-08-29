@@ -501,6 +501,10 @@ plugs:
  mount:
   interface: mount
   workshop-target: /project/training
+  mode: 0
+  uid: 0
+  gid: 0
+  read-only: false
 `, s.projectId, "ws", "consumer", "mount")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
@@ -540,8 +544,10 @@ plugs:
   interface: mount
   workshop-target: /project/training
   mode: 0o755
-  uid: 123
+  # Use float to simulate passing through the state
+  uid: 123.0
   gid: 321
+  read-only: false
 `, s.projectId, "ws", "consumer", "mount")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
@@ -583,6 +589,10 @@ plugs:
  mount:
   interface: mount
   workshop-target: /project/training
+  mode: 0
+  uid: 0
+  gid: 0
+  read-only: false
 `, s.projectId, "ws", "consumer", "mount")
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 

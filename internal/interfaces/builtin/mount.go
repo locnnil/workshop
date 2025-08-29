@@ -20,6 +20,7 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -242,40 +243,56 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	return nil
 }
 
-func (iface *mountInterface) setPlugAttrs(mount *workshop.Mount, plug *interfaces.ConnectedPlug) {
-	_ = plug.Attr("workshop-target", &mount.Where)
+func (iface *mountInterface) setPlugAttrs(mount *workshop.Mount, plug *interfaces.ConnectedPlug) error {
+	if err := plug.Attr("workshop-target", &mount.Where); err != nil {
+		return err
+	}
 	mount.MakeWhere = true
 
 	var value int64
-	_ = plug.Attr("mode", &value)
+	if err := plug.Attr("mode", &value); err != nil {
+		return err
+	}
 	mount.Mode = os.FileMode(value)
 
-	_ = plug.Attr("uid", &value)
+	if err := plug.Attr("uid", &value); err != nil {
+		return err
+	}
 	mount.Owner = sys.UserID(value)
 
-	_ = plug.Attr("gid", &value)
+	if err := plug.Attr("gid", &value); err != nil {
+		return err
+	}
 	mount.Group = sys.GroupID(value)
 
-	_ = plug.Attr("read-only", &mount.ReadOnly)
+	if err := plug.Attr("read-only", &mount.ReadOnly); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (iface *mountInterface) setRegularSlotAttrs(mount *workshop.Mount, slot *interfaces.ConnectedSlot) {
+func (iface *mountInterface) setRegularSlotAttrs(mount *workshop.Mount, slot *interfaces.ConnectedSlot) error {
 	mount.Type = workshop.WorkshopWorkshop
 
-	_ = slot.Attr("workshop-source", &mount.What)
+	return slot.Attr("workshop-source", &mount.What)
 }
 
-func (iface *mountInterface) setSystemSlotAttrs(mount *workshop.Mount, spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) {
+func (iface *mountInterface) setSystemSlotAttrs(mount *workshop.Mount, spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	mount.Type = workshop.HostWorkshop
 
+	var attrErr *sdk.AttributeNotFoundError
 	if err := slot.Attr("host-source", &mount.What); err == nil {
-		return
+		return nil
+	} else if !errors.As(err, &attrErr) {
+		return err
 	}
 
 	// default dir: <sdk>/<plug>
 	userDataDir := workshop.UserDataRootDir(spec.User.HomeDir, spec.Environment)
 	mount.What = workshop.SdkMountHostSource(userDataDir, slot.Sdk().ProjectId, slot.Sdk().Workshop, plug.Sdk().Name, plug.Name())
 	mount.MakeWhat = true
+	return nil
 }
 
 func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -286,11 +303,19 @@ func (iface *mountInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo)
 // Interactions with the mount backend.
 func (iface *mountInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
 	mount := workshop.Mount{Name: plug.Name()}
-	iface.setPlugAttrs(&mount, plug)
+
+	if err := iface.setPlugAttrs(&mount, plug); err != nil {
+		return err
+	}
+
 	if slot.Sdk().Type == sdk.System {
-		iface.setSystemSlotAttrs(&mount, spec, plug, slot)
+		if err := iface.setSystemSlotAttrs(&mount, spec, plug, slot); err != nil {
+			return err
+		}
 	} else {
-		iface.setRegularSlotAttrs(&mount, slot)
+		if err := iface.setRegularSlotAttrs(&mount, slot); err != nil {
+			return err
+		}
 	}
 
 	return spec.AddMountEntry(mount)
