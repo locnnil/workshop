@@ -22,6 +22,7 @@ package metautil
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -38,7 +39,7 @@ func convertValue(value reflect.Value, outputType reflect.Type) (reflect.Value, 
 			break
 		}
 		outputValue := reflect.MakeSlice(outputType, 0, value.Len())
-		for i := 0; i < value.Len(); i++ {
+		for i := range value.Len() {
 			convertedElem, err := convertValue(value.Index(i), outputType.Elem())
 			if err != nil {
 				return nullValue, err
@@ -66,15 +67,32 @@ func convertValue(value reflect.Value, outputType reflect.Type) (reflect.Value, 
 			outputValue.SetMapIndex(convertedKey, convertedValue)
 		}
 		return outputValue, nil
+	case reflect.Float64:
+		// Special case: encoding/json can mangle int64 -> float64.
+		v, ok := maybeFloatToInt(value.Float())
+		// Recall that -0.0 == 0.0 in Go (and IEEE 754).
+		if ok && outputType.Kind() == reflect.Int64 {
+			return reflect.ValueOf(int64(v)), nil
+		}
 	}
 	return nullValue, fmt.Errorf(`cannot convert value "%v" into a %v`, value, outputType)
+}
+
+func maybeFloatToInt(v float64) (int64, bool) {
+	if _, frac := math.Modf(v); frac != 0 {
+		return 0, false
+	}
+	if v < float64(math.MinInt64) || v > float64(math.MaxInt64) {
+		return 0, false
+	}
+	return int64(v), true
 }
 
 // SetValueFromAttribute attempts to convert the attribute value read from the
 // given sdk/interface into the desired type. This function only
 // operates converting the attrVal parameter into a value which can fit into
 // the val parameter, which therefore must be a pointer.
-func SetValueFromAttribute(attrVal interface{}, val interface{}) error {
+func SetValueFromAttribute(attrVal any, val any) error {
 	rt := reflect.TypeOf(val)
 	if rt.Kind() != reflect.Ptr || val == nil {
 		return errors.New("internal error: value must be a pointer")

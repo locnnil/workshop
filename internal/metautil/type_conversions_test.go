@@ -20,6 +20,7 @@
 package metautil_test
 
 import (
+	"math"
 	"reflect"
 
 	. "gopkg.in/check.v1"
@@ -40,6 +41,10 @@ func (s *conversionssSuite) TestConvertHappy(c *C) {
 		{"a string", "a string"},
 		{42, 42},
 		{true, true},
+
+		// Special case of float64 -> int64.
+		{float64(42.0), int64(42)},
+		{float64(-42.0), int64(-42)},
 
 		// Complex types with no conversion
 		{[]string{"one", "two"}, []string{"one", "two"}},
@@ -74,6 +79,11 @@ func (s *conversionssSuite) TestConvertUnhappy(c *C) {
 		// Basic types
 		{"a string", t(42), `cannot convert value "a string" into a int`},
 		{true, t(""), `cannot convert value "true" into a string`},
+
+		// Special case of float64 -> int64.
+		{float64(4.2), t(int64(0)), `cannot convert value "4.2" into a int64`},
+		{math.Nextafter(math.MinInt64, math.Inf(-1)), t(int64(0)), `cannot convert value "-[0-9.]*e\+18" into a int64`},
+		{math.Nextafter(math.MaxInt64, math.Inf(1)), t(int64(0)), `cannot convert value "[0-9.]*e\+18" into a int64`},
 
 		// Complex types
 		{[]interface{}{"one", "two", 3}, t([]string{}), `cannot convert value "3" into a string`},
