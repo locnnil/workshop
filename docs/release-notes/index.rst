@@ -23,10 +23,11 @@ Releases
 
 .. toctree::
    :hidden:
-   
+
+   Workshop v0.1.23 <v0.1.23>
    Workshop v0.1.22 <v0.1.22>
    Workshop v0.1.21 <v0.1.21>
-   Workshop v0.1.20 <v0.1.20>  
+   Workshop v0.1.20 <v0.1.20>
    Workshop v0.1.19 <v0.1.19>
    Workshop v0.1.18 <v0.1.18>
    Workshop v0.1.17 <v0.1.17>
@@ -55,10 +56,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.22 <v0.1.22>`
+- :doc:`Workshop v0.1.23 <v0.1.23>`
 
 Recent versions:
 
+- :doc:`Workshop v0.1.22 <v0.1.22>`
 - :doc:`Workshop v0.1.21 <v0.1.21>`
 - :doc:`Workshop v0.1.20 <v0.1.20>`
 - :doc:`Workshop v0.1.19 <v0.1.19>`
@@ -91,10 +93,11 @@ Older versions:
 
 Latest version:
 
-- `SDKcraft v0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.11>`_
+- `SDKcraft v0.1.12 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.12>`_
 
 Recent versions:
 
+- `SDKcraft v0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.11>`_
 - `SDKcraft v0.1.10 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.10>`_
 - `SDKcraft v0.1.9 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.9>`_
 - `SDKcraft v0.1.8 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.8>`_
@@ -139,7 +142,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.22_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
 

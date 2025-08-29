@@ -61,6 +61,24 @@
           "title": "Workshop-Target",
           "type": "string"
         },
+        "uid": {
+          "exclusiveMaximum": 4294967295,
+          "minimum": 0,
+          "title": "Uid",
+          "type": "integer"
+        },
+        "gid": {
+          "exclusiveMaximum": 4294967295,
+          "minimum": 0,
+          "title": "Gid",
+          "type": "integer"
+        },
+        "mode": {
+          "maximum": 511,
+          "minimum": 0,
+          "title": "Mode",
+          "type": "integer"
+        },
         "read-only": {
           "default": false,
           "title": "Read-Only",
@@ -97,7 +115,7 @@
     },
     "Platform": {
       "additionalProperties": false,
-      "description": "Project platform definition.",
+      "description": "A single platform entry in the platforms dictionary.\n\nThis model defines how a single value under the ``platforms`` key works for a project.",
       "properties": {
         "build-on": {
           "anyOf": [
@@ -105,14 +123,21 @@
               "items": {
                 "type": "string"
               },
-              "minItems": 1,
               "type": "array",
               "uniqueItems": true
             },
             {
-              "type": "null"
+              "type": "string"
             }
           ],
+          "examples": [
+            "amd64",
+            [
+              "arm64",
+              "riscv64"
+            ]
+          ],
+          "minLength": 1,
           "title": "Build-On"
         },
         "build-for": {
@@ -126,15 +151,21 @@
               "type": "array"
             },
             {
-              "type": "null"
+              "type": "string"
             }
           ],
-          "default": null,
+          "examples": [
+            "amd64",
+            [
+              "riscv64"
+            ]
+          ],
           "title": "Build-For"
         }
       },
       "required": [
-        "build-on"
+        "build-on",
+        "build-for"
       ],
       "title": "Platform",
       "type": "object"
@@ -202,7 +233,7 @@
   "description": "SDKcraft project definition.",
   "properties": {
     "name": {
-      "description": "The name of this project. This is used when uploading, publishing, or installing.\n\nProject name rules:\n* Valid characters are lower-case ASCII letters, numerals and hyphens.\n* Must contain at least one letter\n* May not start or end with a hyphen\n* May not have two hyphens in a row\n",
+      "description": "The name of the project. This is used when uploading, publishing, or installing.\n\nThe project name must consist only of lower-case ASCII letters (``a-z``), numerals\n(``0-9``), and hyphens (``-``). It must contain at least one letter, not start or end\nwith a hyphen, and not contain two consecutive hyphens. The maximum length is 40\ncharacters.\n",
       "examples": [
         "ubuntu",
         "jupyterlab-desktop",
@@ -213,7 +244,7 @@
       ],
       "maxLength": 40,
       "minLength": 1,
-      "pattern": "(?!^(system|project-.*|sketch)$)^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$",
+      "pattern": "(?!^(system|try-.*|project-.*|sketch)$)^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$",
       "title": "Project Name",
       "type": "string"
     },
@@ -244,12 +275,12 @@
     "version": {
       "anyOf": [
         {
-          "description": "A string containing the version of the project",
+          "description": "The version of the project, enclosed in quotation marks.",
           "examples": [
-            "0.1",
-            "1.0.0",
-            "v1.0.0",
-            "24.04"
+            "\"0.1\"",
+            "\"1.0.0\"",
+            "\"v1.0.0\"",
+            "\"24.04\""
           ],
           "maxLength": 32,
           "title": "version string",
@@ -265,7 +296,7 @@
     "summary": {
       "anyOf": [
         {
-          "description": "A short description of your project.",
+          "description": "A short description of the project.",
           "examples": [
             "Linux for Human Beings",
             "The cross-platform desktop application for JupyterLab",
@@ -324,6 +355,51 @@
     "platforms": {
       "additionalProperties": {
         "$ref": "#/$defs/Platform"
+      },
+      "patternProperties": {
+        "(amd64|arm64|armhf|i386|ppc64el|riscv64|s390x)": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "properties": {
+                "build-on": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Build-On"
+                },
+                "build-for": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Build-For"
+                }
+              },
+              "required": [
+                "build-on"
+              ],
+              "type": "object"
+            }
+          ]
+        }
       },
       "title": "Platforms",
       "type": "object"
@@ -434,62 +510,82 @@
       "title": "Package-Repositories"
     },
     "plugs": {
-      "additionalProperties": {
-        "discriminator": {
-          "mapping": {
-            "camera": "#/$defs/CameraPlug",
-            "desktop": "#/$defs/DesktopPlug",
-            "gpu": "#/$defs/GPUPlug",
-            "mount": "#/$defs/MountPlug",
-            "ssh": "#/$defs/SSHPlug",
-            "tunnel": "#/$defs/TunnelPlug"
+      "default": {},
+      "patternProperties": {
+        "^[a-z](-?[a-z0-9])*$": {
+          "discriminator": {
+            "mapping": {
+              "camera": "#/$defs/CameraPlug",
+              "desktop": "#/$defs/DesktopPlug",
+              "gpu": "#/$defs/GPUPlug",
+              "mount": "#/$defs/MountPlug",
+              "ssh": "#/$defs/SSHPlug",
+              "tunnel": "#/$defs/TunnelPlug"
+            },
+            "propertyName": "interface"
           },
-          "propertyName": "interface"
-        },
-        "oneOf": [
-          {
-            "$ref": "#/$defs/CameraPlug"
-          },
-          {
-            "$ref": "#/$defs/DesktopPlug"
-          },
-          {
-            "$ref": "#/$defs/GPUPlug"
-          },
-          {
-            "$ref": "#/$defs/MountPlug"
-          },
-          {
-            "$ref": "#/$defs/SSHPlug"
-          },
-          {
-            "$ref": "#/$defs/TunnelPlug"
-          }
+          "oneOf": [
+            {
+              "$ref": "#/$defs/CameraPlug"
+            },
+            {
+              "$ref": "#/$defs/DesktopPlug"
+            },
+            {
+              "$ref": "#/$defs/GPUPlug"
+            },
+            {
+              "$ref": "#/$defs/MountPlug"
+            },
+            {
+              "$ref": "#/$defs/SSHPlug"
+            },
+            {
+              "$ref": "#/$defs/TunnelPlug"
+            }
+          ]
+        }
+      },
+      "propertyNames": {
+        "description": "The name of the plug. This is used when connecting and disconnecting.\n\nThe plug name must consist only of lower-case ASCII letters (``a-z``), numerals\n(``0-9``), and hyphens (``-``). It must start with a letter, not end with a\nhyphen, and not contain two consecutive hyphens.\n",
+        "examples": [
+          "desktop",
+          "gpu",
+          "ssh-agent"
         ]
       },
-      "default": {},
       "title": "Plugs",
       "type": "object"
     },
     "slots": {
-      "additionalProperties": {
-        "discriminator": {
-          "mapping": {
-            "mount": "#/$defs/MountSlot",
-            "tunnel": "#/$defs/TunnelSlot"
+      "default": {},
+      "patternProperties": {
+        "^[a-z](-?[a-z0-9])*$": {
+          "discriminator": {
+            "mapping": {
+              "mount": "#/$defs/MountSlot",
+              "tunnel": "#/$defs/TunnelSlot"
+            },
+            "propertyName": "interface"
           },
-          "propertyName": "interface"
-        },
-        "oneOf": [
-          {
-            "$ref": "#/$defs/MountSlot"
-          },
-          {
-            "$ref": "#/$defs/TunnelSlot"
-          }
+          "oneOf": [
+            {
+              "$ref": "#/$defs/MountSlot"
+            },
+            {
+              "$ref": "#/$defs/TunnelSlot"
+            }
+          ]
+        }
+      },
+      "propertyNames": {
+        "description": "The name of the slot. This is used when connecting and disconnecting.\n\nThe slot name must consist only of lower-case ASCII letters (``a-z``), numerals\n(``0-9``), and hyphens (``-``). It must start with a letter, not end with a\nhyphen, and not contain two consecutive hyphens.\n",
+        "examples": [
+          "dashboard",
+          "gdb",
+          "toolchain"
         ]
       },
-      "default": {},
       "title": "Slots",
       "type": "object"
     }
