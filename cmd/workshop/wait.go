@@ -27,8 +27,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/canonical/x-go/i18n"
-
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/progress"
 )
@@ -48,6 +46,7 @@ type waitMixin struct {
 
 var errNoWait = errors.New("no wait for op")
 var errWaitOnError = errors.New("wait-on-error")
+var errUndone = errors.New("change undone")
 
 //nolint:unparam // Copied from snapd.
 func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error) {
@@ -71,6 +70,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error)
 		if sig == nil || wmx.skipAbort {
 			return
 		}
+
 		_, err := cli.Abort(id)
 		if err != nil {
 			fmt.Fprintf(Stderr, "%v\n", err)
@@ -114,7 +114,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error)
 			if now.After(tMax) {
 				return nil, err
 			}
-			pb.Spin(i18n.G("Waiting for server to restart"))
+			pb.Spin("Waiting for server to restart")
 			time.Sleep(pollTime)
 			continue
 		}
@@ -135,7 +135,7 @@ func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error)
 		// the messages: "Task set to wait until a manual system restart allows to continue"
 		for _, t := range chg.Tasks {
 			if t.Status == "Wait" {
-				return nil, errWaitOnError
+				return chg, errWaitOnError
 			}
 		}
 
@@ -160,11 +160,14 @@ func (wmx waitMixin) wait(cli *client.Client, id string) (*client.Change, error)
 		}
 
 		if chg.Ready {
-			if chg.Status == "Error" {
-				if chg.Err != "" {
-					return chg, errors.New(chg.Err)
-				}
-				return chg, errors.New(i18n.G(`change finished in status "Error" with no error message`))
+			if chg.Err != "" {
+				return chg, errors.New(chg.Err)
+			}
+			if chg.Status == "Undone" {
+				return chg, errUndone
+			}
+			if chg.Status != "Done" && chg.Err == "" {
+				return chg, fmt.Errorf(`change finished in status %q with no error message`, chg.Status)
 			}
 			return chg, nil
 		}

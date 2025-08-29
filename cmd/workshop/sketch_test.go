@@ -428,9 +428,9 @@ func (m *workshopSketch) TestSketchSdkFixRefreshError(c *check.C) {
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/changes/%d", change))
 			switch n {
 			case 4:
-				fmt.Fprintln(w, mockWaitChangeJSON)
+				fmt.Fprintln(w, mockSketchWaitChangeJSON)
 			case 8:
-				fmt.Fprintln(w, mockAbortedChangeJSON)
+				fmt.Fprintln(w, mockSketchAbortedChangeJSON)
 			case 10:
 				fmt.Fprintln(w, mockReadyChangeJSON)
 			}
@@ -466,7 +466,7 @@ hooks:
 	defer restore()
 
 	err := cmd.Run(cmd.Command(), []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot complete refresh for \"ws\", execution is paused\n\n"+
+	c.Assert(err, check.ErrorMatches, "cannot complete sketch refresh for \"ws\", execution is paused\n\n"+
 		"To proceed, resolve the issue and run 'workshop refresh --continue ws'\n"+
 		"To cancel and undo: 'workshop refresh --abort ws'\n"+
 		"To view more information: 'workshop tasks 43'")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -103,7 +104,7 @@ func workshopName(name string) string {
 	return name
 }
 
-func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av []string) error {
+func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av []string) (*client.Change, error) {
 	mode := "transactional"
 	if c.WaitOnError {
 		mode = "wait-on-error"
@@ -125,25 +126,10 @@ func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av 
 
 	changeId, err := cli.Refresh(project.Id, av, mode, option)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if _, err := c.wait(cli, changeId); err != nil {
-		if err == errNoWait {
-			return nil
-		}
-		if err == errWaitOnError {
-			w := workshopName(av[0])
-			return fmt.Errorf(`cannot complete refresh for %q, execution is paused
-
-To proceed, resolve the issue and run 'workshop refresh --continue %s'
-To cancel and undo: 'workshop refresh --abort %s'
-To view more information: 'workshop tasks %s'`, w, w, w, changeId)
-		}
-
-		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
-	}
-	return nil
+	return c.wait(cli, changeId)
 }
 
 func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
@@ -166,22 +152,26 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		av = []string{name}
 	}
 
-	err = c.RunRefresh(cli, project, av)
-	if client.IsNoUpdatesAvailable(err) {
+	chg, err := c.RunRefresh(cli, project, av)
+
+	switch {
+	case err == nil:
+		fmt.Fprintf(Stdout, "%s refreshed\n", strutil.Quoted(av))
+	case errors.Is(err, errNoWait):
+	case client.IsNoUpdatesAvailable(err):
 		fmt.Fprintf(Stdout, "no updates available for %s\n", strutil.Quoted(av))
-		return nil
-	}
-	if err != nil {
-		return err
+	case errors.Is(err, errUndone):
+		fmt.Fprintf(Stdout, "%s refresh aborted\n", strutil.Quoted(av))
+	case errors.Is(err, errWaitOnError):
+		w := workshopName(av[0])
+		return fmt.Errorf(`cannot complete refresh for %q, execution is paused
+
+To proceed, resolve the issue and run 'workshop refresh --continue %s'
+To cancel and undo: 'workshop refresh --abort %s'
+To view more information: 'workshop tasks %s'`, w, w, w, chg.ID)
+	default:
+		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
 	}
 
-	if c.Abort {
-		fmt.Fprintf(Stdout, "%q refresh aborted\n", av[0])
-		return nil
-	}
-
-	for _, i := range av {
-		fmt.Fprintf(Stdout, "%q refreshed\n", i)
-	}
 	return nil
 }
