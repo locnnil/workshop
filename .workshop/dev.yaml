@@ -4,6 +4,7 @@ sdks:
   - name: go
     channel: all/edge
   - name: project-tools
+  - name: project-starter-pack
   - name: system
     plugs:
       fake-store:
