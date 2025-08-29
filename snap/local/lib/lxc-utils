@@ -37,8 +37,10 @@ remove_images() {
 }
 
 remove_network() {
-    echo "Removing network: workshopbr0"
-    run_lxc network delete workshopbr0
+    if run_lxc network info workshopbr0 >/dev/null 2>&1; then
+        echo "Removing network: workshopbr0"
+        run_lxc network delete workshopbr0
+    fi
 }
 
 remove_project() {

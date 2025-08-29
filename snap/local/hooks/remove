@@ -2,7 +2,11 @@
 
 # disable check for relative dir following
 # shellcheck disable=SC1091
-. "$SNAP/snap/lib/lxc-utils"
+if [ -n "${SNAP}" ]; then
+    . "$SNAP/snap/lib/lxc-utils"
+else
+    . "$(dirname -- "$0")/../lib/lxc-utils"
+fi
 
 # The workshop services are stopped by the moment the remove
 # hook is called. Therefore, for now, we walk the LXD projects created
