@@ -115,9 +115,9 @@ func (c *CmdRoot) Command() *cobra.Command {
 	runCmd.GroupID = "utilise"
 	cmd.AddCommand(runCmd)
 
-	scriptsCmd := (&CmdScripts{root: c}).Command()
-	scriptsCmd.GroupID = "explore-troubleshoot"
-	cmd.AddCommand(scriptsCmd)
+	actionsCmd := (&CmdActions{root: c}).Command()
+	actionsCmd.GroupID = "explore-troubleshoot"
+	cmd.AddCommand(actionsCmd)
 
 	removeCmd := (&CmdRemove{root: c}).Command()
 	removeCmd.GroupID = "create-update-delete"

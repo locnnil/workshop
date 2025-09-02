@@ -119,7 +119,7 @@ How workshops are updated
 and builds an update plan to decide whether a refresh is needed.
 
 Some changes don't cause a refresh by their nature;
-for example, updated scripts in the definition are copied inside the workshop.
+for example, updated actions in the definition are copied inside the workshop.
 Larger ones, like switching base images or changing the SDK layout,
 trigger the refresh mechanism:
 

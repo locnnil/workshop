@@ -7,9 +7,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"time"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"

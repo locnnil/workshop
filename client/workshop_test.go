@@ -174,14 +174,14 @@ func (cs *clientSuite) TestClientProjectWorkshop(c *check.C) {
 	c.Check(cs.req.Method, check.Equals, "GET")
 }
 
-func (cs *clientSuite) TestClientListScripts(c *check.C) {
+func (cs *clientSuite) TestClientListActions(c *check.C) {
 	cs.rsp = `{"type": "sync", "result": {"foo": {"script": "echo bar\n"}}}`
 
-	scripts, err := cs.cli.ListScripts("42ws42ws", "ws")
+	actions, err := cs.cli.ListActions("42ws42ws", "ws")
 
 	c.Assert(err, check.IsNil)
 	c.Check(cs.req.Method, check.Equals, "GET")
-	c.Check(scripts, check.DeepEquals, map[string]client.Script{"foo": {Script: "echo bar\n"}})
+	c.Check(actions, check.DeepEquals, map[string]client.Action{"foo": {Script: "echo bar\n"}})
 }
 
 func (cs *clientSuite) TestRemountRequest(c *check.C) {

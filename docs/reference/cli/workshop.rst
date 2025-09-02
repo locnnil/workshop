@@ -24,6 +24,9 @@ and also has a number of global flags:
 
 
 
+.. include:: workshop-actions.rst
+
+
 .. include:: workshop-changes.rst
 
 
@@ -61,9 +64,6 @@ and also has a number of global flags:
 
 
 .. include:: workshop-run.rst
-
-
-.. include:: workshop-scripts.rst
 
 
 .. include:: workshop-shell.rst

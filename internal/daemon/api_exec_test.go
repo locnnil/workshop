@@ -14,7 +14,7 @@ import (
 
 var wsYaml = `name: ws
 base: ubuntu@20.04
-scripts:
+actions:
   lint: golangci-lint run
 `
 
@@ -25,7 +25,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.vars = map[string]string{"id": s.project.ProjectId, "name": "ws"}
 	s.createWFile(c, "ws", wsYaml)
 
-	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Scripts: map[string]workshop.Script{"lint": "\n\n\ngolangci-lint run\n"}}
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Actions: map[string]workshop.Action{"lint": "\n\n\ngolangci-lint run\n"}}
 
 	err := s.b.LaunchOrRebuildWorkshop(s.ctx, wf)
 	c.Assert(err, check.IsNil)
@@ -54,11 +54,11 @@ func (s *apiSuite) TestExecNoCommand(c *check.C) {
 	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, ".*must specify command")
 }
 
-func (s *apiSuite) TestExecNoScript(c *check.C) {
+func (s *apiSuite) TestExecNoAction(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)
 
-	body := bytes.NewBufferString(`{"command":[],"script":true}`)
+	body := bytes.NewBufferString(`{"command":[],"action":true}`)
 
 	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)
@@ -68,7 +68,7 @@ func (s *apiSuite) TestExecNoScript(c *check.C) {
 
 	// Verify
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
-	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run script in "ws": must specify script`)
+	c.Assert(rsp.Result.(*errorResult).Message, check.Matches, `cannot run action in "ws": must specify action`)
 }
 
 func (s *apiSuite) TestExecUnsupportedModes(c *check.C) {
@@ -147,11 +147,11 @@ func (s *apiSuite) TestExecSuccess(c *check.C) {
 	c.Assert(soon, check.Equals, 1)
 }
 
-func (s *apiSuite) TestExecScriptSuccess(c *check.C) {
+func (s *apiSuite) TestExecActionSuccess(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)
 
-	body := bytes.NewBufferString(`{"command":["lint", "--verbose"],"script":true,"working-dir":"/"}`)
+	body := bytes.NewBufferString(`{"command":["lint", "--verbose"],"action":true,"working-dir":"/"}`)
 
 	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
 	c.Assert(err, check.IsNil)

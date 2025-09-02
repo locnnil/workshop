@@ -53,12 +53,12 @@ There are several categories of commands that vary by their purpose:
      - Begin and end the run-time life cycle of an existing workshop.
 
    * - Explore, troubleshoot
-     - :command:`changes`,
+     - :command:`actions`,
+       :command:`changes`,
        :command:`connections`,
        :command:`info`,
        :command:`list`,
        :command:`okay`,
-       :command:`scripts`,
        :command:`sketches`,
        :command:`tasks`,
        :command:`warnings`

@@ -1,27 +1,27 @@
-.. _how_add_scripts:
+.. _how_add_actions:
 
 .. meta::
-   :description: How-to guide on adding scripts to workshops, enabling automation and
+   :description: How-to guide on adding actions to workshops, enabling automation and
                  enhanced functionality without modifying SDKs.
 
-How to add scripts to your workshop
+How to add actions to your workshop
 ===================================
 
-This guide explains how to add scripts to an existing workshop
+This guide explains how to add actions to an existing workshop
 to automate mundane tasks and enhance its functionality
 without modifying the SDKs themselves
 or running lengthy :command:`workshop exec` commands.
 
 
-Adding scripts
+Adding actions
 --------------
 
-To add scripts,
+To add actions,
 edit your :file:`workshop.yaml` file,
-adding named script definitions in :program:`bash` format under :samp:`scripts`
+adding named action definitions in :program:`bash` format under :samp:`actions`
 and making use of the features provided by the SDKs in your workshop
 
-Here's an example of a workshop definition with two scripts
+Here's an example of a workshop definition with two actions
 that use the capabilities provided by the sketch SDK
 from the :ref:`tut_sketch_sdks` tutorial section:
 
@@ -35,7 +35,7 @@ from the :ref:`tut_sketch_sdks` tutorial section:
      - name: go
        channel: 22.04/stable
    
-   scripts:
+   actions:
      lint: |
        golangci-lint run --out-format=colored-line-number -c .golangci.yaml
      shellcheck: |
@@ -43,14 +43,14 @@ from the :ref:`tut_sketch_sdks` tutorial section:
 
 
 Unlike changes in SDK layout or base,
-script updates do not require a :command:`workshop refresh`.
+action updates do not require a :command:`workshop refresh`.
 
 
-Running scripts
+Running actions
 ---------------
 
-To execute a script,
-use the :command:`workshop run` command followed by the script name:
+To execute an action,
+use the :command:`workshop run` command followed by the action name:
 
 .. @artefact workshop run
 
@@ -69,15 +69,15 @@ use the :command:`workshop run` command followed by the script name:
          ^---------^ SC2002 (style): Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead.
 
 
-When you run a script using :command:`workshop run`,
-any additional arguments provided after the script name
-are passed directly to the script itself.
+When you run an action using :command:`workshop run`,
+any additional arguments provided after the action name
+are passed directly to the action itself.
 
 
 Conclusion
 ----------
 
-By adding scripts to your workshop,
+By adding actions to your workshop,
 you can streamline your daily |ws_markup| workflows
 and reduce the risk of typing errors.
 
@@ -91,7 +91,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshop_definition_scripts`
+- :ref:`exp_workshop_definition_actions`
 - :ref:`exp_sdk_hooks`
 
 
@@ -100,4 +100,4 @@ Reference:
 - :ref:`ref_workshop_exec`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_run`
-- :ref:`ref_workshop_scripts`
+- :ref:`ref_workshop_actions`

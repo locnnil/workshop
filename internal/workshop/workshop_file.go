@@ -4,13 +4,13 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/sdk"
@@ -21,7 +21,7 @@ var (
 
 	workshopName = regexp.MustCompile(`^[a-z](?:-?[a-z0-9])*$`)
 	channel      = regexp.MustCompile(`^(?:[a-z0-9](?:[.-]?[a-z0-9])*/(?:stable|candidate|beta|edge)|)$`)
-	scriptName   = workshopName
+	actionName   = workshopName
 
 	Directory = ".workshop"
 	Filenames = []string{"workshop.yaml", ".workshop.yaml"}
@@ -178,32 +178,51 @@ type Connection struct {
 	SlotRef SlotRef `yaml:"slot"`
 }
 
-type Script string
+type Action string
 
 type File struct {
 	Name        string            `yaml:"name"`
 	Base        string            `yaml:"base"`
 	Sdks        []SdkRecord       `yaml:"sdks,omitempty"`
 	Connections []Connection      `yaml:"connections,omitempty"`
-	Scripts     map[string]Script `yaml:"scripts,omitempty"`
+	Actions     map[string]Action `yaml:"actions,omitempty"`
 }
 
-func (p Script) String() string {
+func (f *File) UnmarshalYAML(value *yaml.Node) error {
+	type file File
+	if err := value.Decode((*file)(f)); err != nil {
+		return err
+	}
+	var scripts struct {
+		Scripts map[string]Action `yaml:"scripts,omitempty"`
+	}
+	if err := value.Decode(&scripts); err != nil {
+		return err
+	}
+	if f.Actions == nil {
+		f.Actions = scripts.Scripts
+	} else {
+		maps.Copy(f.Actions, scripts.Scripts)
+	}
+	return nil
+}
+
+func (a Action) String() string {
 	// Trim newlines, then append a newline for multi-line scripts.
-	script := strings.Trim(string(p), "\n")
+	script := strings.Trim(string(a), "\n")
 	if strings.ContainsRune(script, '\n') {
 		script += "\n"
 	}
 	return script
 }
 
-func (p Script) MarshalYAML() (interface{}, error) {
+func (a Action) MarshalYAML() (interface{}, error) {
 	node := &yaml.Node{}
-	err := node.Encode(p.String())
+	err := node.Encode(a.String())
 	return node, err
 }
 
-func (p *Script) UnmarshalYAML(value *yaml.Node) error {
+func (a *Action) UnmarshalYAML(value *yaml.Node) error {
 	var script string
 	if err := value.Decode(&script); err != nil {
 		return err
@@ -227,7 +246,7 @@ func (p *Script) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	*p = Script(script)
+	*a = Action(script)
 	return nil
 }
 
@@ -271,7 +290,7 @@ func readWorkshop(path string) (*File, error) {
 		return nil, err
 	}
 
-	if err = validateScripts(&file); err != nil {
+	if err = validateActions(&file); err != nil {
 		return nil, err
 	}
 
@@ -329,7 +348,7 @@ func validateBinding(sdks []SdkRecord) error {
 	}
 
 	// Ensure that there are no "multi-level" binds, e.g. s1 bind to m1 bind to m2.
-	slaveKeysOrdered := maps.Keys(slaves)
+	slaveKeysOrdered := slices.Collect(maps.Keys(slaves))
 	slices.SortFunc(slaveKeysOrdered, func(a, b PlugRef) int {
 		c := cmp.Compare(a.Sdk, b.Sdk)
 		if c == 0 {
@@ -380,10 +399,10 @@ func validateConnections(wfile *File) error {
 	return nil
 }
 
-func validateScripts(wfile *File) error {
-	for name := range wfile.Scripts {
-		if !scriptName.MatchString(name) {
-			return fmt.Errorf("script name %q must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them", name)
+func validateActions(wfile *File) error {
+	for name := range wfile.Actions {
+		if !actionName.MatchString(name) {
+			return fmt.Errorf("action name %q must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them", name)
 		}
 	}
 	return nil

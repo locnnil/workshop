@@ -65,7 +65,7 @@ type ExecArgs struct {
 	workshop string
 	implicit bool
 	command  []string
-	script   bool
+	action   bool
 }
 
 var shortExecHelp = "Run a command and wait for it to complete"
@@ -118,9 +118,9 @@ Notes:
   the default non-privileged user in a workshop.
 `
 
-var shortRunHelp = "Run a workshop script and wait for it to complete"
+var shortRunHelp = "Run a workshop action and wait for it to complete"
 var longRunHelp = `
-The 'run' subcommand runs a script specified in the workshop definition file,
+The 'run' subcommand runs an action specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
 To accept a 'run' command, the workshop must be 'Ready' or 'Waiting'.
@@ -139,22 +139,22 @@ To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 - Otherwise, it's non-interactive
 
 
-To separate the 'run' subcommand from the script and its arguments,
+To separate the 'run' subcommand from the action and its arguments,
 use shell syntax such as *--*.
 This syntax is required if the workshop name is omitted
-and the script takes one or more arguments.
+and the action takes one or more arguments.
 
 Notes:
 
-- To start a workshop before running scripts in it, use 'workshop start'.
+- To start a workshop before running actions in it, use 'workshop start'.
 
 - You can set the working directory, environment variables, user and group ID
-  for running the script in the workshop; reasonable defaults are provided.
+  for running the action in the workshop; reasonable defaults are provided.
 `
 
-var shortScriptsHelp = "List workshop scripts"
-var longScriptsHelp = `
-This command enumerates all scripts in the workshop, printing a YAML map.
+var shortActionsHelp = "List workshop actions"
+var longActionsHelp = `
+This command enumerates all actions in the workshop, printing a YAML map.
 `
 
 func (c *CmdExec) Command() *cobra.Command {
@@ -270,12 +270,12 @@ func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
 
 func (c *CmdRun) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "run [flags] [<WORKSHOP>] [--] <SCRIPT> <ARGUMENTS>...",
-		Args:  maybeNameAndScript,
+		Use:   "run [flags] [<WORKSHOP>] [--] <ACTION> <ARGUMENTS>...",
+		Args:  maybeNameAndAction,
 		Short: shortRunHelp,
 		Long:  longRunHelp,
 		Example: `
-Run the 'build' script under the 'nimble' workshop
+Run the 'build' action under the 'nimble' workshop
 in the current project directory:
 $ workshop run nimble build
 
@@ -285,7 +285,7 @@ $ workshop run --env GO111MODULE=off -w /project nimble build
 The workshop name is optional if the project only has one workshop:
 $ workshop run build
 
-Scripts can accept arguments,
+Actions can accept arguments,
 if a separator or a workshop name is provided:
 $ workshop run -- build --debug
 `,
@@ -300,7 +300,7 @@ $ workshop run -- build --debug
 	return cmd
 }
 
-func maybeNameAndScript(cmd *cobra.Command, av []string) error {
+func maybeNameAndAction(cmd *cobra.Command, av []string) error {
 	if cmd.ArgsLenAtDash() == 0 {
 		// Workshop name is implicit if -- precedes all positional arguments
 		return cobra.MinimumNArgs(1)(cmd, av)
@@ -318,7 +318,7 @@ func maybeNameAndScript(cmd *cobra.Command, av []string) error {
 }
 
 func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
-	args := &ExecArgs{script: true}
+	args := &ExecArgs{action: true}
 
 	// Infer workshop name if first positional argument is --
 	if cmd.ArgsLenAtDash() == 0 {
@@ -332,7 +332,7 @@ func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
 			}
 		}
 
-		// Allow `workshop run script`. Passing arguments requires -- though.
+		// Allow `workshop run action`. Passing arguments requires -- though.
 		if len(av) <= 1 {
 			args.implicit = true
 			args.command = av
@@ -346,25 +346,25 @@ func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
 }
 
 func (c *CmdRun) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	scriptIdx := 1
+	actionIdx := 1
 	dashIdx := len(os.Args) - 2 - len(args)
 	// TODO: Replace with cmd.ArgsLenAtDash() == 0.
 	// See https://github.com/spf13/cobra/issues/1877.
 	if dashIdx >= 0 && os.Args[dashIdx] == "--" {
-		scriptIdx = 0
-	} else if scriptIdx < len(args) && args[scriptIdx] == "--" {
-		scriptIdx++
+		actionIdx = 0
+	} else if actionIdx < len(args) && args[actionIdx] == "--" {
+		actionIdx++
 	}
 
-	if scriptIdx > len(args) {
+	if actionIdx > len(args) {
 		names, directive := c.root.doCompleteWorkshopNames(args, []string{"Ready", "Waiting"})
 
-		// Try script names if no workshop names match partial argument.
+		// Try action names if no workshop names match partial argument.
 		partialMatch := func(name string) bool {
 			return strings.HasPrefix(name, toComplete)
 		}
 		if directive != cobra.ShellCompDirectiveError && !slices.ContainsFunc(names, partialMatch) {
-			names, directive := completeScripts(c.root, args)
+			names, directive := completeActions(c.root, args)
 			if directive != cobra.ShellCompDirectiveError {
 				return names, directive
 			}
@@ -373,22 +373,22 @@ func (c *CmdRun) complete(cmd *cobra.Command, args []string, toComplete string) 
 
 		return names, directive
 	}
-	if scriptIdx < len(args) {
+	if actionIdx < len(args) {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	return completeScripts(c.root, args)
+	return completeActions(c.root, args)
 }
 
-func completeScripts(root *CmdRoot, args []string) ([]string, cobra.ShellCompDirective) {
-	scriptsCmd := CmdScripts{root: root}
-	scripts, err := scriptsCmd.scripts(args)
+func completeActions(root *CmdRoot, args []string) ([]string, cobra.ShellCompDirective) {
+	actionsCmd := CmdActions{root: root}
+	actions, err := actionsCmd.actions(args)
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
 	}
-	names := make([]string, 0, len(scripts))
-	for name := range scripts {
+	names := make([]string, 0, len(actions))
+	for name := range actions {
 		names = append(names, name)
 	}
 	slices.Sort(names)
@@ -429,8 +429,8 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		}
 	}
 
-	if args.script {
-		logger.Debugf("Running script %q", args.command)
+	if args.action {
+		logger.Debugf("Running action %q", args.command)
 	} else {
 		// Obtain an exec session as close to a real login shell as possible.
 		// This is required as an lxd exec call is a simple namespace exec, and LXD
@@ -532,7 +532,7 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	opts := &client.ExecOptions{
 		Command:     args.command,
 		Environment: env,
-		Script:      args.script,
+		Action:      args.action,
 		WorkingDir:  flags.WorkingDir,
 		UserId:      &flags.UserId,
 		GroupId:     &flags.GroupId,
@@ -638,22 +638,22 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 	}
 }
 
-type CmdScripts struct {
+type CmdActions struct {
 	root *CmdRoot
 }
 
-func (c *CmdScripts) Command() *cobra.Command {
+func (c *CmdActions) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "scripts [<WORKSHOP>]",
+		Use:   "actions [<WORKSHOP>]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: shortScriptsHelp,
-		Long:  longScriptsHelp,
+		Short: shortActionsHelp,
+		Long:  longActionsHelp,
 		Example: `
-List scripts for the 'nimble' workshop in the current project directory:
-$ workshop scripts nimble
+List actions for the 'nimble' workshop in the current project directory:
+$ workshop actions nimble
 
 The name is optional if the project has only one workshop:
-$ workshop scripts`,
+$ workshop actions`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.root.completeWorkshopName(nil),
 	}
@@ -661,18 +661,18 @@ $ workshop scripts`,
 	return cmd
 }
 
-func (c *CmdScripts) Run(cmd *cobra.Command, av []string) error {
-	scripts, err := c.scripts(av)
-	if err != nil || len(scripts) == 0 {
+func (c *CmdActions) Run(cmd *cobra.Command, av []string) error {
+	actions, err := c.actions(av)
+	if err != nil || len(actions) == 0 {
 		return err
 	}
 
 	encoder := yaml.NewEncoder(Stdout)
 	encoder.SetIndent(2)
-	return encoder.Encode(scripts)
+	return encoder.Encode(actions)
 }
 
-func (c *CmdScripts) scripts(av []string) (map[string]client.Script, error) {
+func (c *CmdActions) actions(av []string) (map[string]client.Action, error) {
 	cli, err := c.root.client()
 	if err != nil {
 		return nil, err
@@ -691,5 +691,5 @@ func (c *CmdScripts) scripts(av []string) (map[string]client.Script, error) {
 		av = []string{name}
 	}
 
-	return cli.ListScripts(p.Id, av[0])
+	return cli.ListActions(p.Id, av[0])
 }

@@ -24,9 +24,8 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/slices"
 )
 
 // DecodeWithNumber decodes input data using json.Decoder, ensuring numbers are preserved

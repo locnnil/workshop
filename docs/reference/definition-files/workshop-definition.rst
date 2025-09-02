@@ -85,9 +85,9 @@ and includes a number of mandatory and optional keys:
        with the same interface,
        using the :samp:`<SDK>:<PLUG>` format.
 
-   * - :samp:`scripts`
+   * - :samp:`actions`
      - object
-     - List of shell scripts to be used with :ref:`workshop run <ref_workshop_run>`.
+     - List of shell actions to be used with :ref:`workshop run <ref_workshop_run>`.
 
        These are copied into the workshop
        before being executed by :command:`bash`.
@@ -465,7 +465,7 @@ Examples
 This YAML file defines a :samp:`golang` workshop
 with a single :samp:`go` SDK
 from the :samp:`latest/stable` channel,
-and some useful scripts:
+and some useful actions:
 
 .. code-block:: yaml
    :caption: .workshop/golang.yaml
@@ -475,7 +475,7 @@ and some useful scripts:
    sdks:
      - name: go
        channel: 22.04/stable
-   scripts:
+   actions:
      lint: |
        go vet
        golangci-lint run

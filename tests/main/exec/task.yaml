@@ -59,7 +59,7 @@ execute: |
   workshop_exec exec ws-exec bash -c 'exit 125' || exitcode="$?"
   [ "$exitcode" -eq 125 ]
 
-  echo "Check scripts"
+  echo "Check actions"
   workshop_exec run oneline | MATCH '^one line$'
   workshop_exec run ws-exec multiline > multiline.log
   MATCH '^multi$' < multiline.log
@@ -68,18 +68,18 @@ execute: |
   workshop_exec run -- file | MATCH '^script$'
   workshop_exec run env | MATCH 'FOO=BAR' 
 
-  echo "Check scripts can be updated without refreshing"
+  echo "Check actions can be updated without refreshing"
   sed -i 's/one line/1 LINE/g' workshop.yaml
   workshop_exec run oneline | MATCH '^1 LINE$'
   sed -i 's/oneline/line1/' workshop.yaml
   workshop_exec run line1 | MATCH '^1 LINE$'
 
-  echo "Check install-script error message"
-  workshop_exec exec --uid 0 --gid 0 -- rm -f /var/lib/workshop/run/scripts/line1
-  workshop_exec exec --uid 0 --gid 0 -- mkdir /var/lib/workshop/run/scripts/line1
+  echo "Check install-action error message"
+  workshop_exec exec --uid 0 --gid 0 -- rm -f /var/lib/workshop/run/actions/line1
+  workshop_exec exec --uid 0 --gid 0 -- mkdir /var/lib/workshop/run/actions/line1
   ! workshop_exec run line1 > line1.log
   MATCH '^error: cannot perform the following tasks:$' < line1.log
-  MATCH '^- Install script "line1" \(.*\)$' < line1.log
+  MATCH '^- Install action "line1" \(.*\)$' < line1.log
 
   echo "Check stopped workshop"
   workshop_exec stop

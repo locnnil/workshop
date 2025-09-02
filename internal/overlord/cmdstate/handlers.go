@@ -351,7 +351,7 @@ func (e *execution) controlLoop(execId string, conn *websocket.Conn, stop <-chan
 	}
 }
 
-func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) error {
+func (m *CommandManager) doInstallAction(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -384,12 +384,12 @@ func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) erro
 		return err
 	}
 
-	script, ok := file.Scripts[name]
+	action, ok := file.Actions[name]
 	if !ok {
-		return errors.New("script not found")
+		return errors.New("action not found")
 	}
 
-	path := filepath.Join(dirs.WorkshopScriptsDir, name)
+	path := filepath.Join(dirs.WorkshopActionsDir, name)
 	command := []string{"sudo",
 		"-u",
 		"#" + strconv.Itoa(args.UserId),
@@ -409,11 +409,11 @@ func (m *CommandManager) doInstallScript(task *state.Task, tomb *tomb.Tomb) erro
 	}
 	defer wfs.Close()
 
-	if err := wfs.MkdirAll(dirs.WorkshopScriptsDir, 0755); err != nil {
+	if err := wfs.MkdirAll(dirs.WorkshopActionsDir, 0755); err != nil {
 		return err
 	}
 
-	if err := wfs.AtomicWriteTo(strings.NewReader(string(script)), path, 0644); err != nil {
+	if err := wfs.AtomicWriteTo(strings.NewReader(string(action)), path, 0644); err != nil {
 		return err
 	}
 

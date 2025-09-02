@@ -1080,7 +1080,7 @@ func stopMany(st *state.State, names []string, project workshop.Project) ([]*sta
 	return taskset, nil
 }
 
-func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs, script bool) (*state.TaskSet, error) {
+func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs, action bool) (*state.TaskSet, error) {
 	project, err := w.loadProject(ctx, projectId)
 	if err != nil {
 		return nil, err
@@ -1111,12 +1111,12 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	}
 
 	var execSet *state.TaskSet
-	if script {
+	if action {
 		name := args.Command[0]
-		cp := w.state.NewTask("install-script", fmt.Sprintf("Install script %q", name))
-		exec := w.state.NewTask("exec", fmt.Sprintf("Exec script %q", name))
+		cp := w.state.NewTask("install-action", fmt.Sprintf("Install action %q", name))
+		exec := w.state.NewTask("exec", fmt.Sprintf("Exec action %q", name))
 
-		// install-script will modify args and pass it to exec.
+		// install-action will modify args and pass it to exec.
 		w.state.Cache(cmdstate.ExecArgsKey(cp.ID()), args)
 		cp.Set("exec-task", exec.ID())
 

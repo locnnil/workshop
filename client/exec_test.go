@@ -349,15 +349,15 @@ func (s *execSuite) TestStdinAndStdout(c *C) {
 	})
 }
 
-func (s *execSuite) TestScript(c *C) {
+func (s *execSuite) TestAction(c *C) {
 	opts := &client.ExecOptions{
 		Command: []string{"tests"},
-		Script:  true,
+		Action:  true,
 	}
 	process, reqBody := s.exec(c, opts, 0)
 	c.Assert(reqBody, DeepEquals, map[string]interface{}{
 		"command": []interface{}{"tests"},
-		"script":  true,
+		"action":  true,
 	})
 	err := s.wait(c, process)
 	c.Assert(err, IsNil)
@@ -406,7 +406,7 @@ func (w *testWebsocket) WriteJSON(v interface{}) error {
 }
 
 func (s *execSuite) exec(c *C, opts *client.ExecOptions, exitCode int) (process *client.ExecProcess, requestBody map[string]interface{}) {
-	if opts.Script {
+	if opts.Action {
 		s.addRunResponses("123", exitCode)
 	} else {
 		s.addResponses("123", exitCode)
@@ -479,7 +479,7 @@ func (s *execSuite) addRunResponses(changeID string, exitCode int) {
 			"ready": true,
 			"tasks": [{
 				"id": "%s",
-				"kind": "install-script"
+				"kind": "install-action"
 			}, {
 				"data": {"exit-code": %d},
 				"id": "%s",

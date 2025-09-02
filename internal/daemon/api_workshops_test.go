@@ -50,9 +50,9 @@ sdks:
   - name: project-test-sdk-2
 `
 
-	scripts = `name: scripts
+	actions = `name: actions
 base: ubuntu@22.04
-scripts:
+actions:
   oneline: echo one line
   multiline: |
     echo two
@@ -826,21 +826,21 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 		Path: workshop.Filepath(s.project.Path, "somebound")})
 }
 
-func (s *apiSuite) TestGetWorkshopScripts(c *check.C) {
+func (s *apiSuite) TestGetWorkshopActions(c *check.C) {
 	// Setup (create a running workshop with a mount)
 	s.daemon(c)
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	s.launchWorkshop(c, "scripts", scripts)
+	s.launchWorkshop(c, "actions", actions)
 
-	// Get Workshop scripts
-	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}/scripts")
-	s.vars = map[string]string{"id": s.project.ProjectId, "name": "scripts"}
-	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/scripts/scripts", nil)
+	// Get Workshop actions
+	projectsCmd := apiCmd("/v1/projects/{id}/workshops/{name}/actions")
+	s.vars = map[string]string{"id": s.project.ProjectId, "name": "actions"}
+	req, err := s.createProjectsRequest("GET", "/v1/projects/"+s.project.ProjectId+"/workshops/actions/actions", nil)
 	c.Assert(err, check.IsNil)
 
-	rsp := v1GetProjectWorkshopScripts(projectsCmd, req, nil).(*resp)
+	rsp := v1GetProjectWorkshopActions(projectsCmd, req, nil).(*resp)
 
 	// Verify
 	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
@@ -849,7 +849,7 @@ func (s *apiSuite) TestGetWorkshopScripts(c *check.C) {
 	_, err = rsp.MarshalJSON()
 	c.Assert(err, check.IsNil)
 
-	c.Check(rsp.Result, check.DeepEquals, map[string]Script{
+	c.Check(rsp.Result, check.DeepEquals, map[string]Action{
 		"oneline":   {Script: "echo one line"},
 		"multiline": {Script: "echo two\necho lines\n"},
 	})

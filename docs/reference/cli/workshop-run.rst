@@ -5,18 +5,18 @@ workshop run
 
 .. @artefact workshop run
 
-Run a workshop script and wait for it to complete.
+Run a workshop action and wait for it to complete.
 
 .. rubric:: Usage
 
 .. code-block:: console
 
-   $ workshop run [flags] [<WORKSHOP>] [--] <SCRIPT> <ARGUMENTS>...
+   $ workshop run [flags] [<WORKSHOP>] [--] <ACTION> <ARGUMENTS>...
 
 .. rubric:: Description
 
 
-The 'run' subcommand runs a script specified in the workshop definition file,
+The 'run' subcommand runs an action specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
 To accept a 'run' command, the workshop must be 'Ready' or 'Waiting'.
@@ -35,23 +35,23 @@ To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
 - Otherwise, it's non-interactive
 
 
-To separate the 'run' subcommand from the script and its arguments,
+To separate the 'run' subcommand from the action and its arguments,
 use shell syntax such as *--*.
 This syntax is required if the workshop name is omitted
-and the script takes one or more arguments.
+and the action takes one or more arguments.
 
 Notes:
 
-- To start a workshop before running scripts in it, use 'workshop start'.
+- To start a workshop before running actions in it, use 'workshop start'.
 
 - You can set the working directory, environment variables, user and group ID
-  for running the script in the workshop; reasonable defaults are provided.
+  for running the action in the workshop; reasonable defaults are provided.
 
 
 .. rubric:: Examples
 
 
-Run the 'build' script under the 'nimble' workshop
+Run the 'build' action under the 'nimble' workshop
 in the current project directory:
 
 .. code-block:: console
@@ -73,7 +73,7 @@ The workshop name is optional if the project only has one workshop:
    $ workshop run build
 
 
-Scripts can accept arguments,
+Actions can accept arguments,
 if a separator or a workshop name is provided:
 
 .. code-block:: console

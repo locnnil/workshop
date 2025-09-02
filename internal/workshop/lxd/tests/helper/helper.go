@@ -19,7 +19,7 @@ import (
 
 var testYaml = `name: test
 base: ubuntu@22.04
-scripts:
+actions:
   info: |
     pwd
     whoami
@@ -97,7 +97,7 @@ func LaunchTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend, di
 	wf := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@24.04",
-		Scripts: map[string]workshop.Script{"info": `
+		Actions: map[string]workshop.Action{"info": `
 
 
 

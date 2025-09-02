@@ -35,8 +35,8 @@ type ExecOptions struct {
 	Workshop string
 	// Required: command and arguments (first element is the executable).
 	Command []string
-	// True to treat command as a workshop script with arguments.
-	Script bool
+	// True to treat command as a workshop action with arguments.
+	Action bool
 
 	// Optional environment variables.
 	Environment map[string]string
@@ -81,7 +81,7 @@ type ExecOptions struct {
 
 type execPayload struct {
 	Command     []string          `json:"command"`
-	Script      bool              `json:"script,omitempty"`
+	Action      bool              `json:"action,omitempty"`
 	Environment map[string]string `json:"environment,omitempty"`
 	WorkingDir  string            `json:"working-dir,omitempty"`
 	UserId      *int              `json:"user-id,omitempty"`
@@ -133,7 +133,7 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 
 	payload := execPayload{
 		Command:     opts.Command,
-		Script:      opts.Script,
+		Action:      opts.Action,
 		Environment: opts.Environment,
 		WorkingDir:  opts.WorkingDir,
 		UserId:      opts.UserId,

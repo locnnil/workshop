@@ -249,12 +249,14 @@ Mind that the connection established in this way
 is no different from those created via the command line.
 
 
-.. _exp_workshop_definition_scripts:
+.. _exp_workshop_definition_actions:
 
-Scripts
+Actions
 -------
 
-Another optional part of a workshop definition is the :samp:`scripts` section;
+.. @artefact workshop actions
+
+Another optional part of a workshop definition is the :samp:`actions` section;
 it contains named shell scripts to be copied and executed inside the workshop.
 This section provides a degree of convenience,
 allowing the users to define simple aliases
@@ -262,14 +264,14 @@ for longer or more complex shell commands
 that they expect to run frequently inside the workshop,
 right in the definition file.
 
-Scripts are not part of the layered snapshot system at all.
+Actions are not part of the layered snapshot system at all.
 They stay in the definition,
 and are parsed by the :ref:`daemon <exp_arch_install_daemon>`
 every time the :command:`workshop run` command is executed.
-This means the users can add or modify scripts and use them immediately,
+This means the users can add or modify actions and use them immediately,
 without needing to refresh or restart the workshop.
 
-The following example adds four scripts,
+The following example adds four actions,
 :samp:`lint`, :samp:`shellcheck`, :samp:`unit`, and :samp:`cover`,
 intended as utility helpers for a development environment:
 
@@ -282,7 +284,7 @@ intended as utility helpers for a development environment:
    sdks:
      - name: go
        channel: 22.04/stable
-   scripts:
+   actions:
      lint: |
        golangci-lint run  --out-format=colored-line-number -c .golangci.yaml
      shellcheck: |
@@ -294,25 +296,25 @@ intended as utility helpers for a development environment:
        go tool cover -html=coverage.out
 
 
-To run these scripts, you use the :command:`workshop run` command:
+To run these actions, you use the :command:`workshop run` command:
 
 .. code-block:: console
 
    $ workshop run lint
 
 
-When you thus invoke a script, it's injected into the workshop
+When you thus invoke an action, it's injected into the workshop
 and executed there in a fashion similar to :command:`workshop exec`.
-Even if you update the :samp:`scripts` section in the definition,
-there's no need to refresh the workshop to use the updated script;
+Even if you update the :samp:`actions` section in the definition,
+there's no need to refresh the workshop to use the updated action;
 it's available immediately.
 
-For a quick reference of the scripts in your workshop,
-run :command:`workshop scripts`:
+For a quick reference of the actions in your workshop,
+run :command:`workshop actions`:
 
 .. code-block:: console
 
-   $ workshop scripts
+   $ workshop actions
 
 
 This mechanism avoids the need to maintain helper scripts manually,
@@ -378,7 +380,7 @@ that brings these distributed components together:
         in an SDK that can be quickly iterated upon
         and later ejected as an in-project SDK.
 
-    * - :ref:`Scripts <exp_workshop_definition_scripts>`
+    * - :ref:`Actions <exp_workshop_definition_actions>`
       - Defined by |ws_markup| users
       - Listed directly in the workshop definition
       - Utility scripts, specific to the workshop;
@@ -405,5 +407,5 @@ Reference:
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_definition`
 - :ref:`ref_workshop_run`
-- :ref:`ref_workshop_scripts`
+- :ref:`ref_workshop_actions`
 - :ref:`ref_workshop_status`

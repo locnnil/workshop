@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/canonical/lxd/shared/api"
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/progress"

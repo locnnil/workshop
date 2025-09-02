@@ -3,10 +3,9 @@ package sdk
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
-
-	"golang.org/x/exp/slices"
 
 	"github.com/canonical/workshop/internal/arch"
 )
