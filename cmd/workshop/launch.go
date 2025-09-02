@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -118,28 +119,23 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if _, err := c.wait(cli, changeId); err != nil {
-		if err == errNoWait {
-			return nil
-		}
-		if err == errWaitOnError {
-			w := workshopName(av[0])
-			return fmt.Errorf(`cannot complete launch for %q, execution is paused
+	_, err = c.wait(cli, changeId)
+
+	switch {
+	case err == nil:
+		fmt.Fprintf(Stdout, "%s launched\n", strutil.Quoted(av))
+	case errors.Is(err, errNoWait):
+	case errors.Is(err, errUndone):
+		fmt.Fprintf(Stdout, "%s launch aborted\n", strutil.Quoted(av))
+	case errors.Is(err, errWaitOnError):
+		w := workshopName(av[0])
+		return fmt.Errorf(`cannot complete launch for %q, execution is paused
 
 To proceed, resolve the issue and run 'workshop launch --continue %s'
 To cancel and undo: 'workshop launch --abort %s'
 To view more information: 'workshop tasks %s'`, w, w, w, changeId)
-		}
+	default:
 		return fmt.Errorf("%v\n%s launch aborted", err, strutil.Quoted(av))
-	}
-
-	if c.Abort {
-		fmt.Fprintf(Stdout, "%q launch aborted\n", av[0])
-		return nil
-	}
-
-	for _, i := range av {
-		fmt.Fprintf(Stdout, "%q launched\n", i)
 	}
 
 	return nil

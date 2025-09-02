@@ -358,6 +358,23 @@ func hideSketch(sketchdir string) (string, *revert.Reverter, error) {
 	return temp, clone, nil
 }
 
+func handleSketchRefreshErrors(wp string, chg *client.Change, err error) error {
+	switch {
+	case client.IsNoUpdatesAvailable(err):
+	case errors.Is(err, errUndone):
+		fmt.Fprintf(Stdout, "%q sketch refresh aborted\n", wp)
+	case errors.Is(err, errWaitOnError):
+		return fmt.Errorf(`cannot complete sketch refresh for %q, execution is paused
+
+To proceed, resolve the issue and run 'workshop refresh --continue %s'
+To cancel and undo: 'workshop refresh --abort %s'
+To view more information: 'workshop tasks %s'`, wp, wp, wp, chg.ID)
+	default:
+		return fmt.Errorf("%v\n%s sketch refresh aborted", err, wp)
+	}
+	return nil
+}
+
 func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	if c.name != "" && !c.eject {
 		return errors.New("flag --name requires --eject")
@@ -389,8 +406,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	if wp.Status == "Waiting" {
 		fmt.Fprintf(Stdout, "Reverting incomplete change for %q...\n", wp.Name)
 		cmdabort := &CmdRefresh{root: c.root, Abort: true}
-		if err = cmdabort.RunRefresh(cli, p, []string{wp.Name}); err != nil {
-			return err
+		// Skip the Undone status as this is desired; we will continue with the
+		// regular sketch SDK flow afterwards.
+		chg, err := cmdabort.RunRefresh(cli, p, []string{wp.Name})
+		if err != nil && !errors.Is(err, errUndone) {
+			return handleSketchRefreshErrors(wp.Name, chg, err)
 		}
 	} else if wp.Status != "Ready" {
 		return fmt.Errorf(`cannot sketch: workshop %q currently %q, must be "Ready"`, wp.Name, wp.Status)
@@ -415,10 +435,11 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.verbose = c.verbose
-		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
+		chg, err := cmdrefresh.RunRefresh(cli, p, []string{wp.Name})
+		if err != nil {
 			// Refresh failed, revert the stash operation so a possible subsequent
 			// refresh won't fail due to the lack of a sketch SDK definition.
-			return err
+			return handleSketchRefreshErrors(wp.Name, chg, err)
 		}
 		fmt.Fprintf(Stdout, "%q sketch stashed\n", wp.Name)
 		reverter.Success()
@@ -441,8 +462,9 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		// and with --wait-on-error. Hence, there is always a possibility to
 		// run 'workshop refresh --abort' and 'workshop sketch-sdk --stash' to restore the
 		// original stash content.
-		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
-			return err
+		chg, err := cmdrefresh.RunRefresh(cli, p, []string{wp.Name})
+		if err != nil {
+			return handleSketchRefreshErrors(wp.Name, chg, err)
 		}
 		fmt.Fprintf(Stdout, "%q sketch restored\n", wp.Name)
 		return nil
@@ -470,8 +492,9 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 
 		cmdrefresh := &CmdRefresh{root: c.root}
 		cmdrefresh.verbose = c.verbose
-		if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
-			return err
+		chg, err := cmdrefresh.RunRefresh(cli, p, []string{wp.Name})
+		if err != nil {
+			return handleSketchRefreshErrors(wp.Name, chg, err)
 		}
 
 		reverter.Success()
@@ -498,12 +521,9 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	cmdrefresh.WaitOnError = true
 	cmdrefresh.verbose = c.verbose
 
-	if err = cmdrefresh.RunRefresh(cli, p, []string{wp.Name}); err != nil {
-		// Neither other SDKs and definitions nor the sketch itself were changed.
-		if client.IsNoUpdatesAvailable(err) {
-			return nil
-		}
-		return err
+	chg, err := cmdrefresh.RunRefresh(cli, p, []string{wp.Name})
+	if err != nil {
+		return handleSketchRefreshErrors(wp.Name, chg, err)
 	}
 	fmt.Fprintf(Stdout, "%q sketch refreshed\n", wp.Name)
 	return nil

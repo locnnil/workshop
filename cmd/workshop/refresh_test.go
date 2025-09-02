@@ -25,7 +25,7 @@ var mockSingleWorkshopJSON = `{"type":"sync","status-code":200,"status":"OK","re
 }}`
 
 var mockReadyChangeJSON = `{"type": "sync", "result":{
-    "id":   "four",
+    "id":   "42",
     "kind": "refresh",
     "summary": "...",
     "status": "Done",
@@ -36,7 +36,18 @@ var mockReadyChangeJSON = `{"type": "sync", "result":{
 }}`
 
 var mockWaitChangeJSON = `{"type": "sync", "result":{
-    "id":   "four",
+    "id":   "42",
+    "kind": "refresh",
+    "summary": "...",
+    "status": "Wait",
+    "ready": false,
+    "spawn-time": "2015-02-21T01:02:03Z",
+    "ready-time": "2015-02-21T01:02:04Z",
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Wait", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"}]
+}}`
+
+var mockSketchWaitChangeJSON = `{"type": "sync", "result":{
+    "id":   "43",
     "kind": "refresh",
     "summary": "...",
     "status": "Wait",
@@ -47,7 +58,18 @@ var mockWaitChangeJSON = `{"type": "sync", "result":{
 }}`
 
 var mockAbortedChangeJSON = `{"type": "sync", "result":{
-    "id":   "four",
+    "id":   "42",
+    "kind": "refresh",
+    "summary": "...",
+    "status": "Undone",
+    "ready": true,
+    "spawn-time": "2015-02-21T01:02:03Z",
+    "ready-time": "2015-02-21T01:02:04Z",
+    "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Hold", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z INFO Aborting for workshop \"ws\"..."], "data":{"workshop":"ws"}}]
+}}`
+
+var mockSketchAbortedChangeJSON = `{"type": "sync", "result":{
+    "id":   "43",
     "kind": "refresh",
     "summary": "...",
     "status": "Undone",
@@ -58,7 +80,7 @@ var mockAbortedChangeJSON = `{"type": "sync", "result":{
 }}`
 
 var mockChangeWithError = `{"type": "sync", "result":{
-    "id":   "four",
+    "id":   "42",
     "kind": "refresh",
     "summary": "...",
     "status": "Error",

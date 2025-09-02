@@ -53,7 +53,7 @@ func (m *workshopLaunch) TestLaunchSuccess(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1", "ws"})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `"ws" launched\n"ws-1" launched\n`)
+	c.Assert(m.stdout.String(), check.Matches, `"ws", "ws-1" launched\n`)
 }
 
 func (m *workshopLaunch) TestLaunchWaitOnErrorFailed(c *check.C) {
