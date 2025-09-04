@@ -5,6 +5,7 @@ var (
 	ReadProjects       = readProjects
 	SaveProjects       = saveProjects
 	HandleLaunchUpdate = handleLaunchUpdate
+	CheckServerVersion = checkVersion
 )
 
 func MockNvidiaRuntime(f func() (bool, error)) func() {
