@@ -40,24 +40,9 @@ the definition may look like this:
 
 .. @artefact sdkcraft (CLI)
 
-.. code-block:: yaml
+.. literalinclude:: ../../examples/go-sdk.yaml
+   :language: yaml
    :caption: sdk.yaml
-
-   name: go
-   title: Go SDK
-   base: ubuntu@24.04
-   summary: The Go programming language
-   description: |
-     Go is an open source programming language that enables the production
-     of simple, efficient and reliable software at scale.
-
-   platforms:
-     amd64:
-
-   plugs:
-     mod-cache:
-       interface: mount
-       workshop-target: /home/workshop/go/pkg/mod
 
 
 .. _exp_hooks:

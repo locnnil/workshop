@@ -501,6 +501,34 @@ which contains the build artifacts from the previous step
 along with SDK metadata, hooks, and other components.
 
 
+.. _how_sdkcraft_try:
+
+Try the SDK
+-----------
+
+.. @artefact sdkcraft (CLI)
+.. @artefact try SDK
+
+When you're confident the SDK builds properly,
+you can test it in-place before uploading it to the Store:
+
+.. code-block:: console
+
+   $ sdkcraft try
+
+
+The command copies the SDK to a special *try area*.
+To use it in a workshop, add a prefix: :samp:`try-<NAME>`;
+a :samp:`channel` is not required in this case:
+
+.. code-block:: yaml
+   :caption: workshop.yaml
+
+   sdks:
+     # ...
+     - name: try-ollama
+
+
 .. _how_sdkcraft_publish:
 
 Publish the SDK
@@ -508,8 +536,8 @@ Publish the SDK
 
 .. @artefact SDK Store
 
-When an SDK is ready and packed,
-you need to publish it to the SDK Store
+When an SDK is ready, packed, and tried,
+the only thing left is to publish it to the SDK Store
 for use with |ws_markup|:
 
 .. code-block:: console

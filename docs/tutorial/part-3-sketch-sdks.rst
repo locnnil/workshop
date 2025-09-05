@@ -295,8 +295,8 @@ To restore the stashed SDK:
    $ workshop sketch-sdk --restore
 
 
-Eject an in-project SDK
------------------------
+Convert to in-project SDK
+-------------------------
 
 .. @artefact in-project SDK
 .. @artefact SDK Store

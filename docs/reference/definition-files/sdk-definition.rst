@@ -118,44 +118,6 @@ Other fields are optional.
      - See :ref:`ref_sdk_plugs_slots` for a detailed discussion.
 
 
-For example:
-
-.. code-block:: yaml
-   :caption: sdk.yaml
-
-   name: go
-   build-base: ubuntu@24.04
-   title: Go SDK
-   summary: The Go programming language
-   description: |
-     Go is an open source programming language
-     that enables the production
-     of simple, efficient and reliable software at scale.
-   version: "1.24.6"
-   license: LGPL-2.1
-   platforms:
-     amd64:
-       build-on: [amd64]
-       build-for: [amd64]
-     arm64:
-       build-on: [amd64]
-       build-for: [arm64]
-     riscv64:
-       build-on: [amd64]
-       build-for: [riscv64]
-   
-   plugs:
-     mod-cache:
-       interface: mount
-       workshop-target: /home/workshop/go/pkg/mod
-   
-   parts:
-     go:
-       plugin: dump
-       source: https://go.dev/dl/go$CRAFT_PROJECT_VERSION.linux-$CRAFT_ARCH_BUILD_FOR.tar.gz
-       source-type: tar
-
-
 JSON Schema
 -----------
 
@@ -173,17 +135,26 @@ formalizes the description above:
 Examples
 --------
 
-This YAML file defines a simple :samp:`go` SDK
-that supports multiple bases:
+This is a real-world example of an SDK definition file
+for a Go development environment.
+It involves a non-trivial layout of build and target architectures,
+and also uses the :ref:`parts <ref_sdk_parts>` mechanism:
+
+.. literalinclude:: ../../examples/go-sdk.yaml
+   :language: yaml
+   :caption: sdk.yaml
+
+
+This YAML file defines an SDK that supports multiple bases:
 
 .. code-block:: yaml
    :caption: sdk.yaml
 
-   name: go
+   name: multibase
    version: '0.1'
-   summary: Go SDK
+   summary: Multibase SDK
    description: |
-     This is my Go SDK description.
+     This is my multibase SDK description.
    license: GPL-3.0
    platforms:
      noble:
