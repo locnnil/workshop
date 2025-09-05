@@ -104,8 +104,6 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 		inited:   true,
 	}
 
-	var err error
-
 	if !filepath.IsAbs(dir) {
 		return nil, fmt.Errorf("directory %q must be absolute", dir)
 	}
@@ -193,10 +191,7 @@ var timeNow = time.Now
 func (m *Overlord) StartOfOperationTime() (time.Time, error) {
 	var opTime time.Time
 	err := m.State().Get("start-of-operation-time", &opTime)
-	if err == nil {
-		return opTime, nil
-	}
-	if err != nil && !errors.Is(err, state.ErrNoState) {
+	if !errors.Is(err, state.ErrNoState) {
 		return opTime, err
 	}
 

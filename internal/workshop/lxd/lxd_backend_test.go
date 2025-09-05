@@ -111,3 +111,32 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	c.Assert(cfg["nvidia.runtime"], check.Equals, "")
 	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "")
 }
+
+func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
+	err := lxdbackend.CheckServerVersion("6.3")
+	c.Assert(err, check.IsNil)
+
+	err = lxdbackend.CheckServerVersion("6.4")
+	c.Assert(err, check.IsNil)
+
+	err = lxdbackend.CheckServerVersion("6.2")
+	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
+
+	err = lxdbackend.CheckServerVersion("5.9")
+	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
+
+	err = lxdbackend.CheckServerVersion("unreachable")
+	c.Assert(err, check.ErrorMatches, ".*cannot parse LXD server version.*")
+
+	err = lxdbackend.CheckServerVersion("6")
+	c.Assert(err, check.ErrorMatches, ".*cannot parse LXD server version.*")
+
+	err = lxdbackend.CheckServerVersion("6.x")
+	c.Assert(err, check.ErrorMatches, ".*cannot parse LXD server version.*")
+
+	err = lxdbackend.CheckServerVersion("6.3.1")
+	c.Assert(err, check.IsNil)
+
+	err = lxdbackend.CheckServerVersion("6.2.9")
+	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
+}

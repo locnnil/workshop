@@ -1,0 +1,2 @@
+name: comp-check
+base: ubuntu@24.04

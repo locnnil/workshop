@@ -756,17 +756,18 @@ func New(opts *Options) (*Daemon, error) {
 	}
 
 	ovld, err := overlord.New(opts.Dir, d)
-	if err == errExpectedReboot {
+	switch {
+	case errors.Is(err, errExpectedReboot):
 		// we proceed without overlord until we reach Stop
 		// where we will schedule and wait again for a system restart.
 		// ATM we cannot do that in New because we need to satisfy
 		// systemd notify mechanisms.
 		d.rebootIsMissing = true
 		return d, nil
-	}
-	if err != nil {
+	case err != nil:
 		return nil, err
 	}
+
 	d.overlord = ovld
 	d.state = ovld.State()
 	return d, nil

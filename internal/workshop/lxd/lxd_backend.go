@@ -1,6 +1,7 @@
 package lxdbackend
 
 import (
+	"cmp"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -26,6 +27,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -71,6 +73,8 @@ func init() {
 	volumeGuardsLock.Lock()
 	defer volumeGuardsLock.Unlock()
 	volumeGuards = make(map[string]*volumeGuard)
+
+	syscheck.RegisterCheck(checkServerCapabilities)
 }
 
 type Backend struct {
@@ -123,6 +127,48 @@ To restart the workshop daemon: 'sudo snap restart workshop'`, err)
 	default:
 		return err
 	}
+}
+
+func checkVersion(version string) error {
+	const minimalLXDMajor = 6
+	const minimalLXDMinor = 3
+
+	comps := strings.Split(version, ".")
+
+	// LXD non-LTS versions are in the form of X.Y, while LTS versions are
+	// in the form of X.Y.Z. Accept both.
+	if len(comps) != 2 && len(comps) != 3 {
+		return fmt.Errorf("%w: cannot parse LXD server version %q", workshop.ErrIncompatibleBackend, version)
+	}
+
+	major, err := strconv.Atoi(comps[0])
+	minor, err2 := strconv.Atoi(comps[1])
+	if cmp.Or(err, err2) != nil {
+		return fmt.Errorf("%w: cannot parse LXD server version %q", workshop.ErrIncompatibleBackend, version)
+	}
+
+	if major < minimalLXDMajor || (major == minimalLXDMajor && minor < minimalLXDMinor) {
+		return fmt.Errorf("%w: LXD server version %q is not supported; required >= %d.%d.*", workshop.ErrIncompatibleBackend, version, minimalLXDMajor, minimalLXDMinor)
+	}
+	return nil
+}
+
+func checkServerCapabilities() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	conn, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
+	if err != nil {
+		return ErrorLxdBackend(err)
+	}
+	defer conn.Disconnect()
+
+	info, _, err := conn.GetServer()
+	if err != nil {
+		return err
+	}
+
+	return checkVersion(info.Environment.ServerVersion)
 }
 
 func New() (*Backend, error) {
@@ -195,6 +241,7 @@ func New() (*Backend, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if idx := slices.IndexFunc(networks, func(n api.Network) bool { return n.Name == networkName }); idx < 0 {
 		req := api.NetworksPost{
 			Name: networkName,

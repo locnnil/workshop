@@ -39,6 +39,7 @@ var (
 	ErrVolumeAlreadyExists = errors.New("volume already exists")
 	ErrVolumeInUse         = errors.New("volume is in use")
 	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
+	ErrIncompatibleBackend = errors.New("incompatible backend")
 
 	User = user.User{
 		Uid:      "1000",

@@ -27,6 +27,7 @@ import (
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/version"
 )
@@ -117,12 +118,7 @@ func runWatchdog(d *daemon.Daemon) (*time.Ticker, error) {
 	return wt, nil
 }
 
-var checkRunningConditionsRetryDelay = 300 * time.Second
-
-func sanityCheck() error {
-	// Nothing interesting to check for now. See snapd's sanity package for examples.
-	return nil
-}
+var checkRunningConditionsRetryDelay = 5 * time.Second
 
 func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	t0 := time.Now().Truncate(time.Millisecond)
@@ -152,7 +148,7 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	// the given error to any client.
 	var checkTicker <-chan time.Time
 	var tic *time.Ticker
-	if err := sanityCheck(); err != nil {
+	if err := syscheck.CheckSystem(); err != nil {
 		degradedErr := fmt.Errorf("system is not healthy: %w", err)
 		logger.Noticef("%s", degradedErr)
 		d.SetDegradedMode(degradedErr)
@@ -193,7 +189,7 @@ out:
 			logger.Noticef("Server exiting!")
 			break out
 		case <-checkTicker:
-			if err := sanityCheck(); err == nil {
+			if err := syscheck.CheckSystem(); err == nil {
 				d.SetDegradedMode(nil)
 				tic.Stop()
 			}
