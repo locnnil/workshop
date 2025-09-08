@@ -14,10 +14,10 @@ of the essential |ws_markup| activities.
 
 .. @artefact workshop (container)
 
-A workshop is a development environment running in a container,
+A *workshop* is a development environment running in a container,
 mapping your project to its contained dependencies.
 Here, you will practice all the major steps
-in the life cycle of a *workshop*,
+in the life cycle of a workshop,
 from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`,
 and :ref:`refreshing <tut_refresh>` it
 to :ref:`executing commands <tut_exec>` and
@@ -31,7 +31,7 @@ cover most of your daily needs with |ws_markup|.
 Install |ws_markup|
 -------------------
 
-Check the prerequisites,
+Prepare the prerequisites below,
 build and install |ws_markup|,
 then ensure it runs.
 
