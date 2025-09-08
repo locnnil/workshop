@@ -301,12 +301,12 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 		c.Assert(err, check.IsNil)
 
 		info := hdr.FileInfo()
+		entry := fmt.Sprintf("%s %s", info.Mode(), hdr.Name)
+		entries = append(entries, entry)
+
 		if info.IsDir() {
 			continue
 		}
-
-		entry := fmt.Sprintf("%s %s", info.Mode().Perm(), hdr.Name)
-		entries = append(entries, entry)
 
 		r, err := system.SystemSdkFs.Open(hdr.Name)
 		c.Assert(err, check.IsNil)
@@ -314,7 +314,7 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 		r.Close()
 	}
 
-	c.Check(entries, check.DeepEquals, []string{"-r--r--r-- meta/sdk.yaml"})
+	c.Check(entries, check.DeepEquals, []string{"drwxr-xr-x meta/", "-rw-r--r-- meta/sdk.yaml"})
 }
 
 func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
