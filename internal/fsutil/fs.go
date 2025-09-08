@@ -111,11 +111,10 @@ func (f Fs) MkdirAllChmodChown(path string, perm os.FileMode, uid, gid int) erro
 }
 
 func parentDir(path string) string {
-	idx := strings.LastIndexFunc(path, func(r rune) bool { return r != os.PathSeparator })
-	idx = max(idx, 0)
-	idx = strings.LastIndexByte(path[:idx], os.PathSeparator)
-	idx = max(idx, 0)
-	return path[:idx]
+	path = strings.TrimRight(path, string(os.PathSeparator))
+	path = strings.TrimRightFunc(path, func(r rune) bool { return r != os.PathSeparator })
+	path = strings.TrimRight(path, string(os.PathSeparator))
+	return path
 }
 
 // MkdirTemp is like os.MkdirTemp, but it treats an empty dir as the current directory.
