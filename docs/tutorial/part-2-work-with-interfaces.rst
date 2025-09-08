@@ -38,7 +38,6 @@ To check out the connected interfaces of a workshop, list the connections:
 
 .. code-block:: console
 
-   $ workshop launch  # In case you have removed the workshop accidentally
    $ workshop connections
 
      Interface  Plug               Slot              Notes
@@ -61,8 +60,8 @@ this depends on their built-in security policy defined by |ws_markup|.
 For instance, you can't use the ssh-agent interface
 without connecting it manually.
 
-In any case, you can connect and disconnect interfaces at will,
-confirming the connection state with :command:`workshop connections`:
+In any case, you can connect and disconnect interfaces at will.
+To check the connection state, run :command:`workshop connections`:
 
 .. @artefact workshop connect
 .. @artefact workshop disconnect
@@ -177,7 +176,13 @@ to the host system:
 
 
 The slot we're going to connect this plug to is defined by the SDK itself,
-so you don't have to add it manually.
+so you don't have to add it manually:
+
+.. code-block:: console
+
+   $ workshop connections --all
+
+
 
 Refresh the workshop to enable the tunnel;
 |ws_markup| will auto-connect the plug to the slot by matching their names
@@ -216,8 +221,8 @@ e.g., http://localhost:8989.
 Next steps
 ----------
 
-This was the last step in this tutorial section;
-you are now familiar with the essentials of interfaces in |ws_markup|.
+This was the last step in this tutorial section; you're halfway through!
+Now you are familiar with the essentials of interfaces in |ws_markup|.
 
 Your next step is to learn even more about workshop customization,
 creating experimental SDKs quickly

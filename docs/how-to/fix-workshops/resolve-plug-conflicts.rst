@@ -75,7 +75,7 @@ where the SDKs store their models
         mount      digits/torchvision:hub  digits/system:mount  bind.1
 
    Both plugs share the same :samp:`bind.1` note,
-   confirming that they reference the same mount.
+   which implies they reference the same mount.
 
 
 #. Any operation on one side automatically applies to the other.

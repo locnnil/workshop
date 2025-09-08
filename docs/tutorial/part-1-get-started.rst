@@ -144,9 +144,8 @@ Define, add SDKs
 ~~~~~~~~~~~~~~~~
 
 First, you need to define a workshop.
-A definition lists the components of a workshop
-to be instantiated at launch
-and is stored in your project directory.
+A definition is a YAML file that is stored in your project directory;
+it lists the components of the workshop to be instantiated at launch.
 
 .. @artefact sdkcraft (CLI)
 .. @artefact SDK
@@ -526,7 +525,7 @@ with :command:`workshop changes`:
 
 Changes are enacted atomically to ensure workshops stay operational.
 Any change must have all its smaller steps, or tasks, succeed;
-otherwise, it will be undone.
+otherwise, it will be reverted.
 
 To look at the latest change,
 run the :command:`workshop tasks` command without an argument.

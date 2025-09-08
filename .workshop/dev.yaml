@@ -13,7 +13,7 @@ sdks:
       sphinx-build:
         interface: tunnel
         endpoint: 8000
-actions:
+scripts:
   docs-html: |
     make -C docs/ html
   docs-run: |
