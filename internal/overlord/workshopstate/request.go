@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"maps"
 	"os"
 	"os/user"
@@ -256,6 +255,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (sdk.R
 	if err != nil {
 		return sdk.Revision{}, fmt.Errorf("SDK %q not found: %w", "try-"+sk, err)
 	}
+	defer root.Close()
 
 	file, filename, err := findTrySdkFile(root, sk, arch.DpkgArchitecture(), base)
 	if err != nil {
@@ -347,15 +347,13 @@ func findTrySdkFile(root *os.Root, sk, arch, base string) (*os.File, string, err
 }
 
 func readTrySdkMetadata(root *os.Root, filename string) (string, string, error) {
-	fs := root.FS().(fs.ReadFileFS)
-
-	content, err := fs.ReadFile(filename + ".sha3-384")
+	content, err := root.ReadFile(filename + ".sha3-384")
 	if err != nil {
 		return "", "", prependRootPath(root, err)
 	}
 	digest := strings.TrimSpace(string(content))
 
-	content, err = fs.ReadFile(filename + ".yaml")
+	content, err = root.ReadFile(filename + ".yaml")
 	if err != nil {
 		return "", "", prependRootPath(root, err)
 	}
