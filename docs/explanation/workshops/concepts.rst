@@ -123,7 +123,7 @@ This is the first layer of the workshop,
 upon which all other components are applied.
 
 For details on how the images are handled behind the scenes,
-see :ref:`exp_arch_install_images`.
+see :ref:`exp_arch_images`.
 
 
 .. _exp_workshop_definition_sdks:
@@ -170,7 +170,7 @@ the workshop reverts to its previous state.
 The cloned file systems are used to restore the deleted snapshots.
 
 For details on how |ws_markup| leverages ZFS,
-see :ref:`exp_arch_install_storage`.
+see :ref:`exp_arch_zfs_storage`.
 
 
 .. _exp_workshop_definition_connections:
@@ -273,7 +273,7 @@ right in the definition file.
 
 Actions are not part of the layered snapshot system at all.
 They stay in the definition,
-and are parsed by the :ref:`daemon <exp_arch_install_daemon>`
+and are parsed by the :ref:`daemon <exp_arch_daemon>`
 every time the :command:`workshop run` command is executed.
 This means the users can add or modify actions and use them immediately,
 without needing to refresh or restart the workshop.

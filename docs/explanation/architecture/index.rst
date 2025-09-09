@@ -3,12 +3,13 @@
 Architecture
 ============
 
-This section outlines the installation process for |ws_markup|
-and provides a thorough overview of its core architecture.
+This section provides a thorough overview of |ws_markup|'s core architecture
+and runtime behavior.
 Understanding these fundamentals is key
 to effectively using and managing |ws_markup| environments.
 
 .. toctree::
    :maxdepth: 1
 
-   installation
+   components
+   runtime-behavior
