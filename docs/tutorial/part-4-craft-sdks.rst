@@ -529,7 +529,11 @@ To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
 
 
 A :samp:`channel` is not needed here;
-the SDK is installed from the try area when you refresh the workshop.
+the SDK is installed from the try area when you refresh the workshop:
+
+.. code-block:: console
+
+   $ workshop refresh
 
 
 .. _how_sdkcraft_publish:
