@@ -29,31 +29,17 @@ in our docs.
 Installation
 ~~~~~~~~~~~~
 
-Workshop requires
-`LXD 6.3+ <https://canonical.com/lxd>`_
-for low-level operation.
-
-Check whether it's configured:
+Authenticate to the Snap Store and install the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
 
 .. code-block:: console
 
-   lxc info | grep 'server_version:'
-
-     server_version: "6.3"
-
-If the command displays an older version
-or returns an error indicating LXD is missing,
-install a recent LXD version with ``snap``:
-
-.. code-block:: console
-
-   sudo snap install lxd --channel=6/stable  # to install
-   sudo snap refresh lxd --channel=6/stable  # to update
+   sudo snap login
+   sudo snap install --classic workshop
 
 
-Next, download the latest Workshop snap from the
-`Releases <https://github.com/canonical/workshop/releases/>`_
-page on GitHub and install it,
+Alternatively, you can download the latest Workshop snap from the
+`Releases_` page on GitHub and install it,
 using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
@@ -63,6 +49,22 @@ for example:
 .. code-block:: console
 
    sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
+
+
+Prerequisites
+~~~~~~~~~~~~~
+
+Workshop requires
+`LXD 6.3+ <https://canonical.com/lxd>`_
+for low-level operation.
+
+If the ``snap install`` command reports an issue with LXD,
+install a recent LXD version with ``snap``:
+
+.. code-block:: console
+
+   sudo snap install --channel=6/stable lxd  # to install
+   sudo snap refresh --channel=6/stable lxd  # to update
 
 
 Launching workshops

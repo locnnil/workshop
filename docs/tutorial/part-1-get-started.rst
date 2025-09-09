@@ -31,44 +31,48 @@ cover most of your daily needs with |ws_markup|.
 Install |ws_markup|
 -------------------
 
-Prepare the prerequisites below,
-build and install |ws_markup|,
+Install |ws_markup|,
+upgrading the prerequisites if needed,
 then ensure it runs.
 
+.. @artefact installation
+.. @artefact workshopd
+.. @artefact workshop (CLI)
 
-Prepare LXD
-~~~~~~~~~~~
+Authenticate to the Snap Store and install the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+
+.. code-block:: console
+
+   $ sudo snap login
+   $ sudo snap install --classic workshop
+
+
+Prerequisites
+~~~~~~~~~~~~~
 
 |ws_markup| relies on
 `LXD 6.3+ <https://canonical.com/lxd>`_
 for low-level operation
 and uses its
-`API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
+`REST API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to handle individual *workshops*.
-Check whether it's properly configured:
 
-.. code-block:: console
-
-   $ lxc info | grep 'server_version:'
-
-     server_version: "6.3"
-
-
-If the command displays an older version
-or returns an error indicating LXD is missing,
+If the :command:`snap install` command reports an issue with LXD,
 install a recent LXD version with :program:`snap`.
+
 To install it from scratch:
 
 .. code-block:: console
 
-   $ sudo snap install lxd --channel=6/stable
+   $ sudo snap install --channel=6/stable lxd
 
 
 To refresh an existing installation:
 
 .. code-block:: console
 
-   $ sudo snap refresh lxd --channel=6/stable
+   $ sudo snap refresh --channel=6/stable lxd
 
 
 .. note::
@@ -83,31 +87,6 @@ To refresh an existing installation:
    is enabled and running.
    Again, refer to LXD documentation
    and your distribution's manuals for guidance.
-
-
-With LXD properly installed and started,
-proceed to installing |ws_markup|.
-
-
-Install
-~~~~~~~
-
-.. @artefact installation
-.. @artefact workshopd
-.. @artefact workshop (CLI)
-
-Download the latest snap from |ws_markup|'s "Releases" page on GitHub:
-:literalref:`https://github.com/canonical/workshop/releases/`
-
-
-Browse to the download directory and install the snap using the options
-`--dangerous <https://snapcraft.io/docs/install-modes>`_
-and
-`--classic <https://snapcraft.io/docs/install-modes>`_:
-
-.. code-block:: console
-
-   $ sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
 
 
 Shell integration (optional)

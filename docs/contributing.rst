@@ -429,8 +429,8 @@ To be able to run the build, install ``snapcraft`` and ``lxd`` using ``snap``:
 
 .. code-block:: console
 
-   sudo snap install snapcraft --classic
-   sudo snap install lxd
+   sudo snap install --classic snapcraft
+   sudo snap install --channel=6/stable lxd
 
 
 Add the current user to the ``lxd`` group
