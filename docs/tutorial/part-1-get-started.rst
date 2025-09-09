@@ -199,10 +199,14 @@ list the workshops in the project directory:
      ~/ollama-python-project  dev       Off     -
 
 
-As the output suggests, your newly defined workshop is *Off*,
+As the command output suggests, your newly defined workshop is *Off*,
 so it needs to be launched.
 
 .. note::
+
+   The command lists all workshops within the project;
+   the tutorial focuses on a single-workshop setup,
+   but your project can have multiple workshops defined.
 
    For a detailed explanation of the workshop status values,
    see the :ref:`exp_workshop_status` section.
