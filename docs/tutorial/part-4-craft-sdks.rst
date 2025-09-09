@@ -518,8 +518,7 @@ you can test it in-place before uploading it to the Store:
 
 
 The command copies the SDK to a special *try area*.
-To use it in a workshop, add a prefix: :samp:`try-<NAME>`;
-a :samp:`channel` is not required in this case:
+To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -527,6 +526,14 @@ a :samp:`channel` is not required in this case:
    sdks:
      # ...
      - name: try-ollama
+
+
+A :samp:`channel` is not needed here;
+the SDK is installed from the try area when you refresh the workshop:
+
+.. code-block:: console
+
+   $ workshop refresh
 
 
 .. _how_sdkcraft_publish:

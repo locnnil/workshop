@@ -260,13 +260,6 @@ just run :command:`workshop sketch-sdk` again to update your sketch SDK.
 Repeat this as often as needed until it works the way you want.
 
 
-.. note::
-
-   You can only have one sketch SDK per workshop at a time;
-   there's no way to create :samp:`sketch-foo`, :samp:`sketch-draft`,
-   :samp:`sketch-final-final`, and so on.
-
-
 Stash and restore
 -----------------
 
@@ -295,14 +288,35 @@ To restore the stashed SDK:
    $ workshop sketch-sdk --restore
 
 
+Explore sketches
+----------------
+
+You can only have one sketch SDK per workshop at a time;
+there's no way to add :samp:`sketch-foo`, :samp:`sketch-draft`,
+:samp:`sketch-final-final`, and so on.
+However, a project may contain multiple workshops,
+each with its own sketch SDK.
+
+.. @artefact workshop sketches
+
+To explore the available sketches in your project and their respective states,
+use the :command:`workshop sketches` command:
+
+.. code-block:: console
+
+   $ workshop sketches
+
+
+
 Convert to in-project SDK
 -------------------------
 
 .. @artefact in-project SDK
 .. @artefact SDK Store
 
-If you're satisfied with your sketch SDK,
-you can convert it into an :ref:`in-project SDK <exp_in_project_sdk>`.
+If you're happy with your sketch SDK,
+your first option is to convert it into an
+:ref:`in-project SDK <exp_in_project_sdk>`.
 This makes it a permanent, version-controllable part of your project,
 shareable with your team;
 a good step before deciding to publish it to the SDK Store for wider use.
@@ -379,7 +393,8 @@ and can be shared with collaborators or CI systems.
 Clean up
 --------
 
-To remove the sketch SDK permanently:
+If you're not quite satisfied with your sketching experiments,
+your second option is to remove the sketch SDK permanently:
 
 .. code-block:: console
 
@@ -391,17 +406,6 @@ Also, note that :command:`workshop remove` removes the sketch SDK,
 as you could expect,
 including its stashed version.
 
-To list all sketch SDKs in a project:
-
-.. @artefact workshop sketches
-
-.. code-block:: console
-
-   $ workshop sketches
-
-
-A project can have multiple workshops;
-hence the need to browse the respective sketches.
 
 .. _tut_remove:
 
