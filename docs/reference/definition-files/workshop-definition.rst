@@ -267,6 +267,7 @@ Mount interface plugs can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They are described by the following attributes:
 
 .. @artefact mount interface attributes
+.. @artefact $SDK
 
 .. list-table::
    :header-rows: 1
@@ -280,7 +281,9 @@ They are described by the following attributes:
    * - :samp:`workshop-target` (required)
      - string
      - A path inside the workshop
-       to be used as the plug's target directory.
+       to be used as the plug's target directory;
+       :file:`/project/` or :envvar:`$SDK`-based paths can be used;
+       :envvar:`$SDK` expands into the SDK's installation path in the workshop.
 
    * - :samp:`mode`
      - integer
@@ -332,7 +335,7 @@ They are described by the following attributes:
      - string
      - A path inside the workshop
        to be used as the slot's source directory;
-       :file:`/project` or :envvar:`$SDK`-based paths can be used;
+       :file:`/project/` or :envvar:`$SDK`-based paths can be used;
        :envvar:`$SDK` expands into the SDK's installation path in the workshop.
 
 

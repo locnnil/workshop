@@ -224,6 +224,47 @@ plugs:
 	c.Check(plug.Attrs["gid"], check.Equals, int64(0))
 }
 
+func (s *mountSuite) TestSanitizePlugSDK(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+plugs:
+ mount-plug:
+  interface: mount
+  workshop-target: $SDK
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["workshop-target"], check.Equals, "/var/lib/workshop/sdk/mount-slot-sdk")
+}
+
+func (s *mountSuite) TestSanitizePlugSDKSubdir(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+plugs:
+ mount-plug:
+  interface: mount
+  workshop-target: ${SDK}/lib/x86_64-linux-gnu
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["workshop-target"], check.Equals, "/var/lib/workshop/sdk/mount-slot-sdk/lib/x86_64-linux-gnu")
+}
+
+func (s *mountSuite) TestSanitizePlugSDKUnclean(c *check.C) {
+	const mockSdkYaml = `name: mount-slot-sdk
+base: ubuntu@22.04
+plugs:
+ mount-plug:
+  interface: mount
+  workshop-target: $SDK/
+`
+	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
+	plug := info.Plugs["mount-plug"]
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, `mount plug "workshop-target" is not clean: "/var/lib/workshop/sdk/mount-slot-sdk/"`)
+}
+
 func (s *mountSuite) TestSanitizePlugSimpleNoTarget(c *check.C) {
 	const mockSdkYaml = `name: mount-slot-sdk
 base: ubuntu@22.04
@@ -233,7 +274,7 @@ plugs:
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	plug := info.Plugs["mount-plug"]
-	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, "mount plug must contain target path")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.ErrorMatches, `mount plug must contain "workshop-target"`)
 }
 
 func (s *mountSuite) TestSanitizePlugSimpleTargetRelative(c *check.C) {
@@ -452,7 +493,7 @@ slots:
 `
 	info := sdk.MockInfo(c, mockSdkYaml, s.projectId, "ws")
 	slot := info.Slots["mount-slot"]
-	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, "mount slot must contain source path")
+	c.Assert(interfaces.BeforePrepareSlot(s.iface, slot), check.ErrorMatches, `mount slot must contain "workshop-source"`)
 }
 
 func (s *mountSuite) TestSanitizeSlotAbsSourceFails(c *check.C) {

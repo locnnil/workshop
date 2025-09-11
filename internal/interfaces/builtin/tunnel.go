@@ -278,20 +278,20 @@ func (iface *tunnelInterface) MountConnectedPlug(spec *lxd_device.Specification,
 	}
 	switch entry.Direction {
 	case workshop.HostToWorkshop:
-		if err := expandPath(&entry.Listen, spec.User); err != nil {
+		if err := expandProxyPath(&entry.Listen, spec.User); err != nil {
 			return err
 		}
 		if err := authorizePath(entry.Listen, spec.User); err != nil {
 			return err
 		}
-		if err := expandPath(&entry.Connect, &workshop.User); err != nil {
+		if err := expandProxyPath(&entry.Connect, &workshop.User); err != nil {
 			return err
 		}
 	case workshop.WorkshopToHost:
-		if err := expandPath(&entry.Listen, &workshop.User); err != nil {
+		if err := expandProxyPath(&entry.Listen, &workshop.User); err != nil {
 			return err
 		}
-		if err := expandPath(&entry.Connect, spec.User); err != nil {
+		if err := expandProxyPath(&entry.Connect, spec.User); err != nil {
 			return err
 		}
 	}
@@ -366,7 +366,7 @@ func checkListenPort(listen workshop.ProxyTarget, direction workshop.ProxyDirect
 	return nil
 }
 
-func expandPath(target *workshop.ProxyTarget, user *user.User) error {
+func expandProxyPath(target *workshop.ProxyTarget, user *user.User) error {
 	if target.Protocol != "unix" {
 		return nil
 	}

@@ -93,16 +93,9 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 		}
 	}
 
-	target, ok := plug.Attrs["workshop-target"].(string)
-	if !ok || len(target) == 0 {
-		return fmt.Errorf("mount plug must contain target path")
-	}
-
-	if !filepath.IsAbs(target) {
-		return fmt.Errorf(`mount plug "workshop-target" must be absolute: %q`, target)
-	}
-	if filepath.Clean(target) != target {
-		return fmt.Errorf(`mount plug "workshop-target" is not clean: %q`, target)
+	path, err := parseMountPath(plug.Attrs, "plug", "workshop-target", plug.Sdk.Name)
+	if err != nil {
+		return err
 	}
 
 	if _, err := parseBool(plug.Attrs, "read-only", false); err != nil {
@@ -111,7 +104,7 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 
 	var fallbackUid, fallbackGid int64
 	for _, prefix := range []string{"/home/workshop", "/project", "/run/user/1000"} {
-		if target == prefix || strings.HasPrefix(target, prefix+string(filepath.Separator)) {
+		if path == prefix || strings.HasPrefix(path, prefix+string(filepath.Separator)) {
 			fallbackUid = workshop.Uid
 			fallbackGid = workshop.Gid
 			break
@@ -206,20 +199,43 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 			return fmt.Errorf(`unknown attribute for mount interface slot: %q`, name)
 		}
 	}
-	source, exist := slot.Attrs["workshop-source"]
+
+	_, err := parseMountPath(slot.Attrs, "slot", "workshop-source", slot.Sdk.Name)
+	return err
+}
+
+func parseMountPath(attrs map[string]interface{}, kind, key string, sk string) (string, error) {
+	attr, exist := attrs[key]
 	if !exist {
-		return fmt.Errorf("mount slot must contain source path")
+		return "", fmt.Errorf("mount %s must contain %q", kind, key)
 	}
-	path, ok := source.(string)
+	template, ok := attr.(string)
 	if !ok {
-		return fmt.Errorf(`mount slot "workshop-source" is not a string (found %T)`, source)
+		return "", fmt.Errorf(`mount %s %q is not a string (found %T)`, kind, key, attr)
 	}
 
+	path, err := expandMountPath(template, sk)
+	if err != nil {
+		return "", err
+	}
+
+	if !filepath.IsAbs(path) {
+		return "", fmt.Errorf(`mount %s %q must be absolute: %q`, kind, key, path)
+	}
+	if filepath.Clean(path) != path {
+		return "", fmt.Errorf(`mount %s %q is not clean: %q`, kind, key, path)
+	}
+
+	attrs[key] = path
+	return path, nil
+}
+
+func expandMountPath(template string, sk string) (string, error) {
 	var err error
-	path = os.Expand(path, func(s string) string {
+	path := os.Expand(template, func(s string) string {
 		switch s {
 		case "SDK":
-			return sdk.SdkDir(slot.Sdk.Name)
+			return sdk.SdkDir(sk)
 		case "$":
 			// Unescape $$ -> $.
 			return "$"
@@ -228,19 +244,11 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 			return ""
 		}
 	})
+
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	if !filepath.IsAbs(path) {
-		return fmt.Errorf(`mount slot "workshop-source" must be absolute: %q`, path)
-	}
-	if filepath.Clean(path) != path {
-		return fmt.Errorf(`mount slot "workshop-source" is not clean: %q`, path)
-	}
-
-	slot.Attrs["workshop-source"] = path
-	return nil
+	return path, nil
 }
 
 func (iface *mountInterface) setPlugAttrs(mount *workshop.Mount, plug *interfaces.ConnectedPlug) error {
