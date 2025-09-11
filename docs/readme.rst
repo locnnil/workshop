@@ -8,26 +8,38 @@ Workshop
 **A tool for defining and handling ephemeral development environments**.
 
 
-Getting Started
----------------
+Using Workshop
+--------------
 
-Follow the sections below,
-or refer to the
-`Tutorial
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/>`_
-in our docs for a more detailed introduction to Workshop.
+In the directory of the project
+that you want to use with Workshop,
+create a workshop definition file named ``workshop.yaml``
+to list your project's prerequisites,
+then run ``workshop launch``:
 
-To join the development effort, see `How to contribute <contributing.rst>`_.
+.. code-block:: yaml
+   :caption: workshop.yaml
 
-To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
-the SDK authoring tool for Workshop,
-jump straight to the
-`SDK crafting guide
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/craft-sdks/>`_
-in our docs.
+   name: dev
+   base: ubuntu@22.04
+   sdks:
+     - name: go
+       channel: 22.04/stable
+
+
+.. code-block:: console
+
+   workshop launch
+
+
+Workshop downloads and installs the SDKs your definition lists;
+the project is now ready to use them.
+
 
 Installation
-~~~~~~~~~~~~
+------------
+
+Workshop is supported on Ubuntu and other ``snap``-enabled Linux distributions.
 
 Authenticate to the Snap Store and install the snap
 using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
@@ -39,7 +51,7 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
 
 
 Alternatively, you can download the latest Workshop snap from the
-`Releases_` page on GitHub and install it,
+`Releases <releases/>`_ page on GitHub and install it,
 using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
@@ -67,29 +79,37 @@ install a recent LXD version with ``snap``:
    sudo snap refresh --channel=6/stable lxd  # to update
 
 
-Launching workshops
--------------------
+Documentation
+-------------
 
-In the directory of the project
-that you want to use with Workshop,
-create a workshop definition file named ``workshop.yaml``
-to list your project's prerequisites,
-then run ``workshop launch``:
+Refer to the
+`Tutorial
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/>`_
+in our docs for a detailed introduction to Workshop.
 
-.. code-block:: yaml
-   :caption: workshop.yaml
-
-   name: dev
-   base: ubuntu@22.04
-   sdks:
-     - name: go
-       channel: 22.04/stable
+To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
+the SDK authoring tool for Workshop,
+jump straight to the
+`SDK crafting guide
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/craft-sdks/>`_
+in our docs.
 
 
-.. code-block:: console
+Community and Support
+---------------------
 
-   workshop launch
+Use the following resources for communication, support, and feedback:
+
+- `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
+
+- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
+
+- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
+
+- `Product and documentation feedback <issues/>`__
 
 
-Workshop downloads and installs the SDKs your definition lists;
-the project is now ready to use them.
+Contributions
+-------------
+
+To join the development effort, see `How to contribute <contributing.rst>`_.
