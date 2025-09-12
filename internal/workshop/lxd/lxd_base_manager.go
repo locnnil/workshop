@@ -250,7 +250,8 @@ func (b *Backend) maybeUpdateAlias(conn lxd.InstanceServer, base, fingerprint st
 }
 
 var (
-	imgDownloadSS = regexp.MustCompile(`^rootfs: (?P<done>[0-9]+)% (?P<speed>\([\w/\.]+\))$`)
+	// rootfs: 95% (37.46MB/s)
+	imgDownloadSS = regexp.MustCompile(`^(?:rootfs(?: delta)?: )?(?P<done>[0-9]+)% (?P<speed>\([\w/\.]+\))$`)
 	// 225.19MB (37.46MB/s)
 	imgDownloadLXD = regexp.MustCompile(`^(?P<done>[0-9\.]+)(?P<mult>\w+) (?P<speed>\([\w/\.]+\))$`)
 )
@@ -260,47 +261,44 @@ var (
 // inconsistent between operations that handleLaunchUpdate accomodates by
 // looking for specific progress labels. NOTE: There is no guarantee that the
 // LXD's progress reporting formant won't change; this meta data parser is valid
-// for LXD 5.21.
+// for LXD 6.5.
 func handleLaunchUpdate(opmeta map[string]interface{}, imsize int) *downloadUpdate {
-	for key, value := range opmeta {
-		if key == "download_progress" {
-			upd, ok := value.(string)
-			if !ok {
-				continue
-			}
-
-			// check if the response metadata comes from a simplestream protocol
-			if data := imgDownloadSS.FindStringSubmatch(upd); len(data) == 3 {
-				done, err := strconv.Atoi(data[1])
-				if err != nil {
-					// just in case, but this is ensured by the regex
-					continue
-				}
-				// now, "done" is the percentage value. The state.Task progress
-				// reporting expects to have bytes all the way up to the client
-				// to calculate the download speed. Thus, covert percentages to
-				// bytes.
-				donebytes := imsize * done / 100
-				return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
-			}
-
-			// check if the response metadata comes from a lxd protocol
-			if data := imgDownloadLXD.FindStringSubmatch(upd); len(data) == 4 {
-				done, err := strconv.ParseFloat(data[1], 32)
-				if err != nil {
-					continue
-				}
-				// ParseByteSizeString understands only int, so we use it to get
-				// a multiplier for "done".
-				multiplier, err := units.ParseByteSizeString("1" + data[2])
-				if err != nil {
-					continue
-				}
-				donebytes := int(done) * int(multiplier)
-				return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
-			}
-		}
+	upd, ok := opmeta["download_progress"].(string)
+	if !ok {
+		return nil
 	}
+
+	// check if the response metadata comes from a simplestream protocol
+	if data := imgDownloadSS.FindStringSubmatch(upd); len(data) == 3 {
+		done, err := strconv.Atoi(data[1])
+		if err != nil {
+			// just in case, but this is ensured by the regex
+			return nil
+		}
+		// now, "done" is the percentage value. The state.Task progress
+		// reporting expects to have bytes all the way up to the client
+		// to calculate the download speed. Thus, covert percentages to
+		// bytes.
+		donebytes := imsize * done / 100
+		return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
+	}
+
+	// check if the response metadata comes from a lxd protocol
+	if data := imgDownloadLXD.FindStringSubmatch(upd); len(data) == 4 {
+		done, err := strconv.ParseFloat(data[1], 32)
+		if err != nil {
+			return nil
+		}
+		// ParseByteSizeString understands only int, so we use it to get
+		// a multiplier for "done".
+		multiplier, err := units.ParseByteSizeString("1" + data[2])
+		if err != nil {
+			return nil
+		}
+		donebytes := int(done) * int(multiplier)
+		return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
+	}
+
 	return nil
 }
 
