@@ -24,6 +24,7 @@ Releases
 .. toctree::
    :hidden:
 
+   Workshop v0.1.24 <v0.1.24>
    Workshop v0.1.23 <v0.1.23>
    Workshop v0.1.22 <v0.1.22>
    Workshop v0.1.21 <v0.1.21>
@@ -35,10 +36,7 @@ Releases
    Workshop v0.1.14 <v0.1.14>
    Workshop v0.1.13 <v0.1.13>
    Workshop v0.1.12 <v0.1.12>
-   Workshop v0.1.11 <v0.1.11>
-   Workshop v0.1.10 <v0.1.10>
-   Workshop v0.1.9 <v0.1.9>
-   Workshop v0.1.8 <v0.1.8>
+
 
 
 We provide two binaries: |ws_markup| and |sdk_markup|.
@@ -56,10 +54,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.23 <v0.1.23>`
+- :doc:`Workshop v0.1.24 <v0.1.24>`
 
 Recent versions:
 
+- :doc:`Workshop v0.1.23 <v0.1.23>`
 - :doc:`Workshop v0.1.22 <v0.1.22>`
 - :doc:`Workshop v0.1.21 <v0.1.21>`
 - :doc:`Workshop v0.1.20 <v0.1.20>`
@@ -71,14 +70,14 @@ Recent versions:
 - :doc:`Workshop v0.1.14 <v0.1.14>`
 - :doc:`Workshop v0.1.13 <v0.1.13>`
 - :doc:`Workshop v0.1.12 <v0.1.12>`
-- :doc:`Workshop v0.1.11 <v0.1.11>`
-- :doc:`Workshop v0.1.10 <v0.1.10>`
-- :doc:`Workshop v0.1.9 <v0.1.9>`
-- :doc:`Workshop v0.1.8 <v0.1.8>`
 
 
 Older versions:
 
+- `Workshop v0.1.11 <https://github.com/canonical/workshop/releases/tag/v0.1.11>`_
+- `Workshop v0.1.10 <https://github.com/canonical/workshop/releases/tag/v0.1.10>`_
+- `Workshop v0.1.9 <https://github.com/canonical/workshop/releases/tag/v0.1.9>`_
+- `Workshop v0.1.8 <https://github.com/canonical/workshop/releases/tag/v0.1.8>`_
 - `Workshop v0.1.7 <https://github.com/canonical/workshop/releases/tag/v0.1.7>`_
 - `Workshop v0.1.6 <https://github.com/canonical/workshop/releases/tag/v0.1.6>`_
 - `Workshop v0.1.5 <https://github.com/canonical/workshop/releases/tag/v0.1.5>`_
@@ -150,7 +149,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.24_amd64.snap
 
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.

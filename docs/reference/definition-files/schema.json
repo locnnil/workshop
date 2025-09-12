@@ -8,7 +8,7 @@
     "name": {
       "type": "string",
       "description": "Name of the workshop.",
-      "pattern": "^[a-z](-?[a-z0-9])*$",
+      "pattern": "^[a-z](?:-?[a-z0-9])*$",
       "errorMessage": "A workshop's name must start with a letter and can only include digits, lowercase letters, and hyphens joining them."
     },
     "base": {
@@ -37,7 +37,7 @@
           "channel": {
             "type": "string",
             "description": "Channel used for the SDK. May be empty when the SDK is installed from a local source.",
-            "pattern": "^(?:[a-zA-Z0-9.-]+/(stable|candidate|beta|edge)|)$",
+            "pattern": "^(?:[a-z0-9](?:[.-]?[a-z0-9])*/(?:stable|candidate|beta|edge)|)$",
             "errorMessage": "Channel must be empty or follow the pattern <track>/<risk> (e.g., 'latest/stable')."
           },
           "plugs": {
@@ -131,13 +131,25 @@
       "type": "object",
       "description": "List of actions to be run in the workshop.",
       "patternProperties": {
-        "^[a-z](-?[a-z0-9])*$": {
+        "^[a-z](?:-?[a-z0-9])*$": {
           "type": "string",
           "description": "Shell script."
         }
       },
       "additionalProperties": false,
       "errorMessage": "Action names must be unique and only appear once."
+    },
+    "scripts": {
+      "type": "object",
+      "description": "List of scripts to be run in the workshop (deprecated, use 'actions' instead).",
+      "patternProperties": {
+        "^[a-z](?:-?[a-z0-9])*$": {
+          "type": "string",
+          "description": "Shell script."
+        }
+      },
+      "additionalProperties": false,
+      "errorMessage": "Script names must be unique and only appear once."
     }
   },
   "required": [
