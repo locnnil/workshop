@@ -239,7 +239,8 @@ Mount interface
 
 .. @artefact mount interface
 
-A mount plug in the definition must specify the plug name, the interface, the target directory, its permissions and ownership, and optionally whether to be read-only:
+A mount plug in the definition must specify the plug name, the interface, and the target directory.
+The plug can specify permissions and ownership for the target, and whether it is read-only:
 
 .. code-block:: yaml
    :caption: sdk.yaml
@@ -254,9 +255,12 @@ A mount plug in the definition must specify the plug name, the interface, the ta
         gid: <GROUP ID> # optional
         read-only: <true | false> # optional
 
+.. @artefact $SDK
 
 This mounts a directory automatically created by |ws_markup| on the host
 to the :samp:`workshop-target` directory.
+The :envvar:`$SDK` variable can be used to refer to the SDK installation path
+inside the workshop.
 The host directory will be created under the path
 designated by the :envvar:`$XDG_DATA_HOME` variable.
 The workshop directory will be created using the given :samp:`mode`, :samp:`uid`, and :samp:`gid`.
