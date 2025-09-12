@@ -8,71 +8,14 @@ Workshop
 **A tool for defining and handling ephemeral development environments**.
 
 
-Getting Started
----------------
-
-Follow the sections below,
-or refer to the
-`Tutorial
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/>`_
-in our docs for a more detailed introduction to Workshop.
-
-To join the development effort, see `How to contribute <contributing.rst>`_.
-
-To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
-the SDK authoring tool for Workshop,
-jump straight to the
-`SDK crafting guide
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/craft-sdks/>`_
-in our docs.
-
-Installation
-~~~~~~~~~~~~
-
-Workshop requires
-`LXD 6.3+ <https://canonical.com/lxd>`_
-for low-level operation.
-
-Check whether it's configured:
-
-.. code-block:: console
-
-   lxc info | grep 'server_version:'
-
-     server_version: "6.3"
-
-If the command displays an older version
-or returns an error indicating LXD is missing,
-install a recent LXD version with ``snap``:
-
-.. code-block:: console
-
-   sudo snap install lxd --channel=6/stable  # to install
-   sudo snap refresh lxd --channel=6/stable  # to update
-
-
-Next, download the latest Workshop snap from the
-`Releases <https://github.com/canonical/workshop/releases/>`_
-page on GitHub and install it,
-using the options
-`--dangerous <https://snapcraft.io/docs/install-modes>`_
-and
-`--classic <https://snapcraft.io/docs/install-modes>`_,
-for example:
-
-.. code-block:: console
-
-   sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
-
-
-Launching workshops
--------------------
+Using Workshop
+--------------
 
 In the directory of the project
 that you want to use with Workshop,
 create a workshop definition file named ``workshop.yaml``
 to list your project's prerequisites,
-then run ``workshop launch``:
+then run ``workshop launch``:
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -91,3 +34,82 @@ then run ``workshop launch``:
 
 Workshop downloads and installs the SDKs your definition lists;
 the project is now ready to use them.
+
+
+Installation
+------------
+
+Workshop is supported on Ubuntu and other ``snap``-enabled Linux distributions.
+
+Authenticate to the Snap Store and install the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+
+.. code-block:: console
+
+   sudo snap login
+   sudo snap install --classic workshop
+
+
+Alternatively, you can download the latest Workshop snap from the
+`Releases <releases/>`_ page on GitHub and install it,
+using the options
+`--dangerous <https://snapcraft.io/docs/install-modes>`_
+and
+`--classic <https://snapcraft.io/docs/install-modes>`_,
+for example:
+
+.. code-block:: console
+
+   sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
+
+
+Prerequisites
+~~~~~~~~~~~~~
+
+Workshop requires
+`LXD 6.3+ <https://canonical.com/lxd>`_
+for low-level operation.
+
+If the ``snap install`` command reports an issue with LXD,
+install a recent LXD version with ``snap``:
+
+.. code-block:: console
+
+   sudo snap install --channel=6/stable lxd  # to install
+   sudo snap refresh --channel=6/stable lxd  # to update
+
+
+Documentation
+-------------
+
+Refer to the
+`Tutorial
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/>`_
+in our docs for a detailed introduction to Workshop.
+
+To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
+the SDK authoring tool for Workshop,
+jump straight to the
+`SDK crafting guide
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/craft-sdks/>`_
+in our docs.
+
+
+Community and Support
+---------------------
+
+Use the following resources for communication, support, and feedback:
+
+- `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
+
+- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
+
+- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
+
+- `Product and documentation feedback <issues/>`__
+
+
+Contributions
+-------------
+
+To join the development effort, see `How to contribute <contributing.rst>`_.

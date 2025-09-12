@@ -27,8 +27,20 @@ The commands you're about to run
 cover most of your daily needs with |sdk_markup|.
 
 
-Check the prerequisites
------------------------
+Install |sdk_markup|
+--------------------
+
+Authenticate to the Snap Store and install the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+
+.. code-block:: console
+
+   $ sudo snap login
+   $ sudo snap install --classic sdkcraft
+
+
+Prerequisites
+~~~~~~~~~~~~~
 
 |sdk_markup| relies on
 `LXD 6.3+ <https://canonical.com/lxd>`_
@@ -37,30 +49,21 @@ using its
 `REST API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to craft the SDKs.
 
-Check whether it's properly configured:
-
-.. code-block:: console
-
-   $ lxc info | grep 'server_version:'
-
-     server_version: "6.3"
-
-
-If the command displays an older version
-or returns an error indicating LXD is missing,
+If the :command:`snap install` command reports an issue with LXD,
 install a recent LXD version with :program:`snap`.
+
 To install it from scratch:
 
 .. code-block:: console
 
-   $ sudo snap install lxd --channel=6/stable
+   $ sudo snap install --channel=6/stable lxd
 
 
 To refresh an existing installation:
 
 .. code-block:: console
 
-   $ sudo snap refresh lxd --channel=6/stable
+   $ sudo snap refresh --channel=6/stable lxd
 
 
 .. note::
@@ -75,32 +78,6 @@ To refresh an existing installation:
    is enabled and running.
    Again, refer to LXD documentation
    and your distribution's manuals for guidance.
-
-
-Install |sdk_markup|
---------------------
-
-Download the latest snap from |sdk_markup|'s
-`Releases <https://github.com/canonical/sdkcraft/releases/>`__
-page on GitHub.
-
-Install it using the
-`--dangerous <https://snapcraft.io/docs/install-modes>`_
-and
-`--classic <https://snapcraft.io/docs/install-modes>`_
-options, for example:
-
-.. code-block:: console
-
-   $ sudo snap install --dangerous --classic ./sdkcraft_0.1.12_amd64.snap
-
-
-The snap installs the :program:`sdkcraft` CLI tool.
-Make sure it runs:
-
-.. code-block:: console
-
-   $ sdkcraft --help
 
 
 .. _how_sdkcraft_init:

@@ -136,13 +136,22 @@ see the next section for guidance.
 Upgrade instructions
 --------------------
 
-To upgrade, visit our `GitHub page
-<https://github.com/canonical/workshop/releases>`_
+Authenticate to the Snap Store and refresh the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+
+.. code-block:: console
+
+   $ sudo snap login
+   $ sudo snap refresh --classic workshop
+
+
+Alternatively, visit our `Releases_` page on GitHub
 to download and install the latest snap:
 
 .. code-block:: console
 
    $ sudo snap install --dangerous --classic ./workshop_0.1.23_amd64.snap
+
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
 
