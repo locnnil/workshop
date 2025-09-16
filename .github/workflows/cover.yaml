@@ -8,11 +8,12 @@ on:
     - cron: "0 0 */2 * *"
   workflow_dispatch:
 
-# Cancel currently-running builds when pushing new commits to a PR or branch
-# https://stackoverflow.com/a/72408109
+# Cancel currently-running builds when pushing new commits to a PR.
+# Prevent TICS qserver from running concurrently.
+# https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Call spread and unit tests as reusable workflows. This is the most
