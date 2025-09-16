@@ -188,25 +188,6 @@ type File struct {
 	Actions     map[string]Action `yaml:"actions,omitempty"`
 }
 
-func (f *File) UnmarshalYAML(value *yaml.Node) error {
-	type file File
-	if err := value.Decode((*file)(f)); err != nil {
-		return err
-	}
-	var scripts struct {
-		Scripts map[string]Action `yaml:"scripts,omitempty"`
-	}
-	if err := value.Decode(&scripts); err != nil {
-		return err
-	}
-	if f.Actions == nil {
-		f.Actions = scripts.Scripts
-	} else {
-		maps.Copy(f.Actions, scripts.Scripts)
-	}
-	return nil
-}
-
 func (a Action) String() string {
 	// Trim newlines, then append a newline for multi-line scripts.
 	script := strings.Trim(string(a), "\n")
