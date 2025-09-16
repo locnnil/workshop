@@ -70,15 +70,15 @@ func convertValue(value reflect.Value, outputType reflect.Type) (reflect.Value, 
 	case reflect.Float64:
 		// Special case: encoding/json can mangle int64 -> float64.
 		v, ok := maybeFloatToInt(value.Float())
-		// Recall that -0.0 == 0.0 in Go (and IEEE 754).
 		if ok && outputType.Kind() == reflect.Int64 {
-			return reflect.ValueOf(int64(v)), nil
+			return reflect.ValueOf(v), nil
 		}
 	}
 	return nullValue, fmt.Errorf(`cannot convert value "%v" into a %v`, value, outputType)
 }
 
 func maybeFloatToInt(v float64) (int64, bool) {
+	// Recall that -0.0 == 0.0 in Go (and IEEE 754).
 	if _, frac := math.Modf(v); frac != 0 {
 		return 0, false
 	}
@@ -94,7 +94,7 @@ func maybeFloatToInt(v float64) (int64, bool) {
 // the val parameter, which therefore must be a pointer.
 func SetValueFromAttribute(attrVal any, val any) error {
 	rt := reflect.TypeOf(val)
-	if rt.Kind() != reflect.Ptr || val == nil {
+	if rt.Kind() != reflect.Pointer || val == nil {
 		return errors.New("internal error: value must be a pointer")
 	}
 
