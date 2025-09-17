@@ -67,7 +67,7 @@ and report its health.
 
 Each hook is a shell script with domain-aware actions
 that |ws_markup| runs in the workshop
-at a particular life cycle stage
+at a particular lifecycle stage
 to ensure that the SDK stays functional.
 Specific examples include :samp:`setup-base`, :samp:`setup-project`,
 :samp:`save-state` and :samp:`restore-state`.

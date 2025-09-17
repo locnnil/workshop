@@ -10,7 +10,7 @@ Workshop status diagrams
 .. @artefact workshop status
 .. @artefact project
 
-During its life-cycle, a workshop goes through a number of states,
+During its lifecycle, a workshop goes through a number of states,
 which we call *statuses* to distinguish them from SDK states.
 The following partial diagrams represent each state
 with the commands that cause the workshop to transition to a different status.

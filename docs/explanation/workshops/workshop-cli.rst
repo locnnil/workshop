@@ -16,7 +16,7 @@ workshop (CLI)
 |ws_markup| includes an eponymous command-line utility,
 :command:`workshop`;
 it is the daily go-to instrument for regular users,
-with a set of commands that govern the entire life cycle of a
+with a set of commands that govern the entire lifecycle of a
 :ref:`workshop <exp_workshop>`.
 
 .. note::
@@ -50,7 +50,7 @@ There are several categories of commands that vary by their purpose:
    * - Start, stop
      - :command:`start`,
        :command:`stop`
-     - Begin and end the run-time life cycle of an existing workshop.
+     - Begin and end the run-time lifecycle of an existing workshop.
 
    * - Explore, troubleshoot
      - :command:`actions`,

@@ -279,7 +279,7 @@ and the :samp:`ollama-server` slot exposes the Ollama API on port 11434.
 
    You can't explicitly set the *host* directory for mount plugs here;
    this restriction prevents SDKs
-   from accessing any arbitrary data on the host file system.
+   from accessing any arbitrary data on the host filesystem.
    However, users who add your SDK to their workshops
    will be able to remount the plug elsewhere at run-time.
 
@@ -291,7 +291,7 @@ Add hooks
 
 To prepare the SDK for use,
 add the :ref:`hooks <exp_sdk_hooks>`
-that run at different stages of the workshop's life cycle,
+that run at different stages of the workshop's lifecycle,
 preparing the SDK for use or preserving its state during updates.
 
 Under :file:`ollama/`,

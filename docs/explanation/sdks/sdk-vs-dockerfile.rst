@@ -297,7 +297,7 @@ a complete :command:`docker run` command may look like this:
 
 
 In |ws_markup| and |sdk_markup|,
-additional file system mounts are defined by the SDK author or the user
+additional filesystem mounts are defined by the SDK author or the user
 using the :ref:`mount interface <exp_mount_interface>`:
 
 .. code-block:: yaml

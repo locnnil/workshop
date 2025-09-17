@@ -32,7 +32,7 @@ Main components
 
 - The :program:`workshopd` daemon runs as a background process
   with elevated privileges,
-  managing the complete workshop life cycle
+  managing the complete workshop lifecycle
   including container creation,
   SDK installation,
   interface coordination
@@ -83,7 +83,7 @@ Daemon
 .. @artefact workshopd
 
 The :program:`workshopd` daemon, a core component of |ws_markup|,
-is a :program:`systemd` service responsible for the complete workshop life cycle.
+is a :program:`systemd` service responsible for the complete workshop lifecycle.
 It uses LXD as its container backend
 and relies on the proven state package from :program:`snapd`
 to ensure that any changes to a workshop are handled in a transactional manner:
@@ -105,7 +105,7 @@ for secure local communication with the CLI.
 The API provides endpoints for all workshop operations:
 
 - Project management (:samp:`/v1/projects`)
-- Workshop life cycle operations (:samp:`/v1/projects/<ID>/workshops`)
+- Workshop lifecycle operations (:samp:`/v1/projects/<ID>/workshops`)
 - Workshop execution and control (:samp:`/v1/projects/<ID>/workshops/<NAME>/exec`)
 - Interface connection management (:samp:`/v1/connections`)
 - Change tracking and monitoring (:samp:`/v1/changes`)
@@ -139,7 +139,7 @@ For each user, :program:`workshopd` creates dedicated LXD projects
 that provide complete isolation between workshops
 on the same system.
 
-The LXD communication layer handles container life cycle,
+The LXD communication layer handles container lifecycle,
 storage management, network configuration,
 and device pass-through, with proper error handling
 for common issues like :program:`workshopd` availability
@@ -182,7 +182,7 @@ Management and isolation
 
 .. @artefact workshopd
 
-The :program:`workshopd` daemon manages the complete workshop life cycle,
+The :program:`workshopd` daemon manages the complete workshop lifecycle,
 including storage pool management,
 image management,
 network isolation,
@@ -198,7 +198,7 @@ Storage pool
 Workshop requires a minimum pool size of 5 GiB.
 
 The ZFS pool serves multiple purposes beyond simple container storage,
-managing container root file systems,
+managing container root filesystems,
 volumes for SDKs and SDK data persistence,
 snapshots for quick workshop updates and rollbacks,
 and cached container images.
@@ -308,7 +308,7 @@ Data flow between components:
 .. mermaid::
     :alt: Diagram showing the data flow between Workshop components.
           The user interacts with the CLI, which communicates with :program:`workshopd`.
-          workshopd manages LXD operations and handles workshop life cycle.
+          workshopd manages LXD operations and handles workshop lifecycle.
           LXD manages containers and storage, while the CLI provides user feedback.
           This does not show 'workshopctl' interactions for simplicity.
     :align: center

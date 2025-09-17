@@ -26,7 +26,7 @@ Customize workshops
 -------------------
 
 These topics address daily |ws_markup|-related scenarios,
-such as moving projects within the file system or adding custom actions:
+such as moving projects within the filesystem or adding custom actions:
 
 - :doc:`Add actions to workshops <customize-workshops/add-actions>`
 - :doc:`Forward ports <customize-workshops/forward-ports>`

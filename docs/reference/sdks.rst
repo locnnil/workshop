@@ -416,7 +416,7 @@ both sides use the same port.
 SDK hooks
 ---------
 
-|ws_markup| supports the following life cycle hooks,
+|ws_markup| supports the following lifecycle hooks,
 which can be defined when the SDK is built using |sdk_markup|:
 
 .. @artefact workshopctl

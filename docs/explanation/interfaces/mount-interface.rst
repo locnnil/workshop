@@ -8,7 +8,7 @@
 Mount interface
 ===============
 
-The mount interface securely exposes file system locations
+The mount interface securely exposes filesystem locations
 on the host (via the :ref:`system SDK <exp_system_sdk>` only) or in the workshop
 by mounting them inside the workshop.
 
@@ -58,7 +58,7 @@ will be mounted to it.
 This allows the workshops using this SDK to use the host directory
 (which |ws_markup| allocates automatically and doesn't expose otherwise)
 to persist the files placed there from inside the workshop
-in the host file system when the workshop stops.
+in the host filesystem when the workshop stops.
 
 
 .. _exp_mount_slot:
@@ -66,7 +66,7 @@ in the host file system when the workshop stops.
 Mount interface slot
 --------------------
 
-To let SDKs in a workshop access the host file system,
+To let SDKs in a workshop access the host filesystem,
 |ws_markup| provides a mount interface slot
 that multiple mount interface plugs can access.
 
@@ -151,7 +151,7 @@ This means a source directory is mounted to the target:
 
 
 Here, the source is set to an internal location (:samp:`...`)
-that |ws_markup| maintains on the host file system;
+that |ws_markup| maintains on the host filesystem;
 the SDKs can't set host locations explicitly for security reasons,
 but there's a way to do it manually.
 
@@ -171,7 +171,7 @@ for the target directory inside the workshop:
 
 First, the remount operation is attempted atomically;
 this usually succeeds if the new source is either a non-existent directory
-or an empty directory on the same file system as the current source.
+or an empty directory on the same filesystem as the current source.
 Otherwise, the remount only occurs if the workshop has been stopped earlier,
 which prevents data corruption.
 

@@ -187,7 +187,7 @@ with code inside the workshop on TCP port :samp:`9000`.
 
 .. note::
 
-   Abstract sockets avoid file system permissions and name collisions.
+   Abstract sockets avoid filesystem permissions and name collisions.
    They are written as :samp:`@name` (note the leading "@").
 
 

@@ -57,7 +57,7 @@ This is the simplest scenario;
 you use the :samp:`mount` interface
 to define the target directory
 where the content will be mounted inside the workshop
-per each directory you want to retain during the workshop's life cycle.
+per each directory you want to retain during the workshop's lifecycle.
 
 .. @artefact sdkcraft (CLI)
 
