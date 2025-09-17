@@ -6,7 +6,7 @@
                  offers improved repeatability, persistence, and layering
                  compared to Docker-based solutions.
 
-How Dockerfiles compare to SDKs
+How SDKs compare to Dockerfiles
 ===============================
 
 .. @artefact SDK

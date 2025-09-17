@@ -568,11 +568,6 @@ Explanation:
 - :ref:`exp_sdk_parts`
 
 
-How-to guide:
-
-- :ref:`how_create_ros2_sdk`
-
-
 Reference:
 
 - :ref:`ref_sdk_definition`

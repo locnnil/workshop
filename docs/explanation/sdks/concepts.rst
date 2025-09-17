@@ -45,14 +45,20 @@ the definition may look like this:
    :caption: sdk.yaml
 
 
-.. _exp_hooks:
+.. _exp_sdk_hooks:
 
 SDK hooks
 ---------
 
+.. @artefact SDK
+.. @artefact SDK health
 .. @artefact SDK hook
+.. @artefact restore-state
+.. @artefact save-state
+.. @artefact setup-base
+.. @artefact setup-project
 
-SDK publishers can define optional *hooks*
+|ws_markup| and |sdk_markup| enable optional lifecycle *hooks*
 that control and extend the workshop's internal behavior
 to make any framework wrapped as an SDK
 compatible with |ws_markup|'s logic;
@@ -69,6 +75,68 @@ Specific examples include :samp:`setup-base`, :samp:`setup-project`,
 You may see individual hooks mentioned in the output of
 :command:`workshop changes` and :command:`workshop tasks`;
 understanding the events that trigger them can help you with troubleshooting.
+
+When you define an SDK,
+its hooks should be placed in the :file:`hooks/` subdirectory
+next to the :ref:`definition <exp_sdk_definition>`;
+|sdk_markup| validates and packages them along with the :file:`.yaml` file.
+
+
+.. _exp_workshopctl:
+
+Using :program:`workshopctl` with hooks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. @artefact workshopd
+.. @artefact workshopctl
+
+The :program:`workshopctl` CLI tool allows an SDK
+to talk to the :program:`workshopd` daemon.
+Under the hood, :program:`workshopctl` uses a socket exposed by the daemon
+into the workshop environment.
+
+Overall, the interaction between SDKs and the :program:`workshopd` daemon
+focuses on health checks in post-launch or refresh operations.
+The tool provides commands to report SDK health,
+list workshops that use the SDK and get their details.
+
+
+SDK health, workshop status
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. @artefact check-health
+.. @artefact workshop status
+
+An SDK can report its health
+using the :samp:`workshopctl set-health` subcommand,
+which is typically invoked from the :samp:`check-health` hook
+when a workshop launches or refreshes.
+The command requires a health status.
+If it's not :samp:`okay`,
+you can also supply an error code with a user-friendly message
+to provide further details.
+
+.. @artefact SDK publisher
+
+This command is essential for SDK publishers
+to communicate the health status of their SDKs
+within the workshop environment.
+Then, :program:`workshopd` determines the overall
+:ref:`health status <exp_workshop_status>` of a workshop,
+such as *Ready*, *Pending* or *Error*;
+it depends on the run-time results of the :samp:`check-health` hook:
+
+- *Ready* means success: the hook set SDK health to :samp:`okay`
+  and gracefully exited with a zero code.
+
+- *Pending*: The hook set the SDK health to :samp:`waiting`.
+  This means it will be retried, one attempt per second.
+  If the retries fail 10 times consecutively
+  or if 5 seconds pass without :samp:`set-health` being invoked,
+  the SDK health is changed to :samp:`error`.
+
+- *Error*: the hook exited with a non-zero code
+  or explicitly set SDK health to :samp:`error`.
 
 
 .. _exp_sdk_state:
@@ -132,10 +200,10 @@ System SDK
 
 Every workshop contains a special *system SDK*
 that exposes system resources through its slots.
-It's unavailable from the SDK Store;
-installed first at :command:`workshop launch`
-and removed last during :command:`workshop remove`,
-it ensures internal consistency.
+It cannot be installed from the SDK Store.
+Instead, it is automatically installed first during :command:`workshop launch`
+and removed last during :command:`workshop remove`
+to ensure internal consistency.
 
 The purpose of the system SDK isn't to add hooks or additional content;
 it's only there to uniformly expose host system resources to other SDKs.
@@ -156,7 +224,7 @@ Sketch SDK
 .. @artefact sketch SDK
 
 The sketch SDK is another special type of SDK.
-Again, it's unavailable from the SDK Store;
+Like the system SDK, it's unavailable from the SDK Store;
 instead, you define it inside the workshop
 using the :command:`workshop sketch-sdk` command.
 Its purpose is to allow |ws_markup| users
@@ -189,7 +257,7 @@ The :command:`sdkcraft try` command allows publishers to test SDKs
 before uploading them to the Store.
 Once installed in a workshop, these SDKs behave identically to SDKs from the Store.
 
-|sdk_markup| does not install SDKs in a workshop by itself;
+|sdk_markup| does not install SDKs in a workshop directly;
 it simply copies packed SDKs to a directory called the *try area*.
 |ws_markup| looks in this directory when installing an SDK with the :samp:`try-` prefix.
 
@@ -211,7 +279,8 @@ in-project SDKs are specific to your project
 and are version-controlled alongside your project's source code.
 
 You can create an in-project SDK by ejecting a :ref:`sketch SDK <exp_sketch_sdk>`
-or by adding one manually.
+or by adding one manually,
+creating the appropriate directory structure with :file:`sdk.yaml` and hooks.
 This approach allows you to customize the workshop
 to fit your project's unique requirements,
 ensuring that all collaborators use the same environment and dependencies.
@@ -234,6 +303,8 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_sdk_hooks`
+- :ref:`ref_workshopctl`
 - :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_changes`
@@ -242,4 +313,3 @@ Reference:
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_start`
 - :ref:`ref_workshop_tasks`
-- :ref:`ref_sdk_hooks`

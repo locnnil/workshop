@@ -17,11 +17,9 @@ with |ws_markup| and |sdk_markup|:
    :maxdepth: 1
 
    concepts
+   SDKs versus Dockerfiles <sdk-vs-dockerfile>
    Data storage and sharing <data-persistence-sharing>
    Design best practices <best-practices>
-   Dockerfiles versus SDKs <dockerfile-vs-sdk>
-   Health reports <workshopctl>
-   Hooks <hooks>
    Parts <parts>
 
 
