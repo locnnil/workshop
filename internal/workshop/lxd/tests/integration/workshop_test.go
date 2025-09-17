@@ -11,6 +11,7 @@ import (
 	"slices"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"gopkg.in/check.v1"
 
@@ -81,18 +82,31 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
-	// Wait a bit longer than the default start command, to ensure both
-	// IPv4 and IPv6 addresses are ready.
-	defer lxdbackend.FakeStartCommand(
-		"/usr/lib/systemd/systemd-networkd-wait-online --ipv4 --ipv6 --operational-state=routable",
-	)()
-
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	// Wait a bit longer than the default start command, to ensure both
+	// IPv4 and IPv6 addresses are ready.
+	args := workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
+			Command: []string{
+				"/usr/lib/systemd/systemd-networkd-wait-online",
+				"--ipv4",
+				"--ipv6",
+				"--operational-state=routable",
+			},
+			WorkDir: "/",
+			Timeout: time.Minute,
+		},
+	}
+	exectx, err := f.bd.Exec(f.ctx, "test", &args)
+	c.Assert(err, check.IsNil)
+	c.Assert(exectx.WaitExecution(f.ctx), check.IsNil)
+
 	addresses := f.ipAddresses(c, "test")
 
 	// Execute
-	err := f.bd.StashWorkshop(f.ctx, "test")
+	err = f.bd.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate
