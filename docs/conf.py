@@ -177,6 +177,8 @@ linkcheck_ignore = [
     "http://localhost:*",
     "https://github.com/canonical/sdkcraft",
     "https://github.com/canonical/workshop",
+    "https://github.com/canonical/sdks",
+    "https://github.com/canonical/reference-workshops",
     r"^https://.*\.readthedocs-hosted\.com/.*#\w+$",
 ]
 

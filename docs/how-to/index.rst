@@ -7,18 +7,30 @@
 How-to guides
 =============
 
+.. @artefact workshop
+
 .. toctree::
    :hidden:
 
+   Customize workshops <customize-workshops/index>
    Develop with workshops <develop-with-workshops/index>
    Fix workshops <fix-workshops/index>
-   Study examples <ros2/index>
-   Use workshops <use-workshops/index>
 
 
 These articles
 cover the needs and corner cases
 that arise when you use |ws_markup| and |sdk_markup|.
+
+
+Customize workshops
+-------------------
+
+These topics address daily |ws_markup|-related scenarios,
+such as moving projects within the file system or adding custom actions:
+
+- :doc:`Add actions to workshops <customize-workshops/add-actions>`
+- :doc:`Forward ports <customize-workshops/forward-ports>`
+- :doc:`Move projects around <customize-workshops/move-projects>`
 
 
 Develop with workshops
@@ -51,21 +63,8 @@ Study examples
 
 .. @artefact SDK
 
-This section presents a sample SDK layout for `ROS 2 <https://www.ros.org/>`_,
-a popular robotics-oriented framework.
-The articles discuss the design of a ROS 2-oriented SDK and its practical usage:
+These examples showcase different SDK patterns and workshop implementations.
+Studying them helps to better understand SDK design and workshop creation:
 
-
-- :doc:`Design an SDK <ros2/design-sdk>`
-- :doc:`Create a workshop <ros2/create-workshop>`
-
-
-Use workshops
--------------
-
-These topics address daily |ws_markup|-related scenarios,
-such as moving projects within the file system or adding custom actions:
-
-- :doc:`Add actions to workshops <use-workshops/add-actions>`
-- :doc:`Forward ports <use-workshops/forward-ports>`
-- :doc:`Move projects around <use-workshops/move-projects>`
+- https://github.com/canonical/sdks
+- https://github.com/canonical/reference-workshops

@@ -366,11 +366,6 @@ Explanation:
 - :ref:`exp_projects`
 
 
-How-to guides:
-
-- :ref:`how_create_ros2_sdk`
-
-
 Reference:
 
 - :ref:`ref_sdk_definition`
