@@ -452,7 +452,7 @@ which can be defined when the SDK is built using |sdk_markup|:
 
      - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
        after mounting the project directory
-       and connecting plugs and slots
+       and auto-connecting plugs and slots
        but before the workshop is set to *Ready*.
 
      - Configures the user environment for the SDK to become operational.
