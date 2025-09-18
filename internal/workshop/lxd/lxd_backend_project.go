@@ -159,6 +159,7 @@ func (s *Backend) Projects(ctx context.Context) (map[string][]workshop.Project, 
 	if err != nil {
 		return nil, ErrorLxdBackend(err)
 	}
+	defer client.Disconnect()
 	// list all projects for all users if the user is not provided
 	lxdProjects, err := client.GetProjects()
 	if err != nil {

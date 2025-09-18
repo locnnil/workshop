@@ -121,6 +121,7 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.restoreDevices()
 	helper.CleanupLxdProject(c, f.lxdClient, "workshop."+f.usr.Username)
 	helper.CleanupLxdProject(c, f.lxdClient, "workshop-stash."+f.usr.Username)
+	f.lxdClient.Disconnect()
 }
 
 func (f *wsExec) exec(stdin string, workshop, projectId string, opts *client.ExecOptions) (stdout, stderr string, waitErr error) {

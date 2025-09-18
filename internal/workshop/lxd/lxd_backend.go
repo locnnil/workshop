@@ -676,8 +676,6 @@ func (s *Backend) execCommand(conn lxd.InstanceServer, ctx context.Context, name
 	return workshop.ExecContext{
 		Environment: env,
 		WaitExecution: func(ctx context.Context) error {
-			defer conn.Disconnect()
-
 			if err := op.WaitContext(ctx); err != nil {
 				switch err.Error() {
 				case "Command not executable", "Command not found":
@@ -702,12 +700,28 @@ func (s *Backend) execCommand(conn lxd.InstanceServer, ctx context.Context, name
 }
 
 func (s *Backend) Exec(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	rev := revert.New()
+	defer rev.Fail()
+
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return workshop.ExecContext{}, err
 	}
+	rev.Add(conn.Disconnect)
 
-	return s.execCommand(conn, ctx, name, args)
+	exectx, err := s.execCommand(conn, ctx, name, args)
+	if err != nil {
+		return exectx, err
+	}
+
+	// Extend the connection until WaitExecution is done.
+	waitExecution := exectx.WaitExecution
+	exectx.WaitExecution = func(ctx context.Context) error {
+		defer conn.Disconnect()
+		return waitExecution(ctx)
+	}
+	rev.Success()
+	return exectx, err
 }
 
 func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop, error) {
