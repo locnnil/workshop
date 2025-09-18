@@ -27,7 +27,7 @@ actions:
     golangci-lint run --new-from-rev='HEAD~' --config=.golangci.errcheck.yaml
   shellcheck: |
     git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
-    "$HOME"/snapd-testing-tools/utils/spread-shellcheck tests/integration
+    /opt/snapd-testing-tools/utils/spread-shellcheck tests/integration
   cover: |
     go test -covermode=count -coverpkg=./... -coverprofile=coverage.out ./...
   fake-store: |
