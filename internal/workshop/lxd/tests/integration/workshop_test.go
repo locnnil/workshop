@@ -385,6 +385,19 @@ func (f *wsOps) TestLxdBackendDownloadProtocolNotSupported(c *check.C) {
 	c.Check(err, check.ErrorMatches, `unknown image server URL prefix \(supported: simplestreams, lxd\)`)
 }
 
+func (f *wsOps) TestLxdBackendDownloadConcurrentErrors(c *check.C) {
+	var wg sync.WaitGroup
+	wg.Add(5)
+	for range 5 {
+		go func() {
+			err := f.bd.Download(f.ctx, "ubuntu@1.01", nil)
+			c.Check(err, check.ErrorMatches, `"ubuntu@1.01" download failed.*`)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+}
+
 func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *check.C) {
 	// ensure there is no image in LXD storage
 	fp, err := f.image(c, "ubuntu@22.04")
