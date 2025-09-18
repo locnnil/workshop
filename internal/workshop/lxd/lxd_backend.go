@@ -445,6 +445,7 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		return err
 	}
 
+	var stderr strings.Builder
 	args := workshop.Execution{
 		ExecArgs: workshop.ExecArgs{
 			UserId:  0,
@@ -455,6 +456,9 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 			WorkDir: "/",
 			Timeout: startCommandTimeout,
 		},
+		ExecControls: workshop.ExecControls{
+			Stderr: &stderr,
+		},
 	}
 
 	exectx, err := s.execCommand(conn, ctx, name, &args)
@@ -462,7 +466,14 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		return err
 	}
 
-	if err = exectx.WaitExecution(ctx); err != nil {
+	var errExec *workshop.ErrExec
+	if err := exectx.WaitExecution(ctx); errors.As(err, &errExec) {
+		message := strings.TrimSpace(stderr.String())
+		if message == "" {
+			return err
+		}
+		return errors.New(message)
+	} else if err != nil {
 		return err
 	}
 
