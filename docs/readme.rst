@@ -7,6 +7,17 @@ Workshop
 
 **A tool for defining and handling ephemeral development environments**.
 
+List your dependencies and components in YAML to define an environment. The key
+pieces of a definition are SDKs, independent but connectable units of
+functionality created by software publishers and available on the SDK Store.
+Workshop simplifies experiments with your environment layout.
+
+It allows you to focus on adding value to your project. With Workshop, you can
+launch a setup that previously took hours to configure in a few commands, and be
+sure that it stays operational. It assists in issue reproduction, enables
+hands-on code reviews, and turns environment updates into manageable
+transactions, reducing the need to battle with your tooling every day.
+
 
 Using Workshop
 --------------
@@ -51,7 +62,8 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
 
 
 Alternatively, you can download the latest Workshop snap from the
-`Releases <releases/>`_ page on GitHub and install it,
+`Releases <https://github.com/canonical/workshop/releases/>`_
+page on GitHub and install it,
 using the options
 `--dangerous <https://snapcraft.io/docs/install-modes>`_
 and
@@ -106,7 +118,7 @@ Use the following resources for communication, support, and feedback:
 
 - `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
 
-- `Product and documentation feedback <issues/>`__
+- `Product and documentation feedback <https://github.com/canonical/workshop/issues/>`__
 
 
 Contributions
