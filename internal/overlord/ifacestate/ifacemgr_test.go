@@ -122,7 +122,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf)
+	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, "fakeimage123")
 	c.Assert(err, check.IsNil)
 
 	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)

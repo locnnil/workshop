@@ -125,7 +125,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsFocal)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123")
 	c.Check(err, check.IsNil)
 
 	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
@@ -167,7 +167,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 		{Name: "test2", Channel: "latest/stable"},
 	}}
 
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123")
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")
@@ -223,7 +223,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 
 	for _, wf := range wFiles {
-		err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf)
+		err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123")
 		c.Check(err, check.IsNil)
 
 		// create content directories
@@ -302,6 +302,8 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	t1 := s.state.NewTask("create-workshop", "...")
 	setWorkshopProject("ws", s.project, t1)
 	t1.Set("forget", true)
+	t1.Set("image-id", "fakeimage123")
+	t1.Set("download-base-task", t1.ID())
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
@@ -325,6 +327,8 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
 	t1.Set("forget", true)
+	t1.Set("image-id", "fakeimage123")
+	t1.Set("download-base-task", t1.ID())
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -353,6 +357,8 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
 	t1.Set("forget", true)
+	t1.Set("image-id", "fakeimage123")
+	t1.Set("download-base-task", t1.ID())
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -374,9 +380,9 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report *progress.Reporter) error {
+	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report *progress.Reporter) (string, error) {
 		report.Report("download finished", 100, 100)
-		return nil
+		return "fakeimage123", nil
 	}
 	defer func() {
 		s.backend.DownloadBaseCallback = nil
@@ -404,4 +410,7 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	c.Assert(label, check.Equals, "download finished")
 	c.Assert(done, check.Equals, 100)
 	c.Assert(total, check.Equals, 100)
+	var image string
+	c.Assert(t1.Get("image-id", &image), check.IsNil)
+	c.Check(image, check.Equals, "fakeimage123")
 }

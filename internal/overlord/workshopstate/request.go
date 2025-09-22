@@ -478,7 +478,7 @@ func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveTasks
 	return all
 }
 
-func launchWorkshop(st *state.State, name string, fileText string) *state.TaskSet {
+func launchWorkshop(st *state.State, name string, fileText string, downloadBase string) *state.TaskSet {
 	construct := state.NewTaskSet()
 
 	var prev *state.Task
@@ -494,6 +494,7 @@ func launchWorkshop(st *state.State, name string, fileText string) *state.TaskSe
 	addTask(create)
 	create.Set("workshop-file", fileText)
 	create.Set("forget", true)
+	create.Set("download-base-task", downloadBase)
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
 	addTask(start)
@@ -501,7 +502,7 @@ func launchWorkshop(st *state.State, name string, fileText string) *state.TaskSe
 	return construct
 }
 
-func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot string) *state.TaskSet {
+func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot string, downloadBase string) *state.TaskSet {
 	construct := state.NewTaskSet()
 
 	var prev *state.Task
@@ -527,6 +528,9 @@ func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot 
 
 	if sdkSnapshot != "" {
 		create.Set("sdk-snapshot", sdkSnapshot)
+	}
+	if downloadBase != "" {
+		create.Set("download-base-task", downloadBase)
 	}
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
@@ -560,7 +564,7 @@ func launch(st *state.State, file *workshop.File, fileText string, sdks []sdk.Se
 	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", file.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	create := launchWorkshop(st, file.Name, fileText)
+	create := launchWorkshop(st, file.Name, fileText, base.ID())
 	addTaskSet(create)
 
 	install := installSdks(st, project.ProjectId, file.Name, sdks, rmap)
@@ -823,9 +827,11 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	}
 
 	var base *state.Task
+	var baseID string
 	if plan.sdkSnapshot == "" {
 		// Create download-base first so the task IDs are in a nice order.
 		base = retrieveBase(st, file)
+		baseID = base.ID()
 	}
 	retrieve, rmap := retrieveSdks(st, plan.InstallOrRefresh())
 	if base != nil {
@@ -854,7 +860,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file.Name, fileText, plan.sdkSnapshot)
+	rebuild := rebuildWorkshop(st, file.Name, fileText, plan.sdkSnapshot, baseID)
 	addTaskSet(rebuild)
 
 	// Re-register intact SDKs (the workshop definition can change plugs and slots).

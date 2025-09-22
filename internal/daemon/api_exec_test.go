@@ -27,7 +27,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Actions: map[string]workshop.Action{"lint": "\n\n\ngolangci-lint run\n"}}
 
-	err := s.b.LaunchOrRebuildWorkshop(s.ctx, wf)
+	err := s.b.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123")
 	c.Assert(err, check.IsNil)
 
 	wp, err := s.b.Workshop(s.ctx, "ws")

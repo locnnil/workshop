@@ -99,7 +99,7 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	wf := s.workshopFile(w, []*sdk.Info{info})
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf), check.IsNil)
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123"), check.IsNil)
 
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
@@ -126,7 +126,7 @@ func (s *apiSuite) mockInstalledSDKBoundPlug(c *check.C, yaml string, w string, 
 		Name:      to}
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
 	wf := s.workshopFile(w, []*sdk.Info{info})
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf), check.IsNil)
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123"), check.IsNil)
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
 	return wp

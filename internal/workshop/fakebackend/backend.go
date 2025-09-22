@@ -89,7 +89,7 @@ type FakeWorkshopBackend struct {
 	WorkshopFsCalls    []*FsCall
 
 	downloadLock         sync.Mutex
-	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) error
+	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) (string, error)
 	DownloadBaseCalls    []*DownloadCall
 
 	AttachVolumeCalls []AttachVolumeCall
@@ -159,7 +159,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File) error {
+func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image string) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -691,7 +691,7 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	return userName, projectId, nil
 }
 
-func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *progress.Reporter) error {
+func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *progress.Reporter) (string, error) {
 	b.downloadLock.Lock()
 	defer b.downloadLock.Unlock()
 
@@ -699,7 +699,7 @@ func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report 
 	if b.DownloadBaseCallback != nil {
 		return b.DownloadBaseCallback(ctx, base, report)
 	}
-	return nil
+	return "fakeimage123", nil
 }
 
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {

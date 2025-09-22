@@ -31,18 +31,16 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	var retrieveId string
 	var sdkSetup sdk.Setup
 
-	err := task.Get("sdk-retrieve-task", &retrieveId)
-
-	if err != nil {
+	if err := task.Get("sdk-retrieve-task", &retrieveId); err != nil {
 		return sdk.Setup{}, err
 	}
 
-	retrieve := task.State().Task(retrieveId)
+	retrieve := st.Task(retrieveId)
 	if retrieve == nil {
 		return sdk.Setup{}, fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
 	}
 
-	if err = retrieve.Get("sdk-setup", &sdkSetup); err != nil {
+	if err := retrieve.Get("sdk-setup", &sdkSetup); err != nil {
 		return sdk.Setup{}, err
 	}
 	return sdkSetup, nil

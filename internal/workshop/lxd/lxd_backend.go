@@ -10,7 +10,6 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -104,10 +103,6 @@ func workshopProjectId(instance string) (string, string) {
 		return "", ""
 	}
 	return instance[:idx], instance[idx+1:]
-}
-
-func ImageAlias(name string) string {
-	return fmt.Sprintf("workshop-%s-%s", name, runtime.GOARCH)
 }
 
 func ErrorLxdBackend(err error) error {
@@ -264,20 +259,14 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File) error {
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image string) error {
 	var err error
-	var image *api.Image
 
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
-
-	info, err := conn.GetConnectionInfo()
-	if err != nil {
-		return err
-	}
 
 	username, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
@@ -287,17 +276,6 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
-	}
-
-	// Check if we have the base image stored locally.
-	alias, _, err := conn.GetImageAlias(ImageAlias(file.Base))
-	if err != nil {
-		return err
-	}
-
-	image, _, err = conn.GetImage(alias.Target)
-	if err != nil {
-		return err
 	}
 
 	usr, err := osutil.UserLookup(username)
@@ -310,6 +288,10 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 	devices := defaultDevices(projectId, file.Name)
+	source := api.InstanceSource{
+		Type:        api.SourceTypeImage,
+		Fingerprint: image,
+	}
 
 	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
 	switch {
@@ -322,13 +304,9 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 				Devices: devices,
 				Config:  config,
 			},
-			Name: InstanceName(file.Name, projectId),
-			Type: api.InstanceType("container"),
-			Source: api.InstanceSource{
-				Type:        "image",
-				Fingerprint: image.Fingerprint,
-				Project:     info.Project,
-			},
+			Name:   InstanceName(file.Name, projectId),
+			Type:   api.InstanceTypeContainer,
+			Source: source,
 		}
 		op, err := conn.CreateInstance(req)
 		if err != nil {
@@ -348,11 +326,11 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			}
 		}
 
-		rop, err := conn.RebuildInstanceFromImage(conn, *image, inst.Name, api.InstanceRebuildPost{})
+		op, err := conn.RebuildInstance(inst.Name, api.InstanceRebuildPost{Source: source})
 		if err != nil {
 			return err
 		}
-		if err = rop.Wait(); err != nil {
+		if err = op.Wait(); err != nil {
 			return err
 		}
 
@@ -369,7 +347,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		}
 		rebuilt.Devices = devices
 
-		op, err := conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
+		op, err = conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
 		if err != nil {
 			return err
 		}
