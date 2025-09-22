@@ -18,6 +18,7 @@ with |ws_markup| and |sdk_markup|:
 
    concepts
    Data storage and sharing <data-persistence-sharing>
+   Design best practices <best-practices>
    Dockerfiles versus SDKs <dockerfile-vs-sdk>
    Health reports <workshopctl>
    Hooks <hooks>
