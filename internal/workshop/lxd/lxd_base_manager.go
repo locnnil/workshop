@@ -64,7 +64,7 @@ func (b *Backend) Download(ctx context.Context, base string, report *progress.Re
 
 func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (err error) {
 	defer func() {
-		op.waitCh <- err
+		op.err = err
 		close(op.waitCh)
 
 		imageLock.Lock()
@@ -231,8 +231,8 @@ func waitDownloadOp(ctx context.Context, op *downloadOp) error {
 		// image download properly. Instead, we'll wait for it to finish if
 		// the task will be restarted.
 		return ctx.Err()
-	case err := <-op.waitCh:
-		return err
+	case <-op.waitCh:
+		return op.err
 	}
 }
 
@@ -311,14 +311,15 @@ type downloadUpdate struct {
 }
 
 type downloadOp struct {
-	waitCh chan error
+	waitCh chan struct{}
+	err    error
 
 	reportersLock sync.Mutex
 	reporters     map[string]*progress.Reporter
 }
 
 func newImageDownloadOp() *downloadOp {
-	return &downloadOp{waitCh: make(chan error), reporters: make(map[string]*progress.Reporter, 0)}
+	return &downloadOp{waitCh: make(chan struct{}), reporters: make(map[string]*progress.Reporter, 0)}
 }
 
 func (r *downloadOp) AddReporter(rep *progress.Reporter) {

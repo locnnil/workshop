@@ -68,6 +68,7 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 func (f *wsOps) TearDownSuite(c *check.C) {
 	lxdclient, err := f.bd.LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
+	defer lxdclient.Disconnect()
 
 	helper.CleanupLxdProject(c, lxdclient, "workshop."+f.usr.Username)
 	helper.CleanupLxdProject(c, lxdclient, "workshop-stash."+f.usr.Username)
@@ -134,6 +135,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 func (f *wsOps) ipAddresses(c *check.C, name string) []string {
 	conn, err := f.bd.LxdClient(f.ctx)
 	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
 
 	inst, _, err := conn.GetInstanceFull(lxdbackend.InstanceName(name, f.project.ProjectId))
 	c.Assert(err, check.IsNil)
@@ -383,6 +385,19 @@ func (f *wsOps) TestLxdBackendDownloadProtocolNotSupported(c *check.C) {
 	defer lxdbackend.FakeImageServer("https://cloud-images.ubuntu.com/minimal/releases/")()
 	err := f.bd.Download(f.ctx, "ubuntu@20.04", nil)
 	c.Check(err, check.ErrorMatches, `unknown image server URL prefix \(supported: simplestreams, lxd\)`)
+}
+
+func (f *wsOps) TestLxdBackendDownloadConcurrentErrors(c *check.C) {
+	var wg sync.WaitGroup
+	wg.Add(5)
+	for range 5 {
+		go func() {
+			err := f.bd.Download(f.ctx, "ubuntu@1.01", nil)
+			c.Check(err, check.ErrorMatches, `"ubuntu@1.01" download failed.*`)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *check.C) {

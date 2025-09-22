@@ -47,6 +47,7 @@ func (f *wsProject) SetUpTest(c *check.C) {
 func (f *wsProject) TearDownTest(c *check.C) {
 	helper.CleanupLxdProject(c, f.client, "workshop."+f.username)
 	helper.CleanupLxdProject(c, f.client, "workshop-stash."+f.username)
+	f.client.Disconnect()
 }
 
 func TestWorkshopBackendIntegration(t *testing.T) { check.TestingT(t) }
@@ -391,6 +392,7 @@ func (f *wsProject) TestPosixUsernameAsProjectSuffix(c *check.C) {
 	be := lxdbackend.Backend{}
 	p, err := be.LxdClient(ctx)
 	c.Assert(err, check.IsNil)
+	defer p.Disconnect()
 
 	props, err := p.GetConnectionInfo()
 	c.Assert(err, check.IsNil)
@@ -418,6 +420,7 @@ func (f *wsProject) TestNonPosixUsernameAsProjectSuffix(c *check.C) {
 	be := lxdbackend.Backend{}
 	p, err := be.LxdClient(ctx)
 	c.Assert(err, check.IsNil)
+	defer p.Disconnect()
 
 	props, err := p.GetConnectionInfo()
 	c.Assert(err, check.IsNil)
