@@ -654,6 +654,22 @@ func (f *wsOps) TestLxdBackendWorkshopStartFailed(c *check.C) {
 	c.Check(w.Running, check.Equals, false)
 }
 
+func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
+	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@24.04")
+	c.Assert(err, check.IsNil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@24.04", fingerprint, nil)
+	c.Assert(err, check.IsNil)
+
+	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
+	c.Assert(err, check.IsNil)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	w, err := f.bd.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
+}
+
 func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
@@ -674,6 +690,10 @@ func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	// Execute
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
 	c.Assert(err, check.IsNil)
+
+	w, err := f.bd.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) {
@@ -682,6 +702,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
+	fingerprint := w.BaseFingerprint
 
 	sdkfs := c.MkDir()
 	setup := sdk.Setup{
@@ -744,9 +765,10 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Assert(err, check.IsNil)
 	c.Check(w.Running, check.Equals, false)
 
-	// Check that Restore uses the provided "user.workshop.file" and removes
-	// "test-sdk-2" setup from the workshop.
+	// Check that Restore uses the provided "user.workshop.file," keeps its
+	// base fingerprint and removes "test-sdk-2" setup from the workshop.
 	c.Check(w.File, check.DeepEquals, wf)
+	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
 	c.Check(w.Sdks, check.HasLen, 1)
 	c.Check(w.Sdks[setup2.Name], check.DeepEquals, sdk.Setup{})
 

@@ -89,7 +89,8 @@ type FakeWorkshopBackend struct {
 	WorkshopFsCallback WorkshopFsCallback
 	WorkshopFsCalls    []*FsCall
 
-	downloadLock         sync.Mutex
+	baseLock             sync.Mutex
+	GetBaseCallback      func(ctx context.Context, base string) (string, error)
 	DownloadBaseCallback func(ctx context.Context, base, fingerprint string, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
 
@@ -181,14 +182,14 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 		// rebuild the workshop
 		ws = wpe
 		ws.File = file
-		ws.Base = file.Base
+		ws.BaseFingerprint = baseFingerprint
 	} else {
 		ws.Workshop = &workshop.Workshop{Backend: f,
-			Name:    file.Name,
-			Running: false,
-			Project: *prj,
-			Base:    file.Base,
-			File:    file,
+			Name:            file.Name,
+			Running:         false,
+			Project:         *prj,
+			BaseFingerprint: baseFingerprint,
+			File:            file,
 		}
 		f.Workshops[projectId][file.Name] = ws
 	}
@@ -693,12 +694,18 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 }
 
 func (b *FakeWorkshopBackend) GetBase(ctx context.Context, base string) (string, error) {
+	b.baseLock.Lock()
+	defer b.baseLock.Unlock()
+
+	if b.GetBaseCallback != nil {
+		return b.GetBaseCallback(ctx, base)
+	}
 	return "fakeimage123", nil
 }
 
 func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error {
-	b.downloadLock.Lock()
-	defer b.downloadLock.Unlock()
+	b.baseLock.Lock()
+	defer b.baseLock.Unlock()
 
 	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base, Fingerprint: fingerprint})
 	if b.DownloadBaseCallback != nil {

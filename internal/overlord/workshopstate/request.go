@@ -675,8 +675,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			}
 
 			sdks := wp.SdksByInstallOrder()
-			// TODO: replace empty string with workshop's current base image.
-			plan := resolveRefresh(wp, wp.File, "", sdks)
+			plan := resolveRefresh(wp, wp.File, wp.BaseFingerprint, sdks)
 			tasks := refresh(w.state, plan, wp, wp.File, string(fileBlob))
 			taskset = append(taskset, tasks)
 		}
@@ -772,7 +771,7 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, fingerprint st
 	// Restore the order of SDKs installed in the running workshop.
 	installed := w.SdksByInstallOrder()
 
-	if w.Base == newfile.Base {
+	if w.File.Base == newfile.Base && w.BaseFingerprint == fingerprint {
 		for ci, s := range candidates {
 			// Do we have this SDK in the same order as in the running workshop?
 			if ci >= len(installed) || installed[ci].Name != s.Name {

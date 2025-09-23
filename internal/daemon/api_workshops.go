@@ -122,7 +122,7 @@ func workshopToInfo(username string, w *workshop.Workshop, health healthstate.He
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
-	info.Base = w.Base
+	info.Base = w.File.Base
 
 	sdkSetups := w.SdksByInstallOrder()
 
@@ -169,7 +169,7 @@ func workshopToInfoFull(ctx context.Context, username string, w *workshop.Worksh
 	var info WorkshopInfo
 	info.Name = w.Name
 	info.ProjectId = w.Project.ProjectId
-	info.Base = w.Base
+	info.Base = w.File.Base
 
 	sdks, err := w.SdkInfosByInstallOrder(ctx)
 	if err != nil {
