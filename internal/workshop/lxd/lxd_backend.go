@@ -259,7 +259,7 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image string) error {
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
 	var err error
 
 	conn, err := s.LxdClient(ctx)
@@ -290,7 +290,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	devices := defaultDevices(projectId, file.Name)
 	source := api.InstanceSource{
 		Type:        api.SourceTypeImage,
-		Fingerprint: image,
+		Fingerprint: baseFingerprint,
 	}
 
 	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))

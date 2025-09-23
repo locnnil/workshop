@@ -38,7 +38,7 @@ func (f *LxdBeTests) TestLaunchProgressReporter(c *check.C) {
 	}
 
 	for i, m := range metas {
-		upd := lxdbackend.HandleLaunchUpdate(m, 100)
+		upd := lxdbackend.HandleImageUpdate(m, 100)
 		if expected[i] != nil {
 			c.Check(upd.Label, check.Equals, expected[i].label)
 			c.Check(upd.Done, check.Equals, expected[i].done)

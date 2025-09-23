@@ -40,7 +40,8 @@ type FsCall struct {
 }
 
 type DownloadCall struct {
-	Base string
+	Base        string
+	Fingerprint string
 }
 
 type AttachVolumeCall struct {
@@ -89,7 +90,7 @@ type FakeWorkshopBackend struct {
 	WorkshopFsCalls    []*FsCall
 
 	downloadLock         sync.Mutex
-	DownloadBaseCallback func(ctx context.Context, base string, report *progress.Reporter) (string, error)
+	DownloadBaseCallback func(ctx context.Context, base, fingerprint string, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
 
 	AttachVolumeCalls []AttachVolumeCall
@@ -159,7 +160,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image string) error {
+func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -691,15 +692,19 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	return userName, projectId, nil
 }
 
-func (b *FakeWorkshopBackend) Download(ctx context.Context, base string, report *progress.Reporter) (string, error) {
+func (b *FakeWorkshopBackend) GetBase(ctx context.Context, base string) (string, error) {
+	return "fakeimage123", nil
+}
+
+func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error {
 	b.downloadLock.Lock()
 	defer b.downloadLock.Unlock()
 
-	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base})
+	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base, Fingerprint: fingerprint})
 	if b.DownloadBaseCallback != nil {
-		return b.DownloadBaseCallback(ctx, base, report)
+		return b.DownloadBaseCallback(ctx, base, fingerprint, report)
 	}
-	return "fakeimage123", nil
+	return nil
 }
 
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {

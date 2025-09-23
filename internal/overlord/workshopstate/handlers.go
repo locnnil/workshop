@@ -1,6 +1,7 @@
 package workshopstate
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -33,11 +34,12 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	st := task.State()
-	var base string
+	var base, fingerprint string
 	st.Lock()
-	err = task.Get("workshop-base", &base)
+	err1 := task.Get("workshop-base", &base)
+	err2 := task.Get("workshop-base-fingerprint", &fingerprint)
 	st.Unlock()
-	if err != nil {
+	if cmp.Or(err1, err2) != nil {
 		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 	}
 
@@ -53,15 +55,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 		},
 	}
 
-	image, err := m.backend.Download(ctx, base, reporter)
-	if err != nil {
-		return err
-	}
-
-	st.Lock()
-	task.Set("image-id", image)
-	st.Unlock()
-	return nil
+	return m.backend.DownloadBase(ctx, base, fingerprint, reporter)
 }
 
 func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -120,12 +114,15 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	})
 
 	if sdkSnapshot == "" {
-		image, err := baseImage(task)
+		var fingerprint string
+		st.Lock()
+		err = task.Get("workshop-base-fingerprint", &fingerprint)
+		st.Unlock()
 		if err != nil {
-			return err
+			return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 		}
 
-		if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, image); err != nil {
+		if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, fingerprint); err != nil {
 			return err
 		}
 		// Create workshop base and run directories
@@ -146,28 +143,6 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 
 	rev.Success()
 	return nil
-}
-
-func baseImage(task *state.Task) (string, error) {
-	st := task.State()
-	st.Lock()
-	defer st.Unlock()
-
-	var downloadId string
-	if err := task.Get("download-base-task", &downloadId); err != nil {
-		return "", err
-	}
-
-	download := st.Task(downloadId)
-	if download == nil {
-		return "", fmt.Errorf("internal error: no corresponding download-base task found")
-	}
-
-	var image string
-	if err := download.Get("image-id", &image); err != nil {
-		return "", err
-	}
-	return image, nil
 }
 
 func (m *WorkshopManager) doCreateWorkshopStorage(task *state.Task, tomb *tomb.Tomb) error {

@@ -302,8 +302,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	t1 := s.state.NewTask("create-workshop", "...")
 	setWorkshopProject("ws", s.project, t1)
 	t1.Set("forget", true)
-	t1.Set("image-id", "fakeimage123")
-	t1.Set("download-base-task", t1.ID())
+	t1.Set("workshop-base-fingerprint", "fakeimage123")
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
@@ -327,8 +326,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
 	t1.Set("forget", true)
-	t1.Set("image-id", "fakeimage123")
-	t1.Set("download-base-task", t1.ID())
+	t1.Set("workshop-base-fingerprint", "fakeimage123")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -357,8 +355,7 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
 	t1.Set("forget", true)
-	t1.Set("image-id", "fakeimage123")
-	t1.Set("download-base-task", t1.ID())
+	t1.Set("workshop-base-fingerprint", "fakeimage123")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -380,9 +377,11 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	s.backend.DownloadBaseCallback = func(ctx context.Context, base string, report *progress.Reporter) (string, error) {
+	s.backend.DownloadBaseCallback = func(ctx context.Context, base, fingerprint string, report *progress.Reporter) error {
+		c.Check(base, check.Equals, "ubuntu@22.04")
+		c.Check(fingerprint, check.Equals, "fakeimage1234")
 		report.Report("download finished", 100, 100)
-		return "fakeimage123", nil
+		return nil
 	}
 	defer func() {
 		s.backend.DownloadBaseCallback = nil
@@ -394,6 +393,7 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("download-base", "...")
 	t1.Set("workshop-base", wf.Base)
+	t1.Set("workshop-base-fingerprint", "fakeimage1234")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -410,7 +410,4 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	c.Assert(label, check.Equals, "download finished")
 	c.Assert(done, check.Equals, 100)
 	c.Assert(total, check.Equals, 100)
-	var image string
-	c.Assert(t1.Get("image-id", &image), check.IsNil)
-	c.Check(image, check.Equals, "fakeimage123")
 }

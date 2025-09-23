@@ -26,11 +26,31 @@ var (
 	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
 )
 
-func (b *Backend) Download(ctx context.Context, base string, report *progress.Reporter) (string, error) {
+func (b *Backend) GetBase(ctx context.Context, base string) (string, error) {
+	source, err := baseImageSource(base)
+	if err != nil {
+		return "", err
+	}
+
+	imageServer, err := connectImageServer(*source)
+	if err != nil {
+		return "", err
+	}
+	defer imageServer.Disconnect()
+
+	alias, _, err := imageServer.GetImageAliasType(string(api.InstanceTypeContainer), source.Alias)
+	if err != nil {
+		return "", fmt.Errorf("base %q not found: %w", base, err)
+	}
+
+	return alias.Target, nil
+}
+
+func (b *Backend) DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error {
 	defer func() {
 		if report != nil {
 			imageLock.Lock()
-			if op, exist := currentDownloads[base]; exist {
+			if op, exist := currentDownloads[fingerprint]; exist {
 				op.RemoveReporter(report.Name)
 			}
 			imageLock.Unlock()
@@ -38,7 +58,7 @@ func (b *Backend) Download(ctx context.Context, base string, report *progress.Re
 	}()
 
 	imageLock.Lock()
-	op, exist := currentDownloads[base]
+	op, exist := currentDownloads[fingerprint]
 	if exist {
 		if report != nil {
 			op.AddReporter(report)
@@ -51,68 +71,66 @@ func (b *Backend) Download(ctx context.Context, base string, report *progress.Re
 	if report != nil {
 		op.AddReporter(report)
 	}
-	currentDownloads[base] = op
+	currentDownloads[fingerprint] = op
 	imageLock.Unlock()
 
-	go b.download(ctx, op, base)
+	go b.tryDownloadBase(ctx, op, base, fingerprint)
 
 	return waitDownloadOp(ctx, op)
 }
 
-func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (fingerprint string, err error) {
-	defer func() {
-		op.fingerprint = fingerprint
-		op.err = err
-		close(op.waitCh)
+func (b *Backend) tryDownloadBase(ctx context.Context, op *downloadOp, base, fingerprint string) {
+	op.err = b.downloadBase(ctx, op, base, fingerprint)
+	close(op.waitCh)
 
-		imageLock.Lock()
-		delete(currentDownloads, base)
-		imageLock.Unlock()
-	}()
+	imageLock.Lock()
+	delete(currentDownloads, fingerprint)
+	imageLock.Unlock()
+}
 
-	copyArgs := lxd.ImageCopyArgs{
-		AutoUpdate: false,
-		Public:     false,
-		Type:       string(api.InstanceTypeContainer),
-	}
-
-	source, err := BaseImageSource(base)
+func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, base, fingerprint string) error {
+	source, err := baseImageSource(base)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	imageServer, err := connectImageServer(*source)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer imageServer.Disconnect()
 
-	// TODO: For simplestreams, lxc image copy immediately calls CopyImage,
-	// without looking up the alias first. For LXD image servers, it does
-	// look up the alias. The only fields in the response it uses are
-	// Aliases, Profiles and Public. We only care about the latter, which
-	// is likely always true. For now, we have to query anyway, to retrieve
-	// the image size. Once LXD starts reporting more detailed progress
-	// information, we should drop this query for simplestreams, and
-	// possibly also LXD servers.
-	alias, _, err := imageServer.GetImageAliasType(copyArgs.Type, source.Alias)
+	// TODO: Remove this query once LXD starts reporting more detailed
+	// progress information.
+	image, _, err := imageServer.GetImage(fingerprint)
 	if err != nil {
-		return "", fmt.Errorf("%q download failed: %w", base, err)
+		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
-	aliasInfo, _, err := imageServer.GetImage(alias.Target)
-	if err != nil {
-		return "", fmt.Errorf("%q download failed: %w", base, err)
+	req := api.ImagesPost{
+		ImagePut: api.ImagePut{
+			Properties: map[string]string{"workshop-base": base},
+		},
+		Source: &api.ImagesPostSource{
+			ImageSource: *source,
+			Fingerprint: fingerprint,
+			Type:        api.SourceTypeImage,
+		},
 	}
 
-	// We use an alias instead of a fingerprint here so that LXD populates
-	// the api.Image.UpdateSource field locally. This field shows us where
-	// the image came from without having to add our own config or aliases.
-	// In any case, we won't know the fingerprint once we remove the above
-	// alias lookup.
-	imageInfo := api.Image{
-		Fingerprint: source.Alias,
-		Public:      aliasInfo.Public || source.Protocol == "simplestreams",
+	info, err := imageServer.GetConnectionInfo()
+	if err != nil {
+		return err
+	}
+	req.Source.Certificate = info.Certificate
+
+	if !image.Public && source.Protocol != "simplestreams" {
+		secret, err := imageServer.GetImageSecret(fingerprint)
+		if err != nil {
+			return err
+		}
+
+		req.Source.Secret = secret
 	}
 
 	// LXD cannot cancel download operations
@@ -120,7 +138,7 @@ func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (fi
 
 	conn, err := b.LxdClient(child)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer conn.Disconnect()
 
@@ -134,38 +152,28 @@ func (b *Backend) download(ctx context.Context, op *downloadOp, base string) (fi
 	// TODO: remove this when we remove features.images=false.
 	conn = conn.UseProject("")
 
-	copyop, err := conn.CopyImage(imageServer, imageInfo, &copyArgs)
+	copyop, err := conn.CreateImage(req, nil)
 	if err != nil {
-		return "", fmt.Errorf("%q download failed: %w", base, err)
+		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
 	copyop.AddHandler(func(o api.Operation) {
-		if o.Metadata == nil || aliasInfo.Size <= 0 {
+		if o.Metadata == nil || image.Size <= 0 {
 			return
 		}
-		if upd := handleLaunchUpdate(o.Metadata, int(aliasInfo.Size)); upd != nil {
+		if upd := handleImageUpdate(o.Metadata, int(image.Size)); upd != nil {
 			op.Update(*upd)
 		}
 	})
 
 	if err := copyop.Wait(); err != nil {
-		return "", fmt.Errorf("%q download failed: %w", base, err)
+		return fmt.Errorf("%q download failed: %w", base, err)
 	}
 
-	target, err := copyop.GetTarget()
-	if err != nil {
-		return "", fmt.Errorf("fingerprint not found for %q: %w", base, err)
-	}
-
-	fingerprint, ok := target.Metadata["fingerprint"].(string)
-	if !ok {
-		return "", fmt.Errorf("fingerprint not found for %q", base)
-	}
-
-	return fingerprint, nil
+	return nil
 }
 
-func BaseImageSource(base string) (*api.ImageSource, error) {
+func baseImageSource(base string) (*api.ImageSource, error) {
 	parts := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid base %q (expected <NAME>@<VERSION>)", base)
@@ -189,9 +197,10 @@ func BaseImageSource(base string) (*api.ImageSource, error) {
 	// There's a risk this doesn't work correctly for some 32-bit ARM
 	// variants, but it should be OK for x86_64, aarch64 and riscv64.
 	source := api.ImageSource{
-		Alias:    parts[1],
-		Protocol: protocol,
-		Server:   url,
+		Alias:     parts[1],
+		ImageType: string(api.InstanceTypeContainer),
+		Protocol:  protocol,
+		Server:    url,
 	}
 	return &source, nil
 }
@@ -277,15 +286,15 @@ func connectImageServer(source api.ImageSource) (lxd.ImageServer, error) {
 	}
 }
 
-func waitDownloadOp(ctx context.Context, op *downloadOp) (string, error) {
+func waitDownloadOp(ctx context.Context, op *downloadOp) error {
 	select {
 	case <-ctx.Done():
 		// Do not try to cancel the target op here as LXD is unable to cancel
 		// image download properly. Instead, we'll wait for it to finish if
 		// the task will be restarted.
-		return "", ctx.Err()
+		return ctx.Err()
 	case <-op.waitCh:
-		return op.fingerprint, op.err
+		return op.err
 	}
 }
 
@@ -302,7 +311,7 @@ var (
 // looking for specific progress labels. NOTE: There is no guarantee that the
 // LXD's progress reporting formant won't change; this meta data parser is valid
 // for LXD 6.5.
-func handleLaunchUpdate(opmeta map[string]interface{}, imsize int) *downloadUpdate {
+func handleImageUpdate(opmeta map[string]interface{}, imsize int) *downloadUpdate {
 	upd, ok := opmeta["download_progress"].(string)
 	if !ok {
 		return nil
@@ -349,9 +358,8 @@ type downloadUpdate struct {
 }
 
 type downloadOp struct {
-	waitCh      chan struct{}
-	fingerprint string
-	err         error
+	waitCh chan struct{}
+	err    error
 
 	reportersLock sync.Mutex
 	reporters     map[string]*progress.Reporter
