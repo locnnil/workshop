@@ -210,7 +210,7 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	return nil
 }
 
-func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string, forget bool) error {
+func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err

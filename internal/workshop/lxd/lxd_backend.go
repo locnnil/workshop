@@ -334,7 +334,16 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 
-		// Get an updated instance configuration.
+		// When rebuilding an instance from an image, LXD resets the
+		// image-related options: image.* and volatile.base_image. It
+		// also sets volatile.uuid.generation to volatile.uuid. The
+		// former seems to be unused for containers. Finally, it clears
+		// volatile.idmap.next and volatile.last_state.idmap. We are
+		// responsible for resetting the remaining options. Workshop
+		// only touches the options present in the default config, so
+		// we overwrite these options and assume everything else is
+		// managed by LXD. If we remove an option from the default
+		// config, we should also remove it from the config below.
 		rebuilt, etag, err := conn.GetInstance(inst.Name)
 		if err != nil {
 			return err
@@ -859,7 +868,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 	return workshops, nil
 }
 
-func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) (err error) {
+func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -876,13 +885,6 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) 
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
 	}
 
-	if !forget {
-		// Remove MAC address so LXD won't release the DHCP lease.
-		if err := removeHwaddr(ctx, conn, InstanceName(name, projectId)); err != nil {
-			logger.Noticef("On RemoveWorkshop: failed to preserve %q workshop DHCP lease: %v", name, err)
-		}
-	}
-
 	op, err := conn.DeleteInstance(InstanceName(name, projectId))
 	if err != nil {
 		return err
@@ -890,26 +892,6 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) 
 
 	// DeleteInstance cannot be cancelled in LXD.
 	return op.Wait()
-}
-
-func removeHwaddr(ctx context.Context, conn lxd.InstanceServer, name string) error {
-	inst, etag, err := conn.GetInstance(name)
-	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	if _, ok := inst.Config["volatile.workshop.network.hwaddr"]; !ok {
-		return nil
-	}
-	delete(inst.Config, "volatile.workshop.network.hwaddr")
-
-	op, err := conn.UpdateInstance(name, inst.Writable(), etag)
-	if err != nil {
-		return err
-	}
-	return op.WaitContext(ctx)
 }
 
 func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {

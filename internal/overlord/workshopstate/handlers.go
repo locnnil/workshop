@@ -90,28 +90,22 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
 	}
 
-	var forget bool
-	st.Lock()
-	err = task.Get("forget", &forget)
-	st.Unlock()
-	if err != nil {
-		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
-	}
-
 	rev := revert.New()
 	defer rev.Fail()
 
-	cleanupCtx := context.WithoutCancel(ctx)
-	rev.Add(func() {
-		cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
-		defer cancel()
+	if task.Kind() == "create-workshop" {
+		cleanupCtx := context.WithoutCancel(ctx)
+		rev.Add(func() {
+			cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
+			defer cancel()
 
-		// This may fail if the first workshop launch has failed for some
-		// reason; it is safe to ignore the error in that case.
-		if reverr := m.backend.RemoveWorkshop(cleanupCtx, w, forget); reverr != nil {
-			logger.Noticef("On doConstructWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
-		}
-	})
+			// This may fail if the first workshop launch has failed for some
+			// reason; it is safe to ignore the error in that case.
+			if reverr := m.backend.RemoveWorkshop(cleanupCtx, w); reverr != nil {
+				logger.Noticef("On doConstructWorkshop: cannot remove %q workshop on cleanup: %v", w, reverr)
+			}
+		})
+	}
 
 	if sdkSnapshot == "" {
 		var fingerprint string
@@ -142,6 +136,12 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	}
 
 	rev.Success()
+	return nil
+}
+
+func (m *WorkshopManager) undoRebuildWorkshop(task *state.Task, tomb *tomb.Tomb) error {
+	// The undo handler for stash-workshop rolls back both stash-workshop
+	// and rebuild-workshop.
 	return nil
 }
 
@@ -318,19 +318,10 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 		return err
 	}
 
-	var forget bool
-	st := task.State()
-	st.Lock()
-	err = task.Get("forget", &forget)
-	st.Unlock()
-	if err != nil {
-		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
-	}
-
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.RemoveWorkshop(ctx, w, forget)
+	return m.backend.RemoveWorkshop(ctx, w)
 }
 
 func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tomb) error {

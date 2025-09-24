@@ -64,6 +64,7 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 	c.Assert(s.runner.KnownTaskKinds(), testutil.DeepUnsortedMatches, []string{
 		"download-base",
 		"create-workshop",
+		"rebuild-workshop",
 		"start-workshop",
 		"stop-workshop",
 		"remove-workshop",
@@ -128,7 +129,7 @@ func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
 	defer s.state.Unlock()
 	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
 	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-	err := s.backend.RemoveWorkshop(s.ctx, workshop2.Name, true)
+	err := s.backend.RemoveWorkshop(s.ctx, workshop2.Name)
 	c.Assert(err, check.IsNil)
 
 	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)

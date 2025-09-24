@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -17,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
@@ -91,8 +93,57 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
-	// Wait a bit longer than the default start command, to ensure both
-	// IPv4 and IPv6 addresses are ready.
+	// Collect workshop metadata.
+	f.waitForNetwork(c, "test")
+	preStash := f.workshopMetadata(c, "test")
+	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
+
+	// Stash workshop.
+	err := f.bd.StashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	defer func() {
+		err := f.bd.RemoveWorkshopStash(f.ctx, "test")
+		c.Check(err, check.IsNil)
+	}()
+
+	// Validate metadata changes.
+	postStash := f.workshopMetadata(c, "test")
+	config := maps.Clone(postStash.config)
+	c.Check(config["boot.autostart"], check.Equals, "false")
+	config["boot.autostart"] = "true"
+	c.Check(config, check.DeepEquals, preStash.config)
+	c.Check(postStash.devices, check.DeepEquals, preStash.devices)
+
+	stash := f.stashMetadata(c, "test")
+	c.Check(stash.config, check.DeepEquals, postStash.config)
+	c.Check(stash.devices, check.DeepEquals, postStash.devices)
+
+	// Rebuild workshop.
+	wf := &workshop.File{
+		Name: "test",
+		Base: "ubuntu@22.04",
+	}
+	fingerprint, err := f.bd.GetBase(f.ctx, wf.Base)
+	c.Assert(err, check.IsNil)
+	err = f.bd.DownloadBase(f.ctx, wf.Base, fingerprint, nil)
+	c.Assert(err, check.IsNil)
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
+	c.Assert(err, check.IsNil)
+
+	// Unstash workshop.
+	err = f.bd.UnstashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+
+	// Validate workshop metadata.
+	f.waitForNetwork(c, "test")
+	postUnstash := f.workshopMetadata(c, "test")
+	c.Check(postUnstash.config, check.DeepEquals, preStash.config)
+	c.Check(postUnstash.devices, check.DeepEquals, preStash.devices)
+	c.Check(postUnstash.addresses, testutil.DeepUnsortedMatches, preStash.addresses)
+}
+
+// Wait until workshop acquires both an IPv4 and an IPv6 address.
+func (f *wsOps) waitForNetwork(c *check.C, name string) {
 	args := workshop.Execution{
 		ExecArgs: workshop.ExecArgs{
 			Command: []string{
@@ -105,46 +156,49 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 			Timeout: time.Minute,
 		},
 	}
-	exectx, err := f.bd.Exec(f.ctx, "test", &args)
+	exectx, err := f.bd.Exec(f.ctx, name, &args)
 	c.Assert(err, check.IsNil)
 	c.Assert(exectx.WaitExecution(f.ctx), check.IsNil)
-
-	addresses := f.ipAddresses(c, "test")
-
-	// Execute
-	err = f.bd.StashWorkshop(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	// Validate
-	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	err = f.bd.RemoveWorkshop(f.ctx, "test", false)
-	c.Assert(err, check.IsNil)
-
-	// Execute
-	err = f.bd.UnstashWorkshop(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	// Validate
-	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-
-	c.Check(f.ipAddresses(c, "test"), testutil.DeepUnsortedMatches, addresses)
 }
 
-func (f *wsOps) ipAddresses(c *check.C, name string) []string {
+type metadata struct {
+	config    map[string]string
+	devices   map[string]map[string]string
+	addresses []string
+}
+
+func (f *wsOps) workshopMetadata(c *check.C, name string) metadata {
 	conn, err := f.bd.LxdClient(f.ctx)
 	c.Assert(err, check.IsNil)
 	defer conn.Disconnect()
 
-	inst, _, err := conn.GetInstanceFull(lxdbackend.InstanceName(name, f.project.ProjectId))
+	return instanceMetadata(c, conn, lxdbackend.InstanceName(name, f.project.ProjectId))
+}
+
+func (f *wsOps) stashMetadata(c *check.C, name string) metadata {
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+
+	conn = conn.UseProject("workshop-stash." + f.usr.Username)
+
+	return instanceMetadata(c, conn, "stash-"+lxdbackend.InstanceName(name, f.project.ProjectId))
+}
+
+func instanceMetadata(c *check.C, conn lxd.InstanceServer, name string) metadata {
+	inst, _, err := conn.GetInstanceFull(name)
 	c.Assert(err, check.IsNil)
 
+	maps.DeleteFunc(inst.Config, func(k, v string) bool { return !includeWhenCopying(k) })
+	return metadata{inst.Config, inst.Devices, ipAddresses(inst)}
+}
+
+func includeWhenCopying(key string) bool {
+	suffix, found := strings.CutPrefix(key, "volatile.")
+	return !found || slices.Contains([]string{"base_image", "last_state.idmap"}, suffix)
+}
+
+func ipAddresses(inst *api.InstanceFull) []string {
 	var addresses []string
 	for _, network := range inst.State.Network {
 		for _, address := range network.Addresses {
@@ -329,7 +383,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Validate
-	err := f.bd.RemoveWorkshop(f.ctx, "test", true)
+	err := f.bd.RemoveWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
@@ -674,26 +728,50 @@ func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
+	// Collect workshop metadata.
+	f.waitForNetwork(c, "test")
+	original := f.workshopMetadata(c, "test")
+	maps.DeleteFunc(original.config, func(k, v string) bool { return modifiedByRebuild(k) })
+	c.Check(original.addresses, check.Not(check.HasLen), 0)
+
+	// Stop workshop.
 	err := f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 
-	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@22.04")
-	c.Assert(err, check.IsNil)
-	err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
-	c.Assert(err, check.IsNil)
-
+	// Rebuild workshop.
 	wf := &workshop.File{
 		Name: "test",
 		Base: "ubuntu@22.04",
 	}
-
-	// Execute
+	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
+	c.Assert(err, check.IsNil)
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
 	c.Assert(err, check.IsNil)
 
-	w, err := f.bd.Workshop(f.ctx, "test")
+	// Start workshop.
+	err = f.bd.StartWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
+
+	// Validate workshop metadata.
+	f.waitForNetwork(c, "test")
+	rebuilt := f.workshopMetadata(c, "test")
+	c.Check(rebuilt.config["image.workshop-base"], check.Equals, "ubuntu@22.04")
+	c.Check(rebuilt.config["user.workshop.file"], check.Equals, "name: test\nbase: ubuntu@22.04\n")
+	c.Check(rebuilt.config["user.workshop.base-fingerprint"], check.Equals, fingerprint)
+	maps.DeleteFunc(rebuilt.config, func(k, v string) bool { return modifiedByRebuild(k) })
+	c.Check(rebuilt.config, check.DeepEquals, original.config)
+	c.Check(rebuilt.devices, check.DeepEquals, original.devices)
+	c.Check(rebuilt.addresses, testutil.DeepUnsortedMatches, original.addresses)
+}
+
+func modifiedByRebuild(key string) bool {
+	switch key {
+	case "user.workshop.file", "user.workshop.base-fingerprint":
+		return true
+	}
+	return strings.HasPrefix(key, "image.") || strings.HasPrefix(key, "volatile.")
 }
 
 func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) {

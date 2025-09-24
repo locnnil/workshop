@@ -4,7 +4,10 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
+	"strings"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -53,7 +56,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err = s.copyInstance(conn, instance, stashed, sourceProject, targetProject); err != nil {
+	if err = s.copyInstance(conn, instance, stashed, sourceProject, targetProject, false); err != nil {
 		return err
 	}
 
@@ -87,7 +90,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	if err := s.copyInstance(conn, stash, instance, sourceProject, targetProject); err != nil {
+	if err := s.copyInstance(conn, stash, instance, sourceProject, targetProject, true); err != nil {
 		return err
 	}
 
@@ -95,9 +98,9 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 }
 
 // Copies the instance between LXD projects.
-func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string) error {
+func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string, refresh bool) error {
 	conn = conn.UseProject(sourceProject)
-	instance, _, err := conn.GetInstance(srcName)
+	srcInst, _, err := conn.GetInstance(srcName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return workshop.ErrWorkshopNotLaunched
@@ -105,15 +108,62 @@ func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, source
 		return err
 	}
 
+	// Clear the config and device overrides. LXD will still copy most of
+	// these from the source instance, but it will omit options which are
+	// unique to the source instance, like MAC addresses and UUIDs.
+	config := srcInst.Config
+	devices := srcInst.Devices
+	srcInst.Config = nil
+	srcInst.Devices = nil
+
 	dest := conn.UseProject(targetProject)
-	rop, err := dest.CopyInstance(conn, *instance, &lxd.InstanceCopyArgs{Name: dstName})
+	rop, err := dest.CopyInstance(conn, *srcInst, &lxd.InstanceCopyArgs{Name: dstName, Refresh: refresh})
 	if err != nil {
 		return err
 	}
 	if err = rop.Wait(); err != nil {
 		return err
 	}
-	return nil
+
+	if !refresh {
+		// LXD created a new instance with copied config and devices.
+		return nil
+	}
+
+	// LXD replaced an existing instance's root disk, but it's our job to
+	// copy the config and devices.
+	dstInst, etag, err := dest.GetInstance(dstName)
+	if err != nil {
+		return err
+	}
+
+	// The main use case is to restore an instance from a backup, so we
+	// replace all options which should be present in the backup. Other
+	// options are preserved. Most of these will be constant for the
+	// instance's lifetime, and we assume they are all managed by LXD.
+	maps.DeleteFunc(dstInst.Config, func(k, v string) bool { return includeWhenCopying(k) })
+	maps.DeleteFunc(config, func(k, v string) bool { return !includeWhenCopying(k) })
+	if dstInst.Config == nil {
+		dstInst.Config = config
+	} else {
+		maps.Copy(dstInst.Config, config)
+	}
+
+	dstInst.Devices = devices
+
+	op, err := dest.UpdateInstance(dstName, dstInst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.Wait()
+}
+
+// Based on LXD's InstanceIncludeWhenCopying. These are the options which
+// CopyInstance adds to a newly created instance by default (i.e. when
+// api.Instance.Config is empty).
+func includeWhenCopying(key string) bool {
+	suffix, found := strings.CutPrefix(key, "volatile.")
+	return !found || slices.Contains([]string{"base_image", "last_state.idmap"}, suffix)
 }
 
 func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
@@ -139,15 +189,8 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	}
 
 	conn = conn.UseProject(stash)
-	iname := instanceStashName(name, projectId)
 
-	// Remove MAC address so LXD won't release the DHCP lease,
-	// which is owned by the real instance and not the stash.
-	if err := removeHwaddr(ctx, conn, iname); err != nil {
-		logger.Noticef("On RemoveWorkshopStash: failed to preserve %q workshop DHCP lease: %v", name, err)
-	}
-
-	op, err := conn.DeleteInstance(iname)
+	op, err := conn.DeleteInstance(instanceStashName(name, projectId))
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
