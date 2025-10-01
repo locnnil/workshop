@@ -133,9 +133,12 @@ type VolumeManager interface {
 }
 
 type BaseImageManager interface {
-	// Download the latest image for the given base. On success, returns an
-	// image identifier that can be passed to LaunchOrRebuildWorkshop.
-	Download(ctx context.Context, base string, report *progress.Reporter) (string, error)
+	// Lookup the latest image for the given base. On success, returns a
+	// string that uniquely identifies the latest image. This can be
+	// passed to DownloadBase and LaunchOrRebuildWorkshop.
+	GetBase(ctx context.Context, base string) (string, error)
+	// Download the base image with the given fingerprint.
+	DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error
 }
 
 type ExecArgs struct {
@@ -198,9 +201,9 @@ type Backend interface {
 	// Launch a barebone workshop instance. If the workshop exists, wipe out its
 	// rootfs and rebuild it from the workshop file's base image. The
 	// configuration and devices of the rebuilt workshop will be reset to the
-	// default one. The provided image should be a unique identifier, like a hash,
-	// rather than a human-readable name like `file.Base`.
-	LaunchOrRebuildWorkshop(ctx context.Context, file *File, image string) error
+	// default one. The given base fingerprint is combined with `file.Base` to
+	// determine the exact base image to use.
+	LaunchOrRebuildWorkshop(ctx context.Context, file *File, baseFingerprint string) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	// Also deletes all metadata associated with the workshop if forget is true.

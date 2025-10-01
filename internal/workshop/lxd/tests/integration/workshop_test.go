@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/user"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -334,27 +335,36 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 }
 
-func (f *wsOps) listImages(c *check.C, base string) []api.Image {
-	source, err := lxdbackend.BaseImageSource(base)
+// List images marked by Workshop for the given base.
+func (f *wsOps) listWorkshopImages(c *check.C, base string) []api.Image {
+	cli, err := f.bd.LxdClient(f.ctx)
 	c.Assert(err, check.IsNil)
+	defer cli.Disconnect()
+
+	images, err := cli.GetImagesWithFilter([]string{"type=container", "properties.workshop-base=" + base})
+	c.Assert(err, check.IsNil)
+
+	return images
+}
+
+// List images for the given base, including those unknown to Workshop. Only
+// tested for ubuntu and ubuntu-minimal images.
+func (f *wsOps) listAllImages(c *check.C, base string) []api.Image {
+	parts := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
+	c.Assert(parts, check.HasLen, 2)
 
 	cli, err := f.bd.LxdClient(f.ctx)
 	c.Assert(err, check.IsNil)
 	defer cli.Disconnect()
 
-	images, err := cli.GetImagesWithFilter([]string{"type=container"})
+	images, err := cli.GetImagesWithFilter([]string{"type=container", "properties.os=" + parts[0], "properties.version=" + parts[1]})
 	c.Assert(err, check.IsNil)
 
-	return slices.DeleteFunc(images, func(image api.Image) bool {
-		if other := image.UpdateSource; other == nil {
-			return true
-		} else {
-			return other.Server != source.Server || other.Alias != source.Alias
-		}
-	})
+	return images
 }
+
 func (f *wsOps) deleteImages(c *check.C, base string) {
-	images := f.listImages(c, base)
+	images := f.listAllImages(c, base)
 
 	cli, err := f.bd.LxdClient(f.ctx)
 	c.Assert(err, check.IsNil)
@@ -367,54 +377,71 @@ func (f *wsOps) deleteImages(c *check.C, base string) {
 	}
 }
 
-func (f *wsOps) TestLxdBackendDownloadWorkshopBase(c *check.C) {
+func (f *wsOps) TestLxdBackendDownloadBase(c *check.C) {
 	// ensure there is no image in LXD storage
 	f.deleteImages(c, "ubuntu@22.04")
+
+	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	c.Assert(fingerprint, check.Not(check.Equals), "")
 
 	var wg sync.WaitGroup
 	wg.Add(5)
 	for range 5 {
 		go func() {
-			image, err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
+			err := f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
 			c.Check(err, check.IsNil)
-			c.Check(image, check.Not(check.Equals), "")
 			wg.Done()
 		}()
 	}
 	wg.Wait()
 
-	// Check behaviour when image already downloaded.
-	image, err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
-	c.Check(err, check.IsNil)
-	c.Check(image, check.Not(check.Equals), "")
+	images := f.listWorkshopImages(c, "ubuntu@22.04")
+	c.Assert(images, check.HasLen, 1)
+	c.Check(images[0].AutoUpdate, check.Equals, false)
+	c.Check(images[0].Cached, check.Equals, false)
+	c.Check(images[0].Fingerprint, check.Equals, fingerprint)
 
-	images := f.listImages(c, "ubuntu@22.04")
-	fingerprints := make([]string, len(images))
-	for i, image := range images {
-		c.Check(image.AutoUpdate, check.Equals, false)
-		c.Check(image.Cached, check.Equals, false)
-		fingerprints[i] = image.Fingerprint
-	}
-	c.Check(fingerprints, testutil.Contains, image)
+	// Check behaviour when image already downloaded.
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
+	c.Check(err, check.IsNil)
+
+	images2 := f.listWorkshopImages(c, "ubuntu@22.04")
+	c.Assert(images2, check.HasLen, 1)
+	c.Check(images2[0], check.DeepEquals, images[0])
 }
 
-func (f *wsOps) TestLxdBackendDownloadMalformedBase(c *check.C) {
-	_, err := f.bd.Download(f.ctx, "ubuntu:24.04", nil)
+func (f *wsOps) TestLxdBackendGetOrDownloadMalformedBase(c *check.C) {
+	_, err := f.bd.GetBase(f.ctx, "ubuntu:24.04")
 	c.Check(err, check.ErrorMatches, `invalid base "ubuntu:24.04" \(expected <NAME>@<VERSION>\)`)
-	_, err = f.bd.Download(f.ctx, "ubuntu@", nil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu:24.04", "", nil)
+	c.Check(err, check.ErrorMatches, `invalid base "ubuntu:24.04" \(expected <NAME>@<VERSION>\)`)
+
+	_, err = f.bd.GetBase(f.ctx, "ubuntu@")
 	c.Check(err, check.ErrorMatches, `invalid base "ubuntu@" \(expected <NAME>@<VERSION>\)`)
-	_, err = f.bd.Download(f.ctx, "canonical@ubuntu@24.04", nil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@", "", nil)
+	c.Check(err, check.ErrorMatches, `invalid base "ubuntu@" \(expected <NAME>@<VERSION>\)`)
+
+	_, err = f.bd.GetBase(f.ctx, "canonical@ubuntu@24.04")
+	c.Check(err, check.ErrorMatches, `invalid base "canonical@ubuntu@24.04" \(expected <NAME>@<VERSION>\)`)
+	err = f.bd.DownloadBase(f.ctx, "canonical@ubuntu@24.04", "", nil)
 	c.Check(err, check.ErrorMatches, `invalid base "canonical@ubuntu@24.04" \(expected <NAME>@<VERSION>\)`)
 }
 
 func (f *wsOps) TestLxdBackendDownloadBaseImageNotFound(c *check.C) {
-	_, err := f.bd.Download(f.ctx, "ubuntu@1.01", nil)
-	c.Check(err, check.ErrorMatches, `"ubuntu@1.01" download failed.*`)
+	_, err := f.bd.GetBase(f.ctx, "ubuntu@1.01")
+	c.Check(err, check.ErrorMatches, `base "ubuntu@1.01" not found.*`)
+
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", "##################", nil)
+	c.Check(err, check.ErrorMatches, `"ubuntu@22.04" download failed.*`)
 }
 
 func (f *wsOps) TestLxdBackendDownloadProtocolNotSupported(c *check.C) {
 	defer lxdbackend.FakeImageServer("https://cloud-images.ubuntu.com/minimal/releases")()
-	_, err := f.bd.Download(f.ctx, "ubuntu@20.04", nil)
+
+	_, err := f.bd.GetBase(f.ctx, "ubuntu@20.04")
+	c.Check(err, check.ErrorMatches, `unknown image server URL prefix \(supported: simplestreams, lxd\)`)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@20.04", "", nil)
 	c.Check(err, check.ErrorMatches, `unknown image server URL prefix \(supported: simplestreams, lxd\)`)
 }
 
@@ -423,17 +450,21 @@ func (f *wsOps) TestLxdBackendDownloadConcurrentErrors(c *check.C) {
 	wg.Add(5)
 	for range 5 {
 		go func() {
-			_, err := f.bd.Download(f.ctx, "ubuntu@1.01", nil)
-			c.Check(err, check.ErrorMatches, `"ubuntu@1.01" download failed.*`)
+			err := f.bd.DownloadBase(f.ctx, "ubuntu@22.04", "##################", nil)
+			c.Check(err, check.ErrorMatches, `"ubuntu@22.04" download failed.*`)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
 }
 
-func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *check.C) {
+func (f *wsOps) TestLxdBackendDownloadBaseResumeAfterCancellation(c *check.C) {
 	// ensure there is no image in LXD storage
 	f.deleteImages(c, "ubuntu@22.04")
+
+	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	c.Assert(fingerprint, check.Not(check.Equals), "")
 
 	wcancel, cancel := context.WithCancel(f.ctx)
 	defer cancel()
@@ -449,7 +480,7 @@ func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *che
 					once.Do(func() { cancel() })
 				},
 			}
-			_, err := f.bd.Download(wcancel, "ubuntu@22.04", r)
+			err := f.bd.DownloadBase(wcancel, "ubuntu@22.04", fingerprint, r)
 			c.Check(err, testutil.ErrorIs, context.Canceled)
 			wg.Done()
 		}()
@@ -458,18 +489,14 @@ func (f *wsOps) TestLxdBackendDownloadWorkshopBaseResumeAfterCancellation(c *che
 
 	// attempt to download after interruption (must pickup an ongoing operation
 	// and wait for it).
-	image, err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
 	c.Assert(err, check.IsNil)
-	c.Check(image, check.Not(check.Equals), "")
 
-	images := f.listImages(c, "ubuntu@22.04")
-	fingerprints := make([]string, len(images))
-	for i, image := range images {
-		c.Check(image.AutoUpdate, check.Equals, false)
-		c.Check(image.Cached, check.Equals, false)
-		fingerprints[i] = image.Fingerprint
-	}
-	c.Check(fingerprints, testutil.Contains, image)
+	images := f.listWorkshopImages(c, "ubuntu@22.04")
+	c.Assert(images, check.HasLen, 1)
+	c.Check(images[0].AutoUpdate, check.Equals, false)
+	c.Check(images[0].Cached, check.Equals, false)
+	c.Check(images[0].Fingerprint, check.Equals, fingerprint)
 }
 
 func (f *wsOps) TestLxdBackendDownloadMultipleBasesConcurrently(c *check.C) {
@@ -484,23 +511,25 @@ func (f *wsOps) TestLxdBackendDownloadMultipleBasesConcurrently(c *check.C) {
 	wg.Add(len(workshop.SupportedBases))
 	for i, b := range workshop.SupportedBases {
 		go func() {
-			image, err := f.bd.Download(f.ctx, b, nil)
-			c.Check(err, check.IsNil)
-			c.Check(image, check.Not(check.Equals), "")
-			fingerprints[i] = image
-			wg.Done()
+			defer wg.Done()
+
+			fingerprint, err := f.bd.GetBase(f.ctx, b)
+			c.Assert(err, check.IsNil)
+			c.Assert(fingerprint, check.Not(check.Equals), "")
+			fingerprints[i] = fingerprint
+
+			err = f.bd.DownloadBase(f.ctx, b, fingerprint, nil)
+			c.Assert(err, check.IsNil)
 		}()
 	}
 	wg.Wait()
 
 	for i, b := range workshop.SupportedBases {
-		images := f.listImages(c, b)
-		c.Check(len(images), check.Equals, 1)
-		if len(images) == 1 {
-			c.Check(images[0].AutoUpdate, check.Equals, false)
-			c.Check(images[0].Cached, check.Equals, false)
-			c.Check(images[0].Fingerprint, check.Equals, fingerprints[i])
-		}
+		images := f.listWorkshopImages(c, b)
+		c.Assert(images, check.HasLen, 1)
+		c.Check(images[0].AutoUpdate, check.Equals, false)
+		c.Check(images[0].Cached, check.Equals, false)
+		c.Check(images[0].Fingerprint, check.Equals, fingerprints[i])
 	}
 }
 
@@ -520,17 +549,24 @@ func (f *wsOps) TestLxdBackendReuseDownloadedBase(c *check.C) {
 		// ensure there is no image in LXD storage
 		f.deleteImages(c, "ubuntu@22.04")
 
-		image, err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
-		c.Assert(err, check.IsNil)
-		c.Check(image, check.Not(check.Equals), "")
+		images := f.listAllImages(c, "ubuntu@22.04")
+		c.Assert(images, check.HasLen, 0)
 
-		images := f.listImages(c, "ubuntu@22.04")
-		c.Assert(len(images), check.Equals, 1)
+		fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@22.04")
+		c.Assert(err, check.IsNil)
+		c.Assert(fingerprint, check.Not(check.Equals), "")
+		err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
+		c.Assert(err, check.IsNil)
+
+		images = f.listAllImages(c, "ubuntu@22.04")
+		c.Assert(images, check.HasLen, 1)
 		imageDownloaded := images[0]
 
 		c.Check(imageDownloaded.AutoUpdate, check.Equals, false)
 		c.Check(imageDownloaded.Cached, check.Equals, false)
-		c.Check(imageDownloaded.Fingerprint, check.Equals, image)
+		c.Check(imageDownloaded.Fingerprint, check.Equals, fingerprint)
+		c.Check(imageDownloaded.Properties["workshop-base"], check.Equals, "ubuntu@22.04")
+		c.Check(imageDownloaded.UpdateSource, check.IsNil)
 
 		tempInstance := fmt.Sprintf("%08x-test", rand.Uint32())
 		init := exec.Command("lxc", "init", "ubuntu-minimal:22.04", tempInstance)
@@ -538,13 +574,13 @@ func (f *wsOps) TestLxdBackendReuseDownloadedBase(c *check.C) {
 		cleanup := exec.Command("lxc", "delete", tempInstance)
 		c.Assert(cleanup.Run(), check.IsNil)
 
-		images = f.listImages(c, "ubuntu@22.04")
-		if len(images) > 1 || images[0].Fingerprint != image {
+		images = f.listAllImages(c, "ubuntu@22.04")
+		if len(images) > 1 || images[0].Fingerprint != fingerprint {
 			// Alias was just updated, try again.
 			continue
 		}
 
-		c.Assert(len(images), check.Equals, 1)
+		c.Assert(images, check.HasLen, 1)
 		imageCached := images[0]
 
 		c.Check(imageCached.LastUsedAt, check.Not(check.Equals), imageDownloaded.LastUsedAt)
@@ -556,53 +592,46 @@ func (f *wsOps) TestLxdBackendReuseDownloadedBase(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendReuseCachedBase(c *check.C) {
-	// Attempt twice in case the image is updated partway.
-	for range 2 {
-		// ensure there is no image in LXD storage
-		f.deleteImages(c, "ubuntu@22.04")
+	// ensure there is no image in LXD storage
+	f.deleteImages(c, "ubuntu@22.04")
 
-		tempInstance := fmt.Sprintf("%08x-test", rand.Uint32())
-		init := exec.Command("lxc", "init", "ubuntu-minimal:22.04", tempInstance)
-		c.Assert(init.Run(), check.IsNil)
-		cleanup := exec.Command("lxc", "delete", tempInstance)
-		c.Assert(cleanup.Run(), check.IsNil)
+	images := f.listAllImages(c, "ubuntu@22.04")
+	c.Assert(images, check.HasLen, 0)
 
-		images := f.listImages(c, "ubuntu@22.04")
-		c.Assert(len(images), check.Equals, 1)
-		imageCached := images[0]
+	tempInstance := fmt.Sprintf("%08x-test", rand.Uint32())
+	init := exec.Command("lxc", "init", "ubuntu-minimal:22.04", tempInstance)
+	c.Assert(init.Run(), check.IsNil)
+	cleanup := exec.Command("lxc", "delete", tempInstance)
+	c.Assert(cleanup.Run(), check.IsNil)
 
-		c.Check(imageCached.AutoUpdate, check.Equals, true)
-		c.Check(imageCached.Cached, check.Equals, true)
+	images = f.listAllImages(c, "ubuntu@22.04")
+	c.Assert(images, check.HasLen, 1)
+	imageCached := images[0]
 
-		image, err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
-		c.Assert(err, check.IsNil)
-		c.Check(image, check.Not(check.Equals), "")
+	c.Check(imageCached.AutoUpdate, check.Equals, true)
+	c.Check(imageCached.Cached, check.Equals, true)
+	_, ok := imageCached.Properties["workshop-base"]
+	c.Check(ok, check.Equals, false)
+	c.Check(imageCached.UpdateSource, check.NotNil)
 
-		images = f.listImages(c, "ubuntu@22.04")
-		if len(images) > 1 || images[0].Fingerprint != imageCached.Fingerprint {
-			// Alias was just updated, try again.
-			continue
-		}
+	err := f.bd.DownloadBase(f.ctx, "ubuntu@22.04", imageCached.Fingerprint, nil)
+	c.Assert(err, check.IsNil)
 
-		c.Assert(len(images), check.Equals, 1)
-		imageDownloaded := images[0]
+	images = f.listAllImages(c, "ubuntu@22.04")
+	c.Assert(images, check.HasLen, 1)
+	imageDownloaded := images[0]
 
-		c.Check(imageDownloaded.AutoUpdate, check.Equals, false)
-		c.Check(imageDownloaded.Cached, check.Equals, false)
-		c.Check(imageDownloaded.Fingerprint, check.Equals, image)
-		// CopyImage updates Public, AutoUpdate, Filename, Properties
-		// and Profiles if any of them are set. It also does so if
-		// Profiles is nil (but not if it's a non-nil empty slice).
-		// This works for us since we want to unset AutoUpdate. As a
-		// side effect, the Filename is lost as well. This doesn't seem
-		// to have any practical significance.
-		imageDownloaded.Filename = imageCached.Filename
-		imageDownloaded.AutoUpdate = true
-		imageDownloaded.Cached = true
-		c.Check(imageDownloaded, check.DeepEquals, imageCached)
-
-		break
-	}
+	// CreateImage updates Public, AutoUpdate, Filename, Properties
+	// and Profiles if any of them are set. It also does so if
+	// Profiles is nil (but not if it's a non-nil empty slice).
+	// This works for us since we want to unset AutoUpdate and add the
+	// workshop-base property. As a side effect, the Filename is lost as
+	// well. This doesn't seem to have any practical significance.
+	imageCached.Filename = ""
+	imageCached.AutoUpdate = false
+	imageCached.Cached = false
+	imageCached.Properties["workshop-base"] = "ubuntu@22.04"
+	c.Check(imageDownloaded, check.DeepEquals, imageCached)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopStartFailed(c *check.C) {
@@ -625,6 +654,22 @@ func (f *wsOps) TestLxdBackendWorkshopStartFailed(c *check.C) {
 	c.Check(w.Running, check.Equals, false)
 }
 
+func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
+	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@24.04")
+	c.Assert(err, check.IsNil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@24.04", fingerprint, nil)
+	c.Assert(err, check.IsNil)
+
+	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
+	c.Assert(err, check.IsNil)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	w, err := f.bd.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
+}
+
 func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
@@ -632,16 +677,23 @@ func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	err := f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 
-	image, err := f.bd.Download(f.ctx, "ubuntu@22.04", nil)
+	fingerprint, err := f.bd.GetBase(f.ctx, "ubuntu@22.04")
+	c.Assert(err, check.IsNil)
+	err = f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{
 		Name: "test",
-		Base: "ubuntu@24.04"}
+		Base: "ubuntu@22.04",
+	}
 
 	// Execute
-	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, image)
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
 	c.Assert(err, check.IsNil)
+
+	w, err := f.bd.Workshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) {
@@ -650,6 +702,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 
 	w, err := f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
+	fingerprint := w.BaseFingerprint
 
 	sdkfs := c.MkDir()
 	setup := sdk.Setup{
@@ -712,9 +765,10 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Assert(err, check.IsNil)
 	c.Check(w.Running, check.Equals, false)
 
-	// Check that Restore uses the provided "user.workshop.file" and removes
-	// "test-sdk-2" setup from the workshop.
+	// Check that Restore uses the provided "user.workshop.file," keeps its
+	// base fingerprint and removes "test-sdk-2" setup from the workshop.
 	c.Check(w.File, check.DeepEquals, wf)
+	c.Check(w.BaseFingerprint, check.Equals, fingerprint)
 	c.Check(w.Sdks, check.HasLen, 1)
 	c.Check(w.Sdks[setup2.Name], check.DeepEquals, sdk.Setup{})
 

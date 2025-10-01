@@ -84,7 +84,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	})
 
 	// Execute
-	cfg, err := lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	cfg, err := lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file, "fakeimage12345")
 	defer reset()
 
 	// Validate
@@ -96,6 +96,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	c.Assert(cfg["nvidia.runtime"], check.Equals, "true")
 	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "all")
 	c.Assert(cfg["user.workshop.file"], check.Equals, marshalledWorkshop)
+	c.Assert(cfg["user.workshop.base-fingerprint"], check.Equals, "fakeimage12345")
 
 	// Setup
 	reset = lxdbackend.MockNvidiaRuntime(func() (bool, error) {
@@ -104,7 +105,7 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 	defer reset()
 
 	// Execute
-	cfg, err = lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file)
+	cfg, err = lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file, "")
 
 	// Validate
 	c.Assert(err, check.IsNil)

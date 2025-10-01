@@ -1634,7 +1634,7 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 
 		wantws := want[idx]
 		c.Assert(w.Name, check.Equals, wantws.name)
-		c.Assert(w.Base, check.Equals, wantws.base)
+		c.Assert(w.File.Base, check.Equals, wantws.base)
 
 		c.Assert(w.Sdks, check.HasLen, len(wantws.sdks))
 		for _, sk := range wantws.sdks {
@@ -3144,6 +3144,101 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 	want := []expectedWorkshop{{
 		name: "manysdks",
 		base: "ubuntu@24.04",
+		sdks: []sdk.Setup{
+			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
+			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+			{Name: "test-sdk-2", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},
+		},
+		connections: []string{
+			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
+			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
+		},
+		plugs: []string{
+			"test-sdk:data",
+			"test-sdk-2:photos",
+			"test-sdk-2:gpu",
+		},
+		slots: []string{
+			"test-sdk-2:data-slot",
+			"system:camera",
+			"system:desktop",
+			"system:gpu",
+			"system:mount",
+			"system:ssh-agent",
+		},
+	}}
+
+	s.ensureWorkshops(c, want)
+
+	s.checkSnapshotCalls(c, "manysdks", []string{
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+		"system",
+		"test-sdk",
+		"test-sdk-2",
+	})
+
+	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+}
+
+func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer func() { _ = s.d.Overlord().Stop() }()
+	// Setup
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	oldGetBase := s.b.GetBaseCallback
+	s.b.GetBaseCallback = func(ctx context.Context, base string) (string, error) {
+		return "oldimage123", nil
+	}
+	defer func() { s.b.GetBaseCallback = oldGetBase }()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	wp, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+	c.Check(wp.BaseFingerprint, check.Equals, "oldimage123")
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+
+	s.b.GetBaseCallback = func(ctx context.Context, base string) (string, error) {
+		return "newimage321", nil
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	wp, err = s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+	c.Check(wp.BaseFingerprint, check.Equals, "newimage321")
+
+	want := []expectedWorkshop{{
+		name: "manysdks",
+		base: "ubuntu@22.04",
 		sdks: []sdk.Setup{
 			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision, InstallTime: &s.installTime},
 			{Name: "test-sdk", Channel: "latest/stable", Revision: sdk.R(1), InstallTime: &s.installTime},

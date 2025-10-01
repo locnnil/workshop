@@ -259,7 +259,7 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image string) error {
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
 	var err error
 
 	conn, err := s.LxdClient(ctx)
@@ -283,14 +283,14 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file)
+	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, baseFingerprint)
 	if err != nil {
 		return err
 	}
 	devices := defaultDevices(projectId, file.Name)
 	source := api.InstanceSource{
 		Type:        api.SourceTypeImage,
-		Fingerprint: image,
+		Fingerprint: baseFingerprint,
 	}
 
 	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
@@ -783,14 +783,14 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	return &workshop.Workshop{
-		Backend:  b,
-		Project:  p,
-		Name:     f.Name,
-		Base:     f.Base,
-		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
-		Sdks:     sdks,
-		Profiles: profs,
-		File:     f,
+		Backend:         b,
+		Project:         p,
+		Name:            f.Name,
+		BaseFingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
+		Running:         inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		Sdks:            sdks,
+		Profiles:        profs,
+		File:            f,
 	}, nil
 }
 
@@ -1104,7 +1104,7 @@ func checkNvidia() (bool, error) {
 //
 // Although these will be present within every workshop, path units utilise
 // inotify and as such add effectively zero overhead to a workshop launch/start.
-func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File) (map[string]string, error) {
+func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, baseFingerprint string) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
   - default
@@ -1210,16 +1210,17 @@ runcmd:
 	// Include all options we might change, even those with default values,
 	// so that workshops can be rebuilt.
 	cfg := map[string]string{
-		"boot.autostart":             "false",
-		"raw.idmap":                  fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
-		"security.nesting":           "true",
-		"user.workshop.project-id":   projectId,
-		"user.user-data":             cloudInitConfig,
-		"user.network-config":        cloudInitNetwork,
-		"user.workshop.file":         string(f),
-		"user.workshop.sdks":         "{}",
-		"nvidia.driver.capabilities": cfgNvidiaDriverCapabilities,
-		"nvidia.runtime":             cfgNvidiaRuntime,
+		"boot.autostart":                 "false",
+		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
+		"security.nesting":               "true",
+		"user.workshop.project-id":       projectId,
+		"user.user-data":                 cloudInitConfig,
+		"user.network-config":            cloudInitNetwork,
+		"user.workshop.file":             string(f),
+		"user.workshop.base-fingerprint": baseFingerprint,
+		"user.workshop.sdks":             "{}",
+		"nvidia.driver.capabilities":     cfgNvidiaDriverCapabilities,
+		"nvidia.runtime":                 cfgNvidiaRuntime,
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic

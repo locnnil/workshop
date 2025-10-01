@@ -17,10 +17,11 @@ import (
 )
 
 var (
-	ConfigProjectId         = "user.workshop.project-id"
-	ConfigWorkshopFile      = "user.workshop.file"
-	ConfigWorkshopSdks      = "user.workshop.sdks"
-	ConfigProjectPathDevice = "workshop.project"
+	ConfigProjectId               = "user.workshop.project-id"
+	ConfigWorkshopFile            = "user.workshop.file"
+	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
+	ConfigWorkshopSdks            = "user.workshop.sdks"
+	ConfigProjectPathDevice       = "workshop.project"
 )
 
 var InstallTimeNow = time.Now
@@ -30,10 +31,10 @@ type Workshop struct {
 	Project Project
 	// Workshop file that was used to launch it; it may be out of sync with the
 	// file in the project directory due to user's edits, etc.
-	File    *File
-	Name    string
-	Base    string
-	Running bool
+	File            *File
+	Name            string
+	BaseFingerprint string
+	Running         bool
 	// Installed SDKs.
 	Sdks map[string]sdk.Setup
 	// Workshop devices installed.

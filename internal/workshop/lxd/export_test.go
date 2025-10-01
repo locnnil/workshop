@@ -4,7 +4,7 @@ var (
 	DefaultConfig      = (*Backend).workshopConfig
 	ReadProjects       = readProjects
 	SaveProjects       = saveProjects
-	HandleLaunchUpdate = handleLaunchUpdate
+	HandleImageUpdate  = handleImageUpdate
 	CheckServerVersion = checkVersion
 )
 

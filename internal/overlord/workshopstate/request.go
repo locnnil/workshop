@@ -84,7 +84,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		project:     project,
 	}
 
-	reqs, err := w.findAllStoreSdks(ctx, project, names, "launch")
+	reqs, err := w.findRemoteArtifacts(ctx, project, names, "launch")
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 	for _, req := range reqs {
 		name := req.file.Name
 		// Make sure the workshop doesn't exist.
-		// Has to happen after calling findAllStoreSdks (because it unlocks the state).
+		// Has to happen after calling findRemoteArtifacts (because it unlocks the state).
 		_, err := w.Workshop(ctx, name, projectId)
 		if err == nil {
 			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
@@ -110,7 +110,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		}
 		sdks := ordered(req.installOrder, req.storeSdks, localSdks)
 
-		tasks := launch(w.state, req.file, req.fileText, sdks, project)
+		tasks := launch(w.state, req.file, req.fileText, req.baseFingerprint, sdks, project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
@@ -121,13 +121,15 @@ type workshopReq struct {
 	file *workshop.File
 	// Marshalled file (to prevent data loss when passing through the state).
 	fileText string
+	// Up to date base image identifier.
+	baseFingerprint string
 	// All possible SDKs (including sketch) in installation order.
 	installOrder []string
 	// Up to date SDK setups from the store.
 	storeSdks []sdk.Setup
 }
 
-func (w *WorkshopManager) findAllStoreSdks(ctx context.Context, project workshop.Project, names []string, action string) ([]workshopReq, error) {
+func (w *WorkshopManager) findRemoteArtifacts(ctx context.Context, project workshop.Project, names []string, action string) ([]workshopReq, error) {
 	sto := sdk.StoreService(w.state)
 	reqs := make([]workshopReq, 0, len(names))
 
@@ -149,6 +151,11 @@ func (w *WorkshopManager) findAllStoreSdks(ctx context.Context, project workshop
 			return nil, fmt.Errorf("cannot %s %q: invalid workshop file: %w", action, name, err)
 		}
 
+		fingerprint, err := w.backend.GetBase(ctx, file.Base)
+		if err != nil {
+			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
+		}
+
 		installOrder := make([]string, 1, len(file.Sdks)+2)
 		installOrder[0] = sdk.System.String()
 		for _, sk := range file.Sdks {
@@ -163,10 +170,11 @@ func (w *WorkshopManager) findAllStoreSdks(ctx context.Context, project workshop
 			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
 		req := workshopReq{
-			file:         file,
-			fileText:     string(fileBlob),
-			installOrder: installOrder,
-			storeSdks:    storeSdks,
+			file:            file,
+			fileText:        string(fileBlob),
+			baseFingerprint: fingerprint,
+			installOrder:    installOrder,
+			storeSdks:       storeSdks,
 		}
 		reqs = append(reqs, req)
 	}
@@ -421,9 +429,10 @@ func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
 	return ordered
 }
 
-func retrieveBase(st *state.State, file *workshop.File) *state.Task {
+func retrieveBase(st *state.State, file *workshop.File, fingerprint string) *state.Task {
 	base := st.NewTask("download-base", fmt.Sprintf("Download %q base image", file.Base))
 	base.Set("workshop-base", file.Base)
+	base.Set("workshop-base-fingerprint", fingerprint)
 	return base
 }
 
@@ -478,7 +487,7 @@ func installSdks(st *state.State, pid, w string, sdks []sdk.Setup, retrieveTasks
 	return all
 }
 
-func launchWorkshop(st *state.State, name string, fileText string, downloadBase string) *state.TaskSet {
+func launchWorkshop(st *state.State, name string, fileText string, fingerprint string) *state.TaskSet {
 	construct := state.NewTaskSet()
 
 	var prev *state.Task
@@ -494,7 +503,7 @@ func launchWorkshop(st *state.State, name string, fileText string, downloadBase 
 	addTask(create)
 	create.Set("workshop-file", fileText)
 	create.Set("forget", true)
-	create.Set("download-base-task", downloadBase)
+	create.Set("workshop-base-fingerprint", fingerprint)
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
 	addTask(start)
@@ -502,7 +511,7 @@ func launchWorkshop(st *state.State, name string, fileText string, downloadBase 
 	return construct
 }
 
-func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot string, downloadBase string) *state.TaskSet {
+func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot string, fingerprint string) *state.TaskSet {
 	construct := state.NewTaskSet()
 
 	var prev *state.Task
@@ -529,8 +538,8 @@ func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot 
 	if sdkSnapshot != "" {
 		create.Set("sdk-snapshot", sdkSnapshot)
 	}
-	if downloadBase != "" {
-		create.Set("download-base-task", downloadBase)
+	if fingerprint != "" {
+		create.Set("workshop-base-fingerprint", fingerprint)
 	}
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
@@ -539,7 +548,7 @@ func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot 
 	return construct
 }
 
-func launch(st *state.State, file *workshop.File, fileText string, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
+func launch(st *state.State, file *workshop.File, fileText string, fingerprint string, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
 
@@ -556,7 +565,7 @@ func launch(st *state.State, file *workshop.File, fileText string, sdks []sdk.Se
 		all.AddAll(ts)
 	}
 
-	base := retrieveBase(st, file)
+	base := retrieveBase(st, file, fingerprint)
 	retrieve, rmap := retrieveSdks(st, sdks)
 	retrieve.AddTask(base)
 	addTaskSet(retrieve)
@@ -564,7 +573,7 @@ func launch(st *state.State, file *workshop.File, fileText string, sdks []sdk.Se
 	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", file.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	create := launchWorkshop(st, file.Name, fileText, base.ID())
+	create := launchWorkshop(st, file.Name, fileText, fingerprint)
 	addTaskSet(create)
 
 	install := installSdks(st, project.ProjectId, file.Name, sdks, rmap)
@@ -612,7 +621,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 
 	switch option {
 	case conflict.RefreshUpdate:
-		reqs, err := w.findAllStoreSdks(ctx, project, names, "refresh")
+		reqs, err := w.findRemoteArtifacts(ctx, project, names, "refresh")
 		if err != nil {
 			return nil, err
 		}
@@ -632,7 +641,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			}
 
 			// Check for conflicting changes. Has to happen after calling
-			// findAllStoreSdks (because it unlocks the state).
+			// findRemoteArtifacts (because it unlocks the state).
 			if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
 				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 			}
@@ -643,7 +652,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			}
 			sdks := ordered(req.installOrder, req.storeSdks, localSdks)
 
-			plan := resolveRefresh(wp, req.file, sdks)
+			plan := resolveRefresh(wp, req.file, req.baseFingerprint, sdks)
 			if plan.HasUpdates() {
 				tasks := refresh(w.state, plan, wp, req.file, req.fileText)
 				taskset = append(taskset, tasks)
@@ -666,7 +675,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			}
 
 			sdks := wp.SdksByInstallOrder()
-			plan := resolveRefresh(wp, wp.File, sdks)
+			plan := resolveRefresh(wp, wp.File, wp.BaseFingerprint, sdks)
 			tasks := refresh(w.state, plan, wp, wp.File, string(fileBlob))
 			taskset = append(taskset, tasks)
 		}
@@ -705,6 +714,8 @@ func maybeRefresh(installed, candidate sdk.Setup) bool {
 }
 
 type refreshPlan struct {
+	baseFingerprint string
+
 	install []sdk.Setup
 	intact  []sdk.Setup
 	refresh []sdk.Setup
@@ -746,20 +757,21 @@ func (p refreshPlan) HasUpdates() bool {
 	return len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 || p.workshopDefinitionUpdated
 }
 
-func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, candidates []sdk.Setup) *refreshPlan {
+func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, fingerprint string, candidates []sdk.Setup) *refreshPlan {
 	plan := &refreshPlan{
-		install:        make([]sdk.Setup, 0),
-		intact:         make([]sdk.Setup, 0),
-		refresh:        make([]sdk.Setup, 0),
-		remove:         make([]sdk.Setup, 0),
-		installOrder:   make([]string, 0),
-		installedOrder: make([]string, 0),
+		baseFingerprint: fingerprint,
+		install:         make([]sdk.Setup, 0),
+		intact:          make([]sdk.Setup, 0),
+		refresh:         make([]sdk.Setup, 0),
+		remove:          make([]sdk.Setup, 0),
+		installOrder:    make([]string, 0),
+		installedOrder:  make([]string, 0),
 	}
 
 	// Restore the order of SDKs installed in the running workshop.
 	installed := w.SdksByInstallOrder()
 
-	if w.Base == newfile.Base {
+	if w.File.Base == newfile.Base && w.BaseFingerprint == fingerprint {
 		for ci, s := range candidates {
 			// Do we have this SDK in the same order as in the running workshop?
 			if ci >= len(installed) || installed[ci].Name != s.Name {
@@ -827,11 +839,9 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	}
 
 	var base *state.Task
-	var baseID string
 	if plan.sdkSnapshot == "" {
 		// Create download-base first so the task IDs are in a nice order.
-		base = retrieveBase(st, file)
-		baseID = base.ID()
+		base = retrieveBase(st, file, plan.baseFingerprint)
 	}
 	retrieve, rmap := retrieveSdks(st, plan.InstallOrRefresh())
 	if base != nil {
@@ -860,7 +870,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file.Name, fileText, plan.sdkSnapshot, baseID)
+	rebuild := rebuildWorkshop(st, file.Name, fileText, plan.sdkSnapshot, plan.baseFingerprint)
 	addTaskSet(rebuild)
 
 	// Re-register intact SDKs (the workshop definition can change plugs and slots).
