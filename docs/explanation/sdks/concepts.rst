@@ -97,8 +97,6 @@ into the workshop environment.
 
 Overall, the interaction between SDKs and the :program:`workshopd` daemon
 focuses on health checks in post-launch or refresh operations.
-The tool provides commands to report SDK health,
-list workshops that use the SDK and get their details.
 
 
 SDK health, workshop status
