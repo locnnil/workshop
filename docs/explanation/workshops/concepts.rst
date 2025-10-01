@@ -35,7 +35,7 @@ Workshop status
 
 .. @artefact workshop status
 
-A workshop's life-cycle can see it switch between several statuses:
+A workshop's lifecycle can see it switch between several statuses:
 
 .. list-table::
    :header-rows: 1

@@ -27,7 +27,7 @@ encapsulates a different aspect of the SDK
 and focuses on a specific feature or resource;
 these can be libraries, binaries, or configuration files.
 
-A part defines a number of preset attributes and life cycle stages in YAML;
+A part defines a number of preset attributes and lifecycle stages in YAML;
 |sdk_markup| executes these definitions stage by stage
 and iteratively resolves any dependencies between parts.
 Eventually, this results in a uniform SDK,

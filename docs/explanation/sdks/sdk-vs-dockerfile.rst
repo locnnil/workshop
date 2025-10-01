@@ -6,7 +6,7 @@
                  offers improved repeatability, persistence, and layering
                  compared to Docker-based solutions.
 
-How Dockerfiles compare to SDKs
+How SDKs compare to Dockerfiles
 ===============================
 
 .. @artefact SDK
@@ -297,7 +297,7 @@ a complete :command:`docker run` command may look like this:
 
 
 In |ws_markup| and |sdk_markup|,
-additional file system mounts are defined by the SDK author or the user
+additional filesystem mounts are defined by the SDK author or the user
 using the :ref:`mount interface <exp_mount_interface>`:
 
 .. code-block:: yaml
@@ -364,11 +364,6 @@ See also
 Explanation:
 
 - :ref:`exp_projects`
-
-
-How-to guides:
-
-- :ref:`how_create_ros2_sdk`
 
 
 Reference:

@@ -90,7 +90,6 @@ In this documentation
 - **SDKs**: :ref:`Concepts <exp_sdk_concepts>` |
   :ref:`Internals <ref_sdk_internals>` |
   :ref:`Definition file <ref_sdk_definition>` |
-  :ref:`Design SDKs <how_create_ros2_sdk>` |
   :ref:`Sketch SDKs in-place <tut_sketch_sdks>` |
   :ref:`Craft full SDKs <tut_craft_sdks>`
 

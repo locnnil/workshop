@@ -31,7 +31,7 @@ To achieve this, |ws_markup| implements a counterpart to :program:`snapd`'s
 `interface manager <https://snapcraft.io/docs/interface-management>`__,
 which controls whether an SDK can use resources beyond its confines.
 You can think of specific interfaces as resource *types*:
-file system, hardware, computing, and so on.
+filesystem, hardware, computing, and so on.
 
 Specific interfaces are predefined and implemented by |ws_markup|,
 so you cannot create a custom interface type.

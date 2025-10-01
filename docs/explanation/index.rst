@@ -69,9 +69,7 @@ to create tailored development environments.
 
 - :doc:`sdks/concepts`
 - :doc:`Data storage and sharing <sdks/data-persistence-sharing>`
-- :doc:`Dockerfiles versus SDKs <sdks/dockerfile-vs-sdk>`
-- :doc:`Health reports <sdks/workshopctl>`
-- :doc:`Hooks <sdks/hooks>`
+- :doc:`SDKs versus Dockerfiles <sdks/sdk-vs-dockerfile>`
 - :doc:`Parts <sdks/parts>`
 
 

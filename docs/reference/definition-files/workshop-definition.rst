@@ -176,7 +176,7 @@ the system SDK has default eponymous slots for these interfaces:
 :samp:`system:mount`, and :samp:`system:ssh-agent`.
 No other SDKs can declare slots for these interfaces, except for :samp:`mount`.
 The :samp:`system:mount` slot is still unique
-because it's the only one that provides access to the *host* file system,
+because it's the only one that provides access to the *host* filesystem,
 whereas slots under regular SDKs only expose locations in the workshop.
 
 If additional slots for interfaces like :samp:`tunnel` or :samp:`mount`
