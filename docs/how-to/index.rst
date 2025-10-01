@@ -29,6 +29,7 @@ such as integrating IDEs, using Git, or running CI/CD workflows with workshops:
 
 - :doc:`Connect VS Code to a workshop <develop-with-workshops/connect-vscode>`
 - :doc:`Run GitHub Actions locally <develop-with-workshops/run-github-actions-locally>`
+- :doc:`Run JetBrains Gateway in a workshop <develop-with-workshops/run-jetbrains-gateway>`
 - :doc:`Run JupyterLab in your browser <develop-with-workshops/run-jupyterlab-in-browser>`
 - :doc:`Run VS Code in your browser <develop-with-workshops/run-vscode-in-browser>`
 - :doc:`Use workshops with Git <develop-with-workshops/git>`
