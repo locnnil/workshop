@@ -11,11 +11,84 @@ import (
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/workshop"
 )
+
+func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	op, err := conn.CreateInstanceSnapshot(InstanceName(name, projectId), api.InstanceSnapshotsPost{
+		Name: snapid,
+	})
+	if err != nil {
+		return err
+	}
+	return op.Wait()
+}
+
+func (s *Backend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	instPut := inst.Writable()
+	instPut.Restore = snapid
+	op, err := conn.UpdateInstance(inst.Name, instPut, etag)
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+
+	restored, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	f, err := yaml.Marshal(file)
+	if err != nil {
+		return err
+	}
+
+	// The restored snapshot will have an updated file.
+	// Similar to how a launched workshop is associated with its definition.
+	restored.Config[workshop.ConfigWorkshopFile] = string(f)
+
+	op, err = conn.UpdateInstance(inst.Name, restored.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	rev := revert.New()
