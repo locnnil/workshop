@@ -819,10 +819,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 		Workshops:   map[string][]string{f.project.ProjectId: {"test"}},
 	})
 
-	err = f.bd.StopWorkshop(f.ctx, "test", true)
-	c.Assert(err, check.IsNil)
-
-	err = f.bd.Snapshot(f.ctx, "test", "snapshot-1")
+	err = f.bd.Snapshot(f.ctx, "test", "test-sdk")
 	c.Assert(err, check.IsNil)
 
 	// Attach the SDK volume as "test-sdk-2" to the workshop after the snapshot
@@ -835,8 +832,11 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Assert(err, check.IsNil)
 
 	// Restore the workshop from the snapshot.
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
+
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
-	err = f.bd.Restore(f.ctx, "test", "snapshot-1", wf)
+	err = f.bd.Restore(f.ctx, "test", "test-sdk", wf)
 	c.Assert(err, check.IsNil)
 
 	w, err = f.bd.Workshop(f.ctx, "test")

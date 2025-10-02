@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/canonical/workshop/internal/osutil"
@@ -295,8 +294,4 @@ func (w *Workshop) Tunnels(sdks []*sdk.Info) map[string][]Tunnel {
 	}
 
 	return tunnels
-}
-
-func SnapshotId(w, sk string) string {
-	return strings.Join([]string{w, sk}, ".")
 }

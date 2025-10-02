@@ -240,8 +240,8 @@ type Backend interface {
 }
 
 type Snapshot interface {
-	Snapshot(ctx context.Context, workshop, snapid string) error
-	Restore(ctx context.Context, workshop, snapid string, file *File) error
+	Snapshot(ctx context.Context, workshop, sk string) error
+	Restore(ctx context.Context, workshop, sk string, file *File) error
 }
 
 type cachedBackendKey struct{}

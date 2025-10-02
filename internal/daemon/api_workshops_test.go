@@ -1728,7 +1728,7 @@ func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
 	c.Assert(wpCalls, check.HasLen, len(sdks))
 
 	for i, sk := range sdks {
-		c.Assert(wpCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
+		c.Assert(wpCalls[i].Sdk, check.Equals, sk)
 	}
 }
 
@@ -1743,7 +1743,7 @@ func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, fil
 	c.Assert(wpCalls, check.HasLen, len(sdks))
 
 	for i, sk := range sdks {
-		c.Assert(wpCalls[i].Snapid, check.Equals, workshop.SnapshotId(name, sk))
+		c.Assert(wpCalls[i].Sdk, check.Equals, sk)
 
 		var f workshop.File
 		err := yaml.Unmarshal([]byte(files[i]), &f)

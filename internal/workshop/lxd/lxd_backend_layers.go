@@ -18,7 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
+func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
 	}
 
 	op, err := conn.CreateInstanceSnapshot(InstanceName(name, projectId), api.InstanceSnapshotsPost{
-		Name: snapid,
+		Name: name + "." + sk,
 	})
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
 	return op.Wait()
 }
 
-func (s *Backend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
+func (s *Backend) Restore(ctx context.Context, name, sk string, file *workshop.File) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func (s *Backend) Restore(ctx context.Context, name, snapid string, file *worksh
 	}
 
 	instPut := inst.Writable()
-	instPut.Restore = snapid
+	instPut.Restore = name + "." + sk
 	op, err := conn.UpdateInstance(inst.Name, instPut, etag)
 	if err != nil {
 		return err

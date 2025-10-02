@@ -51,12 +51,12 @@ type AttachVolumeCall struct {
 
 type SnapshotCall struct {
 	Workshop string
-	Snapid   string
+	Sdk      string
 }
 
 type RestoreCall struct {
 	Workshop string
-	Snapid   string
+	Sdk      string
 	File     *workshop.File
 }
 
@@ -714,27 +714,27 @@ func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, base, fingerprin
 	return nil
 }
 
-func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, snapid string) error {
+func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, sk string) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapid: snapid})
+	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Sdk: sk})
 	if s.SnapshotCallback != nil {
-		return s.SnapshotCallback(ctx, name, snapid)
+		return s.SnapshotCallback(ctx, name, sk)
 	}
 	return nil
 }
 
-func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
+func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, sk string, file *workshop.File) error {
 	wp, err := s.Workshop(ctx, name)
 	if err != nil {
 		return err
 	}
 
 	sdks := wp.SdksByInstallOrder()
-	lastIntact := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return workshop.SnapshotId(name, s.Name) == snapid })
+	lastIntact := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return s.Name == sk })
 	if lastIntact < 0 {
-		return fmt.Errorf("invalid snapshot %q", snapid)
+		return fmt.Errorf("invalid snapshot %q", sk)
 	}
 	unwantedSdks := sdks[lastIntact+1:]
 
@@ -750,15 +750,15 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 	}
 
 	// Remove SDKs from after the snapshot.
-	for _, sk := range unwantedSdks {
-		delete(wp.Sdks, sk.Name)
+	for _, setup := range unwantedSdks {
+		delete(wp.Sdks, setup.Name)
 		// Restore would detach the volume attached after the snapshot.
-		if sk.IsVolume() {
-			if err = s.DetachVolume(ctx, name, sdk.VolumeName(sk.Name, sk.Revision)); err != nil {
+		if setup.IsVolume() {
+			if err = s.DetachVolume(ctx, name, sdk.VolumeName(setup.Name, setup.Revision)); err != nil {
 				return err
 			}
 		} else {
-			if err = fs.RemoveAll(sdk.SdkDir(sk.Name)); err != nil {
+			if err = fs.RemoveAll(sdk.SdkDir(setup.Name)); err != nil {
 				return err
 			}
 		}
@@ -777,9 +777,9 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, snapid string, 
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Snapid: snapid, File: file})
+	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Sdk: sk, File: file})
 	if s.RestoreCallback != nil {
-		return s.RestoreCallback(ctx, name, snapid, file)
+		return s.RestoreCallback(ctx, name, sk, file)
 	}
 	return nil
 }

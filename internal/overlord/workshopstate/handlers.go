@@ -130,7 +130,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 			return err
 		}
 	} else {
-		if err = m.backend.Restore(ctx, w, workshop.SnapshotId(w, sdkSnapshot), &wf); err != nil {
+		if err = m.backend.Restore(ctx, w, sdkSnapshot, &wf); err != nil {
 			return err
 		}
 	}
