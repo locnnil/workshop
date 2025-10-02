@@ -1,7 +1,6 @@
 package lxdbackend
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"maps"
@@ -94,7 +93,12 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	rev := revert.New()
 	defer rev.Fail()
 
-	conn, err := s.LxdClient(ctx)
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -110,26 +114,9 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", workshop.ContextUser)
-	}
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
 	instance := InstanceName(name, projectId)
 	stashed := instanceStashName(name, projectId)
-
-	sourceProject, err1 := lxdProjectName(user)
-	targetProject, err2 := lxdLayersProjectName(user)
-	if err = cmp.Or(err1, err2); err != nil {
-		return err
-	}
-
-	if err = s.copyInstance(conn, instance, stashed, sourceProject, targetProject, false); err != nil {
+	if err := s.createLayer(conn, layerConn, instance, stashed); err != nil {
 		return err
 	}
 
@@ -138,17 +125,12 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 }
 
 func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", workshop.ContextUser)
-	}
-
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn, err := s.LxdClient(ctx)
+	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -156,24 +138,24 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 
 	instance := InstanceName(name, projectId)
 	stash := instanceStashName(name, projectId)
-
-	sourceProject, err1 := lxdLayersProjectName(user)
-	targetProject, err2 := lxdProjectName(user)
-	if err = cmp.Or(err1, err2); err != nil {
-		return err
-	}
-
-	if err := s.copyInstance(conn, stash, instance, sourceProject, targetProject, true); err != nil {
+	if err := s.restoreLayer(conn, layerConn, instance, stash); err != nil {
 		return err
 	}
 
 	return s.startWorkshop(conn, ctx, name)
 }
 
+func (s *Backend) createLayer(conn, layerConn lxd.InstanceServer, inst, layer string) error {
+	return s.copyInstance(conn, layerConn, inst, layer, false)
+}
+
+func (s *Backend) restoreLayer(conn, layerConn lxd.InstanceServer, inst, layer string) error {
+	return s.copyInstance(layerConn, conn, layer, inst, true)
+}
+
 // Copies the instance between LXD projects.
-func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, sourceProject, targetProject string, refresh bool) error {
-	conn = conn.UseProject(sourceProject)
-	srcInst, _, err := conn.GetInstance(srcName)
+func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName string, refresh bool) error {
+	srcInst, _, err := src.GetInstance(srcName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return workshop.ErrWorkshopNotLaunched
@@ -184,13 +166,11 @@ func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, source
 	// Clear the config and device overrides. LXD will still copy most of
 	// these from the source instance, but it will omit options which are
 	// unique to the source instance, like MAC addresses and UUIDs.
-	config := srcInst.Config
-	devices := srcInst.Devices
-	srcInst.Config = nil
-	srcInst.Devices = nil
+	req := *srcInst
+	req.Config = nil
+	req.Devices = nil
 
-	dest := conn.UseProject(targetProject)
-	rop, err := dest.CopyInstance(conn, *srcInst, &lxd.InstanceCopyArgs{Name: dstName, Refresh: refresh})
+	rop, err := dst.CopyInstance(src, req, &lxd.InstanceCopyArgs{Name: dstName, Refresh: refresh})
 	if err != nil {
 		return err
 	}
@@ -205,7 +185,7 @@ func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, source
 
 	// LXD replaced an existing instance's root disk, but it's our job to
 	// copy the config and devices.
-	dstInst, etag, err := dest.GetInstance(dstName)
+	dstInst, etag, err := dst.GetInstance(dstName)
 	if err != nil {
 		return err
 	}
@@ -215,16 +195,16 @@ func (s *Backend) copyInstance(conn lxd.InstanceServer, srcName, dstName, source
 	// options are preserved. Most of these will be constant for the
 	// instance's lifetime, and we assume they are all managed by LXD.
 	maps.DeleteFunc(dstInst.Config, func(k, v string) bool { return includeWhenCopying(k) })
-	maps.DeleteFunc(config, func(k, v string) bool { return !includeWhenCopying(k) })
+	maps.DeleteFunc(srcInst.Config, func(k, v string) bool { return !includeWhenCopying(k) })
 	if dstInst.Config == nil {
-		dstInst.Config = config
+		dstInst.Config = srcInst.Config
 	} else {
-		maps.Copy(dstInst.Config, config)
+		maps.Copy(dstInst.Config, srcInst.Config)
 	}
 
-	dstInst.Devices = devices
+	dstInst.Devices = srcInst.Devices
 
-	op, err := dest.UpdateInstance(dstName, dstInst.Writable(), etag)
+	op, err := dst.UpdateInstance(dstName, dstInst.Writable(), etag)
 	if err != nil {
 		return err
 	}
@@ -240,41 +220,46 @@ func includeWhenCopying(key string) bool {
 }
 
 func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return fmt.Errorf("context key %s not found", workshop.ContextUser)
-	}
-
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	layers, err := lxdLayersProjectName(user)
+	_, conn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
+	defer conn.Disconnect()
 
-	conn = conn.UseProject(layers)
+	return s.deleteLayer(conn, instanceStashName(name, projectId))
+}
 
-	op, err := conn.DeleteInstance(instanceStashName(name, projectId))
+func (s *Backend) deleteLayer(layerConn lxd.InstanceServer, layer string) error {
+	op, err := layerConn.DeleteInstance(layer)
+	if err == nil {
+		err = op.Wait()
+	}
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return nil
+	}
+	return err
+}
+
+func (s *Backend) layerClients(ctx context.Context) (lxd.InstanceServer, lxd.InstanceServer, error) {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return nil, nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
+	}
+
+	project, err := lxdLayersProjectName(user)
 	if err != nil {
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil
-		}
-		return err
+		return nil, nil, err
 	}
-	if err = op.Wait(); err != nil {
-		if api.StatusErrorCheck(err, http.StatusNotFound) {
-			return nil
-		}
-		return err
+
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return nil, nil, err
 	}
-	return nil
+
+	return conn, conn.UseProject(project), nil
 }
