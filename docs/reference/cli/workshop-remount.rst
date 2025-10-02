@@ -22,7 +22,7 @@ Specifically, it does the following:
 
 - Attempts the mount operation atomically;
   this normally succeeds if the new source is either a non-existing directory
-  or an empty directory on the same filesystem as the current source.
+  or an empty directory on the same file system as the current source.
 
 - Otherwise, performs the mount operation only if the workshop is 'Stopped'
   to prevent data corruption.
