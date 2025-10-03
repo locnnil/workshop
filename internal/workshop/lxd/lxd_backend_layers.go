@@ -1,7 +1,11 @@
 package lxdbackend
 
 import (
+	"cmp"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net/http"
@@ -14,60 +18,59 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
 func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	op, err := conn.CreateInstanceSnapshot(InstanceName(name, projectId), api.InstanceSnapshotsPost{
-		Name: name + "." + sk,
-	})
+	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
-	return op.Wait()
+	defer conn.Disconnect()
+
+	// Copy workshop to preserve setup-base results for the SDK.
+	instance := InstanceName(name, projectId)
+	snapshot, err := sdkLayerName(sk)
+	if err != nil {
+		return err
+	}
+	config := map[string]string{
+		// The SDK can be deduced from user.workshop.file together with
+		// user.workshop.sdks, but we add a standalone option to make
+		// it easier to find during Restore.
+		"user.workshop.sdk": sk,
+		// Mark the copy as an SDK layer to avoid ambiguity.
+		"user.workshop.layer-type": "sdk",
+	}
+	// We could exclude user.workshop.file since Restore will override it,
+	// but doing that requires additional LXD API calls, and there's no
+	// harm in keeping it around.
+	var exclude []string
+	return s.copyInstance(conn, layerConn, instance, snapshot, false, config, exclude)
+}
+
+// Generates a random suffix for the SDK, to avoid clashing with SDK layers
+// from other projects and workshops, while remaining withing the 63 characters
+// allowed for LXD instance names.
+func sdkLayerName(sk string) (string, error) {
+	bytes := make([]byte, 8)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return sk + "-" + hex.EncodeToString(bytes), nil
 }
 
 func (s *Backend) Restore(ctx context.Context, name, sk string, file *workshop.File) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
-	}
-
-	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
-	}
-
-	instPut := inst.Writable()
-	instPut.Restore = name + "." + sk
-	op, err := conn.UpdateInstance(inst.Name, instPut, etag)
-	if err != nil {
-		return err
-	}
-	if err = op.Wait(); err != nil {
-		return err
-	}
-
-	restored, etag, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
 	}
 
 	f, err := yaml.Marshal(file)
@@ -75,18 +78,33 @@ func (s *Backend) Restore(ctx context.Context, name, sk string, file *workshop.F
 		return err
 	}
 
-	// The restored snapshot will have an updated file.
-	// Similar to how a launched workshop is associated with its definition.
-	restored.Config[workshop.ConfigWorkshopFile] = string(f)
-
-	op, err = conn.UpdateInstance(inst.Name, restored.Writable(), etag)
+	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
-	if err = op.Wait(); err != nil {
+	defer conn.Disconnect()
+
+	// Find the snapshot itself and any newer snapshots.
+	snapshot, obstacles, err := s.layerNamesAfter(layerConn, projectId, name, sk)
+	if err != nil {
 		return err
 	}
-	return nil
+	// Remove the newer snapshots, as LXD would do. This is not necessary
+	// to "restore the snapshot," i.e. replace the volume with a new one,
+	// but we want to avoid having two snapshots for the same SDK and
+	// workshop until we introduce a way to distinguish them.
+	for _, layer := range obstacles {
+		if err := s.deleteLayer(layerConn, layer); err != nil {
+			return err
+		}
+	}
+
+	instance := InstanceName(name, projectId)
+	// Update the workshop definition, similar to LaunchOrRebuildWorkshop.
+	config := map[string]string{workshop.ConfigWorkshopFile: string(f)}
+	// Avoid copying the options which we added when taking the snapshot.
+	exclude := []string{"user.workshop.sdk", "user.workshop.layer-type"}
+	return s.copyInstance(layerConn, conn, snapshot, instance, true, config, exclude)
 }
 
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
@@ -114,9 +132,27 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
+	layers, err := s.layerNames(layerConn, projectId, name, "sdk")
+	if err != nil {
+		return err
+	}
+
+	// Backup the workshop's SDK layers, modifying the instance name and
+	// layer type to distinguish the backups from the originals.
+	for _, layer := range layers {
+		newname := "stash-" + layer
+		config := map[string]string{"user.workshop.layer-type": "stash-sdk"}
+		if err := s.copyInstance(layerConn, layerConn, layer, newname, false, config, nil); err != nil {
+			return err
+		}
+	}
+
+	// Backup the workshop itself.
 	instance := InstanceName(name, projectId)
 	stashed := instanceStashName(name, projectId)
-	if err := s.createLayer(conn, layerConn, instance, stashed); err != nil {
+	// Mark the copy as a stash to avoid confusing it with an SDK layer.
+	config := map[string]string{"user.workshop.layer-type": "stash"}
+	if err := s.copyInstance(conn, layerConn, instance, stashed, false, config, nil); err != nil {
 		return err
 	}
 
@@ -136,25 +172,125 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
+	layers, err := s.layerNames(layerConn, projectId, name, "sdk")
+	if err != nil {
+		return err
+	}
+	stashLayers, err := s.layerNames(layerConn, projectId, name, "stash-sdk")
+	if err != nil {
+		return err
+	}
+
+	// Remove the layers that were created after stashing. These are the
+	// ones which don't have backups.
+	for _, layer := range layers {
+		if slices.Contains(stashLayers, "stash-"+layer) {
+			continue
+		}
+		if err := s.deleteLayer(layerConn, layer); err != nil {
+			return err
+		}
+	}
+
+	// Restore the layers that were deleted when restoring an SDK snapshot.
+	// These come from the backups whose source no longer exists.
+	for _, layer := range stashLayers {
+		name := strings.TrimPrefix(layer, "stash-")
+		if slices.Contains(layers, name) {
+			continue
+		}
+		// Restore the original layer type (stash-sdk -> sdk).
+		config := map[string]string{"user.workshop.layer-type": "sdk"}
+		if err := s.copyInstance(layerConn, layerConn, layer, name, false, config, nil); err != nil {
+			return err
+		}
+	}
+
+	// Restore the workshop itself.
 	instance := InstanceName(name, projectId)
 	stash := instanceStashName(name, projectId)
-	if err := s.restoreLayer(conn, layerConn, instance, stash); err != nil {
+	// Avoid copying the option which we added when stashing.
+	exclude := []string{"user.workshop.layer-type"}
+	if err := s.copyInstance(layerConn, conn, stash, instance, true, nil, exclude); err != nil {
 		return err
 	}
 
 	return s.startWorkshop(conn, ctx, name)
 }
 
-func (s *Backend) createLayer(conn, layerConn lxd.InstanceServer, inst, layer string) error {
-	return s.copyInstance(conn, layerConn, inst, layer, false)
+// Find layer names for all SDKs in the given workshop or stash.
+func (s *Backend) layerNames(layerConn lxd.InstanceServer, pid, w string, kind string) ([]string, error) {
+	filters := []string{
+		"config.user.workshop.project-id=" + pid,
+		"config.user.workshop.name=" + w,
+		"config.user.workshop.layer-type=" + kind,
+	}
+	layers, err := layerConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]string, 0, len(layers))
+	for _, layer := range layers {
+		names = append(names, layer.Name)
+	}
+	return names, nil
 }
 
-func (s *Backend) restoreLayer(conn, layerConn lxd.InstanceServer, inst, layer string) error {
-	return s.copyInstance(layerConn, conn, layer, inst, true)
+// Find layer name for the given SDK and any subsequent SDKs.
+func (s *Backend) layerNamesAfter(layerConn lxd.InstanceServer, pid, w, sk string) (string, []string, error) {
+	filters := []string{
+		"config.user.workshop.project-id=" + pid,
+		"config.user.workshop.name=" + w,
+		"config.user.workshop.layer-type=sdk",
+	}
+	layers, err := layerConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	if err != nil {
+		return "", nil, err
+	}
+
+	idx := slices.IndexFunc(layers, func(inst api.Instance) bool {
+		return inst.Config["user.workshop.sdk"] == sk
+	})
+	if idx < 0 {
+		return "", nil, fmt.Errorf("%q SDK snapshot not found in workshop %q", sk, w)
+	}
+
+	// Find the installed SDKs at the time of the snapshot.
+	sdks := map[string]sdk.Setup{}
+	buf, exist := layers[idx].Config[workshop.ConfigWorkshopSdks]
+	if exist {
+		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {
+			return "", nil, err
+		}
+	}
+
+	// Any SDK which wasn't installed must have been added later.
+	obstacles := make([]string, 0, len(layers))
+	for _, layer := range layers {
+		if _, ok := sdks[layer.Config["user.workshop.sdk"]]; !ok {
+			obstacles = append(obstacles, layer.Name)
+		}
+	}
+
+	return layers[idx].Name, obstacles, nil
 }
 
-// Copies the instance between LXD projects.
-func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName string, refresh bool) error {
+// Copies an instance from the src server to the dst server. The servers can be
+// identical, different, or the same underlying server for different projects.
+// If the target instance already exists, set refresh=true to overwrite it.
+// Otherwise, refresh should be false to avoid unnecessary API calls. In both
+// cases the non-volatile config options, and a couple of volatile ones, are
+// copied to the target instance. Additional options can be added or overridden
+// using the config argument. To prevent an option from being copied over, add
+// it to the exclude list. The boot.autostart option is always set to false in
+// the copy: the source instance might be running but the copy won't be.
+func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName string, refresh bool, config map[string]string, exclude []string) error {
+	if config == nil {
+		config = map[string]string{}
+	}
+	config["boot.autostart"] = "false"
+
 	srcInst, _, err := src.GetInstance(srcName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
@@ -163,14 +299,20 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		return err
 	}
 
-	// Clear the config and device overrides. LXD will still copy most of
-	// these from the source instance, but it will omit options which are
+	// Set the config and device overrides. LXD will copy most other
+	// options from the source instance, but it will omit options which are
 	// unique to the source instance, like MAC addresses and UUIDs.
 	req := *srcInst
-	req.Config = nil
+	req.Config = config
 	req.Devices = nil
 
-	rop, err := dst.CopyInstance(src, req, &lxd.InstanceCopyArgs{Name: dstName, Refresh: refresh})
+	args := lxd.InstanceCopyArgs{
+		Name:         dstName,
+		InstanceOnly: true,
+		Refresh:      refresh,
+	}
+
+	rop, err := dst.CopyInstance(src, req, &args)
 	if err != nil {
 		return err
 	}
@@ -178,24 +320,35 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		return err
 	}
 
-	if !refresh {
-		// LXD created a new instance with copied config and devices.
+	if !refresh && len(exclude) == 0 {
+		// LXD created a new instance with copied config and devices,
+		// and we don't need to go back and remove any options.
 		return nil
 	}
 
-	// LXD replaced an existing instance's root disk, but it's our job to
-	// copy the config and devices.
+	// We're in one of the following scenarios:
+	// - LXD replaced an existing instance's root disk, but it's our job to
+	//   copy the config and devices.
+	// - LXD created a new instance with copied config and devices, but we
+	//   didn't want it to copy some of the config options.
 	dstInst, etag, err := dst.GetInstance(dstName)
 	if err != nil {
 		return err
 	}
 
-	// The main use case is to restore an instance from a backup, so we
-	// replace all options which should be present in the backup. Other
-	// options are preserved. Most of these will be constant for the
-	// instance's lifetime, and we assume they are all managed by LXD.
+	// Remove all options that aren't managed by LXD. The ones we do want
+	// to set are added below. Ideally, some LXD-managed options should
+	// also be removed. See https://github.com/canonical/lxd/issues/16667.
 	maps.DeleteFunc(dstInst.Config, func(k, v string) bool { return includeWhenCopying(k) })
-	maps.DeleteFunc(srcInst.Config, func(k, v string) bool { return !includeWhenCopying(k) })
+
+	// Add all options from the source, except for those managed by LXD or
+	// excluded by the caller. Then add config overrides.
+	maps.DeleteFunc(srcInst.Config, func(k, v string) bool { return !includeWhenCopying(k) || slices.Contains(exclude, k) })
+	if srcInst.Config == nil {
+		srcInst.Config = config
+	} else {
+		maps.Copy(srcInst.Config, config)
+	}
 	if dstInst.Config == nil {
 		dstInst.Config = srcInst.Config
 	} else {
@@ -231,7 +384,16 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	return s.deleteLayer(conn, instanceStashName(name, projectId))
+	layers, err := s.layerNames(conn, projectId, name, "stash-sdk")
+	if err == nil {
+		for _, layer := range layers {
+			err1 := s.deleteLayer(conn, layer)
+			err = cmp.Or(err, err1)
+		}
+	}
+
+	err1 := s.deleteLayer(conn, instanceStashName(name, projectId))
+	return cmp.Or(err, err1)
 }
 
 func (s *Backend) deleteLayer(layerConn lxd.InstanceServer, layer string) error {

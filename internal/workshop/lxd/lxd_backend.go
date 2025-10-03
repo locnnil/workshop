@@ -193,11 +193,6 @@ func New() (*Backend, error) {
 		req := api.StoragePoolsPost{
 			Name:   storagePool,
 			Driver: storagePoolDriver,
-			StoragePoolPut: api.StoragePoolPut{
-				Config: map[string]string{
-					"volume.zfs.remove_snapshots": "true",
-				},
-			},
 		}
 		err := conn.CreateStoragePool(req)
 		if err != nil {
@@ -262,7 +257,7 @@ func New() (*Backend, error) {
 func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
 	var err error
 
-	conn, err := s.LxdClient(ctx)
+	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -316,12 +311,13 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return op.Wait()
 	default:
 		// Rebuild the existing workshop.
-		for _, snapshot := range inst.Snapshots {
-			op, err := conn.DeleteInstanceSnapshot(inst.Name, snapshot.Name)
-			if err != nil {
-				return err
-			}
-			if err = op.Wait(); err != nil {
+		snapshots, err := s.layerNames(layerConn, projectId, file.Name, "sdk")
+		if err != nil {
+			return err
+		}
+
+		for _, snapshot := range snapshots {
+			if err := s.deleteLayer(layerConn, snapshot); err != nil {
 				return err
 			}
 		}
@@ -772,7 +768,8 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	sdks := map[string]sdk.Setup{}
-	if buf, exist := inst.Config[workshop.ConfigWorkshopSdks]; exist {
+	buf, exist := inst.Config[workshop.ConfigWorkshopSdks]
+	if exist {
 		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {
 			return nil, err
 		}
@@ -869,20 +866,31 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 }
 
 func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
+	conn, layerConn, err := s.layerClients(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
 	// ignore possible errors (e.g. container is already stopped)
 	if err = s.stopWorkshop(conn, ctx, name, true); err != nil {
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
+	}
+
+	snapshots, err := s.layerNames(layerConn, projectId, name, "sdk")
+	if err != nil {
+		logger.Noticef("On RemoveWorkshop: failed to find SDK snapshots for %q workshop: %v", name, err)
+	} else {
+		for _, snapshot := range snapshots {
+			if err := s.deleteLayer(layerConn, snapshot); err != nil {
+				logger.Noticef("On RemoveWorkshop: failed to delete %q SDK snapshot for %q workshop: %v", snapshot, name, err)
+			}
+		}
 	}
 
 	op, err := conn.DeleteInstance(InstanceName(name, projectId))

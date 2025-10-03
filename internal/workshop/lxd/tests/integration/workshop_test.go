@@ -98,8 +98,16 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	preStash := f.workshopMetadata(c, "test")
 	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
 
+	// Create some snapshots.
+	err := f.bd.Snapshot(f.ctx, "test", "test-sdk-1")
+	c.Assert(err, check.IsNil)
+	err = f.bd.Snapshot(f.ctx, "test", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	snapshots := f.listSnapshots(c, "test", false)
+	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
+
 	// Stash workshop.
-	err := f.bd.StashWorkshop(f.ctx, "test")
+	err = f.bd.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	defer func() {
 		err := f.bd.RemoveWorkshopStash(f.ctx, "test")
@@ -115,8 +123,14 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Check(postStash.devices, check.DeepEquals, preStash.devices)
 
 	stash := f.stashMetadata(c, "test")
-	c.Check(stash.config, check.DeepEquals, postStash.config)
+	config = maps.Clone(postStash.config)
+	c.Check(config["user.workshop.layer-type"], check.Equals, "")
+	config["user.workshop.layer-type"] = "stash"
+	c.Check(stash.config, check.DeepEquals, config)
 	c.Check(stash.devices, check.DeepEquals, postStash.devices)
+
+	snapshots = f.listSnapshots(c, "test", true)
+	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
 	// Rebuild workshop.
 	wf := &workshop.File{
@@ -130,6 +144,10 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, fingerprint)
 	c.Assert(err, check.IsNil)
 
+	// Check snapshots are gone.
+	snapshots = f.listSnapshots(c, "test", false)
+	c.Check(snapshots, check.HasLen, 0)
+
 	// Unstash workshop.
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
@@ -140,6 +158,10 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Check(postUnstash.config, check.DeepEquals, preStash.config)
 	c.Check(postUnstash.devices, check.DeepEquals, preStash.devices)
 	c.Check(postUnstash.addresses, testutil.DeepUnsortedMatches, preStash.addresses)
+
+	// Check snapshots came back.
+	snapshots = f.listSnapshots(c, "test", false)
+	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 }
 
 // Wait until workshop acquires both an IPv4 and an IPv6 address.
@@ -214,23 +236,62 @@ func ipAddresses(inst *api.InstanceFull) []string {
 	return addresses
 }
 
+func (f *wsOps) listSnapshots(c *check.C, name string, stash bool) []string {
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+
+	conn = conn.UseProject("workshop-layers." + f.usr.Username)
+
+	layerType := "sdk"
+	if stash {
+		layerType = "stash-sdk"
+	}
+
+	filters := []string{
+		"config.user.workshop.project-id=" + f.project.ProjectId,
+		"config.user.workshop.name=" + name,
+		"config.user.workshop.layer-type=" + layerType,
+	}
+	layers, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	c.Assert(err, check.IsNil)
+
+	names := make([]string, 0, len(layers))
+	for _, layer := range layers {
+		names = append(names, layer.Config["user.workshop.sdk"])
+	}
+	return names
+}
+
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
+	// Create some snapshots.
+	err := f.bd.Snapshot(f.ctx, "test", "test-sdk-1")
+	c.Assert(err, check.IsNil)
+	err = f.bd.Snapshot(f.ctx, "test", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	snapshots := f.listSnapshots(c, "test", false)
+	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
+
 	// Execute
-	err := f.bd.StashWorkshop(f.ctx, "test")
+	err = f.bd.StashWorkshop(f.ctx, "test")
 
 	// Validate
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
+	snapshots = f.listSnapshots(c, "test", true)
+	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
 	// Execute
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate
+	snapshots = f.listSnapshots(c, "test", true)
+	c.Check(snapshots, check.HasLen, 0)
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
 	c.Assert(err, check.ErrorMatches, "workshop not launched")
 }
@@ -379,14 +440,24 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
-	// Execute
+	// Launch
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
+	// Create some snapshots.
+	err := f.bd.Snapshot(f.ctx, "test", "test-sdk-1")
+	c.Assert(err, check.IsNil)
+	err = f.bd.Snapshot(f.ctx, "test", "test-sdk-2")
+	c.Assert(err, check.IsNil)
+	snapshots := f.listSnapshots(c, "test", false)
+	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
+
 	// Validate
-	err := f.bd.RemoveWorkshop(f.ctx, "test")
+	err = f.bd.RemoveWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+	snapshots = f.listSnapshots(c, "test", false)
+	c.Check(snapshots, check.HasLen, 0)
 }
 
 // List images marked by Workshop for the given base.

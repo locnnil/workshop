@@ -200,7 +200,7 @@ Workshop requires a minimum pool size of 5 GiB.
 The ZFS pool serves multiple purposes beyond simple container storage,
 managing container root filesystems,
 volumes for SDKs and SDK data persistence,
-snapshots for quick workshop updates and rollbacks,
+snapshots and clones for quick workshop updates and rollbacks,
 and cached container images.
 
 
