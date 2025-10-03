@@ -987,11 +987,6 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error
 }
 
 func ConnectLxd(ctx context.Context) (lxd.InstanceServer, error) {
-	conn, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
-	if err != nil {
-		return nil, ErrorLxdBackend(err)
-	}
-
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
@@ -1002,7 +997,13 @@ func ConnectLxd(ctx context.Context) (lxd.InstanceServer, error) {
 		return nil, err
 	}
 
-	if err = initLxdProject(conn, project, user); err != nil {
+	conn, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
+	if err != nil {
+		return nil, ErrorLxdBackend(err)
+	}
+
+	if err := initLxdProject(conn, project, user); err != nil {
+		conn.Disconnect()
 		return nil, err
 	}
 
