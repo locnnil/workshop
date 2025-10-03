@@ -10,6 +10,8 @@ import (
 	"github.com/canonical/workshop/internal/arch"
 )
 
+const MAX_SDK_NAME_LENGTH = 40
+
 var (
 	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 	sdkName      = regexp.MustCompile(`^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$`)
@@ -60,6 +62,9 @@ func ValidateName(name string) error {
 	}
 	if !sdkName.MatchString(name) {
 		return fmt.Errorf("invalid SDK name %q", name)
+	}
+	if len(name) > MAX_SDK_NAME_LENGTH {
+		return fmt.Errorf("SDK name %q too long", name)
 	}
 	return nil
 }

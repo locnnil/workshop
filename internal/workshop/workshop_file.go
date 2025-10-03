@@ -16,6 +16,8 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 )
 
+const MAX_WORKSHOP_NAME_LENGTH = 40
+
 var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 
@@ -253,6 +255,9 @@ func readWorkshop(path string) (*File, error) {
 
 	if !workshopName.MatchString(file.Name) {
 		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them")
+	}
+	if len(file.Name) > MAX_WORKSHOP_NAME_LENGTH {
+		return nil, fmt.Errorf("workshop name %q too long", file.Name)
 	}
 
 	if !slices.Contains(SupportedBases, file.Base) {
