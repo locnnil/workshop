@@ -78,7 +78,7 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 	defer lxdclient.Disconnect()
 
 	helper.CleanupLxdProject(c, lxdclient, "workshop."+f.usr.Username)
-	helper.CleanupLxdProject(c, lxdclient, "workshop-stash."+f.usr.Username)
+	helper.CleanupLxdProject(c, lxdclient, "workshop-layers."+f.usr.Username)
 	f.restoreLookupUsr()
 	f.restoreNewId()
 
@@ -180,7 +180,7 @@ func (f *wsOps) stashMetadata(c *check.C, name string) metadata {
 	c.Assert(err, check.IsNil)
 	defer conn.Disconnect()
 
-	conn = conn.UseProject("workshop-stash." + f.usr.Username)
+	conn = conn.UseProject("workshop-layers." + f.usr.Username)
 
 	return instanceMetadata(c, conn, "stash-"+lxdbackend.InstanceName(name, f.project.ProjectId))
 }

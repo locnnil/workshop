@@ -86,12 +86,12 @@ for initial steps on listing and deleting orphaned LXD containers, e.g.:
 
 
 To ensure there are no backup copies of the workshop remaining,
-check the :samp:`workshop-stash.<USERNAME>` project as well:
+check the :samp:`workshop-layers.<USERNAME>` project as well:
 
 .. code-block:: console
 
-   $ sudo lxc list --all-projects | grep workshop-stash.<USERNAME>
-   $ sudo lxc delete --project workshop-stash.<USERNAME> <CONTAINER> --force
+   $ sudo lxc list --all-projects | grep workshop-layers.<USERNAME>
+   $ sudo lxc delete --project workshop-layers.<USERNAME> <CONTAINER> --force
 
 
 In addition to containers,

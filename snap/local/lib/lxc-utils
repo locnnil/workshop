@@ -4,7 +4,7 @@ run_lxc() {
 }
 
 get_projects() {
-    run_lxc project list -f compact | awk '$1 ~ /^workshop(-stash)?\..*/ {print $1}'
+    run_lxc project list -f compact | awk '$1 ~ /^workshop(-layers|-stash)?\..*/ {print $1}'
 }
 
 remove_instances() {

@@ -120,7 +120,7 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	f.restoreImageServer()
 	f.restoreDevices()
 	helper.CleanupLxdProject(c, f.lxdClient, "workshop."+f.usr.Username)
-	helper.CleanupLxdProject(c, f.lxdClient, "workshop-stash."+f.usr.Username)
+	helper.CleanupLxdProject(c, f.lxdClient, "workshop-layers."+f.usr.Username)
 	f.lxdClient.Disconnect()
 }
 

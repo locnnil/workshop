@@ -124,7 +124,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	stashed := instanceStashName(name, projectId)
 
 	sourceProject, err1 := lxdProjectName(user)
-	targetProject, err2 := lxdStashProjectName(user)
+	targetProject, err2 := lxdLayersProjectName(user)
 	if err = cmp.Or(err1, err2); err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	instance := InstanceName(name, projectId)
 	stash := instanceStashName(name, projectId)
 
-	sourceProject, err1 := lxdStashProjectName(user)
+	sourceProject, err1 := lxdLayersProjectName(user)
 	targetProject, err2 := lxdProjectName(user)
 	if err = cmp.Or(err1, err2); err != nil {
 		return err
@@ -256,12 +256,12 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	stash, err := lxdStashProjectName(user)
+	layers, err := lxdLayersProjectName(user)
 	if err != nil {
 		return err
 	}
 
-	conn = conn.UseProject(stash)
+	conn = conn.UseProject(layers)
 
 	op, err := conn.DeleteInstance(instanceStashName(name, projectId))
 	if err != nil {

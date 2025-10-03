@@ -116,7 +116,7 @@ func (f *backendDeviceSuite) SetUpTest(c *check.C) {
 func (f *backendDeviceSuite) TearDownTest(c *check.C) {
 	helper.RemoveTestWorkshop(c, f.ctx, f.be)
 	helper.CleanupLxdProject(c, f.client, "workshop."+f.usr.Username)
-	helper.CleanupLxdProject(c, f.client, "workshop-stash."+f.usr.Username)
+	helper.CleanupLxdProject(c, f.client, "workshop-layers."+f.usr.Username)
 	f.restoreNewId()
 	f.restoreEnv()
 	f.restoreUser()
