@@ -24,6 +24,7 @@ Releases
 .. toctree::
    :hidden:
 
+   Workshop v0.1.25 <v0.1.25>
    Workshop v0.1.24 <v0.1.24>
    Workshop v0.1.23 <v0.1.23>
    Workshop v0.1.22 <v0.1.22>
@@ -35,8 +36,6 @@ Releases
    Workshop v0.1.15 <v0.1.15>
    Workshop v0.1.14 <v0.1.14>
    Workshop v0.1.13 <v0.1.13>
-   Workshop v0.1.12 <v0.1.12>
-
 
 
 We provide two binaries: |ws_markup| and |sdk_markup|.
@@ -54,10 +53,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.24 <v0.1.24>`
+- :doc:`Workshop v0.1.25 <v0.1.25>`
 
 Recent versions:
 
+- :doc:`Workshop v0.1.24 <v0.1.24>`
 - :doc:`Workshop v0.1.23 <v0.1.23>`
 - :doc:`Workshop v0.1.22 <v0.1.22>`
 - :doc:`Workshop v0.1.21 <v0.1.21>`
@@ -69,11 +69,11 @@ Recent versions:
 - :doc:`Workshop v0.1.15 <v0.1.15>`
 - :doc:`Workshop v0.1.14 <v0.1.14>`
 - :doc:`Workshop v0.1.13 <v0.1.13>`
-- :doc:`Workshop v0.1.12 <v0.1.12>`
 
 
 Older versions:
 
+- `Workshop v0.1.12 <https://github.com/canonical/workshop/releases/tag/v0.1.12>`_
 - `Workshop v0.1.11 <https://github.com/canonical/workshop/releases/tag/v0.1.11>`_
 - `Workshop v0.1.10 <https://github.com/canonical/workshop/releases/tag/v0.1.10>`_
 - `Workshop v0.1.9 <https://github.com/canonical/workshop/releases/tag/v0.1.9>`_
@@ -84,6 +84,7 @@ Older versions:
 - `Workshop v0.1.4 <https://github.com/canonical/workshop/releases/tag/v0.1.4>`_
 - `Workshop v0.1.3 <https://github.com/canonical/workshop/releases/tag/v0.1.3>`_
 - `Workshop v0.1.2 <https://github.com/canonical/workshop/releases/tag/v0.1.2>`_
+- Workshop v0.1.1 didn't go public
 - `Workshop v0.1.0 <https://github.com/canonical/workshop/releases/tag/v0.1.0>`_
 
 
@@ -92,12 +93,13 @@ Older versions:
 
 Latest version:
 
-- `SDKcraft v0.1.12 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.12>`_
+- `SDKcraft 0.1.13 <https://github.com/canonical/sdkcraft/releases/tag/0.1.13>`_
 
 Recent versions:
 
-- `SDKcraft v0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.11>`_
-- `SDKcraft v0.1.10 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.10>`_
+- `SDKcraft 0.1.12 <https://github.com/canonical/sdkcraft/releases/tag/0.1.12>`_
+- `SDKcraft 0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/0.1.11>`_
+- SDKcraft v0.1.10 didn't go public; also, version naming scheme dropped the 'v'
 - `SDKcraft v0.1.9 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.9>`_
 - `SDKcraft v0.1.8 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.8>`_
 - `SDKcraft v0.1.7 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.7>`_
@@ -109,9 +111,9 @@ Recent versions:
 
 Older versions:
 
-- `SDKcraft v0.1.2 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.2>`_
-- `SDKcraft v0.1.1 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.1>`_
-- `SDKcraft v0.1.0 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.0>`_
+- `SDKcraft 0.1.2 <https://github.com/canonical/sdkcraft/releases/tag/0.1.2>`_
+- `SDKcraft 0.1.1 <https://github.com/canonical/sdkcraft/releases/tag/0.1.1>`_
+- `SDKcraft 0.1.0 <https://github.com/canonical/sdkcraft/releases/tag/0.1.0>`_
 
 
 Release policy and schedule
@@ -149,7 +151,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.24_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.25_amd64.snap
 
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
