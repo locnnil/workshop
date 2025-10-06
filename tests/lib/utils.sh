@@ -13,21 +13,6 @@ function setup_lxd() {
     if [ "$(lxc storage list -f compact | grep -c default)" -eq 0 ]; then
         lxd init --auto --storage-backend=zfs
     fi
-
-    # Import LXD base images instead of downloading in every spread instance.
-    # This assumes images are mounted into the spread instance at /mnt.
-    image_dir="/mnt"
-    versions=("20.04" "22.04" "24.04")
-
-    for version in "${versions[@]}"; do
-        image_file="$image_dir/ubuntu-$version.tar.gz"
-        image_root="$image_dir/ubuntu-$version.tar.gz.root"
-        image_alias="workshop-ubuntu@$version-amd64"
-
-        if [ -f "$image_file" ] && ! lxc image info "$image_alias" &>/dev/null; then
-            lxc image import "$image_file" "$image_root" --alias "$image_alias"
-        fi
-    done
 }
 
 function prepare_environment() {
