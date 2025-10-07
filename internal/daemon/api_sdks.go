@@ -4,15 +4,19 @@ import (
 	"cmp"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/canonical/workshop/internal/sdk"
 )
 
 type sdkEntry struct {
-	Name     string `json:"name"`
-	Version  string `json:"version,omitempty"`
-	Revision string `json:"revision"`
-	Summary  string `json:"summary,omitempty"`
+	Name        string     `json:"name"`
+	Version     string     `json:"version,omitempty"`
+	Revision    string     `json:"revision"`
+	Summary     string     `json:"summary,omitempty"`
+	Description string     `json:"description,omitempty"`
+	BuildTime   *time.Time `json:"build-time,omitempty"`
+	Size        uint64     `json:"size,omitempty"`
 }
 
 func v1GetSdks(c *Command, r *http.Request, _ *userState) Response {
@@ -38,10 +42,13 @@ func v1GetSdks(c *Command, r *http.Request, _ *userState) Response {
 		}
 
 		entries = append(entries, sdkEntry{
-			Name:     info.Name,
-			Version:  info.Version,
-			Revision: vol.Revision.String(),
-			Summary:  info.Summary,
+			Name:        vol.Sdk,
+			Version:     info.Version,
+			Revision:    vol.Revision.String(),
+			Summary:     info.Summary,
+			Description: info.Description,
+			BuildTime:   info.BuildTime,
+			Size:        vol.Size,
 		})
 	}
 

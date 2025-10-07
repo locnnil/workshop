@@ -543,7 +543,7 @@ func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, info workshop.Vo
 	}
 
 	s.SdkVolumeContents[info.Name] = vfs
-	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string)}
+	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string), Size: 0}
 	return nil
 }
 
@@ -636,7 +636,7 @@ func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.Vo
 	}
 
 	s.SdkVolumeContents[info.Name] = tarball.Name()
-	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string)}
+	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string), Size: 0}
 	return nil
 }
 

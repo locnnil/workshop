@@ -91,15 +91,16 @@ func (s Source) NeedsRetrieve() bool {
 }
 
 type sdkYaml struct {
-	Name      string                 `yaml:"name"`
-	Base      string                 `yaml:"base"`
-	Arch      string                 `yaml:"architecture"`
-	Version   string                 `yaml:"version,omitempty"`
-	Summary   string                 `yaml:"summary"`
-	Type      string                 `yaml:"type"`
-	BuildTime *time.Time             `yaml:"sdkcraft-started-at,omitempty"`
-	Plugs     map[string]interface{} `yaml:"plugs,omitempty"`
-	Slots     map[string]interface{} `yaml:"slots,omitempty"`
+	Name        string                 `yaml:"name"`
+	Base        string                 `yaml:"base"`
+	Arch        string                 `yaml:"architecture"`
+	Version     string                 `yaml:"version,omitempty"`
+	Summary     string                 `yaml:"summary"`
+	Description string                 `yaml:"description"`
+	Type        string                 `yaml:"type"`
+	BuildTime   *time.Time             `yaml:"sdkcraft-started-at,omitempty"`
+	Plugs       map[string]interface{} `yaml:"plugs,omitempty"`
+	Slots       map[string]interface{} `yaml:"slots,omitempty"`
 }
 
 type Type string
@@ -124,18 +125,19 @@ func IsSketch(name string) bool {
 }
 
 type Info struct {
-	ProjectId string
-	Workshop  string
-	Name      string
-	Base      string
-	Arch      string
-	Version   string
-	Type      Type
-	Revision  Revision
-	Channel   string
-	Source    Source
-	BuildTime *time.Time
-	Summary   string
+	ProjectId   string
+	Workshop    string
+	Name        string
+	Base        string
+	Arch        string
+	Version     string
+	Type        Type
+	Revision    Revision
+	Channel     string
+	Source      Source
+	BuildTime   *time.Time
+	Summary     string
+	Description string
 
 	Plugs     map[string]*PlugInfo
 	PlugBinds map[string]PlugRef
@@ -254,6 +256,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Type:          Type(sdkYaml.Type),
 		BuildTime:     sdkYaml.BuildTime,
 		Summary:       sdkYaml.Summary,
+		Description:   sdkYaml.Description,
 		Plugs:         make(map[string]*PlugInfo),
 		PlugBinds:     make(map[string]PlugRef),
 		Slots:         make(map[string]*SlotInfo),
