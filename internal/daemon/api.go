@@ -28,6 +28,11 @@ var api = []*Command{{
 	GET:     v1GetProjects,
 	POST:    v1PostProjects,
 }, {
+	Path:    "/v1/sdks",
+	GuestOK: false,
+	UserOK:  true,
+	GET:     v1GetSdks,
+}, {
 	Path:    "/v1/projects/{id}/workshops",
 	GuestOK: false,
 	UserOK:  true,

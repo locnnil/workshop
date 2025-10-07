@@ -1,0 +1,74 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/testutil"
+)
+
+type sdkSuite struct {
+	testutil.BaseTest
+	stdout bytes.Buffer
+	stderr bytes.Buffer
+}
+
+var _ = check.Suite(&sdkSuite{})
+
+func Test(t *testing.T) { check.TestingT(t) }
+
+func (s *sdkSuite) SetUpTest(c *check.C) {
+	s.BaseTest.SetUpTest(c)
+	dirs.SetRootDir(c.MkDir())
+
+	Stdout = &s.stdout
+	Stderr = &s.stderr
+}
+
+func (s *sdkSuite) TearDownTest(_ *check.C) {
+	Stdout = os.Stdout
+	Stderr = os.Stderr
+	ClientConfig.BaseURL = ""
+}
+
+func (s *sdkSuite) Stdout() string {
+	return s.stdout.String()
+}
+
+func (s *sdkSuite) TestList(c *check.C) {
+	sdks := []client.SdkVolume{
+		{Name: "ollama", Version: "1.0-053", Revision: "82", Summary: "Large language model runtime"},
+		{Name: "ros2", Revision: "5", Summary: "ROS2 SDK"},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c.Assert(r.Method, check.Equals, "GET")
+		c.Assert(r.URL.Path, check.Equals, "/v1/sdks")
+		body := map[string]interface{}{
+			"type":   "sync",
+			"result": sdks,
+		}
+		encoder := json.NewEncoder(w)
+		c.Assert(encoder.Encode(body), check.IsNil)
+	}))
+	defer srv.Close()
+
+	ClientConfig.BaseURL = srv.URL
+
+	cmd := (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"list"})
+	c.Assert(cmd.Execute(), check.IsNil)
+
+	c.Check(s.Stdout(), check.Equals, `Name    Version  Rev  Summary
+ollama  1.0-053  82   Large language model runtime
+ros2    -        5    ROS2 SDK
+`)
+}
