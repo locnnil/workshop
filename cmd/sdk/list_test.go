@@ -34,6 +34,8 @@ func (s *sdkSuite) SetUpTest(c *check.C) {
 }
 
 func (s *sdkSuite) TearDownTest(_ *check.C) {
+	s.stdout.Reset()
+	s.stderr.Reset()
 	Stdout = os.Stdout
 	Stderr = os.Stderr
 	ClientConfig.BaseURL = ""
@@ -45,8 +47,8 @@ func (s *sdkSuite) Stdout() string {
 
 func (s *sdkSuite) TestList(c *check.C) {
 	sdks := []client.SdkVolume{
-		{Name: "ollama", Version: "1.0-053", Revision: "82", Summary: "Large language model runtime"},
-		{Name: "ros2", Revision: "5", Summary: "ROS2 SDK"},
+		{Name: "ollama", Version: "1.0-053", Revision: "82"},
+		{Name: "ros2", Revision: "5", Size: 1024 * 1024},
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -67,8 +69,8 @@ func (s *sdkSuite) TestList(c *check.C) {
 	cmd.SetArgs([]string{"list"})
 	c.Assert(cmd.Execute(), check.IsNil)
 
-	c.Check(s.Stdout(), check.Equals, `Name    Version  Rev  Summary
-ollama  1.0-053  82   Large language model runtime
-ros2    -        5    ROS2 SDK
+	c.Check(s.Stdout(), check.Equals, `Name    Version  Rev  Size
+ollama  1.0-053  82     -
+ros2    -        5    1MB
 `)
 }

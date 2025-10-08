@@ -30,6 +30,7 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.DisableAutoGenTag = true
 
 	cmd.AddCommand((&CmdList{root: c}).Command())
+	cmd.AddCommand((&CmdInfo{root: c}).Command())
 
 	cmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
 	cmd.PersistentFlags().BoolP("version", "v", false, "Print SDK CLI version.")
