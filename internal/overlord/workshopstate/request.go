@@ -409,7 +409,16 @@ func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk, source str
 	}
 
 	target := workshop.LocalSdkDir(s.userDataDir, s.project.ProjectId, w, sk)
-	return sdk.CommitRevision(s.user, source, target, installed)
+	revision, err := sdk.CommitRevision(s.user, source, target, installed)
+	if err != nil {
+		return sdk.Revision{}, err
+	}
+
+	if !osutil.FileExists(filepath.Join(target, revision.String(), "meta", "sdk.yaml")) {
+		return sdk.Revision{}, fmt.Errorf("sdk.yaml file not found for SDK %q", sk)
+	}
+
+	return revision, nil
 }
 
 func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
