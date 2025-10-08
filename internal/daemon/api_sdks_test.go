@@ -98,6 +98,11 @@ func (s *apiSuite) TestSdksGetOk(c *check.C) {
 			Revision: "5",
 			Size:     96 * 1024 * 1024,
 		},
+		{
+			Name:     "system",
+			Revision: "x1",
+			Size:     64 * 1024 * 1024,
+		},
 	})
 }
 
@@ -238,4 +243,16 @@ func (s *apiSuite) TestSdkInfoGetInvalidMetadata(c *check.C) {
 	rsp := v1GetSdkInfo(apiCmd("/v1/sdks/{name}"), req, nil).(*resp)
 	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
 	c.Assert(rsp.Status, check.Equals, http.StatusInternalServerError)
+}
+
+func (s *apiSuite) TestSdkInfoGetNotFound(c *check.C) {
+	s.daemon(c)
+
+	s.vars = map[string]string{"name": "bad"}
+	req, err := s.createSdksRequest("GET", "/v1/sdks/not-found")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1GetSdkInfo(apiCmd("/v1/sdks/{name}"), req, nil).(*resp)
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Assert(rsp.Status, check.Equals, http.StatusNotFound)
 }

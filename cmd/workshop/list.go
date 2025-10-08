@@ -3,7 +3,6 @@ package main
 import (
 	"cmp"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 )
 
 type CmdList struct {
@@ -150,7 +150,7 @@ func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*clien
 
 func fileEntry(w *client.WorkshopFile, p client.Project) []string {
 	line := []string{
-		contractHomeDirectory(p.Path),
+		cmdutil.ContractHome(p.Path),
 		w.Name,
 		"Off",
 		"-",
@@ -159,33 +159,14 @@ func fileEntry(w *client.WorkshopFile, p client.Project) []string {
 }
 
 func workshopEntry(w *client.WorkshopInfo, p client.Project) []string {
-	comment := "-"
-	if len(w.Notes) > 0 {
-		comment = strings.Join(w.Notes, ",")
-	}
+	comment := cmdutil.EmptyDash(strings.Join(w.Notes, ","))
 	line := []string{
-		contractHomeDirectory(p.Path),
+		cmdutil.ContractHome(p.Path),
 		w.Name,
 		w.Status,
 		comment,
 	}
 	return line
-}
-
-/*
-Make the path nicer and shorter by contracting $HOME with a ~
-
-	TODO: Make it fully correct, strings module is not path-aware
-*/
-func contractHomeDirectory(path string) string {
-	if home, err := os.UserHomeDir(); err == nil {
-		if path == home || strings.HasPrefix(path, home+"/") {
-			return strings.Replace(path, home, "~", 1)
-		} else if strings.HasPrefix(path, "(") {
-			return "-"
-		}
-	}
-	return path
 }
 
 func tabWriter() *tabwriter.Writer {

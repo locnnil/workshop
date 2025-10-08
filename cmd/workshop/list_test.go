@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"gopkg.in/check.v1"
 )
@@ -13,23 +11,6 @@ type workshopList struct {
 }
 
 var _ = check.Suite(&workshopList{})
-
-func (m *workshopList) TestHomeDirectoryPathContraction(c *check.C) {
-	home, _ := os.UserHomeDir()
-	r := contractHomeDirectory(filepath.Join(home, "test"))
-	c.Assert(r, check.Equals, "~/test")
-	r = contractHomeDirectory(filepath.Join(home, "///test"))
-	c.Assert(r, check.Equals, "~/test")
-	r = contractHomeDirectory(home)
-	c.Assert(r, check.Equals, "~")
-	r = contractHomeDirectory("/sys")
-	c.Assert(r, check.Equals, "/sys")
-
-	/* This will fail because of how filepath handles path prefixes (not path aware)
-	r = contractHomeDirectory(home + "4")
-	assert.Equal(t, "~", r)
-	*/
-}
 
 var mockWorkshopList = `{"type":"sync","status-code":200,"status":"OK","result":{
     "workshops":[{

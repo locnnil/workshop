@@ -1,13 +1,18 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
-	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
 
+	"github.com/canonical/lxd/shared/units"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 )
 
 type CmdInfo struct {
@@ -45,8 +50,15 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	slices.SortFunc(info.Installed, func(a, b client.SdkInstalled) int {
+		if a.Workshop != b.Workshop {
+			return cmp.Compare(a.Workshop, b.Workshop)
+		}
+		return cmp.Compare(a.ProjectPath, b.ProjectPath)
+	})
+
 	fmt.Fprintf(Stdout, "name: %s\n", info.Name)
-	fmt.Fprintf(Stdout, "summary: %s\n", emptyDash(info.Summary))
+	fmt.Fprintf(Stdout, "summary: %s\n", cmdutil.EmptyDash(info.Summary))
 
 	if info.Description != "" {
 		fmt.Fprintln(Stdout, "description: |")
@@ -61,26 +73,15 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	fmt.Fprintln(Stdout, "installed:")
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
 	for _, it := range info.Installed {
-		project := contractHome(it.ProjectPath)
-		channel := emptyDash(it.Channel)
+		project := cmdutil.ContractHome(it.ProjectPath)
+		channel := cmdutil.EmptyDash(it.Channel)
 		date := formatDate(it.BuildTime)
 		fmt.Fprintf(w, "  %s:\t%s\t%s\t%s\t(%s)\t%s\n",
-			project, it.Workshop, channel, date, it.Revision, formatSize(it.Size))
+			project, it.Workshop, channel, date, it.Revision, units.GetByteSizeString(int64(it.Size), 2))
 	}
 	w.Flush()
 
 	return nil
-}
-
-func contractHome(path string) string {
-	if home, err := os.UserHomeDir(); err == nil {
-		if path == home || strings.HasPrefix(path, home+"/") {
-			return strings.Replace(path, home, "~", 1)
-		} else if strings.HasPrefix(path, "(") {
-			return "-"
-		}
-	}
-	return path
 }
 
 func formatDate(t *time.Time) string {
@@ -88,23 +89,4 @@ func formatDate(t *time.Time) string {
 		return "-"
 	}
 	return t.Format("2006-01-02")
-}
-
-func formatSize(sz uint64) string {
-	if sz == 0 {
-		return "-"
-	}
-	const kb = 1024
-	const mb = 1024 * 1024
-	if sz < mb {
-		return fmt.Sprintf("%dKB", sz/kb)
-	}
-	return fmt.Sprintf("%dMB", sz/mb)
-}
-
-func emptyDash(s string) string {
-	if s == "" {
-		return "-"
-	}
-	return s
 }

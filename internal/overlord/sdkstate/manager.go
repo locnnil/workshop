@@ -2,7 +2,6 @@ package sdkstate
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"time"
 
@@ -73,10 +72,6 @@ func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
 
 	entries := make([]SdkVolume, 0, len(volumes))
 	for _, vol := range volumes {
-		if sdk.IsSystem(vol.Sdk) {
-			continue
-		}
-
 		info, err := sdk.ReadSdkInfo([]byte(vol.Metadata), "", "")
 		if err != nil {
 
@@ -100,20 +95,16 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 		return nil, err
 	}
 
-	installed := slices.DeleteFunc(volumes, func(a workshop.VolumeInfo) bool { return a.Sdk != name })
-	if len(installed) == 0 {
-		return nil, fmt.Errorf("%q SDK volume not found", name)
+	volumes = slices.DeleteFunc(volumes, func(a workshop.VolumeInfo) bool { return a.Sdk != name })
+	if len(volumes) == 0 {
+		return nil, workshop.ErrVolumeNotFound
 	}
 
 	full := SdkFullInfo{
 		Name:      name,
-		Installed: make([]SdkInstalled, 0, len(installed)),
+		Installed: make([]SdkInstalled, 0, len(volumes)),
 	}
 	for _, vol := range volumes {
-		if sdk.IsSystem(vol.Sdk) {
-			continue
-		}
-
 		info, err := sdk.ReadSdkInfo([]byte(vol.Metadata), "", "")
 		if err != nil {
 			return nil, err

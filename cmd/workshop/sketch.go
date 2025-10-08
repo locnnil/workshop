@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
@@ -710,5 +711,5 @@ func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) [
 		return nil
 	}
 
-	return []string{contractHomeDirectory(p.Path), w.Name, rev, notes}
+	return []string{cmdutil.ContractHome(p.Path), w.Name, rev, notes}
 }

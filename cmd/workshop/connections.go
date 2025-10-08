@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -77,10 +78,7 @@ func (cn connection) String() string {
 	if cn.bind != "" && cn.bindIdx > 0 {
 		opts = append(opts, fmt.Sprintf("bind.%d", cn.bindIdx))
 	}
-	if len(opts) == 0 {
-		return "-"
-	}
-	return strings.Join(opts, ",")
+	return cmdutil.EmptyDash(strings.Join(opts, ","))
 }
 
 type byConnectionData []connection

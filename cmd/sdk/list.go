@@ -1,10 +1,15 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"text/tabwriter"
 
+	"github.com/canonical/lxd/shared/units"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdList struct {
@@ -49,10 +54,14 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
+	slices.SortFunc(sdks, func(a, b client.SdkVolume) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
 	maxSize := 0
 	for _, sdk := range sdks {
-		szl := len(formatSize(sdk.Size))
+		szl := len(units.GetByteSizeString(int64(sdk.Size), 2))
 		if szl > maxSize {
 			maxSize = szl
 		}
@@ -65,7 +74,7 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 			version = "-"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%*s\n", sdk.Name, version, sdk.Revision, maxSize, formatSize(sdk.Size))
+		fmt.Fprintf(w, "%s\t%s\t%s\t%*s\n", sdk.Name, version, sdk.Revision, maxSize, units.GetByteSizeString(int64(sdk.Size), 2))
 	}
 
 	return w.Flush()

@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -17,7 +17,7 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 	d1 := time.Date(2024, 11, 25, 0, 0, 0, 0, time.UTC)
 	d2 := time.Date(2024, 11, 20, 0, 0, 0, 0, time.UTC)
 
-	home, _ := os.UserHomeDir()
+	home := c.MkDir()
 	nav := filepath.Join(home, "work", "nav2")
 	lerobot := filepath.Join(home, "work", "lerobot")
 
@@ -67,15 +67,15 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 	cmd.SetArgs([]string{"info", "openvino"})
 	c.Assert(cmd.Execute(), check.IsNil)
 
-	want := ""
-	want += "name: openvino\n"
-	want += "summary: ROS2 development environment\n"
-	want += "description: |\n"
-	want += "  Longer description\n"
-	want += "  can be multiline.\n"
-	want += "installed:\n"
-	want += "  " + contractHome(nav) + ":     ci   latest/stable  2024-11-25  (85)  109MB\n"
-	want += "  " + contractHome(lerobot) + ":  dev  latest/edge    2024-11-20  (82)  102MB\n"
+	want := fmt.Sprintf(`name: openvino
+summary: ROS2 development environment
+description: |
+  Longer description
+  can be multiline.
+installed:
+  %s:     ci   latest/stable  2024-11-25  (85)  114.29MB
+  %s:  dev  latest/edge    2024-11-20  (82)  106.95MB
+`, nav, lerobot)
 
 	c.Check(s.Stdout(), check.Equals, want)
 }

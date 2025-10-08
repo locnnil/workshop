@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -131,11 +132,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	// combine notes from workshop and its SDKs
-	notesFormatted := strings.Join(notes, ",")
-	if len(workshop.Notes) == 0 {
-		notesFormatted = "-"
-	}
-
+	notesFormatted := cmdutil.EmptyDash(strings.Join(notes, ","))
 	fmt.Fprintf(w, "notes:\t%s\n", notesFormatted)
 
 	if len(workshop.Sdks) > 0 {
@@ -146,19 +143,16 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 			tracking := sk.Channel
 			revision, err := sdk.ParseRevision(sk.Revision)
 			if err == nil && revision.Local() {
-				tracking = contractHomeDirectory(sk.Source)
+				tracking = cmdutil.ContractHome(sk.Source)
 				if sk.BuildTime.IsZero() {
 					sk.BuildTime = sk.InstallTime
 				}
-			}
-			if tracking == "" {
-				tracking = "-"
 			}
 
 			// Tracking info is always the same for the system SDK. Omit it to
 			// highlight the difference between it and a regular type SDK.
 			if !sdk.IsSystem(sk.Name) {
-				fmt.Fprintf(w, "    tracking:\t%s\n", tracking)
+				fmt.Fprintf(w, "    tracking:\t%s\n", cmdutil.EmptyDash(tracking))
 			}
 
 			var buildTime string
