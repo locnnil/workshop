@@ -7,6 +7,8 @@
 How to purge malfunctioning workshops
 =====================================
 
+.. @tests fall outside of current test coverage capabilities
+
 Workshops can sometimes become unresponsive,
 encounter errors during start or stop operations,
 or become orphaned if their project directory is removed prematurely.

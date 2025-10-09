@@ -7,6 +7,8 @@
 How to connect your local VS Code to a workshop
 ===============================================
 
+.. @tests redundant, should be covered by SDK itself
+
 .. @artefact workshop (container)
 
 This article shows how to use Visual Studio Code with Workshop

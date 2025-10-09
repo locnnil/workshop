@@ -7,6 +7,8 @@
 How to forward ports with tunneling
 ===================================
 
+.. @tests made redundant by tests/main/connect/task.yaml
+
 .. @artefact tunnel interface
 
 Port-forwarding in |ws_markup| is done with the *tunnel interface*.
