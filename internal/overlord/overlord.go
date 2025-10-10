@@ -526,6 +526,10 @@ func (o *Overlord) InterfaceManager() *ifacestate.InterfaceManager {
 	return o.ifacemgr
 }
 
+func (o *Overlord) SdkManager() *sdkstate.SdkManager {
+	return o.sdkmgr
+}
+
 func MockWorkshopBackend(b workshop.Backend) func() {
 	workshopBackendOverride = b
 	return func() {

@@ -1,10 +1,15 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"text/tabwriter"
 
+	"github.com/canonical/lxd/shared/units"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdList struct {
@@ -45,20 +50,31 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if len(sdks) == 0 {
+		return nil
+	}
+
+	slices.SortFunc(sdks, func(a, b client.SdkVolume) int {
+		return cmp.Compare(a.Name, b.Name)
+	})
+
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
-	fmt.Fprintf(w, "Name\tVersion\tRev\tSummary\n")
+	maxSize := 0
+	for _, sdk := range sdks {
+		szl := len(units.GetByteSizeString(int64(sdk.Size), 2))
+		if szl > maxSize {
+			maxSize = szl
+		}
+	}
+
+	fmt.Fprintf(w, "Name\tVersion\tRev\t%*s\n", maxSize, "Size")
 	for _, sdk := range sdks {
 		version := sdk.Version
 		if version == "" {
 			version = "-"
 		}
 
-		summary := sdk.Summary
-		if summary == "" {
-			summary = "-"
-		}
-
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", sdk.Name, version, sdk.Revision, summary)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%*s\n", sdk.Name, version, sdk.Revision, maxSize, units.GetByteSizeString(int64(sdk.Size), 2))
 	}
 
 	return w.Flush()

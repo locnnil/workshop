@@ -196,7 +196,8 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(vols, check.HasLen, 1)
 
-	c.Check(vols[0], check.DeepEquals, workshop.VolumeInfo{VolumeSetup: volume, Workshops: map[string][]string{}})
+	c.Check(vols[0].VolumeSetup, check.DeepEquals, volume)
+	c.Check(vols[0].Workshops, check.HasLen, 0)
 
 	// Execute
 	err = f.bd.DeleteVolume(f.ctx, "test")
@@ -259,7 +260,8 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
-	c.Check(vinfo, check.DeepEquals, workshop.VolumeInfo{VolumeSetup: volume, Workshops: make(map[string][]string)})
+	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
+	c.Check(vinfo.Workshops, check.HasLen, 0)
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -318,7 +320,8 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
-	c.Check(vinfo, check.DeepEquals, workshop.VolumeInfo{VolumeSetup: volume, Workshops: make(map[string][]string)})
+	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
+	c.Check(vinfo.Workshops, check.HasLen, 0)
 
 	err = f.bd.DeleteVolume(f.ctx, "test-1")
 	c.Assert(err, check.IsNil)
@@ -736,10 +739,8 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 
 	info, err := f.bd.Volume(f.ctx, volume.Name)
 	c.Assert(err, check.IsNil)
-	c.Check(info, check.DeepEquals, workshop.VolumeInfo{
-		VolumeSetup: volume,
-		Workshops:   map[string][]string{f.project.ProjectId: {"test"}},
-	})
+	c.Check(info.VolumeSetup, check.DeepEquals, volume)
+	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}})
 
 	err = f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
@@ -823,10 +824,8 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	// Validate UsedBy in VolumeInfo.
 	info, err := f.bd.Volume(f.ctx, volume.Name)
 	c.Assert(err, check.IsNil)
-	c.Check(info, check.DeepEquals, workshop.VolumeInfo{
-		VolumeSetup: volume,
-		Workshops:   map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}},
-	})
+	c.Check(info.VolumeSetup, check.DeepEquals, volume)
+	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}})
 
 	// Detach the volume from the first workshop.
 	err = f.bd.DetachVolume(f.ctx, "test", volume.Name)
@@ -835,10 +834,8 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	// Validate UsedBy in VolumeInfo.
 	info, err = f.bd.Volume(f.ctx, volume.Name)
 	c.Assert(err, check.IsNil)
-	c.Check(info, check.DeepEquals, workshop.VolumeInfo{
-		VolumeSetup: volume,
-		Workshops:   map[string][]string{other.ProjectId: {"test"}},
-	})
+	c.Check(info.VolumeSetup, check.DeepEquals, volume)
+	c.Check(info.Workshops, check.DeepEquals, map[string][]string{other.ProjectId: {"test"}})
 
 	err = f.bd.DetachVolume(otherCtx, "test", volume.Name)
 	c.Assert(err, check.IsNil)

@@ -1,53 +1,37 @@
 package daemon
 
 import (
-	"cmp"
+	"errors"
 	"net/http"
-	"slices"
 
-	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
-type sdkEntry struct {
-	Name     string `json:"name"`
-	Version  string `json:"version,omitempty"`
-	Revision string `json:"revision"`
-	Summary  string `json:"summary,omitempty"`
-}
-
 func v1GetSdks(c *Command, r *http.Request, _ *userState) Response {
-	state := c.d.overlord.State()
-	state.Lock()
-	wb := c.d.overlord.WorkshopBackend()
-	state.Unlock()
+	mgr := c.d.overlord.SdkManager()
 
-	volumes, err := wb.Volumes(r.Context(), "sdk")
+	sdks, err := mgr.SdkVolumes(r.Context())
 	if err != nil {
 		return statusInternalError("cannot list SDK volumes: %w", err)
 	}
 
-	entries := make([]sdkEntry, 0, len(volumes))
-	for _, vol := range volumes {
-		if sdk.IsSystem(vol.Sdk) {
-			continue
-		}
+	return SyncResponse(sdks, http.StatusOK)
+}
 
-		info, err := sdk.ReadSdkInfo([]byte(vol.Metadata), "", "")
-		if err != nil {
-			return statusInternalError("cannot parse SDK metadata for %q: %w", vol.Name, err)
-		}
+func v1GetSdkInfo(c *Command, r *http.Request, _ *userState) Response {
+	name := muxVars(r)["name"]
+	if name == "" {
+		return statusBadRequest("sdk name required")
+	}
+	mgr := c.d.overlord.SdkManager()
 
-		entries = append(entries, sdkEntry{
-			Name:     info.Name,
-			Version:  info.Version,
-			Revision: vol.Revision.String(),
-			Summary:  info.Summary,
-		})
+	sk, err := mgr.Sdk(r.Context(), name)
+	if err != nil {
+		if errors.Is(err, workshop.ErrVolumeNotFound) {
+			return statusNotFound("%q SDK volume not found", name)
+		}
+		return statusInternalError("%w", err)
 	}
 
-	slices.SortFunc(entries, func(a, b sdkEntry) int {
-		return cmp.Compare(a.Name, b.Name)
-	})
-
-	return SyncResponse(entries, http.StatusOK)
+	return SyncResponse(sk, http.StatusOK)
 }

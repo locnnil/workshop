@@ -291,7 +291,8 @@ func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeIn
 
 	infos := make([]workshop.VolumeInfo, 0, len(vols))
 	for _, vol := range vols {
-		infos = append(infos, volumeToInfo(&vol))
+		size := volumeSize(conn, vol.Name)
+		infos = append(infos, volumeToInfo(&vol, size))
 	}
 	return infos, nil
 }
@@ -311,7 +312,8 @@ func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo,
 		return workshop.VolumeInfo{}, err
 	}
 
-	return volumeToInfo(vol), nil
+	size := volumeSize(conn, vol.Name)
+	return volumeToInfo(vol, size), nil
 }
 
 func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
@@ -333,7 +335,7 @@ func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
 	return config
 }
 
-func volumeToInfo(volume *api.StorageVolume) workshop.VolumeInfo {
+func volumeToInfo(volume *api.StorageVolume, size uint64) workshop.VolumeInfo {
 	revision, err := sdk.ParseRevision(volume.Config["user.sdk.revision"])
 	if err != nil {
 		revision = sdk.Revision{}
@@ -369,5 +371,20 @@ func volumeToInfo(volume *api.StorageVolume) workshop.VolumeInfo {
 			Metadata: volume.Config["user.sdk.meta"],
 		},
 		Workshops: workshops,
+		Size:      size,
 	}
+}
+
+func volumeSize(conn lxd.InstanceServer, name string) uint64 {
+	state, err := conn.GetStoragePoolVolumeState(storagePool, "custom", name)
+	if err != nil {
+		logger.Debugf("failed to retrieve volume state for %q: %v", name, err)
+		return 0
+	}
+
+	if state.Usage != nil {
+		return state.Usage.Used
+	}
+
+	return 0
 }

@@ -103,6 +103,8 @@ type VolumeInfo struct {
 	VolumeSetup
 	// Project ID / Workshop pairs that the volume is attached to.
 	Workshops map[string][]string
+	// Size reports the current volume usage in bytes when available.
+	Size uint64
 }
 
 type VolumeManager interface {
