@@ -18,7 +18,6 @@ with |ws_markup| and |sdk_markup|:
 
    concepts
    SDKs versus Dockerfiles <sdk-vs-dockerfile>
-   Data storage and sharing <data-persistence-sharing>
    Design best practices <best-practices>
    Parts <parts>
 

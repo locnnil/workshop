@@ -103,7 +103,7 @@ To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
 jump straight to the
 `SDK crafting guide
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/craft-sdks/>`_
+<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
 
