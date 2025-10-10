@@ -1,12 +1,16 @@
 #!/bin/sh -e
 
-# disable check for relative dir following
-# shellcheck disable=SC1091
-if [ -n "${SNAP}" ]; then
-    . "$SNAP/snap/lib/lxc-utils"
+# Allow the script to run without snap.
+if [ -n "$SNAP" ]; then
+    lib="$SNAP/snap/lib"
 else
-    . "$(dirname -- "$0")/../lib/lxc-utils"
+    lib="$(dirname -- "$0")/../lib"
 fi
+
+# shellcheck source=snap/local/lib/lxc-utils
+. "$lib/lxc-utils"
+# shellcheck source=snap/local/lib/completion
+. "$lib/completion"
 
 # The workshop services are stopped by the moment the remove
 # hook is called. Therefore, for now, we walk the LXD projects created
@@ -22,3 +26,7 @@ done
 
 remove_network
 remove_volumes
+
+remove_completion /var/lib/snapd/desktop/bash-completion/completions/workshop
+remove_completion /var/lib/snapd/desktop/fish/vendor_completions.d/workshop.fish
+remove_completion /usr/local/share/zsh/site-functions/_workshop

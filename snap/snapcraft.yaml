@@ -22,7 +22,6 @@ apps:
     environment:
       WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: bin/workshop
-    completer: workshop-completer.sh
   workshopd:
     environment:
       PATH: ${SNAP}/usr/bin:${PATH}
@@ -64,9 +63,6 @@ parts:
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshopctl" ./cmd/workshopctl
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/sdk" ./cmd/sdk
 
-      # Generate completions script
-      "${CRAFT_PART_INSTALL}/bin/workshop" completion bash > "${CRAFT_PART_INSTALL}/workshop-completer.sh"
-
       # Set snap version
       VERSION="$("${CRAFT_PART_INSTALL}/bin/workshop" --version)"
       craftctl set version="$VERSION"
@@ -77,7 +73,6 @@ parts:
       - bin/workshopd
       - bin/workshopctl
       - bin/sdk
-      - workshop-completer.sh
   wrappers:
     plugin: dump
     source: snap/local/

@@ -31,8 +31,17 @@ function prepare_environment() {
         sleep 5
     done
 
+    pkgs=(
+        bsdutils
+        fish
+        jq
+        "linux-modules-extra-$(uname -r)"
+        moreutils
+        zfsutils-linux
+        zsh
+    )
     apt-get update
-    apt-get install -y --no-install-recommends "linux-modules-extra-$(uname -r)" moreutils jq zfsutils-linux
+    apt-get install -y --no-install-recommends "${pkgs[@]}"
 
     mkdir -p /etc/systemd/system/snapd.service.d
     cat <<EOF >/etc/systemd/system/snapd.service.d/override.conf

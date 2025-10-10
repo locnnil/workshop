@@ -1,7 +1,6 @@
 #!/bin/sh -e
 
-# disable check for relative dir following
-# shellcheck disable=SC1091
+# shellcheck source=snap/local/lib/lxc-utils
 . "$SNAP/snap/lib/lxc-utils"
 
 projects=$(get_projects)
@@ -15,4 +14,6 @@ done
 remove_volumes
 
 # Reset workshop state
-rm -rf /var/snap/workshop/current/*
+if [ -n "$SNAP_DATA" ]; then
+    rm -rf "${SNAP_DATA:?}"/*
+fi

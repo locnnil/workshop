@@ -1,0 +1,45 @@
+set -e
+
+do_complete() {
+  set +x
+
+  COMP_LINE="$*"
+  COMP_POINT="${#COMP_LINE}"
+  COMP_KEY=9  # ASCII code for tab
+  COMP_TYPE=33  # ASCII code for !
+  COMP_WORDS=("$@")
+  COMP_CWORD="${#COMP_WORDS[@]}"
+  ((COMP_CWORD--))
+
+  "$func" "${COMP_WORDS[0]}" "${COMP_WORDS[-1]}" "${COMP_WORDS[-2]}" 2>/dev/null || true
+
+  set -x
+}
+
+source /usr/share/bash-completion/bash_completion
+_completion_loader workshop || true
+
+set -x
+
+func='__start_workshop'
+complete -p workshop | grep -qw "$func"
+
+# The completion functionality is well covered in unit tests. We check four
+# small examples here that each use different code paths.
+
+echo "Test launch completion"
+do_complete workshop launch o
+[ "$COMPREPLY" = off ]
+
+echo "Test connect completion"
+do_complete workshop connect w
+[ "$COMPREPLY" = 'ws-comp/test-sdk-desktop:desktop' ]
+
+echo "Test remount dir completion"
+mkdir -p ~/tmp/tmp
+do_complete workshop remount ws-comp/test-sdk-mount:one "$HOME/tmp/t"
+[ "$COMPREPLY" = "$HOME/tmp/tmp" ]
+
+echo "Test stop completion"
+do_complete workshop stop w
+[ "$COMPREPLY" = ws-comp ]
