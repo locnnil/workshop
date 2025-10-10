@@ -40,7 +40,7 @@ func (f *systemSdk) TearDownSuite(c *check.C) {
 }
 
 // Update this hash with new SDK revision numbers.
-const systemSdkHash = "0d45fbec8ff7cfdfafaa3e6279537f3d28a25b61c06bab99f9f5f13c362453f7"
+const systemSdkHash = "9ccfd0116a39ce9ab210697f2e451a7aecd0c07146288ce6bb7ff0c4a847890b"
 
 func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 	done, total := 0, 0

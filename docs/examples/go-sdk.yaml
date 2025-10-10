@@ -4,7 +4,7 @@ title: Go SDK
 summary: The Go programming language
 description: |
   Go is an open source programming language that enables the production of simple, efficient and reliable software at scale.
-version: "1.24.6"
+version: "1.25.1"
 license: LGPL-2.1
 platforms:
   amd64:
