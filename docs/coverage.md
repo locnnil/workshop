@@ -184,7 +184,7 @@
                 <td>action</td>
                 <td><a href="tutorial/part-4-craft-sdks.rst#L404">[part-4-craft-sdks.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/sdks/best-practices.rst#L16">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L105">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L136">[sdk-vs-dockerfile.rst]</a></td>
+                <td><a href="explanation/sdks/best-practices.rst#L16">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L105">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L284">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/cli/workshopctl.rst#L32">[workshopctl.rst]</a><br><a href="reference/sdks.rst#L423">[sdks.rst]</a></td>
                 <td>SK023</td>
             </tr><tr>
@@ -193,7 +193,7 @@
                 <td></td>
                 <td><a href="tutorial/part-1-get-started.rst#L129">[part-1-get-started.rst]</a><br><a href="tutorial/part-4-craft-sdks.rst#L11">[part-4-craft-sdks.rst]</a><br><a href="tutorial/part-4-craft-sdks.rst#L486">[part-4-craft-sdks.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/sdks/concepts.rst#L251">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L41">[concepts.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L62">[data-persistence-sharing.rst]</a></td>
+                <td><a href="explanation/sdks/concepts.rst#L251">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L41">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L178">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/definition-files/sdk-definition.rst#L16">[sdk-definition.rst]</a><br><a href="reference/definition-files/workshop-definition.rst#L196">[workshop-definition.rst]</a><br><a href="reference/sdks.rst#L116">[sdks.rst]</a></td>
                 <td>SK026</td>
             </tr><tr>
@@ -220,7 +220,7 @@
                 <td>concept</td>
                 <td><a href="tutorial/part-1-get-started.rst#L130">[part-1-get-started.rst]</a><br><a href="tutorial/part-3-sketch-sdks.rst#L22">[part-3-sketch-sdks.rst]</a><br><a href="tutorial/part-4-craft-sdks.rst#L12">[part-4-craft-sdks.rst]</a></td>
                 <td><a href="how-to/index.rst#L65">[index.rst]</a></td>
-                <td><a href="explanation/index.rst#L59">[index.rst]</a><br><a href="explanation/interfaces/concepts.rst#L12">[concepts.rst]</a><br><a href="explanation/sdks/best-practices.rst#L11">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L11">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L53">[concepts.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L27">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/index.rst#L11">[index.rst]</a><br><a href="explanation/sdks/parts.rst#L13">[parts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L12">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/workshops/concepts.rst#L106">[concepts.rst]</a></td>
+                <td><a href="explanation/index.rst#L59">[index.rst]</a><br><a href="explanation/interfaces/concepts.rst#L12">[concepts.rst]</a><br><a href="explanation/sdks/best-practices.rst#L11">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L11">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L53">[concepts.rst]</a><br><a href="explanation/sdks/index.rst#L11">[index.rst]</a><br><a href="explanation/sdks/parts.rst#L13">[parts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L143">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L16">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/workshops/concepts.rst#L106">[concepts.rst]</a></td>
                 <td><a href="reference/definition-files/index.rst#L10">[index.rst]</a><br><a href="reference/definition-files/sdk-definition.rst#L10">[sdk-definition.rst]</a><br><a href="reference/definition-files/workshop-definition.rst#L39">[workshop-definition.rst]</a><br><a href="reference/index.rst#L34">[index.rst]</a><br><a href="reference/sdks.rst#L10">[sdks.rst]</a><br><a href="reference/workshops.rst#L30">[workshops.rst]</a></td>
                 <td>SK000</td>
             </tr><tr>
@@ -247,7 +247,7 @@
                 <td>file</td>
                 <td><a href="tutorial/part-3-sketch-sdks.rst#L81">[part-3-sketch-sdks.rst]</a><br><a href="tutorial/part-4-craft-sdks.rst#L100">[part-4-craft-sdks.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/sdks/concepts.rst#L36">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L137">[sdk-vs-dockerfile.rst]</a></td>
+                <td><a href="explanation/sdks/concepts.rst#L36">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L285">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/definition-files/sdk-definition.rst#L11">[sdk-definition.rst]</a></td>
                 <td>SK001<br>SK004<br>SK026</td>
             </tr><tr>
@@ -265,7 +265,7 @@
                 <td>concept</td>
                 <td><a href="tutorial/part-4-craft-sdks.rst#L290">[part-4-craft-sdks.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/sdks/best-practices.rst#L13">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L55">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L95">[sdk-vs-dockerfile.rst]</a></td>
+                <td><a href="explanation/sdks/best-practices.rst#L13">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L55">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L99">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/cli/workshopctl.rst#L12">[workshopctl.rst]</a></td>
                 <td>SK000<br>SK005</td>
             </tr><tr>
@@ -301,7 +301,7 @@
                 <td>concept</td>
                 <td><a href="tutorial/part-1-get-started.rst#L131">[part-1-get-started.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/sdks/concepts.rst#L117">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L12">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L121">[sdk-vs-dockerfile.rst]</a></td>
+                <td><a href="explanation/sdks/concepts.rst#L117">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L12">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L269">[sdk-vs-dockerfile.rst]</a></td>
                 <td></td>
                 <td>SK001</td>
             </tr><tr>
@@ -472,7 +472,7 @@
                 <td>command</td>
                 <td><a href="tutorial/part-1-get-started.rst#L222">[part-1-get-started.rst]</a></td>
                 <td><a href="how-to/customize-workshops/move-projects.rst#L35">[move-projects.rst]</a><br><a href="how-to/develop-with-workshops/git.rst#L43">[git.rst]</a><br><a href="how-to/fix-workshops/debug-issues.rst#L121">[debug-issues.rst]</a></td>
-                <td><a href="explanation/interfaces/concepts.rst#L179">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L269">[sdk-vs-dockerfile.rst]</a></td>
+                <td><a href="explanation/interfaces/concepts.rst#L179">[concepts.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L417">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/cli/workshop-launch.rst#L6">[workshop-launch.rst]</a><br><a href="reference/workshops.rst#L74">[workshops.rst]</a></td>
                 <td>SK001<br>SK003<br>SK008<br>SK020</td>
             </tr><tr>
@@ -508,7 +508,7 @@
                 <td>command</td>
                 <td><a href="tutorial/part-2-work-with-interfaces.rst#L90">[part-2-work-with-interfaces.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/interfaces/mount-interface.rst#L165">[mount-interface.rst]</a><br><a href="explanation/sdks/data-persistence-sharing.rst#L138">[data-persistence-sharing.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L328">[sdk-vs-dockerfile.rst]</a></td>
+                <td><a href="explanation/interfaces/mount-interface.rst#L165">[mount-interface.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L254">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L476">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/cli/workshop-remount.rst#L6">[workshop-remount.rst]</a></td>
                 <td>SK027</td>
             </tr><tr>
@@ -598,7 +598,7 @@
                 <td>concept</td>
                 <td><a href="tutorial/part-1-get-started.rst#L15">[part-1-get-started.rst]</a></td>
                 <td><a href="how-to/develop-with-workshops/connect-vscode.rst#L10">[connect-vscode.rst]</a><br><a href="how-to/develop-with-workshops/git.rst#L10">[git.rst]</a><br><a href="how-to/develop-with-workshops/run-jupyterlab-in-browser.rst#L10">[run-jupyterlab-in-browser.rst]</a><br><a href="how-to/develop-with-workshops/run-vscode-in-browser.rst#L10">[run-vscode-in-browser.rst]</a><br><a href="how-to/fix-workshops/fix-installation.rst#L71">[fix-installation.rst]</a></td>
-                <td><a href="explanation/index.rst#L37">[index.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L13">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/workshops/concepts.rst#L12">[concepts.rst]</a><br><a href="explanation/workshops/index.rst#L11">[index.rst]</a></td>
+                <td><a href="explanation/index.rst#L37">[index.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L17">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/workshops/concepts.rst#L12">[concepts.rst]</a><br><a href="explanation/workshops/index.rst#L11">[index.rst]</a></td>
                 <td><a href="reference/index.rst#L35">[index.rst]</a><br><a href="reference/workshops.rst#L16">[workshops.rst]</a></td>
                 <td>SK000<br>SK003<br>SK007</td>
             </tr><tr>
