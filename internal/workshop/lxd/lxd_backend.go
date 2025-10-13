@@ -148,6 +148,21 @@ func checkVersion(version string) error {
 	return nil
 }
 
+func checkStorage(drivers []api.ServerStorageDriverInfo) error {
+	isZfs := func(driver api.ServerStorageDriverInfo) bool {
+		return driver.Name == "zfs"
+	}
+	if slices.ContainsFunc(drivers, isZfs) {
+		return nil
+	}
+
+	// The LXD error message when creating a pool is:
+	//  Error: Error loading "zfs" module: Failed to run: modprobe -b zfs:
+	//  exit status 1 (modprobe: FATAL: Module zfs not found ...)
+	// We keep the first part for consistency, the rest doesn't add much.
+	return errors.New(`suitable storage backend not found: error loading "zfs" module`)
+}
+
 func checkServerCapabilities() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -163,7 +178,11 @@ func checkServerCapabilities() error {
 		return err
 	}
 
-	return checkVersion(info.Environment.ServerVersion)
+	if err := checkVersion(info.Environment.ServerVersion); err != nil {
+		return err
+	}
+
+	return checkStorage(info.Environment.StorageSupportedDrivers)
 }
 
 func New() (*Backend, error) {
