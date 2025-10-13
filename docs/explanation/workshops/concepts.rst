@@ -146,12 +146,13 @@ at launch time,
 #. The :samp:`system` SDK is installed,
    and its :samp:`setup-base` hook is run.
 
-#. A ZFS snapshot is taken.
+#. A ZFS snapshot is taken,
+   and cloned to create a new ZFS file system.
 
 #. For each subsequent SDK
    in the order of their appearance on the :samp:`sdks` list,
    its :samp:`setup-base` hook is run
-   and another snapshot is taken.
+   and another snapshot is taken and cloned.
 
 
 This will create a chain of snapshots,
@@ -161,6 +162,12 @@ as |ws_markup| can simply restore a previous snapshot
 instead of rebuilding the environment from scratch.
 No snapshots are created for other hook types,
 such as :samp:`setup-project` or :samp:`save-state`.
+
+In order to restore an old snapshot,
+newer snapshots must be destroyed first.
+If refreshing fails,
+the workshop reverts to its previous state.
+The cloned file systems are used to restore the deleted snapshots.
 
 For details on how |ws_markup| leverages ZFS,
 see :ref:`exp_arch_install_storage`.

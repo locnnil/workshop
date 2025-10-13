@@ -46,7 +46,7 @@ func (f *wsProject) SetUpTest(c *check.C) {
 
 func (f *wsProject) TearDownTest(c *check.C) {
 	helper.CleanupLxdProject(c, f.client, "workshop."+f.username)
-	helper.CleanupLxdProject(c, f.client, "workshop-stash."+f.username)
+	helper.CleanupLxdProject(c, f.client, "workshop-layers."+f.username)
 	f.client.Disconnect()
 }
 
@@ -320,7 +320,7 @@ func (f *wsProject) TestLxdBackendLoadProjectsAllUsers(c *check.C) {
 
 func (f *wsProject) TestLxdBackendLoadProjectAsDifferentUser(c *check.C) {
 	defer helper.CleanupLxdProject(c, f.client, "workshop.anotheruser")
-	defer helper.CleanupLxdProject(c, f.client, "workshop-stash.anotheruser")
+	defer helper.CleanupLxdProject(c, f.client, "workshop-layers.anotheruser")
 
 	// Setup
 	be := lxdbackend.Backend{}
@@ -373,7 +373,7 @@ func (f *wsProject) TestInitLxdProjectFails(c *check.C) {
 	projects, err := f.client.GetProjectNames()
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, check.Not(testutil.Contains), "workshop.test@user")
-	c.Assert(projects, check.Not(testutil.Contains), "workshop-stash.test@user")
+	c.Assert(projects, check.Not(testutil.Contains), "workshop-layers.test@user")
 }
 
 func (f *wsProject) TestPosixUsernameAsProjectSuffix(c *check.C) {
@@ -401,7 +401,7 @@ func (f *wsProject) TestPosixUsernameAsProjectSuffix(c *check.C) {
 	projects, err := p.GetProjectNames()
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, testutil.Contains, "workshop.testuser0")
-	c.Assert(projects, testutil.Contains, "workshop-stash.testuser0")
+	c.Assert(projects, testutil.Contains, "workshop-layers.testuser0")
 }
 
 func (f *wsProject) TestNonPosixUsernameAsProjectSuffix(c *check.C) {
@@ -429,5 +429,5 @@ func (f *wsProject) TestNonPosixUsernameAsProjectSuffix(c *check.C) {
 	projects, err := p.GetProjectNames()
 	c.Assert(err, check.IsNil)
 	c.Assert(projects, testutil.Contains, "workshop.1001")
-	c.Assert(projects, testutil.Contains, "workshop-stash.1001")
+	c.Assert(projects, testutil.Contains, "workshop-layers.1001")
 }

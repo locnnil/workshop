@@ -509,7 +509,6 @@ func launchWorkshop(st *state.State, name string, fileText string, fingerprint s
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", name))
 	addTask(create)
 	create.Set("workshop-file", fileText)
-	create.Set("forget", true)
 	create.Set("workshop-base-fingerprint", fingerprint)
 
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
@@ -537,10 +536,9 @@ func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot 
 		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", name, sdkSnapshot)
 	}
 
-	create := st.NewTask("create-workshop", summary)
+	create := st.NewTask("rebuild-workshop", summary)
 	addTask(create)
 	create.Set("workshop-file", fileText)
-	create.Set("forget", false)
 
 	if sdkSnapshot != "" {
 		create.Set("sdk-snapshot", sdkSnapshot)
@@ -1217,7 +1215,6 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	addTaskSet(unregister)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
-	remove.Set("forget", true)
 	addTaskSet(state.NewTaskSet(remove))
 
 	// The point of no return starts after the workshop is removed. If any of the tasks

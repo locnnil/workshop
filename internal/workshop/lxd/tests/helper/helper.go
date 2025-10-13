@@ -126,7 +126,7 @@ printf '%s\n' "$@"
 }
 
 func RemoveTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend) {
-	err := bd.RemoveWorkshop(ctx, "test", true)
+	err := bd.RemoveWorkshop(ctx, "test")
 	c.Assert(err, check.IsNil)
 }
 

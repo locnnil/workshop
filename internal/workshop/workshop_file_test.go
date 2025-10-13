@@ -207,6 +207,24 @@ base: ubuntu@20.04
 	c.Assert(err, check.ErrorMatches, `a workshop's name must: \(1\) start with a letter, \(2\) only include digits, lowercase letters, and hyphens joining them`)
 }
 
+func (f *workshopFile) TestWorkshopLongName(c *check.C) {
+	yaml := `name: xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40
+base: ubuntu@20.04
+`
+	f.createWFile(c, "xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40", yaml)
+	file, err := f.project.Workshop("xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40")
+	c.Check(err, check.IsNil)
+	c.Check(file.Name, check.Equals, "xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40")
+
+	yaml = `name: xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40x
+base: ubuntu@20.04
+`
+	f.createWFile(c, "xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40x", yaml)
+	file, err = f.project.Workshop("xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40x")
+	c.Check(file, check.IsNil)
+	c.Check(err, check.ErrorMatches, `workshop name "xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40x" too long`)
+}
+
 func (f *workshopFile) TestWorkshopUnsupportedBase(c *check.C) {
 	yaml := `name: xbert-gpu
 base: foo@20.04

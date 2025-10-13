@@ -46,11 +46,11 @@ func lxdProjectName(user string) (string, error) {
 	return projectName("workshop.", user)
 }
 
-func lxdStashProjectName(user string) (string, error) {
-	return projectName("workshop-stash.", user)
+func lxdLayersProjectName(user string) (string, error) {
+	return projectName("workshop-layers.", user)
 }
 
-// Create regular and stash LXD projects for the user if they don't exist.
+// Create LXD projects (storing workshops and layers) for the user if they don't exist.
 func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 	names, err := conn.GetProjectNames()
 	if err != nil {
@@ -74,17 +74,17 @@ func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 	defer rev.Fail()
 	rev.Add(func() { _ = conn.DeleteProject(project) })
 
-	stash, err := lxdStashProjectName(username)
+	layers, err := lxdLayersProjectName(username)
 	if err != nil {
 		return err
 	}
-	if !slices.Contains(names, stash) {
+	if !slices.Contains(names, layers) {
 		err = conn.CreateProject(api.ProjectsPost{
 			ProjectPut: api.ProjectPut{
 				Config:      lxdProjectConfig(username),
-				Description: fmt.Sprintf(`Workshop stash project for "%s" user`, username),
+				Description: fmt.Sprintf(`Workshop layers project for "%s" user`, username),
 			},
-			Name: stash,
+			Name: layers,
 		})
 		if err != nil {
 			return err

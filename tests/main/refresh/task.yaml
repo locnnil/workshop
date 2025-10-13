@@ -54,28 +54,40 @@ execute: |
   echo "Check workshop refresh when no updates are available"
   workshop_exec refresh ws-refresh-sdk | MATCH "no updates available for \"ws-refresh-sdk\""
 
+  list_snapshots() {
+    local pid
+    pid=$(cat .workshop.lock)
+
+    lxc list \
+      --project workshop-layers.ubuntu \
+      --format csv \
+      --columns user.workshop.sdk \
+      user.workshop.project-id="$pid" \
+      user.workshop.name=ws-refresh-snapshots \
+      user.workshop.layer-type=sdk
+  }
+
   validate_snapshots() {
     local expected_output="$1"
     local output
-    output=$(zfs list -t snapshot -s creation -o name | grep ws-refresh-snapshots | sed 's|^.*workshop/containers/workshop.ubuntu_||')
+    output=$(list_snapshots)
     [ "$expected_output" = "$output" ]
   }
 
   echo "Check workshop snapshots exist"
-  pid=$(cat .workshop.lock)
-  expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-basic
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-mount
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-gpu"
+  expected_snapshots="system
+  test-sdk-basic
+  test-sdk-gpu
+  test-sdk-mount"
   validate_snapshots "$expected_snapshots"
 
   echo "Check workshop snapshots updated after an SDK was removed"
   # Annoyingly, yq snap is in strict mode and won't see these files.
   cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks[-1])' | sponge .workshop/ws-refresh-snapshots.yaml
   workshop_exec refresh ws-refresh-snapshots
-  expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-basic
-  ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.test-sdk-mount"
+  expected_snapshots="system
+  test-sdk-basic
+  test-sdk-mount"
   validate_snapshots "$expected_snapshots"
 
   echo "Check workshop was rebuilt from a new image base"
@@ -91,5 +103,5 @@ execute: |
 
   echo "Check workshop refresh when no updates are available"
   workshop_exec refresh ws-refresh-snapshots
-  expected_snapshots="ws-refresh-snapshots-$pid@snapshot-ws-refresh-snapshots.system"
+  expected_snapshots="system"
   validate_snapshots "$expected_snapshots"

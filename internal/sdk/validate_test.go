@@ -73,6 +73,22 @@ func (s *ValidateSuite) TestIllegalSdkName(c *check.C) {
 	c.Check(err, check.ErrorMatches, `invalid SDK name "foo.something"`)
 }
 
+func (s *ValidateSuite) TestLongSdkName(c *check.C) {
+	info, err := sdk.ReadSdkInfo([]byte(`name: xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40
+`), s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+
+	err = sdk.Validate(info)
+	c.Check(err, check.IsNil)
+
+	info, err = sdk.ReadSdkInfo([]byte(`name: xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40x
+`), s.projectId, "ws")
+	c.Assert(err, check.IsNil)
+
+	err = sdk.Validate(info)
+	c.Check(err, check.ErrorMatches, `SDK name "xxx05xxx10xxx15xxx20xxx25xxx30xxx35xxx40x" too long`)
+}
+
 func (s *ValidateSuite) TestNoSdkBase(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo
 `), s.projectId, "ws")

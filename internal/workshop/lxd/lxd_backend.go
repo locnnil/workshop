@@ -193,11 +193,6 @@ func New() (*Backend, error) {
 		req := api.StoragePoolsPost{
 			Name:   storagePool,
 			Driver: storagePoolDriver,
-			StoragePoolPut: api.StoragePoolPut{
-				Config: map[string]string{
-					"volume.zfs.remove_snapshots": "true",
-				},
-			},
 		}
 		err := conn.CreateStoragePool(req)
 		if err != nil {
@@ -262,7 +257,7 @@ func New() (*Backend, error) {
 func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
 	var err error
 
-	conn, err := s.LxdClient(ctx)
+	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -316,12 +311,13 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return op.Wait()
 	default:
 		// Rebuild the existing workshop.
-		for _, snapshot := range inst.Snapshots {
-			op, err := conn.DeleteInstanceSnapshot(inst.Name, snapshot.Name)
-			if err != nil {
-				return err
-			}
-			if err = op.Wait(); err != nil {
+		snapshots, err := s.layerNames(layerConn, projectId, file.Name, "sdk")
+		if err != nil {
+			return err
+		}
+
+		for _, snapshot := range snapshots {
+			if err := s.deleteLayer(layerConn, snapshot); err != nil {
 				return err
 			}
 		}
@@ -334,7 +330,16 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			return err
 		}
 
-		// Get an updated instance configuration.
+		// When rebuilding an instance from an image, LXD resets the
+		// image-related options: image.* and volatile.base_image. It
+		// also sets volatile.uuid.generation to volatile.uuid. The
+		// former seems to be unused for containers. Finally, it clears
+		// volatile.idmap.next and volatile.last_state.idmap. We are
+		// responsible for resetting the remaining options. Workshop
+		// only touches the options present in the default config, so
+		// we overwrite these options and assume everything else is
+		// managed by LXD. If we remove an option from the default
+		// config, we should also remove it from the config below.
 		rebuilt, etag, err := conn.GetInstance(inst.Name)
 		if err != nil {
 			return err
@@ -763,7 +768,8 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	sdks := map[string]sdk.Setup{}
-	if buf, exist := inst.Config[workshop.ConfigWorkshopSdks]; exist {
+	buf, exist := inst.Config[workshop.ConfigWorkshopSdks]
+	if exist {
 		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {
 			return nil, err
 		}
@@ -859,27 +865,31 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 	return workshops, nil
 }
 
-func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) (err error) {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
+func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
+
+	conn, layerConn, err := s.layerClients(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
 
 	// ignore possible errors (e.g. container is already stopped)
 	if err = s.stopWorkshop(conn, ctx, name, true); err != nil {
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
 	}
 
-	if !forget {
-		// Remove MAC address so LXD won't release the DHCP lease.
-		if err := removeHwaddr(ctx, conn, InstanceName(name, projectId)); err != nil {
-			logger.Noticef("On RemoveWorkshop: failed to preserve %q workshop DHCP lease: %v", name, err)
+	snapshots, err := s.layerNames(layerConn, projectId, name, "sdk")
+	if err != nil {
+		logger.Noticef("On RemoveWorkshop: failed to find SDK snapshots for %q workshop: %v", name, err)
+	} else {
+		for _, snapshot := range snapshots {
+			if err := s.deleteLayer(layerConn, snapshot); err != nil {
+				logger.Noticef("On RemoveWorkshop: failed to delete %q SDK snapshot for %q workshop: %v", snapshot, name, err)
+			}
 		}
 	}
 
@@ -890,98 +900,6 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string, forget bool) 
 
 	// DeleteInstance cannot be cancelled in LXD.
 	return op.Wait()
-}
-
-func removeHwaddr(ctx context.Context, conn lxd.InstanceServer, name string) error {
-	inst, etag, err := conn.GetInstance(name)
-	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	if _, ok := inst.Config["volatile.workshop.network.hwaddr"]; !ok {
-		return nil
-	}
-	delete(inst.Config, "volatile.workshop.network.hwaddr")
-
-	op, err := conn.UpdateInstance(name, inst.Writable(), etag)
-	if err != nil {
-		return err
-	}
-	return op.WaitContext(ctx)
-}
-
-func (s *Backend) Snapshot(ctx context.Context, name, snapid string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	op, err := conn.CreateInstanceSnapshot(InstanceName(name, projectId), api.InstanceSnapshotsPost{
-		Name: snapid,
-	})
-	if err != nil {
-		return err
-	}
-	return op.Wait()
-}
-
-func (s *Backend) Restore(ctx context.Context, name, snapid string, file *workshop.File) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
-	}
-
-	instPut := inst.Writable()
-	instPut.Restore = snapid
-	op, err := conn.UpdateInstance(inst.Name, instPut, etag)
-	if err != nil {
-		return err
-	}
-	if err = op.Wait(); err != nil {
-		return err
-	}
-
-	restored, etag, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
-	}
-
-	f, err := yaml.Marshal(file)
-	if err != nil {
-		return err
-	}
-
-	// The restored snapshot will have an updated file.
-	// Similar to how a launched workshop is associated with its definition.
-	restored.Config[workshop.ConfigWorkshopFile] = string(f)
-
-	op, err = conn.UpdateInstance(inst.Name, restored.Writable(), etag)
-	if err != nil {
-		return err
-	}
-	if err = op.Wait(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error) {
@@ -1005,11 +923,6 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error
 }
 
 func ConnectLxd(ctx context.Context) (lxd.InstanceServer, error) {
-	conn, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
-	if err != nil {
-		return nil, ErrorLxdBackend(err)
-	}
-
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
@@ -1020,7 +933,13 @@ func ConnectLxd(ctx context.Context) (lxd.InstanceServer, error) {
 		return nil, err
 	}
 
-	if err = initLxdProject(conn, project, user); err != nil {
+	conn, err := lxd.ConnectLXDUnixWithContext(ctx, "", nil)
+	if err != nil {
+		return nil, ErrorLxdBackend(err)
+	}
+
+	if err := initLxdProject(conn, project, user); err != nil {
+		conn.Disconnect()
 		return nil, err
 	}
 
@@ -1213,9 +1132,10 @@ runcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"user.workshop.project-id":       projectId,
 		"user.user-data":                 cloudInitConfig,
 		"user.network-config":            cloudInitNetwork,
+		"user.workshop.project-id":       projectId,
+		"user.workshop.name":             file.Name,
 		"user.workshop.file":             string(f),
 		"user.workshop.base-fingerprint": baseFingerprint,
 		"user.workshop.sdks":             "{}",

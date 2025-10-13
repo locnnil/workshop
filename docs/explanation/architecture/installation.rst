@@ -135,8 +135,8 @@ through its Unix domain socket at :file:`/var/snap/lxd/common/lxd/unix.socket`,
 managing container operations and user isolation.
 
 For each user, :program:`workshopd` creates dedicated LXD projects
-(:samp:`workshop.<USERNAME>` and :samp:`workshop-stash.<USERNAME>`)
-that provide complete isolation between workshops
+(:samp:`workshop.<USERNAME>` and :samp:`workshop-layers.<USERNAME>`)
+that provide complete isolation between users
 on the same system.
 
 The LXD communication layer handles container lifecycle,
@@ -154,7 +154,7 @@ and resource constraints.
      (e.g., :samp:`workshop.john`).
      These are created at :program:`workshopd`'s request
      to provide isolation in LXD.
-     The names are prefixed with :samp:`workshop.` or :samp:`workshop-stash.`
+     The names are prefixed with :samp:`workshop.` or :samp:`workshop-layers.`
      followed by the username.
 
    - Workshop projects, identified by |ws_markup|-assigned IDs.
@@ -200,7 +200,7 @@ Workshop requires a minimum pool size of 5 GiB.
 The ZFS pool serves multiple purposes beyond simple container storage,
 managing container root filesystems,
 volumes for SDKs and SDK data persistence,
-snapshots for quick workshop updates and rollbacks,
+snapshots and clones for quick workshop updates and rollbacks,
 and cached container images.
 
 
@@ -242,9 +242,10 @@ LXD projects
 |ws_markup| implements user isolation through LXD's project system,
 automatically creating dedicated projects for each user
 following the naming pattern :samp:`workshop.<USERNAME>`.
-Each user project includes a corresponding stash project
-(:samp:`workshop-stash.<USERNAME>`)
-used for temporary storage during workshop rebuild operations.
+Each user project includes a corresponding project
+(:samp:`workshop-layers.<USERNAME>`)
+used to cache workshops for faster refreshes
+and temporarily back up old workshops during rebuild operations.
 
 Note that this LXD project name is different from the workshop project ID:
 the LXD project name (:samp:`workshop.<USERNAME>`) provides user-level isolation,

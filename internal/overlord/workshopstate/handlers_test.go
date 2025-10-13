@@ -265,7 +265,6 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 		t2 := s.state.NewTask("remove-workshop-storage", "...")
 		t2.WaitFor(t1)
 		setWorkshopProject(wf.Name, s.project, t1, t2)
-		t1.Set("forget", true)
 		chg.Set("user", "testuser")
 		chg.AddTask(t1)
 		chg.AddTask(t2)
@@ -301,7 +300,6 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	setWorkshopProject("ws", s.project, t1)
-	t1.Set("forget", true)
 	t1.Set("workshop-base-fingerprint", "fakeimage123")
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -325,7 +323,6 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	t1.Set("forget", true)
 	t1.Set("workshop-base-fingerprint", "fakeimage123")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
@@ -341,7 +338,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 }
 
-func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
+func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsJammy)
@@ -354,7 +351,6 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	t1.Set("forget", true)
 	t1.Set("workshop-base-fingerprint", "fakeimage123")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
@@ -371,6 +367,38 @@ func (s *workshopHandlers) TestCreateWorkshopCleaunup(c *check.C) {
 	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
 	_, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
+}
+
+func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	s.createWFile(c, "ws", wsJammy)
+
+	reset := s.backend.SetWorkshopFsCallback(func(ctx context.Context, name string) (fsutil.Fs, error) {
+		return fsutil.Fs{}, errors.New("fs is unavailable")
+	})
+	defer reset()
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("rebuild-workshop", "...")
+	t1.Set("workshop-file", wsJammy)
+	t1.Set("workshop-base-fingerprint", "fakeimage999")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
+	ws, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	c.Check(ws.BaseFingerprint, check.Equals, "fakeimage999")
 }
 
 func (s *workshopHandlers) TestDownloadBase(c *check.C) {
