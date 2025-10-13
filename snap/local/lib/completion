@@ -1,0 +1,24 @@
+workshop_completion() {
+    local shell path dir tmp
+    shell="$1"
+    path="$2"
+
+    dir="$(dirname -- "$path")"
+    install --directory -- "$dir"
+
+    tmp="$(mktemp -- "${path}.XXXXXXXXXX")"
+    chmod 0644 -- "$tmp"
+    "$SNAP/bin/workshop" completion "$shell" >"$tmp"
+    mv -- "$tmp" "$path"
+}
+
+remove_completion() {
+    local path dir
+    path="$1"
+
+    rm --force -- "$path"
+
+    # Remove empty parent directories (likely created by us).
+    dir="$(dirname -- "$path")"
+    rmdir --parents -- "$dir" 2>/dev/null || true
+}

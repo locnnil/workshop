@@ -89,26 +89,6 @@ To refresh an existing installation:
    and your distribution's manuals for guidance.
 
 
-Shell integration (optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-|ws_markup| features shell completion for popular shells
-such as :program:`bash`, :program:`zsh`, and :program:`fish`.
-
-Bash completion is configured automatically;
-manual setup instructions are available for all shells:
-
-.. code-block:: console
-
-   $ workshop completion bash -h
-   $ workshop completion fish -h
-   $ workshop completion zsh -h
-
-
-With completion enabled, you can press the :kbd:`Tab` key while typing a command
-to quickly substitute suitable subcommands, flags, and arguments.
-
-
 .. _tut_define_launch:
 
 Launch a workshop

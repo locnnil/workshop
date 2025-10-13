@@ -1,55 +1,13 @@
 summary: Check that shell completion is installed with the snap
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-comp
 restore: |
   . "$TESTSLIB"/utils.sh
-  workshop_exec remove
+  workshop_exec remove ws-comp || true
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  # The completion functionality is well covered in unit tests. We check four
-  # small examples here that each use different code paths.
-  sudo -iu ubuntu -- bash << EOF
-    source /usr/share/bash-completion/bash_completion
-    cd /workshop/tests/main/completion
-    echo "Test launch completion"
-    COMP_WORDS=(workshop launch w)
-    COMP_LINE='workshop launch w'
-    COMP_POINT=\${#COMP_LINE}
-    COMP_CWORD=2
-
-    _xfunc workshop _complete_from_snap workshop
-
-    echo "\$COMPREPLY" | grep -q -e ws-comp
-    echo "Launch workshop"
-    workshop launch "\$COMPREPLY"
-
-    echo "Test connect completion"
-    COMP_WORDS=(workshop connect w)
-    COMP_LINE='workshop connect w'
-    COMP_POINT=\${#COMP_LINE}
-    COMP_CWORD=2
-
-    _xfunc workshop _complete_from_snap workshop
-
-    echo "\$COMPREPLY" | grep -q -e ws-comp/test-sdk-desktop:desktop
-
-    echo "Test remount dir completion"
-    mkdir -p /home/ubuntu/tmp/tmp
-    COMP_WORDS=(workshop remount ws-comp/test-sdk-mount:one /home/ubuntu/tmp/t)
-    COMP_LINE='workshop stop w'
-    COMP_POINT=\${#COMP_LINE}
-    COMP_CWORD=2
-
-    _xfunc workshop _complete_from_snap workshop
-
-    echo "\$COMPREPLY" | grep -q -e tmp
-
-    echo "Test stop completion"
-    COMP_WORDS=(workshop stop w)
-    COMP_LINE='workshop stop w'
-    COMP_POINT=\${#COMP_LINE}
-    COMP_CWORD=2
-
-    _xfunc workshop _complete_from_snap workshop
-
-    echo "\$COMPREPLY" | grep -q -e ws-comp
-  EOF
+  sudo -u ubuntu -- bash -l bash.sh
+  sudo -u ubuntu -- bash -l zsh.sh
+  sudo -u ubuntu -- bash -l fish.sh
