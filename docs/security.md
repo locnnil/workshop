@@ -10,10 +10,6 @@ This is an overview of security considerations for Workshop and SDKcraft.
 
 ## Privileges
 
-```{artefact} workshopd ```
-
-```{artefact} API ```
-
 Workshop has a client-server architecture; its CLI, which is the contact surface
 for the users, is confined as a snap and neither needs nor requires elevated
 privileges to run. Instead, it uses a RESTful API to communicate with the
@@ -26,10 +22,6 @@ SDKcraft is an instance of
 [`craft-application`](https://github.com/canonical/craft-application/), built,
 installed, and run as a snap; it neither needs nor requires elevated privileges
 to work and securely confines the SDK build process to a container.
-
-```{artefact} SDK ```
-
-```{artefact} SDK Store ```
 
 Packaged SDKs are uploaded to the SDK Store. Currently, it's implemented using
 [GCP](https://console.cloud.google.com/storage/browser/sdkstore), so access is
@@ -55,8 +47,6 @@ In Workshop, the interface mechanism plays a role in maintaining security by
 controlling access between the workshop's components and the host system; the
 implementation is largely similar to `snapd`'s [interface
 manager](https://snapcraft.io/docs/interface-management):
-
-```{artefact} SDK publisher ```
 
 * Interfaces define and control what resources a workshop can use, ensuring that
   permissions are explicitly granted and limited in scope.
