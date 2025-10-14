@@ -74,34 +74,36 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
+	var result *sdk.SdkResult
 	if rec.Source == sdk.SystemSource {
-		if err := system.RetrieveSystemSdk(rec, reporter); err != nil {
-			return err
-		}
+		result, err = system.RetrieveSystemSdk(rec, reporter)
 	} else {
 		st.Lock()
 		store := sdk.StoreService(st)
 		st.Unlock()
 
-		if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
-			return err
-		}
+		result, err = store.DownloadSdk(ctx, rec, reporter)
+	}
+	if err != nil {
+		return err
 	}
 
 	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(rec.Name, rec.Revision),
+		Name:     sdk.VolumeName(result.Name, result.Revision),
 		Kind:     "sdk",
-		Sdk:      rec.Name,
-		Revision: rec.Revision,
+		Sha3_384: result.Sha3_384,
+		MD5:      result.MD5,
+		Sdk:      result.Name,
+		Revision: result.Revision,
 	}
-	file, err := os.Open(rec.Filepath())
+	file, err := os.Open(result.Filepath())
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	err = m.backend.ImportVolume(ctx, volume, file)
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
+		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", volume.Name)
 		return nil
 	}
 

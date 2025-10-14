@@ -29,6 +29,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
@@ -80,7 +81,10 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	}
 
 	s.store = &sdk.FakeStore{}
-	s.restoreRetrieve = system.FakeRetrieveSystemSdk(s.store.RetrieveSystemSdk)
+	retrieveSystemSdk := func(setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {
+		return s.store.DownloadSdk(context.TODO(), setup, report)
+	}
+	s.restoreRetrieve = system.FakeRetrieveSystemSdk(retrieveSystemSdk)
 
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)

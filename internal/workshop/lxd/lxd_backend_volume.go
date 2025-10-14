@@ -327,6 +327,9 @@ func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
 	if info.Sha3_384 != "" {
 		config["user.sha3-384"] = info.Sha3_384
 	}
+	if info.MD5 != "" {
+		config["user.md5"] = info.MD5
+	}
 	if info.Sdk != "" {
 		config["user.sdk.name"] = info.Sdk
 	}
@@ -370,6 +373,7 @@ func volumeToInfo(volume *api.StorageVolume, size uint64) workshop.VolumeInfo {
 			Name:     volume.Name,
 			Kind:     volume.Config["user.kind"],
 			Sha3_384: volume.Config["user.sha3-384"],
+			MD5:      volume.Config["user.md5"],
 			Sdk:      volume.Config["user.sdk.name"],
 			Revision: revision,
 			Metadata: volume.Config["user.sdk.meta"],

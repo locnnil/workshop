@@ -302,6 +302,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 		Name:     "test",
 		Kind:     "testkind",
 		Sha3_384: "abc123",
+		MD5:      "ab12",
 	}
 	err := f.bd.CreateVolume(f.ctx, volume)
 	c.Assert(err, check.IsNil)
