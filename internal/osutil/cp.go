@@ -21,6 +21,7 @@ package osutil
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -218,6 +219,10 @@ func copyDirChown(info os.FileInfo, src, dst string, uid sys.UserID, gid sys.Gro
 	}
 
 	infos, err := regularFilesDirsAndLinks(src)
+	if errors.Is(err, os.ErrNotExist) {
+		// If src no longer exists, no longer any need to copy it.
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -259,6 +264,10 @@ func copyChown(info os.FileInfo, src, dst string, uid sys.UserID, gid sys.GroupI
 
 func copyLinkChown(src, dst string, uid sys.UserID, gid sys.GroupID) error {
 	path, err := os.Readlink(src)
+	if errors.Is(err, os.ErrNotExist) {
+		// If src no longer exists, no longer any need to copy it.
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -270,6 +279,10 @@ func copyLinkChown(src, dst string, uid sys.UserID, gid sys.GroupID) error {
 
 func copyFileChown(src, dst string, uid sys.UserID, gid sys.GroupID, info os.FileInfo) error {
 	r, err := os.Open(src)
+	if errors.Is(err, os.ErrNotExist) {
+		// If src no longer exists, no longer any need to copy it.
+		return nil
+	}
 	if err != nil {
 		return err
 	}
