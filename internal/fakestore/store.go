@@ -50,7 +50,6 @@ type storeSdk struct {
 	Channel  string       `json:"channel"`
 	Revision sdk.Revision `json:"revision"`
 	SdkYAML  string       `json:"sdk-yaml"`
-	Size     int64        `json:"size"`
 }
 
 type SdkActionError struct {
@@ -146,12 +145,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		return nil
 	}
 
-	info, err := storeSdkInfo(ctx, setup.Name, setup.Channel)
-	if err != nil {
-		return err
-	}
-
-	r, err := storeSdkReader(ctx, setup)
+	r, size, err := storeSdkReader(ctx, setup)
 	if err != nil {
 		return err
 	}
@@ -174,7 +168,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 
 	var writer io.Writer
 	if report != nil {
-		writer = io.MultiWriter(file, &reporterWriter{r: report, total: int(info.Size)})
+		writer = io.MultiWriter(file, &reporterWriter{r: report, total: int(size)})
 	} else {
 		writer = file
 	}
@@ -256,7 +250,6 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
 	sSdk.Revision = sdk.Revision{N: int(atr.Generation%1000) + 1}
-	sSdk.Size = atr.Size
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {
 		if _, ok := atr.Metadata["sdk-yaml"]; !ok {
@@ -293,16 +286,16 @@ func readTestMetadata(ctx context.Context, client *ClientWrapper, name, track, r
 	return b.String(), nil
 }
 
-func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, error) {
+func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, int64, error) {
 	client, err := storeConnect(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer client.Close()
 
 	var sa = strings.Split(setup.Channel, "/")
 	if len(sa) != 2 {
-		return nil, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", setup.Name, setup.Channel)
+		return nil, 0, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", setup.Name, setup.Channel)
 	}
 	track, risk := sa[0], sa[1]
 	bkt := client.Bucket(SDK_STORE_BUCKET_NAME)
@@ -314,9 +307,9 @@ func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, er
 	r, err := obj.NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
-			return nil, errors.New("SDK not found")
+			return nil, 0, fmt.Errorf("SDK not found in %q", setup.Channel)
 		}
-		return nil, err
+		return nil, 0, err
 	}
-	return r, nil
+	return r, r.Attrs.Size, nil
 }

@@ -130,8 +130,8 @@ func (*failingReader) Read(p []byte) (n int, err error) {
 func (*failingReader) Close() error { return nil }
 
 func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
-	r := store.FakeSdkStoreSdkReader(func(ctx context.Context, setup sdk.Setup) (io.ReadCloser, error) {
-		return &failingReader{}, nil
+	r := store.FakeSdkStoreSdkReader(func(ctx context.Context, setup sdk.Setup) (io.ReadCloser, int64, error) {
+		return &failingReader{}, 0, nil
 	})
 	defer r()
 
