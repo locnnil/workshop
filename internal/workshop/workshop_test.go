@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -36,6 +37,67 @@ func (f *workshopSuite) SetUpTest(c *check.C) {
 func writeFile(c *check.C, path string, content string) {
 	c.Assert(os.MkdirAll(filepath.Dir(path), 0755), check.IsNil)
 	c.Assert(os.WriteFile(path, []byte(content), 0644), check.IsNil)
+}
+
+func (f *workshopSuite) TestValidateSdkSyntax(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	wpath := filepath.Join(f.project.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
+	c.Assert(err, check.IsNil)
+
+	sdkYaml := `incorrect yaml: -
+`
+	err = workshop.ValidateSdkInfo(f.project.ProjectId, file, "test-sdk-1", sdkYaml)
+	c.Check(err, check.ErrorMatches, `invalid "test-sdk-1" SDK definition: yaml: block sequence entries are not allowed in this context`)
+}
+
+func (f *workshopSuite) TestValidateSdkName(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	wpath := filepath.Join(f.project.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
+	c.Assert(err, check.IsNil)
+
+	sdkYaml := `name: sdk-1
+`
+	err = workshop.ValidateSdkInfo(f.project.ProjectId, file, "test-sdk-1", sdkYaml)
+	c.Check(err, check.ErrorMatches, `SDK must be named "test-sdk-1" \(now: "sdk-1"\)`)
+}
+
+func (f *workshopSuite) TestValidateSdkBase(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	wpath := filepath.Join(f.project.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
+	c.Assert(err, check.IsNil)
+
+	sdkYaml := `name: test-sdk-1
+base: ubuntu@24.04
+`
+	err = workshop.ValidateSdkInfo(f.project.ProjectId, file, "test-sdk-1", sdkYaml)
+	c.Check(err, check.ErrorMatches, `"test-sdk-1" SDK has "ubuntu@24.04" base; required: "ubuntu@22.04"`)
+}
+
+func (f *workshopSuite) TestValidateSdkArchitecture(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+	architecture := arch.ArchitectureType(arch.DpkgArchitecture())
+	arch.SetArchitecture("mock32")
+	defer arch.SetArchitecture(architecture)
+
+	wpath := filepath.Join(f.project.Path, "workshop.yaml")
+	writeFile(c, wpath, string(workshopyaml))
+	file, err := workshop.ReadWorkshop(wpath)
+	c.Assert(err, check.IsNil)
+
+	sdkYaml := `name: test-sdk-1
+architecture: mock64
+`
+	err = workshop.ValidateSdkInfo(f.project.ProjectId, file, "test-sdk-1", sdkYaml)
+	c.Check(err, check.ErrorMatches, `"test-sdk-1" SDK has "mock64" architecture; required: "mock32" or "all"`)
 }
 
 func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {

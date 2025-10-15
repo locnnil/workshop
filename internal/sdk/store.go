@@ -20,7 +20,8 @@ func (s StoreAction) String() string {
 }
 
 type SdkResult struct {
-	*Info
+	Setup
+	SdkYAML string
 }
 
 type SdkAction struct {

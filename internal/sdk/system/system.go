@@ -25,6 +25,15 @@ var (
 	RetrieveSystemSdk = retrieveSystemSdk
 )
 
+func SystemSdkResult() (*sdk.SdkResult, error) {
+	setup := sdk.Setup{Name: "system", Source: sdk.SystemSource, Revision: SystemSdkRevision}
+	sdkYaml, err := SystemSdkFs.ReadFile("meta/sdk.yaml")
+	if err != nil {
+		return nil, err
+	}
+	return &sdk.SdkResult{Setup: setup, SdkYAML: string(sdkYaml)}, nil
+}
+
 func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) error {
 	fl, err := sdk.OpenLock(setup.Name)
 	if err != nil {

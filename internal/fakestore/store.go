@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 
-	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
@@ -85,25 +83,8 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 				continue
 			}
 
-			info, err := sdk.ReadSdkInfo([]byte(s.SdkYAML), act.ProjectId, act.Workshop)
-			if err != nil {
-				actError.errors[act.Name] = err
-				continue
-			}
-			if info.Name != act.Name {
-				return nil, fmt.Errorf("SDK must be named %q (now: %q)", act.Name, info.Name)
-			}
-			if !slices.Contains([]string{"", act.Base}, info.Base) {
-				return nil, fmt.Errorf("%q SDK from %q has %q base; required: %q", act.Name, act.Channel, info.Base, act.Base)
-			}
-			if !slices.Contains([]string{"", "all", arch.DpkgArchitecture()}, info.Arch) {
-				return nil, fmt.Errorf(`%q SDK from %q has %q architecture; required: %q or "all"`, act.Name, act.Channel, info.Arch, arch.DpkgArchitecture())
-			}
-
-			info.Revision = s.Revision
-			info.Channel = s.Channel
-
-			results = append(results, sdk.SdkResult{Info: info})
+			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision}
+			results = append(results, sdk.SdkResult{Setup: setup, SdkYAML: s.SdkYAML})
 		default:
 			return nil, fmt.Errorf("unknown SDK store action")
 		}
