@@ -19,14 +19,6 @@ func FakeSdkStoreInfo(f func(ctx context.Context, name, channel string) (storeSd
 	}
 }
 
-func FakeSdkStoreConnect(f func(ctx context.Context) (*ClientWrapper, error)) (restore func()) {
-	old := storeConnect
-	storeConnect = f
-	return func() {
-		storeConnect = old
-	}
-}
-
 func FakeSdkStoreSdkReader(f func(ctx context.Context, setup sdk.Setup) (io.ReadCloser, error)) (restore func()) {
 	old := storeSdkReader
 	storeSdkReader = f

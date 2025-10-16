@@ -35,7 +35,6 @@ var (
 	SDK_STORE_BUCKET_NAME = "sdkstore"
 
 	storeSdkInfo   = storeSdkInfoImpl
-	storeConnect   = storeConnectImpl
 	storeSdkReader = storeSdkReaderImpl
 )
 
@@ -201,7 +200,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 	return nil
 }
 
-func storeConnectImpl(ctx context.Context) (*ClientWrapper, error) {
+func storeConnect(ctx context.Context) (*ClientWrapper, error) {
 	opt := option.WithoutAuthentication()
 	testing := false
 	if url := os.Getenv("SDK_STORE_URL"); url != "" { // Set STORAGE_EMULATOR_HOST environment variable for GSC.
