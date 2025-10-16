@@ -2,16 +2,16 @@ package store
 
 import (
 	"context"
-	"io"
 
 	"github.com/canonical/workshop/internal/sdk"
 )
 
 type (
-	StoreSdk = storeSdk
+	StoreSdk  = storeSdk
+	SdkReader = sdkReader
 )
 
-func FakeSdkStoreInfo(f func(ctx context.Context, name, channel string) (storeSdk, error)) (restore func()) {
+func FakeSdkStoreInfo(f func(ctx context.Context, name, channel string) (StoreSdk, error)) (restore func()) {
 	old := storeSdkInfo
 	storeSdkInfo = f
 	return func() {
@@ -19,7 +19,7 @@ func FakeSdkStoreInfo(f func(ctx context.Context, name, channel string) (storeSd
 	}
 }
 
-func FakeSdkStoreSdkReader(f func(ctx context.Context, setup sdk.Setup) (io.ReadCloser, int64, error)) (restore func()) {
+func FakeSdkStoreSdkReader(f func(ctx context.Context, setup sdk.Setup) (*SdkReader, error)) (restore func()) {
 	old := storeSdkReader
 	storeSdkReader = f
 	return func() {

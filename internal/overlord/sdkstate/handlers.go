@@ -46,6 +46,29 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	return sdkSetup, nil
 }
 
+func maybeSdkYaml(task *state.Task) (string, error) {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var retrieveId string
+	var sdkYaml string
+
+	if err := task.Get("sdk-retrieve-task", &retrieveId); err != nil {
+		return "", err
+	}
+
+	retrieve := st.Task(retrieveId)
+	if retrieve == nil {
+		return "", fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
+	}
+
+	if err := retrieve.Get("sdk-yaml", &sdkYaml); err != nil {
+		return "", nil
+	}
+	return sdkYaml, nil
+}
+
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, _, err := UserProjectWorkshop(task)
 	if err != nil {
@@ -86,6 +109,20 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// TODO: We should be downloading a specific revision. Remove this when
+	// the Store supports that (it will probably have to be removed anyway
+	// since DownloadSdk won't return a result after that).
+	if result.Revision != rec.Revision {
+		st.Lock()
+		task.Set("sdk-setup", result.Setup)
+		// Ideally we would validate the YAML here, but we can't check
+		// the base without knowing about the workshop. And this task
+		// should remain workshop-agnostic if possible. Instead we
+		// pass it to doInstallSdk and validate there.
+		task.Set("sdk-yaml", result.SdkYAML)
+		st.Unlock()
 	}
 
 	volume := workshop.VolumeSetup{
@@ -137,6 +174,18 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
+	}
+
+	// TODO: Remove this section when we can download a specific SDK
+	// revision from the Store (this revision was validated earlier).
+	sdkYaml, err := maybeSdkYaml(task)
+	if err != nil {
+		return err
+	}
+	if sdkYaml != "" {
+		if err := workshop.ValidateSdkInfo(project.ProjectId, wp.File, sdkSetup.Name, sdkYaml); err != nil {
+			return err
+		}
 	}
 
 	rev := revert.New()

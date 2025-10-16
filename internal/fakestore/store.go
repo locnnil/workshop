@@ -54,6 +54,12 @@ type storeSdk struct {
 	MD5      string       `json:"md5"`
 }
 
+type sdkReader struct {
+	io.ReadCloser
+	Revision sdk.Revision
+	Size     int64
+}
+
 type SdkActionError struct {
 	// maps an SDK name to an error
 	errors map[string]error
@@ -124,9 +130,8 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 	}
 	defer fl.Close()
 
-	target := setup.Filepath()
-	if osutil.FileExists(target) {
-		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, target)
+	if osutil.FileExists(setup.Filepath()) {
+		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, setup.Filepath())
 
 		// TODO: after a transition period, it should be safe to assume
 		// that the hash and metadata are stored next to the SDK file.
@@ -144,11 +149,14 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		return &sdk.SdkResult{Setup: setup, MD5: digest, SdkYAML: sdkYaml}, nil
 	}
 
-	r, size, err := storeSdkReader(ctx, setup)
+	r, err := storeSdkReader(ctx, setup)
 	if err != nil {
 		return nil, err
 	}
 	defer r.Close()
+
+	setup.Revision = r.Revision
+	target := setup.Filepath()
 
 	reverter := revert.New()
 	defer reverter.Fail()
@@ -170,7 +178,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 	hash := md5.New()
 	writers := []io.Writer{file, hash}
 	if report != nil {
-		writers = append(writers, &reporterWriter{r: report, total: int(size)})
+		writers = append(writers, &reporterWriter{r: report, total: int(r.Size)})
 	}
 
 	if _, err = io.Copy(io.MultiWriter(writers...), r); err != nil {
@@ -360,16 +368,16 @@ func readTestMetadata(ctx context.Context, client *ClientWrapper, name, track, r
 	return b.String(), nil
 }
 
-func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, int64, error) {
+func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (*sdkReader, error) {
 	client, err := storeConnect(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	defer client.Close()
 
 	var sa = strings.Split(setup.Channel, "/")
 	if len(sa) != 2 {
-		return nil, 0, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", setup.Name, setup.Channel)
+		return nil, fmt.Errorf("%s has an invalid channel %s, must take the form <track>/<risk>", setup.Name, setup.Channel)
 	}
 	track, risk := sa[0], sa[1]
 	bkt := client.Bucket(SDK_STORE_BUCKET_NAME)
@@ -381,9 +389,12 @@ func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, in
 	r, err := obj.NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
-			return nil, 0, fmt.Errorf("SDK not found in %q", setup.Channel)
+			return nil, fmt.Errorf("SDK not found in %q", setup.Channel)
 		}
-		return nil, 0, err
+		return nil, err
 	}
-	return r, r.Attrs.Size, nil
+
+	// A simple modulo to keep revision numbers in a readable form for testing
+	revision := sdk.Revision{N: int(r.Attrs.Generation%1000) + 1}
+	return &sdkReader{ReadCloser: r, Revision: revision, Size: r.Attrs.Size}, nil
 }
