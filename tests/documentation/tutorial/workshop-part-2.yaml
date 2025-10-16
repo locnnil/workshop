@@ -1,0 +1,12 @@
+name: nimble
+base: ubuntu@22.04
+sdks:
+  - name: ollama
+    channel: 22.04/edge
+  - name: jupyter
+    channel: 22.04/edge
+  - name: system
+    plugs:
+      jupyter:
+        interface: tunnel
+        endpoint: 127.0.0.1:8989

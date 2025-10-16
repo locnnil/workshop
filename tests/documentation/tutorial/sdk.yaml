@@ -1,14 +1,32 @@
-name: go
-base: ubuntu@24.04
-version: "0.1"
-summary: Go SDK
+name: ollama
+version: "0.9.6"
+summary: Get up and running with large language models
 description: |
-  This is my Go SDK description.
-license: GPL-3.0
+  Get up and running with Llama 3.3, DeepSeek-R1, Phi-4,
+  Gemma 3, Mistral Small 3.1 and other large language models.
+license: MIT
 platforms:
-  amd64:
+  ubuntu@22.04:amd64:
+  ubuntu@24.04:amd64:
 
 plugs:
-  mod-cache:
+  gpu:
+    interface: gpu
+  models:
     interface: mount
-    workshop-target: /home/workshop/go/pkg/mod
+    workshop-target: /home/workshop/.ollama/models
+
+slots:
+  ollama-server:
+    interface: tunnel
+    endpoint: 11434
+
+parts:
+  ollama:
+    plugin: dump
+    source: https://github.com/ollama/ollama/releases/download/v0.9.6/ollama-linux-amd64.tgz
+    source-type: tar
+  user-service:
+    plugin: dump
+    source: ollama.service
+    source-type: file

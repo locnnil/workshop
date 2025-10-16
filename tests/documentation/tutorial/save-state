@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-sudo -u workshop go env -changed | sed "s/='\(.*\)'/=\1/" | tee "$SDK_STATE_DIR"/env-vars
+sudo -u workshop printenv | grep OLLAMA | tee "$SDK_STATE_DIR"/env-vars

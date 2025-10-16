@@ -1,5 +1,5 @@
 name: nimble
-base: ubuntu@22.04
+base: ubuntu@24.04
 sdks:
-  - name: test-sdk-go
-    channel: jammy/stable
+  - name: ollama
+    channel: 24.04/edge

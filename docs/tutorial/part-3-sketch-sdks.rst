@@ -144,7 +144,7 @@ so add the following to install Jupyter Console:
 
    hooks:
      setup-project: |
-       source ~/jupyter-venv/bin/activate
+       source /var/lib/workshop/sdk/jupyter/venv/bin/activate
        pip install jupyter-console
 
 
@@ -199,7 +199,7 @@ Start the Jupyter Console:
 .. code-block:: console
 
    $ workshop shell
-   workshop@dev-6b79e889:/project$ source ~/jupyter-venv/bin/activate
+   workshop@dev-6b79e889:/project$ source /var/lib/workshop/sdk/jupyter/venv/bin/activate
    (jupyter-venv) workshop@dev-6b79e889:/project$ jupyter console
 
      Jupyter console 6.6.3
@@ -255,6 +255,9 @@ you should see the Ollama version and a response to the prompt:
    for growth, blue for water, etc.
 
 
+Quit the Jupyter console and the workshop shell
+by pressing :samp:`Ctrl+D` twice.
+
 If you need to make more changes or experiment,
 just run :command:`workshop sketch-sdk` again to update your sketch SDK.
 Repeat this as often as needed until it works the way you want.
@@ -269,6 +272,7 @@ to revert your workshop to its pre-sketching state:
 .. code-block:: console
 
    $ workshop sketch-sdk --stash
+   $ workshop info
 
 .. warning::
 

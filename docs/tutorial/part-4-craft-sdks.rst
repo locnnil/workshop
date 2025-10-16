@@ -270,6 +270,8 @@ and add two plugs and a slot to the appropriate sections:
        interface: tunnel
        endpoint: 11434
 
+   # ...
+
 
 The :samp:`models` plug preserves downloaded models between workshop refreshes.
 The :samp:`gpu` plug provides access to GPU acceleration for faster inference,
@@ -493,6 +495,9 @@ you can test it in-place before uploading it to the Store:
 
    $ sdkcraft try
 
+     Packed ollama_amd64_ubuntu@22.04.sdk
+     Packed ollama_amd64_ubuntu@24.04.sdk
+
 
 The command copies the SDK to a special *try area*.
 To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
@@ -506,11 +511,11 @@ To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
 
 
 A :samp:`channel` is not needed here;
-the SDK is installed from the try area when you refresh the workshop:
+the SDK is installed from the try area when you launch the workshop:
 
 .. code-block:: console
 
-   $ workshop refresh
+   $ workshop launch
 
 
 .. _how_sdkcraft_publish:

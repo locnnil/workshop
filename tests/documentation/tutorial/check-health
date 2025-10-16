@@ -1,7 +1,6 @@
-#!/usr/bin/bash
-
-if go version > /dev/null 2>&1; then
+output=$(sudo -u workshop --login ollama list 2>&1)
+if [[ $? -eq 0 ]]; then
   workshopctl set-health okay
-else
-  workshopctl set-health --code=installation-fails error "Go installation fails"
+  exit 0
 fi
+workshopctl set-health error "$output"

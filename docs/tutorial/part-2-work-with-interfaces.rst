@@ -182,6 +182,12 @@ so you don't have to add it manually:
 
    $ workshop connections --all
 
+     Interface  Plug                Slot                      Notes
+     gpu        dev/ollama:gpu      dev/system:gpu            -
+     mount      dev/jupyter:venv    dev/system:mount          -
+     mount      dev/ollama:models   dev/system:mount          -
+     tunnel     -                   dev/ollama:ollama-server  -
+     tunnel     dev/system:jupyter  dev/jupyter:jupyter       -
 
 
 Refresh the workshop to enable the tunnel;
@@ -208,8 +214,13 @@ Check the result using :command:`workshop info`:
      ...
 
 
-Now, JupyterLab is available in your browser at the plug address,
-e.g., http://localhost:8989.
+Now, JupyterLab is available at the plug address:
+
+.. code-block:: console
+
+   $ curl http://127.0.0.1:8989/lab?
+
+     <!doctype html><html lang="en">...
 
 
 .. note::

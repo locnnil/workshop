@@ -1,132 +1,157 @@
 summary: Run tutorial commands to ensure it's operational
 restore: |
-  rm -rf ~/mod
+  rm -rf ~/ollama-python-project ~/.ollama
 execute: |
   . "$TESTSLIB"/utils.sh
 
   # ----------------------------------------------------------------------------
 
-  ## Part 1: Get Started
+  # Part 1: Get Started
 
-  # Run
-  workshop_exec --help
 
-  # Define
-  mkdir hello-workshop/
-  cp main.go workshop.yaml hello-workshop/
-  chown -R ubuntu:ubuntu hello-workshop/
-  cd hello-workshop/
+  ## Define, add SDKs
+
+  workshop completion bash -h
+
+  mkdir ollama-python-project/
+
+  chown -R ubuntu:ubuntu ollama-python-project/
+  cd ollama-python-project/
+  git init 2>/dev/null || true
+  cp ../workshop.yaml .
+
   workshop_exec list
 
-  # Launch
+
+  ## Launch, start, and stop
+
   workshop_exec launch
   workshop_exec info
+  echo ".workshop.lock" >> .gitignore
 
-  # Changes and tasks after launch
-  workshop_exec tasks
-  workshop_exec changes
-  workshop_exec tasks $(workshop_exec changes | awk 'END{print $1}')
-
-  # Start and stop
   workshop_exec stop
   workshop_exec start
 
-  # Refresh
 
-  # Change base
-  sed -i "s/22/24/g" workshop.yaml
-  sed -i "s/jammy/noble/g" workshop.yaml
+  ## Refresh a workshop
+
+  sed -i "s/24.04/22.04/g" workshop.yaml
   workshop_exec refresh
 
-  # Execute commands
-  workshop_exec exec nimble go build main.go
-  workshop_exec exec -- go build main.go
 
-  # Variable injection
-  workshop_exec exec --env GO111MODULE=off nimble -- go build -x
+  ## Execute commands
 
-  # Interactive shell needs a tweak in testing
-  workshop_exec exec nimble bash -c "pwd"
-  workshop_exec exec nimble bash -c "uname -a"
+  workshop_exec exec nimble -- ollama pull tinyllama  # Non-interactive version
+  workshop_exec exec nimble -- ollama list
 
-  # Changes in project directory
+
+  ## Interactive shell
+
+  workshop_exec exec nimble bash -c "pwd"  # Non-interactive version
+  workshop_exec exec nimble bash -c "lsb_release -a"
+  workshop_exec exec nimble bash -c "echo \$USER"
+
+
+  ## Project directory updates
+
   touch created_outside.txt
-  workshop_exec exec nimble [ -f "/project/created_outside.txt" ]
-  workshop_exec exec nimble touch /project/created_inside.txt
+  workshop_exec exec nimble -- ls /project/
+  workshop_exec exec nimble bash -c "[ -f \"created_outside.txt\" ]"
+  workshop_exec exec nimble -- touch /project/created_inside.txt
   [ -f "created_inside.txt" ]
 
-  # Interfaces
+
+  ## Track changes and tasks
+
+  workshop_exec tasks $(workshop_exec changes | awk 'END{print $1}')
+
+  # ----------------------------------------------------------------------------
+
+  # Part 2: Interfaces
+
+
+  ## Manage connections
+
   workshop_exec connections
-  workshop_exec disconnect nimble/test-sdk-go:mod-cache
+
+  workshop_exec disconnect nimble/ollama:models
   workshop_exec connections
-  workshop_exec connect nimble/test-sdk-go:mod-cache :mount
+  workshop_exec connect nimble/ollama:models :mount
   workshop_exec connections
-  workshop_exec remount nimble/test-sdk-go:mod-cache ~/mod
+
+  mkdir -p ~/.ollama/models
+  workshop_exec remount nimble/ollama:models ~/.ollama/models
   workshop_exec info
 
-  # Caddy
-  workshop_exec exec -- go install github.com/caddyserver/caddy/v2/cmd/caddy@latest
-  cat <<EOF > Caddyfile
-  :8082 {
-          file_server
-  }
-  EOF
-  echo 'Hello, Workshop!' > index.html
-  cat <<EOF >> workshop.yaml
-      slots:
-        caddy:
-          interface: tunnel
-          endpoint: localhost:8082
-    - name: system
-      plugs:
-        caddy:
-          interface: tunnel
-          endpoint: localhost:8082
-  EOF
+
+  ## Add plugs, slots
+
+  cp ../workshop-part-2.yaml workshop.yaml
   workshop_exec refresh
+  workshop_exec connections --all
   workshop_exec info
-  workshop_exec exec -- caddy start
-  curl localhost:8082 | MATCH 'Hello, Workshop!'
-
-  # Remove
-  workshop_exec remove
+  # curl http://127.0.0.1:8989/lab?
 
 
   # ----------------------------------------------------------------------------
 
-  # Part 2: Sketch SDKs
+  # Part 3: Sketch SDKs
 
-  cp ../workshop.yaml .
-  chown -R ubuntu:ubuntu workshop.yaml
-  workshop_exec launch
+
+  ## Start sketching
 
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
   1/^hooks:$/a
-    setup-base: |
-      apt-get update
-      apt-get install delve clang
-      snap install --classic golangci-lint
+    setup-project: |
+      source /var/lib/workshop/sdk/jupyter/venv/bin/activate
+      pip install jupyter-console
   .
   wq
   EOF
 
   workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
+  # workshop_exec exec nimble -- "source /var/lib/workshop/sdk/jupyter/venv/bin/activate && jupyter console -h"
+
+
+  ## Stash and restore
+
   workshop_exec sketch-sdk --stash
   workshop_exec sketch-sdk --restore
-  workshop_exec sketch-sdk --eject --name tools
-  # workshop_exec sketch-sdk --remove
+
+
+  ## Explore sketches
+
   workshop_exec sketches
+
+
+  ## Convert to in-project SDK
+
+  workshop_exec sketch-sdk --eject --name console
+  [ -f .workshop/console/sdk.yaml ]
+
+  # git add .workshop/
+  # git commit -m "Add jupyter-console in-project SDK"
+
+
+  ## Clean up
+
+  workshop_exec sketch-sdk --remove
+  workshop_exec remove
 
   # ----------------------------------------------------------------------------
 
-  # Part 3: Craft SDKs
+  ## Part 4: Craft SDKs
 
   run_sdkcraft --help
-  mkdir ../go/ && cd ../go/
+  mkdir ../ollama/ && cd ../ollama/
   run_sdkcraft init
   mv ../sdk.yaml .
+  mv ../ollama.service .
   mkdir hooks
-  mv ../{setup-base,save-state,restore-state,check-health} hooks/
+  mv ../{setup-base,save-state,restore-state,check-health,setup-project} hooks/
   run_sdkcraft clean
   run_sdkcraft pack
+  run_sdkcraft try
+  cp ../workshop-part-4.yaml workshop.yaml
+  workshop launch
