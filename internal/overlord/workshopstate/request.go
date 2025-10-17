@@ -291,7 +291,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 
 		if volume.Sha3_384 == digest {
 			setup := sdk.Setup{Name: volume.Sdk, Source: sdk.TrySource, Revision: volume.Revision}
-			return &sdk.SdkResult{Setup: setup, SdkYAML: volume.Metadata}, nil
+			return &sdk.SdkResult{Setup: setup, Sha3_384: volume.Sha3_384, SdkYAML: volume.Metadata}, nil
 		}
 	}
 
@@ -308,7 +308,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 		return nil, err
 	}
 	setup := sdk.Setup{Name: volume.Sdk, Source: sdk.TrySource, Revision: volume.Revision}
-	return &sdk.SdkResult{Setup: setup, SdkYAML: volume.Metadata}, nil
+	return &sdk.SdkResult{Setup: setup, Sha3_384: volume.Sha3_384, SdkYAML: volume.Metadata}, nil
 }
 
 func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.VolumeInfo, error) {
