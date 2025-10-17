@@ -1,0 +1,26 @@
+name: Vulnerability scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  scan:
+    name: Scan for known vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Run Github Trivy FS Action
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          trivy-config: .github/trivy.yaml
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+          # TODO: Remove the whole "env" section when the issue below is resolved.
+          # Known issue: aquasecurity/trivy-action#389.
+          # Workaround: https://github.com/orgs/community/discussions/139074#discussioncomment-10808081.
