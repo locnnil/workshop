@@ -145,3 +145,30 @@ func (s *CommonStateFuncs) TestInjectTasksWithNullChange(c *check.C) {
 	c.Assert(t1.HaltTasks(), check.HasLen, 1)
 	c.Assert(t1.HaltTasks()[0].Kind(), check.Equals, "task1-1")
 }
+
+func (s *CommonStateFuncs) TestInjectTasksMainAborted(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	lane := s.state.NewLane()
+
+	chg := s.state.NewChange("change", "")
+	t0 := s.state.NewTask("task1", "")
+	// Emulate scenario when the task handler is being executed.
+	t0.SetStatus(state.DoingStatus)
+	chg.AddTask(t0)
+	t0.JoinLane(lane)
+	t01 := s.state.NewTask("task1-1", "")
+	t01.WaitFor(t0)
+	t02 := s.state.NewTask("task1-2", "")
+	t02.WaitFor(t0)
+
+	ts := state.NewTaskSet(t01, t02)
+	// This will abort the main task.
+	chg.Abort()
+	handlersetup.InjectTasks(t0, ts)
+
+	// verify that extra tasks are on hold
+	c.Assert(t01.Status(), check.Equals, state.HoldStatus)
+	c.Assert(t02.Status(), check.Equals, state.HoldStatus)
+}
