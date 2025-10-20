@@ -217,7 +217,11 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 	)
 
 	if _, err := repack.Output(); err != nil {
-		logger.Debugf("Failed to repack volume tarball: %v", err)
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			logger.Debugf("Failed to repack volume tarball: %s", exitErr.Stderr)
+			return exitErr
+		}
 		return err
 	}
 
