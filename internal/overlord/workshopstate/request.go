@@ -433,6 +433,9 @@ func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, sou
 func validateSdkResults(projectId string, file *workshop.File, sdks []sdk.SdkResult) ([]sdk.Setup, error) {
 	setups := make([]sdk.Setup, 0, len(sdks))
 	for _, s := range sdks {
+		if s.MD5 == "" && s.Sha3_384 == "" {
+			return nil, fmt.Errorf("internal error: hash not found for %q SDK", s.Name)
+		}
 		if err := workshop.ValidateSdkInfo(projectId, file, s.Name, s.SdkYAML); err != nil {
 			return nil, err
 		}
