@@ -204,7 +204,7 @@ func currentUserAndEnv() (*user.User, map[string]string, error) {
 // Returns the environment for the user as set by systemd.
 // This is the equivalent of running 'systemctl --user show-environment'
 func userEnvironment(user *user.User) (map[string]string, error) {
-	cmd := exec.Command("sudo", "-E", "-u", user.Username, "systemctl", "--user", "show-environment")
+	cmd := exec.Command("systemctl", "--user", "show-environment", "--machine", fmt.Sprintf("%s@.host", user.Username))
 	// XDG_RUNTIME_DIR may not be set if a command is invoked by sudo or
 	// systemd-run; set it here to the default location. It is required for
 	// systemctl to work with --user. See:
