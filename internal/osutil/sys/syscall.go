@@ -20,9 +20,13 @@
 package sys
 
 import (
+	"cmp"
 	"errors"
 	"os"
 	"syscall"
+	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 // FlagID can be passed to chown-ish functions to mean "no change",
@@ -89,4 +93,32 @@ func FileOwner(info os.FileInfo) (UserID, GroupID, error) {
 		return 0, 0, errors.New("user and group unavailable")
 	}
 	return UserID(stat.Uid), GroupID(stat.Gid), nil
+}
+
+// AccessTime returns the file access time if available.
+func AccessTime(info os.FileInfo) (time.Time, error) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return time.Time{}, errors.New("file access time unavailable")
+	}
+	return time.Unix(stat.Atim.Unix()), nil
+}
+
+// Lchtimes is like os.Chtimes but doesn't follow symlinks.
+func Lchtimes(path string, atime time.Time, mtime time.Time) error {
+	time1, err1 := timeToTimespec(atime)
+	time2, err2 := timeToTimespec(mtime)
+	if err := cmp.Or(err1, err2); err != nil {
+		return err
+	}
+	times := []unix.Timespec{time1, time2}
+
+	return unix.UtimesNanoAt(unix.AT_FDCWD, path, times, unix.AT_SYMLINK_NOFOLLOW)
+}
+
+func timeToTimespec(t time.Time) (unix.Timespec, error) {
+	if t.IsZero() {
+		return unix.Timespec{Sec: unix.UTIME_OMIT, Nsec: unix.UTIME_OMIT}, nil
+	}
+	return unix.TimeToTimespec(t)
 }
