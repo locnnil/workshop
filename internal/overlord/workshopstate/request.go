@@ -416,18 +416,18 @@ func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, sou
 	}
 
 	target := workshop.LocalSdkDir(s.userDataDir, s.project.ProjectId, w, sk)
-	revision, err := sdk.CommitRevision(s.user, path, target, installed)
+	revision, digest, err := sdk.CommitRevision(s.user, path, target, installed)
 	if err != nil {
 		return nil, err
 	}
 
-	sdkYaml, err := os.ReadFile(filepath.Join(target, revision.String(), "meta", "sdk.yaml"))
+	sdkYaml, err := os.ReadFile(filepath.Join(target, digest, "meta", "sdk.yaml"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid %q SDK: %w", sk, err)
 	}
 
 	setup := sdk.Setup{Name: sk, Source: source, Revision: revision}
-	return &sdk.SdkResult{Setup: setup, SdkYAML: string(sdkYaml)}, nil
+	return &sdk.SdkResult{Setup: setup, Sha3_384: digest, SdkYAML: string(sdkYaml)}, nil
 }
 
 func validateSdkResults(projectId string, file *workshop.File, sdks []sdk.SdkResult) ([]sdk.Setup, error) {

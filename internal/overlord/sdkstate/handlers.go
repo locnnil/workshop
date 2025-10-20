@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/tomb.v2"
@@ -225,7 +227,18 @@ func (m *SdkManager) mountSdk(ctx context.Context, user string, project *worksho
 		return err
 	}
 	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-	what := workshop.LocalSdkRevision(userDataDir, project.ProjectId, w, sdkSetup.Name, sdkSetup.Revision)
+
+	sdkDir := workshop.LocalSdkDir(userDataDir, project.ProjectId, w, sdkSetup.Name)
+	revision := filepath.Join(sdkDir, sdkSetup.Revision.String())
+	digest, err := os.Readlink(revision)
+	if err != nil {
+		return err
+	}
+	// Ensure we only mount actual SDKs and avoid malicious symlinks.
+	if strings.ContainsRune(digest, os.PathSeparator) {
+		return &os.PathError{Op: "mount", Path: revision, Err: fmt.Errorf("invalid hash %q", digest)}
+	}
+	what := filepath.Join(sdkDir, digest)
 
 	mnt := workshop.Mount{
 		Name:     name,

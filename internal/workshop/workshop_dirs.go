@@ -43,10 +43,6 @@ func LocalSdkDir(userDataDir, pid, w, name string) string {
 	return filepath.Join(UserData(userDataDir, pid, w), "sdk", name)
 }
 
-func LocalSdkRevision(userDataDir, pid, w, name string, revision sdk.Revision) string {
-	return filepath.Join(LocalSdkDir(userDataDir, pid, w, name), revision.String())
-}
-
 func SketchSdkDir(userDataDir, pid, w string) string {
 	return LocalSdkDir(userDataDir, pid, w, sdk.Sketch)
 }

@@ -108,8 +108,8 @@ func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, e
 	}
 	userDataDir := UserDataRootDir(usr.HomeDir, env)
 
-	rev := LocalSdkRevision(userDataDir, w.Project.ProjectId, w.Name, setup.Name, setup.Revision)
-	metapath := filepath.Join(rev, "meta", "sdk.yaml")
+	sdkDir := LocalSdkDir(userDataDir, w.Project.ProjectId, w.Name, setup.Name)
+	metapath := filepath.Join(sdkDir, setup.Revision.String(), "meta", "sdk.yaml")
 
 	meta, err := os.ReadFile(metapath)
 	return string(meta), err
