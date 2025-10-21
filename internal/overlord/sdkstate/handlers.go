@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/tomb.v2"
@@ -46,6 +48,29 @@ func SdkSetup(task *state.Task) (sdk.Setup, error) {
 	return sdkSetup, nil
 }
 
+func maybeSdkYaml(task *state.Task) (string, error) {
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	var retrieveId string
+	var sdkYaml string
+
+	if err := task.Get("sdk-retrieve-task", &retrieveId); err != nil {
+		return "", err
+	}
+
+	retrieve := st.Task(retrieveId)
+	if retrieve == nil {
+		return "", fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
+	}
+
+	if err := retrieve.Get("sdk-yaml", &sdkYaml); err != nil {
+		return "", nil
+	}
+	return sdkYaml, nil
+}
+
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, _, err := UserProjectWorkshop(task)
 	if err != nil {
@@ -74,34 +99,50 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
+	var result *sdk.SdkResult
 	if rec.Source == sdk.SystemSource {
-		if err := system.RetrieveSystemSdk(rec, reporter); err != nil {
-			return err
-		}
+		result, err = system.RetrieveSystemSdk(rec, reporter)
 	} else {
 		st.Lock()
 		store := sdk.StoreService(st)
 		st.Unlock()
 
-		if err = store.DownloadSdk(ctx, rec, reporter); err != nil {
-			return err
-		}
+		result, err = store.DownloadSdk(ctx, rec, reporter)
+	}
+	if err != nil {
+		return err
+	}
+
+	// TODO: We should be downloading a specific revision. Remove this when
+	// the Store supports that (it will probably have to be removed anyway
+	// since DownloadSdk won't return a result after that).
+	if result.Revision != rec.Revision {
+		st.Lock()
+		task.Set("sdk-setup", result.Setup)
+		// Ideally we would validate the YAML here, but we can't check
+		// the base without knowing about the workshop. And this task
+		// should remain workshop-agnostic if possible. Instead we
+		// pass it to doInstallSdk and validate there.
+		task.Set("sdk-yaml", result.SdkYAML)
+		st.Unlock()
 	}
 
 	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(rec.Name, rec.Revision),
+		Name:     sdk.VolumeName(result.Name, result.Revision),
 		Kind:     "sdk",
-		Sdk:      rec.Name,
-		Revision: rec.Revision,
+		Sha3_384: result.Sha3_384,
+		MD5:      result.MD5,
+		Sdk:      result.Name,
+		Revision: result.Revision,
 	}
-	file, err := os.Open(rec.Filepath())
+	file, err := os.Open(result.Filepath())
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	err = m.backend.ImportVolume(ctx, volume, file)
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
+		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", volume.Name)
 		return nil
 	}
 
@@ -135,6 +176,18 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
+	}
+
+	// TODO: Remove this section when we can download a specific SDK
+	// revision from the Store (this revision was validated earlier).
+	sdkYaml, err := maybeSdkYaml(task)
+	if err != nil {
+		return err
+	}
+	if sdkYaml != "" {
+		if err := workshop.ValidateSdkInfo(project.ProjectId, wp.File, sdkSetup.Name, sdkYaml); err != nil {
+			return err
+		}
 	}
 
 	rev := revert.New()
@@ -174,7 +227,18 @@ func (m *SdkManager) mountSdk(ctx context.Context, user string, project *worksho
 		return err
 	}
 	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-	what := workshop.LocalSdkRevision(userDataDir, project.ProjectId, w, sdkSetup.Name, sdkSetup.Revision)
+
+	sdkDir := workshop.LocalSdkDir(userDataDir, project.ProjectId, w, sdkSetup.Name)
+	revision := filepath.Join(sdkDir, sdkSetup.Revision.String())
+	digest, err := os.Readlink(revision)
+	if err != nil {
+		return err
+	}
+	// Ensure we only mount actual SDKs and avoid malicious symlinks.
+	if strings.ContainsRune(digest, os.PathSeparator) {
+		return &os.PathError{Op: "mount", Path: revision, Err: fmt.Errorf("invalid hash %q", digest)}
+	}
+	what := filepath.Join(sdkDir, digest)
 
 	mnt := workshop.Mount{
 		Name:     name,

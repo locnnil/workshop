@@ -243,7 +243,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		sdkYaml.Type = Regular.String()
 	}
 	if sdkYaml.Type == System.String() && !IsSystem(sdkYaml.Name) {
-		return nil, fmt.Errorf("SDK %q has type %q but is not the system SDK", sdkYaml.Name, sdkYaml.Type)
+		return nil, fmt.Errorf("type %q is reserved for the system SDK", sdkYaml.Type)
 	}
 
 	sdkInfo := &Info{

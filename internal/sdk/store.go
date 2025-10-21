@@ -2,6 +2,11 @@ package sdk
 
 import (
 	"context"
+	"crypto/md5"
+	"crypto/sha3"
+	"encoding/hex"
+	"fmt"
+	"hash"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -20,7 +25,10 @@ func (s StoreAction) String() string {
 }
 
 type SdkResult struct {
-	*Info
+	Setup
+	Sha3_384 string
+	MD5      string
+	SdkYAML  string
 }
 
 type SdkAction struct {
@@ -61,7 +69,7 @@ func StoreService(st *state.State) Store {
 
 type Store interface {
 	SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
-	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) error
+	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*SdkResult, error)
 }
 
 func NewFakeStore() Store {
@@ -114,26 +122,37 @@ func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]SdkRe
 	return nil, nil
 }
 
-func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) error {
+func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*SdkResult, error) {
 	f.downloadLock.Lock()
 	defer f.downloadLock.Unlock()
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
 		Setup: setup,
 	})
 	if f.DownloadCallback != nil {
-		return f.DownloadCallback(ctx, setup, report)
+		if err := f.DownloadCallback(ctx, setup, report); err != nil {
+			return nil, err
+		}
 	}
-	return nil
-}
 
-func (f *FakeStore) RetrieveSystemSdk(setup Setup, report *progress.Reporter) error {
-	f.downloadLock.Lock()
-	defer f.downloadLock.Unlock()
-	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
-		Setup: setup,
-	})
-	if f.DownloadCallback != nil {
-		return f.DownloadCallback(nil, setup, report)
+	source, err := setup.Source.MarshalText()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	var hash hash.Hash
+	if IsSystem(setup.Name) {
+		hash = sha3.New384()
+	} else {
+		hash = md5.New()
+	}
+	fmt.Fprintf(hash, "%s:%s:%s:%s", setup.Name, source, setup.Channel, setup.Revision)
+	digest := hex.EncodeToString(hash.Sum(nil))
+
+	result := &SdkResult{Setup: setup, SdkYAML: "name: " + setup.Name}
+	if IsSystem(setup.Name) {
+		result.Sha3_384 = digest
+	} else {
+		result.MD5 = digest
+	}
+	return result, nil
 }

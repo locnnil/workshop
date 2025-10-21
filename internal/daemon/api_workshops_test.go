@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/md5"
 	"crypto/sha3"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -183,6 +185,13 @@ sdks:
         endpoint: 8080
 `
 
+	wrongbase = `name: wrongbase
+base: ubuntu@24.04
+sdks:
+  - name: test-sdk-3
+    channel: latest/stable
+`
+
 	workshoptunnels = `name: tunnels
 base: ubuntu@22.04
 sdks:
@@ -351,7 +360,6 @@ connections:
 	testsdk = `
 name: test-sdk
 title: title
-base: ubuntu@20.04
 version: '0.1.2'
 summary: summary
 description: SDK
@@ -367,7 +375,6 @@ plugs:
 	testsdk_r2 = `
 name: test-sdk
 title: title
-base: ubuntu@20.04
 version: '0.1.3'
 summary: summary
 description: SDK
@@ -382,7 +389,6 @@ plugs:
 	testsdk2 = `
 name: test-sdk-2
 title: title
-base: ubuntu@20.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
@@ -399,10 +405,13 @@ slots:
     interface: mount
 `
 
+	testsdk2_invalid = `name: sdk-2
+`
+
 	mount_conflict = `
 name: mount-conflict
 title: title
-base: ubuntu@20.04
+base: ubuntu@22.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
@@ -422,7 +431,7 @@ slots:
 	testsdk3 = `
 name: test-sdk-3
 title: title
-base: ubuntu@20.04
+base: ubuntu@22.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
@@ -973,15 +982,13 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 }
 
 func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
-	var result = []sdk.SdkResult{}
+	result := make([]sdk.SdkResult, 0, len(actions))
 	for _, act := range actions {
-		info, err := sdk.ReadSdkInfo([]byte(apiSuiteSdks[act.Name].meta), act.ProjectId, act.Workshop)
-		if err != nil {
-			return nil, err
-		}
-		info.Channel = act.Channel
-		info.Revision = apiSuiteSdks[act.Name].s.Revision
-		result = append(result, sdk.SdkResult{Info: info})
+		setup := apiSuiteSdks[act.Name].s
+		setup.Channel = act.Channel
+		sdkYaml := apiSuiteSdks[act.Name].meta
+		digest := md5.Sum([]byte(sdkYaml))
+		result = append(result, sdk.SdkResult{Setup: setup, MD5: hex.EncodeToString(digest[:]), SdkYAML: sdkYaml})
 	}
 	return result, nil
 }
@@ -1714,6 +1721,13 @@ func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
 			return v.Name == wv
 		})
 		c.Assert(v, check.Not(check.Equals), -1)
+		vol := vols[v]
+		c.Check(vol.Kind, check.Equals, "sdk")
+		if vol.Sha3_384 == "" {
+			c.Check(vol.MD5, check.Not(check.Equals), "")
+		}
+		c.Check(sdk.VolumeName(vol.Sdk, vol.Revision), check.Equals, vol.Name)
+		c.Check(vol.Metadata, check.Not(check.Equals), "")
 	}
 }
 
@@ -3851,6 +3865,82 @@ func (s *apiSuite) TestValidateActionInputs(c *check.C) {
 	}
 }
 
+// ValidateSdkInfo is already covered by unit tests. This test ensures it's
+// applied to every type of SDK on both launch and refresh.
+func (s *apiSuite) TestValidateSdkInfo(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2_invalid)
+	s.createWFile(c, "basic", basic_refreshed)
+	s.mockTrySdk(c, "test-sdk", "test-sdk_all.sdk", testsdk)
+	s.mockTrySdk(c, "test-sdk-2", "test-sdk-2_all.sdk", testsdk2_invalid)
+	s.createWFile(c, "manysdks", manysdks_try)
+	s.createWFile(c, "wrongbase", wrongbase)
+	defer s.store.SetDownloadCallback(storeDownload)()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["wrongbase"],"action":"launch"}`),
+	}
+
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot launch "basic": SDK must be named "test-sdk-2" (now: "sdk-2")`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot launch "manysdks": SDK must be named "test-sdk-2" (now: "sdk-2")`,
+		},
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot launch "wrongbase": "test-sdk-3" SDK has "ubuntu@22.04" base; required: "ubuntu@24.04"`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "basic", basic)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+	}
+
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+
+	s.mockSketchSdk(c, "basic", `name: illegal-sketch-name
+`)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh"}`),
+	}
+
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeError,
+			Status:  http.StatusBadRequest,
+			Message: `cannot refresh "basic": SDK must be named "sketch" (now: "illegal-sketch-name")`,
+		},
+	}
+
+	s.runActionTest(c, requests, expected)
+}
+
 func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -4146,54 +4236,63 @@ func (s *apiSuite) TestRefreshConflictChange(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 	// Setup
-	s.createWFile(c, "manysdks", manysdks)
+	s.createWFile(c, "basic", basic)
 	defer s.store.SetDownloadCallback(storeDownload)()
 
+	var errOnce sync.Once
+	s.secBackend.RemoveCallback = func(sdkName string) error {
+		var err error
+		errOnce.Do(func() { err = errors.New("cannot remove profile") })
+		return err
+	}
+
 	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
 	}
 	expected := []*expectedResp{
 		{
 			Type:    ResponseTypeAsync,
 			Status:  http.StatusAccepted,
 			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
+			Summary: `Launch "basic" workshop`,
 		},
 	}
 	s.runActionTest(c, requests, expected)
 
-	s.mockSketchSdk(c, "manysdks", `name: illegal-sketch-name
-base: ubuntu@22.04
-`)
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
+	s.createWFile(c, "basic", basic_refreshed)
 
 	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh", "options": {"mode":"transactional", "refresh-option":"restore"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh","options": {"mode":"wait-on-error"}}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh"}`),
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh", "options": {"mode":"transactional", "refresh-option":"restore"}}`),
 	}
 	expected = []*expectedResp{
 		{
 			Type:      ResponseTypeAsync,
 			Status:    http.StatusAccepted,
 			Kind:      "refresh",
-			Summary:   `Refresh "manysdks" workshop`,
-			ChangeErr: `(?s).*\(SDK must be named "sketch" \(now: "illegal-sketch-name"\)\)`,
+			Summary:   `Refresh "basic" workshop`,
+			ChangeErr: `(?s).*\(cannot remove profile\)`,
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh "manysdks": waiting on error`,
-			Summary: `Refresh "manysdks" workshop`,
+			Message: `cannot refresh "basic": waiting on error`,
+			Summary: `Refresh "basic" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh "manysdks": waiting on error`,
-			Summary: `Refresh "manysdks" workshop`,
+			Message: `cannot refresh "basic": waiting on error`,
+			Summary: `Refresh "basic" workshop`,
 		},
 	}
 
 	s.runActionTest(c, requests, expected)
+
+	// This will be called by the first refresh, the others fail earlier.
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
 func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {

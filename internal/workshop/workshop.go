@@ -11,6 +11,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -107,11 +108,30 @@ func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, e
 	}
 	userDataDir := UserDataRootDir(usr.HomeDir, env)
 
-	rev := LocalSdkRevision(userDataDir, w.Project.ProjectId, w.Name, setup.Name, setup.Revision)
-	metapath := filepath.Join(rev, "meta", "sdk.yaml")
+	sdkDir := LocalSdkDir(userDataDir, w.Project.ProjectId, w.Name, setup.Name)
+	metapath := filepath.Join(sdkDir, setup.Revision.String(), "meta", "sdk.yaml")
 
 	meta, err := os.ReadFile(metapath)
 	return string(meta), err
+}
+
+func ValidateSdkInfo(projectId string, file *File, name, sdkYaml string) error {
+	info, err := sdk.ReadSdkInfo([]byte(sdkYaml), projectId, file.Name)
+	if err != nil {
+		return fmt.Errorf("invalid %q SDK definition: %w", name, err)
+	}
+
+	if info.Name != name {
+		return fmt.Errorf("SDK must be named %q (now: %q)", name, info.Name)
+	}
+	if !slices.Contains([]string{"", file.Base}, info.Base) {
+		return fmt.Errorf("%q SDK has %q base; required: %q", name, info.Base, file.Base)
+	}
+	if !slices.Contains([]string{"", "all", arch.DpkgArchitecture()}, info.Arch) {
+		return fmt.Errorf(`%q SDK has %q architecture; required: %q or "all"`, name, info.Arch, arch.DpkgArchitecture())
+	}
+
+	return nil
 }
 
 // Reads information about the installed SDK from its meta file.

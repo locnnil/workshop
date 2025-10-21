@@ -25,24 +25,36 @@ var (
 	RetrieveSystemSdk = retrieveSystemSdk
 )
 
-func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) error {
+// Update the system SDK revision number when this hash changes.
+const SystemSdkDigest = "5891a3a98ed62339c5c24ded56de52a18873bd73ba8e1e03725376e7fc89c7560944b5fb7260c288b17e115e538d7da6"
+
+func SystemSdkResult() (*sdk.SdkResult, error) {
+	setup := sdk.Setup{Name: "system", Source: sdk.SystemSource, Revision: SystemSdkRevision}
+	sdkYaml, err := SystemSdkFs.ReadFile("meta/sdk.yaml")
+	if err != nil {
+		return nil, err
+	}
+	return &sdk.SdkResult{Setup: setup, Sha3_384: SystemSdkDigest, SdkYAML: string(sdkYaml)}, nil
+}
+
+func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {
 	fl, err := sdk.OpenLock(setup.Name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = fl.Lock(); err != nil {
-		return err
+		return nil, err
 	}
 	defer fl.Close()
 
 	target := setup.Filepath()
 	if osutil.FileExists(target) {
 		logger.Debugf("System SDK on Retrieve: SDK found locally: %s", target)
-		return nil
+		return SystemSdkResult()
 	}
 
 	if setup.Revision != SystemSdkRevision {
-		return fmt.Errorf("system SDK (%s) not available", setup.Revision)
+		return nil, fmt.Errorf("system SDK (%s) not available", setup.Revision)
 	}
 
 	r := revert.New()
@@ -51,7 +63,7 @@ func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) error {
 	// TODO: remove old system SDKs when no longer in use.
 	file, err := os.Create(target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	r.Add(func() {
@@ -62,10 +74,10 @@ func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) error {
 
 	writer := tar.NewWriter(file)
 	if err := addWritableFS(writer, SystemSdkFs); err != nil {
-		return err
+		return nil, err
 	}
 	if err := writer.Close(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if report != nil {
@@ -80,7 +92,7 @@ func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) error {
 	}
 
 	r.Success()
-	return nil
+	return SystemSdkResult()
 }
 
 // Like w.AddFs(fsys) but ensures the user always has write permissions.
@@ -138,7 +150,7 @@ func addWritableFS(w *tar.Writer, fsys fs.FS) error {
 	})
 }
 
-func FakeRetrieveSystemSdk(f func(setup sdk.Setup, report *progress.Reporter) error) func() {
+func FakeRetrieveSystemSdk(f func(setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error)) func() {
 	oldRetrieveSystemSdk := RetrieveSystemSdk
 	RetrieveSystemSdk = f
 	return func() { RetrieveSystemSdk = oldRetrieveSystemSdk }

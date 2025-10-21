@@ -4,14 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -19,7 +21,6 @@ import (
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 
-	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
@@ -35,7 +36,6 @@ var (
 	SDK_STORE_BUCKET_NAME = "sdkstore"
 
 	storeSdkInfo   = storeSdkInfoImpl
-	storeConnect   = storeConnectImpl
 	storeSdkReader = storeSdkReaderImpl
 )
 
@@ -51,7 +51,13 @@ type storeSdk struct {
 	Channel  string       `json:"channel"`
 	Revision sdk.Revision `json:"revision"`
 	SdkYAML  string       `json:"sdk-yaml"`
-	Size     int64        `json:"size"`
+	MD5      string       `json:"md5"`
+}
+
+type sdkReader struct {
+	io.ReadCloser
+	Revision sdk.Revision
+	Size     int64
 }
 
 type SdkActionError struct {
@@ -87,25 +93,8 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 				continue
 			}
 
-			info, err := sdk.ReadSdkInfo([]byte(s.SdkYAML), act.ProjectId, act.Workshop)
-			if err != nil {
-				actError.errors[act.Name] = err
-				continue
-			}
-			if info.Name != act.Name {
-				return nil, fmt.Errorf("SDK must be named %q (now: %q)", act.Name, info.Name)
-			}
-			if !slices.Contains([]string{"", act.Base}, info.Base) {
-				return nil, fmt.Errorf("%q SDK from %q has %q base; required: %q", act.Name, act.Channel, info.Base, act.Base)
-			}
-			if !slices.Contains([]string{"", "all", arch.DpkgArchitecture()}, info.Arch) {
-				return nil, fmt.Errorf(`%q SDK from %q has %q architecture; required: %q or "all"`, act.Name, act.Channel, info.Arch, arch.DpkgArchitecture())
-			}
-
-			info.Revision = s.Revision
-			info.Channel = s.Channel
-
-			results = append(results, sdk.SdkResult{Info: info})
+			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision}
+			results = append(results, sdk.SdkResult{Setup: setup, MD5: s.MD5, SdkYAML: s.SdkYAML})
 		default:
 			return nil, fmt.Errorf("unknown SDK store action")
 		}
@@ -131,39 +120,52 @@ func (r *reporterWriter) Write(p []byte) (n int, err error) {
 	return plen, nil
 }
 
-func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
+func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {
 	fl, err := sdk.OpenLock(setup.Name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = fl.Lock(); err != nil {
-		return err
+		return nil, err
 	}
 	defer fl.Close()
 
-	target := setup.Filepath()
-	if osutil.FileExists(target) {
-		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, target)
-		return nil
-	}
+	if osutil.FileExists(setup.Filepath()) {
+		logger.Debugf("SDK Store on Download: SDK %q found locally: %s", setup.Name, setup.Filepath())
 
-	info, err := storeSdkInfo(ctx, setup.Name, setup.Channel)
-	if err != nil {
-		return err
+		// TODO: after a transition period, it should be safe to assume
+		// that the hash and metadata are stored next to the SDK file.
+		// Probably not worth changing the code since they will likely
+		// be pulled from the Store instead of computed client side.
+		digest, err := hashSdk(setup)
+		if err != nil {
+			return nil, err
+		}
+		sdkYaml, err := extractSdkYAML(ctx, setup)
+		if err != nil {
+			return nil, err
+		}
+
+		return &sdk.SdkResult{Setup: setup, MD5: digest, SdkYAML: sdkYaml}, nil
 	}
 
 	r, err := storeSdkReader(ctx, setup)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer r.Close()
+
+	setup.Revision = r.Revision
+	target := setup.Filepath()
 
 	reverter := revert.New()
 	defer reverter.Fail()
 
+	// TODO: Use a temporary file to prevent corruption if the process is
+	// killed abruptly.
 	file, err := os.Create(target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 	reverter.Add(func() {
@@ -173,16 +175,27 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		}
 	})
 
-	var writer io.Writer
+	hash := md5.New()
+	writers := []io.Writer{file, hash}
 	if report != nil {
-		writer = io.MultiWriter(file, &reporterWriter{r: report, total: int(info.Size)})
-	} else {
-		writer = file
+		writers = append(writers, &reporterWriter{r: report, total: int(r.Size)})
 	}
 
-	if _, err = io.Copy(writer, r); err != nil {
-		return err
+	if _, err = io.Copy(io.MultiWriter(writers...), r); err != nil {
+		return nil, err
 	}
+
+	digest := hex.EncodeToString(hash.Sum(nil))
+	if err := os.WriteFile(target+".md5", []byte(digest+"\n"), 0666); err != nil {
+		return nil, err
+	}
+	reverter.Add(func() { _ = os.Remove(target + ".md5") })
+
+	sdkYaml, err := extractSdkYAML(ctx, setup)
+	if err != nil {
+		return nil, err
+	}
+	reverter.Add(func() { _ = os.Remove(target + ".yaml") })
 
 	reverter.Success()
 	// If the SDK was downloaded successfully, remove its previous rev if any.
@@ -197,11 +210,72 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		if err := os.Remove(m); err != nil {
 			logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err)
 		}
+		if err := os.Remove(m + ".md5"); err != nil && !errors.Is(err, os.ErrNotExist) {
+			logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err)
+		}
+		if err := os.Remove(m + ".yaml"); err != nil && !errors.Is(err, os.ErrNotExist) {
+			logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err)
+		}
 	}
-	return nil
+
+	return &sdk.SdkResult{Setup: setup, MD5: digest, SdkYAML: sdkYaml}, nil
 }
 
-func storeConnectImpl(ctx context.Context) (*ClientWrapper, error) {
+func hashSdk(setup sdk.Setup) (string, error) {
+	target := setup.Filepath()
+	cache := target + ".md5"
+
+	content, err := os.ReadFile(cache)
+	if err == nil {
+		return strings.TrimSpace(string(content)), nil
+	}
+
+	file, err := os.Open(target)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := file.WriteTo(hash); err != nil {
+		return "", err
+	}
+
+	digest := hex.EncodeToString(hash.Sum(nil))
+	if err := os.WriteFile(cache, []byte(digest+"\n"), 0666); err != nil {
+		return "", err
+	}
+	return digest, nil
+}
+
+func extractSdkYAML(ctx context.Context, setup sdk.Setup) (string, error) {
+	target := setup.Filepath()
+	cache := target + ".yaml"
+
+	content, err := os.ReadFile(cache)
+	if err == nil {
+		return string(content), nil
+	}
+
+	cmd := exec.CommandContext(ctx, "tar",
+		"--extract",
+		"--to-stdout",
+		"--force-local",
+		"--file="+target,
+		"meta/sdk.yaml",
+	)
+	content, err = cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.WriteFile(cache, content, 0666); err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+func storeConnect(ctx context.Context) (*ClientWrapper, error) {
 	opt := option.WithoutAuthentication()
 	testing := false
 	if url := os.Getenv("SDK_STORE_URL"); url != "" { // Set STORAGE_EMULATOR_HOST environment variable for GSC.
@@ -257,7 +331,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
 	sSdk.Revision = sdk.Revision{N: int(atr.Generation%1000) + 1}
-	sSdk.Size = atr.Size
+	sSdk.MD5 = hex.EncodeToString(atr.MD5)
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {
 		if _, ok := atr.Metadata["sdk-yaml"]; !ok {
@@ -294,7 +368,7 @@ func readTestMetadata(ctx context.Context, client *ClientWrapper, name, track, r
 	return b.String(), nil
 }
 
-func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, error) {
+func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (*sdkReader, error) {
 	client, err := storeConnect(ctx)
 	if err != nil {
 		return nil, err
@@ -315,9 +389,12 @@ func storeSdkReaderImpl(ctx context.Context, setup sdk.Setup) (io.ReadCloser, er
 	r, err := obj.NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
-			return nil, errors.New("SDK not found")
+			return nil, fmt.Errorf("SDK not found in %q", setup.Channel)
 		}
 		return nil, err
 	}
-	return r, nil
+
+	// A simple modulo to keep revision numbers in a readable form for testing
+	revision := sdk.Revision{N: int(r.Attrs.Generation%1000) + 1}
+	return &sdkReader{ReadCloser: r, Revision: revision, Size: r.Attrs.Size}, nil
 }

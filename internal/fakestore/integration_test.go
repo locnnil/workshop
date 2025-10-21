@@ -6,9 +6,7 @@ package store_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"gopkg.in/check.v1"
@@ -28,7 +26,7 @@ type storeIntegration struct {
 
 var _ = check.Suite(&storeIntegration{})
 
-func (f *storeIntegration) SetUpSuite(c *check.C) {
+func (f *storeIntegration) SetUpTest(c *check.C) {
 	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
 	f.oldRoot = dirs.BaseDir
 	f.oldCache = dirs.CacheDir
@@ -37,7 +35,7 @@ func (f *storeIntegration) SetUpSuite(c *check.C) {
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 }
 
-func (f *storeIntegration) TearDownSuite(c *check.C) {
+func (f *storeIntegration) TearDownTest(c *check.C) {
 	c.Assert(os.Unsetenv("SDK_STORE_URL"), check.IsNil)
 	dirs.SetCacheDir(f.oldCache)
 	dirs.SetRootDir(f.oldRoot)
@@ -45,49 +43,60 @@ func (f *storeIntegration) TearDownSuite(c *check.C) {
 
 func (f *storeIntegration) TestStoreDownloadOK(c *check.C) {
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
-	err := s.DownloadSdk(context.Background(), setup, nil)
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
+	result, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.IsNil)
-	c.Assert(setup.Filepath(), testutil.FilePresent)
-	c.Assert(os.Remove(setup.Filepath()), check.IsNil)
+	setup.Revision = result.Revision
+	c.Check(result.Setup, check.Equals, setup)
+	c.Check(result.Revision, check.Not(check.Equals), sdk.R(0))
+	c.Check(result.MD5, check.Not(check.Equals), "")
+	c.Check(result.SdkYAML, check.Not(check.Equals), "")
+	c.Assert(result.Filepath(), testutil.FilePresent)
 }
 
 func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable"}
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
 	done, total := 0, 0
 	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
 		done = d
 		total = t
 	}}
-	err := s.DownloadSdk(context.Background(), setup, r)
+	result, err := s.DownloadSdk(context.Background(), setup, r)
 	c.Assert(err, check.IsNil)
-	c.Assert(setup.Filepath(), testutil.FilePresent)
+	c.Assert(result.Filepath(), testutil.FilePresent)
 	c.Check(done, testutil.IntGreaterThan, 0)
 	c.Check(total, testutil.IntGreaterThan, 0)
 	c.Check(done, check.Equals, total)
-	c.Assert(os.Remove(setup.Filepath()), check.IsNil)
 }
 
 func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
-	prev := filepath.Join(dirs.SdkDownloads, setup.Name) + "_5.sdk"
-	_, err := os.Create(prev)
+	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
+	prev := setup
+	prev.Revision = sdk.R(5)
+	c.Assert(os.WriteFile(prev.Filepath(), nil, 0644), check.IsNil)
+	other := setup
+	other.Revision = sdk.R(2)
+	c.Assert(os.WriteFile(other.Filepath(), nil, 0644), check.IsNil)
+
+	result, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.IsNil)
-	err = s.DownloadSdk(context.Background(), setup, nil)
-	c.Assert(err, check.IsNil)
-	c.Assert(setup.Filepath(), testutil.FilePresent)
-	c.Assert(prev, testutil.FileAbsent)
-	c.Assert(os.Remove(setup.Filepath()), check.IsNil)
+	c.Check(result.Filepath(), testutil.FilePresent)
+	if prev.Revision != result.Revision {
+		c.Check(prev.Filepath(), testutil.FileAbsent)
+	}
+	if other.Revision != result.Revision {
+		c.Check(other.Filepath(), testutil.FileAbsent)
+	}
 }
 
 func (f *storeIntegration) TestStoreDownloadNotfound(c *check.C) {
 	s := store.New()
-	setup := sdk.Setup{Name: "test-sdk-unknown", Channel: "latest/stable"}
-	err := s.DownloadSdk(context.Background(), setup, nil)
+	setup := sdk.Setup{Name: "test-sdk-unknown", Channel: "latest/stable", Revision: sdk.R(1)}
+	_, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.ErrorMatches, `SDK not found in "latest/stable"`)
-	c.Assert(setup.Filepath(), testutil.FileAbsent)
+	c.Check(dirs.SdkDownloads, testutil.DirEquals, []string{})
 }
 
 func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.C) {
@@ -109,15 +118,20 @@ func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err := s.DownloadSdk(context.Background(), setup, nil)
-		c.Check(err, check.IsNil)
+		defer wg.Done()
+
+		result, err := s.DownloadSdk(context.Background(), setup, nil)
+		c.Assert(err, check.IsNil)
+		c.Check(result.Setup, check.Equals, setup)
+		c.Check(result.MD5, check.Equals, "md5sum")
+		c.Check(result.SdkYAML, check.Equals, "name: test-sdk-basic")
 		c.Check(m.String(), check.Matches, fmt.Sprintf(`(?s)*.DEBUG: SDK Store on Download: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_1.sdk.*`, dirs.SdkDownloads))
-		wg.Done()
 	}()
 
 	// "download" is finished
-	_, err = os.Create(target)
-	c.Assert(err, check.IsNil)
+	c.Assert(os.WriteFile(target, nil, 0666), check.IsNil)
+	c.Assert(os.WriteFile(target+".md5", []byte("md5sum"), 0666), check.IsNil)
+	c.Assert(os.WriteFile(target+".yaml", []byte("name: test-sdk-basic"), 0666), check.IsNil)
 	fl.Close()
 	wg.Wait()
 }
@@ -130,16 +144,16 @@ func (*failingReader) Read(p []byte) (n int, err error) {
 func (*failingReader) Close() error { return nil }
 
 func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
-	r := store.FakeSdkStoreSdkReader(func(ctx context.Context, setup sdk.Setup) (io.ReadCloser, error) {
-		return &failingReader{}, nil
+	r := store.FakeSdkStoreSdkReader(func(ctx context.Context, setup sdk.Setup) (*store.SdkReader, error) {
+		return &store.SdkReader{ReadCloser: &failingReader{}, Revision: setup.Revision}, nil
 	})
 	defer r()
 
 	s := store.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 55}}
-	err := s.DownloadSdk(context.Background(), setup, nil)
+	_, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.NotNil)
-	c.Assert(setup.Filepath(), testutil.FileAbsent)
+	c.Assert(dirs.SdkDownloads, testutil.DirEquals, []string{})
 }
 
 func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {

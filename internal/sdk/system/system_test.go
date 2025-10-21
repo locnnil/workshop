@@ -1,10 +1,9 @@
 package system_test
 
 import (
-	"crypto/sha256"
+	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 
@@ -39,9 +38,6 @@ func (f *systemSdk) TearDownSuite(c *check.C) {
 	dirs.SetRootDir(f.oldRoot)
 }
 
-// Update this hash with new SDK revision numbers.
-const systemSdkHash = "9ccfd0116a39ce9ab210697f2e451a7aecd0c07146288ce6bb7ff0c4a847890b"
-
 func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 	done, total := 0, 0
 	report := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
@@ -49,7 +45,11 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 		total = t
 	}}
 	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
-	c.Assert(system.RetrieveSystemSdk(setup, report), check.IsNil)
+	result, err := system.RetrieveSystemSdk(setup, report)
+	c.Assert(err, check.IsNil)
+	c.Check(result.Setup, check.Equals, setup)
+	c.Check(result.Sha3_384, check.Equals, system.SystemSdkDigest)
+	c.Check(result.SdkYAML, check.Not(check.Equals), "")
 	c.Check(done, testutil.IntGreaterThan, 0)
 	c.Check(total, testutil.IntGreaterThan, 0)
 	c.Check(done, check.Equals, total)
@@ -58,21 +58,21 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer r.Close()
 
-	w := sha256.New()
-	_, err = io.Copy(w, r)
+	hash := sha3.New384()
+	_, err = r.WriteTo(hash)
 	c.Assert(err, check.IsNil)
 
-	hash := hex.EncodeToString(w.Sum(nil))
-	c.Check(hash, check.Equals, systemSdkHash, check.Commentf("system SDK revision needs updating"))
+	digest := hex.EncodeToString(hash.Sum(nil))
+	c.Check(digest, check.Equals, system.SystemSdkDigest, check.Commentf("system SDK revision needs updating"))
 	c.Check(system.SystemSdkRevision, check.Equals, sdk.R(1))
 }
 
 func (s *systemSdk) TestRetrieveSystemSdkWrongRevision(c *check.C) {
 	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: sdk.R(system.SystemSdkRevision.N - 1)}
-	err := system.RetrieveSystemSdk(setup, nil)
+	_, err := system.RetrieveSystemSdk(setup, nil)
 	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
 
 	setup.Revision.N += 2
-	err = system.RetrieveSystemSdk(setup, nil)
+	_, err = system.RetrieveSystemSdk(setup, nil)
 	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
 }

@@ -6,7 +6,6 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/arch"
 	store "github.com/canonical/workshop/internal/fakestore"
 	"github.com/canonical/workshop/internal/sdk"
 )
@@ -66,48 +65,6 @@ func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (s *storeSuite) TestSdkActionInstallCannotParseSdkInfo(c *check.C) {
-	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
-		var s = map[string]store.StoreSdk{
-			"test-sdk-broken": {
-				Name:     "test-sdk-broken",
-				Channel:  channel,
-				Revision: sdk.Revision{N: 123},
-				SdkYAML:  `incorrect yaml: -`,
-			},
-			"test-sdk": {
-				Name:     "test-sdk",
-				Channel:  channel,
-				Revision: sdk.Revision{N: 123},
-				SdkYAML:  testSdk,
-			},
-		}
-		return s[name], nil
-	})
-	defer r()
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-
-	store := store.New()
-	acts := []sdk.SdkAction{{
-		ProjectId: "24242424",
-		Workshop:  "test-workshop",
-		Action:    sdk.Install,
-		Name:      "test-sdk-broken",
-		Base:      "ubuntu@20.04",
-		Channel:   "latest/stable",
-	}, {
-		ProjectId: "24242424",
-		Workshop:  "test-workshop",
-		Action:    sdk.Install,
-		Name:      "test-sdk",
-		Base:      "ubuntu@20.04",
-		Channel:   "latest/stable",
-	}}
-	res, err := store.SdkAction(context.Background(), acts)
-	c.Assert(res, check.HasLen, 1)
-	c.Assert(err, check.ErrorMatches, "(?s).*test-sdk-broken: yaml: block sequence entries are not allowed in this context")
-}
-
 func (s *storeSuite) TestSdkActionInstallNoBase(c *check.C) {
 	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
 		var s = store.StoreSdk{
@@ -134,61 +91,4 @@ func (s *storeSuite) TestSdkActionInstallNoBase(c *check.C) {
 	res, err := store.SdkAction(context.Background(), acts)
 	c.Assert(res, check.HasLen, 1)
 	c.Assert(err, check.IsNil)
-}
-
-func (s *storeSuite) TestSdkActionInstallIncompatibleBase(c *check.C) {
-	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
-		var s = store.StoreSdk{
-			Name:     "test-sdk",
-			Channel:  channel,
-			Revision: sdk.Revision{N: 123},
-			SdkYAML:  testSdk,
-		}
-		return s, nil
-	})
-	defer r()
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-
-	store := store.New()
-	acts := []sdk.SdkAction{{
-		ProjectId: "24242424",
-		Workshop:  "test-workshop",
-		Action:    sdk.Install,
-		Name:      "test-sdk",
-		Base:      "ubuntu@22.04",
-		Channel:   "latest/stable",
-	},
-	}
-	_, err := store.SdkAction(context.Background(), acts)
-	c.Assert(err, check.ErrorMatches, `"test-sdk" SDK from "latest/stable" has "ubuntu@20.04" base; required: "ubuntu@22.04"`)
-}
-
-func (s *storeSuite) TestSdkActionInstallIncompatibleArch(c *check.C) {
-	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
-		var s = store.StoreSdk{
-			Name:     "test-sdk",
-			Channel:  channel,
-			Revision: sdk.Revision{N: 123},
-			SdkYAML:  testSdk + "architecture: amd64\n",
-		}
-		return s, nil
-	})
-	defer r()
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-	oldarch := arch.ArchitectureType(arch.DpkgArchitecture())
-	arch.SetArchitecture("ppc64el")
-	defer arch.SetArchitecture(oldarch)
-
-	store := store.New()
-	acts := []sdk.SdkAction{{
-		ProjectId: "24242424",
-		Workshop:  "test-workshop",
-		Action:    sdk.Install,
-		Name:      "test-sdk",
-		Base:      "ubuntu@20.04",
-		Channel:   "latest/stable",
-	},
-	}
-	_, err := store.SdkAction(context.Background(), acts)
-	c.Assert(err, check.ErrorMatches, `"test-sdk" SDK from "latest/stable" has "amd64" architecture; required: "ppc64el" or "all"`)
 }
