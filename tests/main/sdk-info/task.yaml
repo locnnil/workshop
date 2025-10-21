@@ -1,0 +1,46 @@
+summary: Test sdk info output
+prepare: |
+  sdk_info_volumes() {
+    lxc storage volume list --columns n --format csv workshop config.user.sdk.name=test-sdk-info
+  }
+  sdk_info_volumes | xargs -n1 -r lxc storage volume delete workshop
+restore: |
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec remove edge || true
+  workshop_exec remove stable || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Test SDK info without any volumes"
+  ! sdk_exec info test-sdk-info
+
+  echo "Test SDK info with one volume"
+  workshop_exec launch edge
+  sdk_exec list | MATCH '^test-sdk-info[[:space:]]+2\.0[[:space:]]+[[:digit:]]+[[:space:]]+.*kB$'
+
+  sdk_exec info test-sdk-info > info.log
+  head --lines=-1 info.log > header.log
+  diff -u header.log header.txt
+  tail --lines=1 info.log | MATCH "$PWD:[[:space:]]+edge[[:space:]]+latest/edge[[:space:]]+2025-07-03[[:space:]]+\\([[:digit:]]+\\)[[:space:]]+.*kB$"
+
+  echo "Test SDK info with two volumes"
+  workshop_exec launch stable
+  sdk_exec list | MATCH '^test-sdk-info[[:space:]]+1\.0[[:space:]]+[[:digit:]]+[[:space:]]+.*kB$'
+  sdk_exec list | MATCH '^test-sdk-info[[:space:]]+2\.0[[:space:]]+[[:digit:]]+[[:space:]]+.*kB$'
+
+  sdk_exec info test-sdk-info > info.log
+  head --lines=-2 info.log > header.log
+  diff -u header.log header.txt
+  tail --lines=2 info.log | MATCH "$PWD:[[:space:]]+edge[[:space:]]+latest/edge[[:space:]]+2025-07-03[[:space:]]+\\([[:digit:]]+\\)[[:space:]]+.*kB$"
+  tail --lines=2 info.log | MATCH "$PWD:[[:space:]]+stable[[:space:]]+latest/stable[[:space:]]+2025-04-03[[:space:]]+\\([[:digit:]]+\\)[[:space:]]+.*kB$"
+
+  echo "Test SDK info with two volumes but one workshop"
+  workshop_exec remove edge
+  sdk_exec list | MATCH '^test-sdk-info[[:space:]]+1\.0[[:space:]]+[[:digit:]]+[[:space:]]+.*kB$'
+  sdk_exec list | MATCH '^test-sdk-info[[:space:]]+2\.0[[:space:]]+[[:digit:]]+[[:space:]]+.*kB$'
+
+  sdk_exec info test-sdk-info > info.log
+  head --lines=-1 info.log > header.log
+  diff -u header.log header.txt
+  tail --lines=1 info.log | MATCH "$PWD:[[:space:]]+stable[[:space:]]+latest/stable[[:space:]]+2025-04-03[[:space:]]+\\([[:digit:]]+\\)[[:space:]]+.*kB$"
