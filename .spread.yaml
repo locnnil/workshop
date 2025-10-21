@@ -35,8 +35,8 @@ suites:
       . "$TESTSLIB"/utils.sh
       prepare_environment
     kill-timeout: 30m
-  tests/documentation/:
-    summary: Documentation tests
+  tests/docs-tutorial/:
+    summary: Documentation tutorial tests
     repack: |
       test -f tests/sdkcraft_*.snap
       cat <&3 >&4
@@ -49,6 +49,16 @@ suites:
       . "$TESTSLIB"/utils.sh
       cleanup_workshop true  # used real store, no need to clean it
     kill-timeout: 30m
+  tests/docs-how-to/:
+    summary: Documentation how-to tests
+    prepare: |
+      . "$TESTSLIB"/utils.sh
+      prepare_environment
+      setup_workshop
+    restore: |
+      . "$TESTSLIB"/utils.sh
+      cleanup_workshop
+    kill-timeout: 20m
 exclude:
   - .git
   - .workshop.lock

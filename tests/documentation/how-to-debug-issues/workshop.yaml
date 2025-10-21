@@ -1,5 +1,0 @@
-name: dev-volatile
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk-go
-    channel: latest/edge # This (edge) should cause failure in the stub store

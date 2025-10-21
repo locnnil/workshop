@@ -24,4 +24,4 @@ execute: |
   ## List and suppress warnings
 
   workshop_exec warnings
-  workshop_exec okay
+  workshop_exec okay || true

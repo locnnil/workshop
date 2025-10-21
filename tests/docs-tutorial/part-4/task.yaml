@@ -1,0 +1,22 @@
+summary: Run tutorial part 4 commands to ensure it's operational
+restore: |
+  rm -rf ~/ollama
+execute: |
+  . "$TESTSLIB"/utils.sh
+  lxc storage set default size=30GB
+
+  # ----------------------------------------------------------------------------
+
+  ## Part 4: Craft SDKs
+
+  run_sdkcraft --help
+  mkdir ollama/ && cd ollama/
+  run_sdkcraft init
+  mv ../{sdk.yaml,ollama.service} .
+  mkdir hooks
+  mv ../{setup-base,save-state,restore-state,check-health,setup-project} hooks/
+  run_sdkcraft clean
+  run_sdkcraft pack
+  run_sdkcraft try
+  # cp ../workshop-part-4.yaml workshop.yaml
+  # workshop launch && zfs list -r workshop
