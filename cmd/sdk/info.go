@@ -62,7 +62,8 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	if info.Description != "" {
 		fmt.Fprintln(Stdout, "description: |")
-		lines := strings.Split(info.Description, "\n")
+		description := strings.TrimSuffix(info.Description, "\n")
+		lines := strings.Split(description, "\n")
 		for _, line := range lines {
 			fmt.Fprintf(Stdout, "  %s\n", line)
 		}
@@ -70,7 +71,9 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintln(Stdout, "description: -")
 	}
 
-	fmt.Fprintln(Stdout, "installed:")
+	if len(info.Installed) > 0 {
+		fmt.Fprintln(Stdout, "installed:")
+	}
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
 	for _, it := range info.Installed {
 		project := cmdutil.ContractHome(it.ProjectPath)

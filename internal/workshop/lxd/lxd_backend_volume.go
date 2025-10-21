@@ -284,6 +284,11 @@ func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeIn
 	}
 	defer conn.Disconnect()
 
+	info, err := conn.GetConnectionInfo()
+	if err != nil {
+		return nil, err
+	}
+
 	filters := []string{
 		"type=custom",
 		fmt.Sprintf("config.user.kind=%s", kind),
@@ -296,7 +301,7 @@ func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeIn
 	infos := make([]workshop.VolumeInfo, 0, len(vols))
 	for _, vol := range vols {
 		size := volumeSize(conn, vol.Name)
-		infos = append(infos, volumeToInfo(&vol, size))
+		infos = append(infos, volumeToInfo(&vol, info.Project, size))
 	}
 	return infos, nil
 }
@@ -308,6 +313,11 @@ func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo,
 	}
 	defer conn.Disconnect()
 
+	info, err := conn.GetConnectionInfo()
+	if err != nil {
+		return workshop.VolumeInfo{}, err
+	}
+
 	vol, _, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		return workshop.VolumeInfo{}, workshop.ErrVolumeNotFound
@@ -317,7 +327,7 @@ func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo,
 	}
 
 	size := volumeSize(conn, vol.Name)
-	return volumeToInfo(vol, size), nil
+	return volumeToInfo(vol, info.Project, size), nil
 }
 
 func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
@@ -339,7 +349,7 @@ func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
 	return config
 }
 
-func volumeToInfo(volume *api.StorageVolume, size uint64) workshop.VolumeInfo {
+func volumeToInfo(volume *api.StorageVolume, lxdProject string, size uint64) workshop.VolumeInfo {
 	revision, err := sdk.ParseRevision(volume.Config["user.sdk.revision"])
 	if err != nil {
 		revision = sdk.Revision{}
@@ -352,13 +362,17 @@ func volumeToInfo(volume *api.StorageVolume, size uint64) workshop.VolumeInfo {
 			logger.Debugf("Failed to parse URL %q: %v", u, err)
 			continue
 		}
-		entityType, _, _, pathArgs, err := entity.ParseURL(*parsedURL)
+		entityType, projectName, _, pathArgs, err := entity.ParseURL(*parsedURL)
 		if err != nil {
 			logger.Debugf("Failed to parse entity from URL %q: %v", parsedURL.String(), err)
 			continue
 		}
 		if entityType != entity.TypeInstance || len(pathArgs) == 0 {
 			logger.Debugf("URL %q does not point to an instance, skipping", parsedURL.String())
+			continue
+		}
+		if projectName != lxdProject {
+			// Ignore SDK layers, and workshops owned by other users.
 			continue
 		}
 		wp, pid := workshopProjectId(pathArgs[0])

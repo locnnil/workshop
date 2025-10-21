@@ -67,6 +67,7 @@ function setup_workshop() {
     snap install --dangerous --classic /workshop/tests/*.snap
     snap set workshop store.url=http://localhost:8080/storage/v1/
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
+    snap alias workshop.sdk sdk
     snap restart workshop
 
     # required to keep /lib/systemd/systemd --user running for a regular user
@@ -144,6 +145,10 @@ function publish_test_sdks() {
 # Workshop sub-command wrappers
 function workshop_exec() {
     sudo -u ubuntu -- workshop "$@" 2>&1
+}
+
+function sdk_exec() {
+    sudo -u ubuntu -- sdk "$@" 2>&1
 }
 
 function run_sdkcraft() {
