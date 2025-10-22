@@ -64,7 +64,7 @@ EOF
 }
 
 function setup_workshop() {
-    snap install --dangerous --classic /workshop/tests/*.snap
+    snap install --dangerous --classic /workshop/tests/workshop_*.snap
     snap set workshop store.url=http://localhost:8080/storage/v1/
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
     snap alias workshop.sdk sdk
@@ -157,10 +157,5 @@ function run_sdkcraft() {
 
 # Install sdkcraft from a local snap file
 function install_sdkcraft() {
-    if stat /sdkcraft/tests/*.snap 2>/dev/null; then
-        snap install --classic --dangerous /sdkcraft/tests/*.snap
-    else
-        echo "Expected a snap to exist in /sdkcraft/tests/"
-        exit 1
-    fi
+    snap install --dangerous --classic /workshop/tests/sdkcraft_*.snap
 }
