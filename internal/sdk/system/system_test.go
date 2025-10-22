@@ -44,11 +44,15 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 		done = d
 		total = t
 	}}
-	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
+	setup := sdk.Setup{
+		Name:     sdk.System.String(),
+		Source:   sdk.SystemSource,
+		Revision: system.SystemSdkRevision,
+		Sha3_384: system.SystemSdkDigest,
+	}
 	result, err := system.RetrieveSystemSdk(setup, report)
 	c.Assert(err, check.IsNil)
 	c.Check(result.Setup, check.Equals, setup)
-	c.Check(result.Sha3_384, check.Equals, system.SystemSdkDigest)
 	c.Check(result.SdkYAML, check.Not(check.Equals), "")
 	c.Check(done, testutil.IntGreaterThan, 0)
 	c.Check(total, testutil.IntGreaterThan, 0)
@@ -68,7 +72,12 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 }
 
 func (s *systemSdk) TestRetrieveSystemSdkWrongRevision(c *check.C) {
-	setup := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: sdk.R(system.SystemSdkRevision.N - 1)}
+	setup := sdk.Setup{
+		Name:     sdk.System.String(),
+		Source:   sdk.SystemSource,
+		Revision: sdk.R(system.SystemSdkRevision.N - 1),
+		Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+	}
 	_, err := system.RetrieveSystemSdk(setup, nil)
 	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
 

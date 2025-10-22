@@ -857,8 +857,9 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	sdkfs := c.MkDir()
 	setup := sdk.Setup{
 		Name:     "test-sdk",
+		Source:   sdk.ProjectSource,
 		Revision: sdk.R(5),
-		Source:   sdk.StoreSource,
+		Sha3_384: "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
 	}
 	err = w.AddSdk(f.ctx, setup)
 	c.Assert(err, check.IsNil)
@@ -895,7 +896,12 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	// Attach the SDK volume as "test-sdk-2" to the workshop after the snapshot
 	// to immitate further SDK configuration changes. These should be gone after
 	// Restore.
-	setup2 := sdk.Setup{Name: "test-sdk-2", Revision: sdk.R(5)}
+	setup2 := sdk.Setup{
+		Name:     "test-sdk-2",
+		Source:   sdk.TrySource,
+		Revision: sdk.R(5),
+		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+	}
 	err = w.AddSdk(f.ctx, setup2)
 	c.Assert(err, check.IsNil)
 	err = f.bd.AttachVolume(f.ctx, "test", volume.Name, sdk.SdkDir(setup2.Name), true)

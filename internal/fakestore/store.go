@@ -94,8 +94,8 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 				continue
 			}
 
-			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision}
-			results = append(results, sdk.SdkResult{Setup: setup, Sha3_384: s.Sha3_384, SdkYAML: s.SdkYAML})
+			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision, Sha3_384: s.Sha3_384}
+			results = append(results, sdk.SdkResult{Setup: setup, SdkYAML: s.SdkYAML})
 		default:
 			return nil, fmt.Errorf("unknown SDK store action")
 		}
@@ -138,7 +138,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		// that the hash and metadata are stored next to the SDK file.
 		// Probably not worth changing the code since they will likely
 		// be pulled from the Store instead of computed client side.
-		digest, err := hashSdk(setup)
+		setup.Sha3_384, err = hashSdk(setup)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +147,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 			return nil, err
 		}
 
-		return &sdk.SdkResult{Setup: setup, Sha3_384: digest, SdkYAML: sdkYaml}, nil
+		return &sdk.SdkResult{Setup: setup, SdkYAML: sdkYaml}, nil
 	}
 
 	r, err := storeSdkReader(ctx, setup)
@@ -186,8 +186,8 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		return nil, err
 	}
 
-	digest := md5ToSha3(hash.Sum(nil))
-	if err := os.WriteFile(target+".sha3-384", []byte(digest+"\n"), 0666); err != nil {
+	setup.Sha3_384 = md5ToSha3(hash.Sum(nil))
+	if err := os.WriteFile(target+".sha3-384", []byte(setup.Sha3_384+"\n"), 0666); err != nil {
 		return nil, err
 	}
 	reverter.Add(func() { _ = os.Remove(target + ".sha3-384") })
@@ -219,7 +219,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		}
 	}
 
-	return &sdk.SdkResult{Setup: setup, Sha3_384: digest, SdkYAML: sdkYaml}, nil
+	return &sdk.SdkResult{Setup: setup, SdkYAML: sdkYaml}, nil
 }
 
 func hashSdk(setup sdk.Setup) (string, error) {

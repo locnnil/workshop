@@ -3,6 +3,8 @@ package workshopstate_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha3"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"os"
@@ -94,8 +96,17 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	defer wfs.Close()
 
 	for _, sd := range sdks {
-		s.writeSDKMetaFile(c, wfs, sd.Name, fmt.Sprintf(sdkTemplate, sd.Name))
-		c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: sd.Name, Source: sdk.StoreSource, Channel: sd.Channel}), check.IsNil)
+		sdkYaml := fmt.Sprintf(sdkTemplate, sd.Name)
+		s.writeSDKMetaFile(c, wfs, sd.Name, sdkYaml)
+		digest := sha3.Sum384([]byte(sdkYaml))
+		setup := sdk.Setup{
+			Name:     sd.Name,
+			Channel:  sd.Channel,
+			Source:   sdk.StoreSource,
+			Revision: sdk.R(1),
+			Sha3_384: hex.EncodeToString(digest[:]),
+		}
+		c.Assert(w.AddSdk(s.ctx, setup), check.IsNil)
 	}
 }
 

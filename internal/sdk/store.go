@@ -2,9 +2,6 @@ package sdk
 
 import (
 	"context"
-	"crypto/sha3"
-	"encoding/hex"
-	"fmt"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -24,8 +21,7 @@ func (s StoreAction) String() string {
 
 type SdkResult struct {
 	Setup
-	Sha3_384 string
-	SdkYAML  string
+	SdkYAML string
 }
 
 type SdkAction struct {
@@ -131,14 +127,5 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 		}
 	}
 
-	source, err := setup.Source.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-
-	sum := sha3.Sum384(fmt.Appendf(nil, "%s:%s:%s:%s", setup.Name, source, setup.Channel, setup.Revision))
-	digest := hex.EncodeToString(sum[:])
-
-	result := &SdkResult{Setup: setup, Sha3_384: digest, SdkYAML: "name: " + setup.Name}
-	return result, nil
+	return &SdkResult{Setup: setup, SdkYAML: "name: " + setup.Name}, nil
 }

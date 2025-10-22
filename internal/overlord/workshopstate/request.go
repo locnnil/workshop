@@ -290,8 +290,13 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 		}
 
 		if volume.Sha3_384 == digest {
-			setup := sdk.Setup{Name: volume.Sdk, Source: sdk.TrySource, Revision: volume.Revision}
-			return &sdk.SdkResult{Setup: setup, Sha3_384: volume.Sha3_384, SdkYAML: volume.Metadata}, nil
+			setup := sdk.Setup{
+				Name:     volume.Sdk,
+				Source:   sdk.TrySource,
+				Revision: volume.Revision,
+				Sha3_384: volume.Sha3_384,
+			}
+			return &sdk.SdkResult{Setup: setup, SdkYAML: volume.Metadata}, nil
 		}
 	}
 
@@ -307,8 +312,13 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 	if err := s.importVolume(ctx, volume, file); err != nil {
 		return nil, err
 	}
-	setup := sdk.Setup{Name: volume.Sdk, Source: sdk.TrySource, Revision: volume.Revision}
-	return &sdk.SdkResult{Setup: setup, Sha3_384: volume.Sha3_384, SdkYAML: volume.Metadata}, nil
+	setup := sdk.Setup{
+		Name:     volume.Sdk,
+		Source:   sdk.TrySource,
+		Revision: volume.Revision,
+		Sha3_384: volume.Sha3_384,
+	}
+	return &sdk.SdkResult{Setup: setup, SdkYAML: volume.Metadata}, nil
 }
 
 func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.VolumeInfo, error) {
@@ -426,8 +436,13 @@ func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, sou
 		return nil, fmt.Errorf("invalid %q SDK: %w", sk, err)
 	}
 
-	setup := sdk.Setup{Name: sk, Source: source, Revision: revision}
-	return &sdk.SdkResult{Setup: setup, Sha3_384: digest, SdkYAML: string(sdkYaml)}, nil
+	setup := sdk.Setup{
+		Name:     sk,
+		Source:   source,
+		Revision: revision,
+		Sha3_384: digest,
+	}
+	return &sdk.SdkResult{Setup: setup, SdkYAML: string(sdkYaml)}, nil
 }
 
 func validateSdkResults(projectId string, file *workshop.File, sdks []sdk.SdkResult) ([]sdk.Setup, error) {

@@ -46,7 +46,13 @@ base: ubuntu@22.04
 slots:
   slot:
     interface: mock-network`
-var psetup = sdk.Setup{Name: "producer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
+
+var psetup = sdk.Setup{
+	Name:     "producer",
+	Channel:  "latest/stable",
+	Revision: sdk.Revision{N: 1},
+	Sha3_384: "ad5e649bf9faebda8ede856fc0ba67c333146698648f36b5b4ee89ace57f17deb4488675687a3bc096e91cc9a1b5a6e4",
+}
 
 var consumer = `name: consumer
 base: ubuntu@22.04
@@ -55,6 +61,13 @@ plugs:
     interface: mock-network
     attribute: one
 `
+
+var csetup = sdk.Setup{
+	Name:     "consumer",
+	Channel:  "latest/stable",
+	Revision: sdk.Revision{N: 1},
+	Sha3_384: "5cb2865793d51841462193fccc18c77d74c6571f5ed45556d94d1b247d4f2090185f9edbaa705faace62f5df11f349af",
+}
 
 var consumerManyPlugs = `name: consumer
 base: ubuntu@22.04
@@ -84,6 +97,13 @@ plugs:
     attribute: one
 `
 
+var csetup2 = sdk.Setup{
+	Name:     "consumer2",
+	Channel:  "latest/stable",
+	Revision: sdk.Revision{N: 1},
+	Sha3_384: "aa5b6a08c6be283b51d5430b21aa3cdc523f63dab50cff2ee13c83a7680bedd44475521af9aeec175105efa97c83a12b",
+}
+
 var conflictingTarget1 = `name: conflict-1
 base: ubuntu@22.04
 plugs:
@@ -91,6 +111,13 @@ plugs:
     interface: mount
     workshop-target: /opt
 `
+
+var ctsetup1 = sdk.Setup{
+	Name:     "conflict-1",
+	Channel:  "latest/stable",
+	Revision: sdk.Revision{N: 1},
+	Sha3_384: "e31b080cd302fdbbe9a5c207dcba039c2ae8e47c208ca5bd51588b5f89dc6679132b31d94d279faebb1fb2823df0068e",
+}
 
 var conflictingTarget2 = `name: conflict-2
 base: ubuntu@22.04
@@ -100,8 +127,12 @@ plugs:
     workshop-target: /opt
 `
 
-var csetup = sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
-var csetup2 = sdk.Setup{Name: "consumer2", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}
+var ctsetup2 = sdk.Setup{
+	Name:     "conflict-2",
+	Channel:  "latest/stable",
+	Revision: sdk.Revision{N: 1},
+	Sha3_384: "7fcc3b8c47bb26bbf8502df69804342be1eace51606c3e2283c720cb41ad165a9fa130947e0066a479b6cc40e213168d",
+}
 
 func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.interfaceManagerSuite.SetUpTest(c)
@@ -387,8 +418,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c *check.C) {
 	// Setup
 	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "conflict-1", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget1},
-		{sdk.Setup{Name: "conflict-2", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget2},
+		{ctsetup1, conflictingTarget1},
+		{ctsetup2, conflictingTarget2},
 	})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, conflictingTarget1, s.prj.ProjectId, "ws")), check.IsNil)
@@ -423,8 +454,8 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 func (s *interfaceHandlersSuite) TestAutoconnectBindResolvesMountConflicts(c *check.C) {
 	// Setup
 	wp, err := s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "conflict-1", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget1},
-		{sdk.Setup{Name: "conflict-2", Channel: "latest/stable", Revision: sdk.R(1)}, conflictingTarget2},
+		{ctsetup1, conflictingTarget1},
+		{ctsetup2, conflictingTarget2},
 	})
 	c.Assert(err, check.IsNil)
 	wp.File.Sdks[1].Plugs = map[string]workshop.PlugOrBind{}

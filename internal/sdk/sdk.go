@@ -20,6 +20,7 @@ type Setup struct {
 	Channel     string     `json:"channel,omitempty"`
 	Source      Source     `json:"source,omitempty"`
 	Revision    Revision   `json:"revision"`
+	Sha3_384    string     `json:"sha3-384"`
 	InstallTime *time.Time `json:"install-time"`
 }
 

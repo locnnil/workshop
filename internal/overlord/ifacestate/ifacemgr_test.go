@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
@@ -69,6 +70,7 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
+// TODO: Consider replacing with SdkResult once SDK structs are finalised.
 type testSdkSetup struct {
 	sdk.Setup
 	yaml string
@@ -130,8 +132,13 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	allsdks := []testSdkSetup{{Setup: sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: sdk.R(1)}, yaml: systemYaml}}
-	allsdks = append(allsdks, sdks...)
+	systemSetup := sdk.Setup{
+		Name:     sdk.System.String(),
+		Source:   sdk.SystemSource,
+		Revision: sdk.R(1),
+		Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+	}
+	allsdks := slices.Insert(sdks, 0, testSdkSetup{Setup: systemSetup, yaml: systemYaml})
 
 	for _, setup := range allsdks {
 		s.mockSdk(c, setup.Name, setup.yaml, setup.Revision)
@@ -165,7 +172,7 @@ plugs:
 `
 
 	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}, consumerYaml},
+		{csetup, consumerYaml},
 	})
 
 	s.state.Lock()
@@ -233,8 +240,8 @@ slots:
   attr2: value2
 `
 	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.R(1)}, consumerYaml},
-		{sdk.Setup{Name: "producer", Channel: "latest/stable", Revision: sdk.R(1)}, producerYaml},
+		{csetup, consumerYaml},
+		{psetup, producerYaml},
 	})
 
 	s.state.Lock()
@@ -276,8 +283,8 @@ slots:
   attr2: value2
 `
 	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.R(1)}, consumerYaml},
-		{sdk.Setup{Name: "producer", Channel: "latest/stable", Revision: sdk.R(1)}, producerYaml},
+		{csetup, consumerYaml},
+		{psetup, producerYaml},
 	})
 
 	s.state.Lock()

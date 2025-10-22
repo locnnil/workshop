@@ -38,7 +38,13 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	i.state.Lock()
 	defer i.state.Unlock()
 
-	rec := sdk.Setup{Name: "sdk", Channel: "latest/stable"}
+	rec := sdk.Setup{
+		Name:     "sdk",
+		Channel:  "latest/stable",
+		Source:   sdk.TrySource,
+		Revision: sdk.R(42),
+		Sha3_384: "e1cfa86c92b87afc44a68c2f8f7c3b62b8dc926aa99234ab8ac2e94e242736c05c80a431041a686f3f2bcb5c648676ea",
+	}
 
 	task := sdkstate.Retrieve(i.state, rec)
 
@@ -46,5 +52,9 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	c.Assert(task.Get("sdk-setup", &s), check.IsNil)
 	c.Check(s, check.DeepEquals, rec)
 	c.Check(task.Kind(), check.Equals, "retrieve-sdk")
-	c.Check(task.Summary(), check.Equals, "Retrieve \"sdk\" SDK from channel \"latest/stable\"")
+	c.Check(task.Summary(), check.Equals, `Retrieve "sdk" SDK`)
+
+	rec.Source = sdk.StoreSource
+	task = sdkstate.Retrieve(i.state, rec)
+	c.Check(task.Summary(), check.Equals, `Retrieve "sdk" SDK from channel "latest/stable"`)
 }

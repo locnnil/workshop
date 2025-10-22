@@ -21,6 +21,8 @@ package daemon
 
 import (
 	"bytes"
+	"crypto/sha3"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -110,7 +112,16 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	defer wfs.Close()
 	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
 
-	err = wp.AddSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Source: info.Source, Revision: info.Revision})
+	digest := sha3.Sum384([]byte(yaml))
+
+	setup := sdk.Setup{
+		Name:     info.Name,
+		Channel:  info.Channel,
+		Source:   info.Source,
+		Revision: info.Revision,
+		Sha3_384: hex.EncodeToString(digest[:]),
+	}
+	err = wp.AddSdk(s.ctx, setup)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)

@@ -29,12 +29,17 @@ var (
 const SystemSdkDigest = "5891a3a98ed62339c5c24ded56de52a18873bd73ba8e1e03725376e7fc89c7560944b5fb7260c288b17e115e538d7da6"
 
 func SystemSdkResult() (*sdk.SdkResult, error) {
-	setup := sdk.Setup{Name: "system", Source: sdk.SystemSource, Revision: SystemSdkRevision}
+	setup := sdk.Setup{
+		Name:     "system",
+		Source:   sdk.SystemSource,
+		Revision: SystemSdkRevision,
+		Sha3_384: SystemSdkDigest,
+	}
 	sdkYaml, err := SystemSdkFs.ReadFile("meta/sdk.yaml")
 	if err != nil {
 		return nil, err
 	}
-	return &sdk.SdkResult{Setup: setup, Sha3_384: SystemSdkDigest, SdkYAML: string(sdkYaml)}, nil
+	return &sdk.SdkResult{Setup: setup, SdkYAML: string(sdkYaml)}, nil
 }
 
 func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {

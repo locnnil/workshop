@@ -191,7 +191,13 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
-	newSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
+	newSdk := sdk.Setup{
+		Name:        "test",
+		Channel:     "latest/stable",
+		Revision:    sdk.R(2),
+		Sha3_384:    "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		InstallTime: &s.installTime,
+	}
 	s.mockSdk(c, "test", sdkYaml, sdk.R(2))
 
 	t := s.state.NewTask("fake-task", "retrieve")
@@ -231,7 +237,13 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Setup{Name: "test-2", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
+	newSdk := sdk.Setup{
+		Name:        "test-2",
+		Channel:     "latest/stable",
+		Revision:    sdk.R(2),
+		Sha3_384:    "335783e65660ee5cfeb96b1323585f0c2ad006582c3c3dde89dd62a9f081c24b81e4972c8ce87787531c85e0683479a5",
+		InstallTime: &s.installTime,
+	}
 	s.mockSdk(c, "test-2", sdkYaml, sdk.R(2))
 
 	t := s.state.NewTask("fake-task", "retrieve")
@@ -272,7 +284,12 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	newSdk := sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision}
+	newSdk := sdk.Setup{
+		Name:     sdk.System.String(),
+		Source:   sdk.SystemSource,
+		Revision: system.SystemSdkRevision,
+		Sha3_384: system.SystemSdkDigest,
+	}
 	t := s.state.NewTask("retrieve-sdk", "retrieve")
 	t.Set("sdk-setup", newSdk)
 
@@ -325,7 +342,13 @@ func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
 
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
-	testSdk := sdk.Setup{Name: "test", Channel: "latest/stable", Revision: sdk.Revision{N: 1}, InstallTime: &s.installTime}
+	testSdk := sdk.Setup{
+		Name:        "test",
+		Channel:     "latest/stable",
+		Revision:    sdk.R(1),
+		Sha3_384:    "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		InstallTime: &s.installTime,
+	}
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
 	t := s.state.NewTask("fake-task", "retrieve")
@@ -364,7 +387,13 @@ func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 	s.mockSdk(c, "test-broken", sdkYamlViolatesPolicy, sdk.R(2))
 
-	testSdk := sdk.Setup{Name: "test-broken", Channel: "latest/stable", Revision: sdk.Revision{N: 2}, InstallTime: &s.installTime}
+	testSdk := sdk.Setup{
+		Name:        "test-broken",
+		Channel:     "latest/stable",
+		Revision:    sdk.R(2),
+		Sha3_384:    "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
+		InstallTime: &s.installTime,
+	}
 
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", testSdk)
@@ -414,7 +443,12 @@ func (s *sdkStateSuite) TestDoUnregisterSdk(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "...")
@@ -459,7 +493,12 @@ func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
 	defer s.state.Unlock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("fake-task", "retrieve")
 	t.Set("sdk-setup", newSdk)
 	t1 := s.state.NewTask("install-sdk", "...")
@@ -493,7 +532,13 @@ func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
 func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("unregister-sdk", "...")
 	t.Set("sdk-retrieve-task", t.ID())
 	t.Set("sdk-setup", newSdk)
@@ -522,7 +567,13 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("install-sdk", "...")
 	t.Set("sdk-retrieve-task", t.ID())
 	t.Set("sdk-setup", newSdk)
@@ -554,7 +605,13 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
 func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("install-sdk", "...")
 	t.Set("sdk-retrieve-task", t.ID())
 	t.Set("sdk-setup", newSdk)
@@ -580,7 +637,13 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C
 func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("unregister-sdk", "...")
 	t.Set("sdk-retrieve-task", t.ID())
 	t.Set("sdk-setup", newSdk)
@@ -611,7 +674,13 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("unregister-sdk", "...")
 	t.Set("sdk-retrieve-task", t.ID())
 	t.Set("sdk-setup", newSdk)
@@ -648,7 +717,13 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePresent(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 	t := s.state.NewTask("unregister-sdk", "...")
 	t.Set("sdk-retrieve-task", t.ID())
 	t.Set("sdk-setup", newSdk)
@@ -705,7 +780,13 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	newSdk := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.StoreSource}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 
 	t1 := s.state.NewTask("unregister-sdk", "t1")
 	t1.Set("sdk-retrieve-task", t1.ID())
@@ -749,7 +830,13 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 	s.state.Lock()
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
-	sdkProject := sdk.Setup{Name: "test", Revision: sdk.Revision{N: 1}, Source: sdk.ProjectSource}
+	sdkProject := sdk.Setup{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Source:   sdk.ProjectSource,
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}
 
 	t1 := s.state.NewTask("unregister-sdk", "t1")
 	t1.Set("sdk-retrieve-task", t1.ID())

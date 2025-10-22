@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"context"
 	"crypto/sha3"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -438,16 +437,45 @@ sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
 `
 )
 
+// TODO: Consider replacing with SdkResult once SDK structs are finalised.
 type testSdk struct {
 	s    sdk.Setup
 	meta string
 }
 
 var apiSuiteSdks = map[string]testSdk{
-	"test-sdk":       {s: sdk.Setup{Name: "test-sdk", Revision: sdk.R(1)}, meta: testsdk},
-	"test-sdk-2":     {s: sdk.Setup{Name: "test-sdk-2", Revision: sdk.R(1)}, meta: testsdk2},
-	"mount-conflict": {s: sdk.Setup{Name: "mount-conflict", Revision: sdk.R(1)}, meta: mount_conflict},
-	"test-sdk-3":     {s: sdk.Setup{Name: "test-sdk-3", Revision: sdk.R(1)}, meta: testsdk3},
+	"test-sdk": {
+		s: sdk.Setup{
+			Name:     "test-sdk",
+			Revision: sdk.R(1),
+			Sha3_384: "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
+		},
+		meta: testsdk,
+	},
+	"test-sdk-2": {
+		s: sdk.Setup{
+			Name:     "test-sdk-2",
+			Revision: sdk.R(1),
+			Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+		},
+		meta: testsdk2,
+	},
+	"mount-conflict": {
+		s: sdk.Setup{
+			Name:     "mount-conflict",
+			Revision: sdk.R(1),
+			Sha3_384: "b2bd882ceec6746f00ea2b6cbb6c2073d46d5844b2a3a92a573dd6ea02847a98085b7a7b192d7e24c3f87ba01bbf554e",
+		},
+		meta: mount_conflict,
+	},
+	"test-sdk-3": {
+		s: sdk.Setup{
+			Name:     "test-sdk-3",
+			Revision: sdk.R(1),
+			Sha3_384: "0b4b94c4685db0970a15d294ce8e0683b5c6957b08a94ab8a3b14d3aac90f06a4d2cc1240dad04e5be0fe358276e64fc",
+		},
+		meta: testsdk3,
+	},
 }
 
 func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
@@ -986,8 +1014,7 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 		setup := apiSuiteSdks[act.Name].s
 		setup.Channel = act.Channel
 		sdkYaml := apiSuiteSdks[act.Name].meta
-		digest := sha3.Sum384([]byte(sdkYaml))
-		result = append(result, sdk.SdkResult{Setup: setup, Sha3_384: hex.EncodeToString(digest[:]), SdkYAML: sdkYaml})
+		result = append(result, sdk.SdkResult{Setup: setup, SdkYAML: sdkYaml})
 	}
 	return result, nil
 }
@@ -1644,6 +1671,8 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 
 		c.Assert(w.Sdks, check.HasLen, len(wantws.sdks))
 		for _, sk := range wantws.sdks {
+			sk.Sha3_384 = w.Sdks[sk.Name].Sha3_384
+			c.Check(sk.Sha3_384, check.Not(check.Equals), "")
 			c.Assert(w.Sdks[sk.Name], check.DeepEquals, sk)
 		}
 
