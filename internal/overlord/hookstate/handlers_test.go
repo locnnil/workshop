@@ -88,7 +88,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "new", 0, hookstate.SetupBase)
+	t1 := hookstate.Hook(s.state, "ws", "new", 0, hookstate.SetupBase)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -111,7 +111,7 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 func (s *hookSuite) TestExecSetupProject(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.SetupProject)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.SetupProject)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -134,7 +134,7 @@ func (s *hookSuite) TestExecSetupProject(c *check.C) {
 func (s *hookSuite) TestExecSaveState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.SaveState)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -186,7 +186,7 @@ func (s *hookSuite) TestExecSaveState(c *check.C) {
 func (s *hookSuite) TestExecRestoreState(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.RestoreState)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.RestoreState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -229,7 +229,7 @@ func (s *hookSuite) TestExecRestoreState(c *check.C) {
 func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.SaveState)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.SaveState)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -276,7 +276,7 @@ func (s *hookSuite) TestExecHandlesFailedHook(c *check.C) {
 func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 100*time.Millisecond, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 100*time.Millisecond, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -316,7 +316,7 @@ func (s *hookSuite) TestExecHandlesHookTimedout(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -340,7 +340,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerHappyPath(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
@@ -376,7 +376,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerUnhappyPath(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 	// The context handler will return an error that must be the final error of
 	// the task.
 	s.mockHandler.ErrorError = true
@@ -415,7 +415,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerErrorFails(c *check.C) {
 func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 	s.mockHandler.IgnoreOriginalErr = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -451,7 +451,7 @@ func (s *hookSuite) TestExecEnsureContextHandlerIgnoresError(c *check.C) {
 func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 	s.mockHandler.BeforeError = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -479,7 +479,7 @@ func (s *hookSuite) TestHookTaskHandlerBeforeError(c *check.C) {
 func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 	s.mockHandler.DoneError = true
 
 	chg := s.state.NewChange("sample", "...")
@@ -505,7 +505,7 @@ func (s *hookSuite) TestHookTaskHandlerDoneError(c *check.C) {
 func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 	s.hookmgr.Register(regexp.MustCompile("^fake-*"), func(context *hookstate.Context) hookstate.Handler {
 		return s.mockHandler
 	})
@@ -555,7 +555,7 @@ func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 func (s *hookSuite) TestExecCombinedHookOutputStoredInLogs(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
-	t1 := hookstate.Hook(s.state, s.project.ProjectId, "ws", "one", 0, hookstate.FakeHook)
+	t1 := hookstate.Hook(s.state, "ws", "one", 0, hookstate.FakeHook)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t1)
