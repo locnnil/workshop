@@ -39,6 +39,10 @@ Configure your workshop
 Configure your workshop to accept SSH connections
 by adding a plug, a slot, and an action to upload your public SSH key.
 
+.. @artefact tunnel interface
+.. @artefact interface plug
+.. @artefact system SDK
+
 #. First, add a tunnel interface plug for the system SDK
    in the workshop definition:
 
@@ -60,6 +64,8 @@ by adding a plug, a slot, and an action to upload your public SSH key.
 #. Next, add a corresponding slot;
    you can graft it onto an existing SDK
    or add it with sketching:
+
+.. @artefact interface slot
 
    .. code-block:: yaml
 
