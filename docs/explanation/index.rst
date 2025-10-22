@@ -27,7 +27,8 @@ and how they work together to provide isolated development environments.
    architecture/index
 
 
-- :doc:`architecture/installation`
+- :doc:`architecture/components`
+- :doc:`architecture/runtime-behavior`
 
 
 Workshops and projects
