@@ -38,7 +38,7 @@ func (b *Backend) GetBase(ctx context.Context, base string) (string, error) {
 	}
 	defer imageServer.Disconnect()
 
-	alias, _, err := imageServer.GetImageAliasType(string(api.InstanceTypeContainer), source.Alias)
+	alias, _, err := imageServer.GetImageAliasType(source.ImageType, source.Alias)
 	if err != nil {
 		return "", fmt.Errorf("base %q not found: %w", base, err)
 	}
@@ -266,7 +266,7 @@ func lxdConnectionArgs() (*lxd.ConnectionArgs, error) {
 func connectImageServer(source api.ImageSource) (lxd.ImageServer, error) {
 	switch source.Protocol {
 	case "simplestreams":
-		conn, err := ConnectSimpleStreams(source.Server, nil)
+		conn, err := ConnectSimpleStreams(source.Server, &lxd.ConnectionArgs{CachePath: dirs.BaseDownloads})
 		if err != nil {
 			return nil, fmt.Errorf("image server is not available: %w", err)
 		}
