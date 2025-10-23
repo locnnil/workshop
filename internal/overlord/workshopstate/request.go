@@ -515,6 +515,9 @@ func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]str
 
 		hook := hookstate.Hook(st, setup.Name, 0, hookstate.SetupBase)
 		addTask(hook)
+
+		snapshot := sdkstate.Snapshot(st, setup.Name)
+		addTask(snapshot)
 	}
 	return all
 }

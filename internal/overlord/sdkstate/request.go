@@ -43,3 +43,9 @@ func Unregister(st *state.State, setup sdk.Setup) *state.Task {
 	unregister.Set("sdk-setup", setup)
 	return unregister
 }
+
+func Snapshot(st *state.State, sdk string) *state.Task {
+	snapshot := st.NewTask("snapshot-sdk", fmt.Sprintf("Snapshot %q SDK installation", sdk))
+	snapshot.Set("sdk", sdk)
+	return snapshot
+}

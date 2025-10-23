@@ -107,11 +107,6 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		}
 
 		return h.executeHook(ctx, task, w, &hook, execArgs)
-	case SetupBase:
-		if err = h.executeHook(ctx, task, w, &hook, execArgs); err != nil {
-			return err
-		}
-		return h.backend.Snapshot(ctx, w, hook.Sdk)
 	case SetupProject:
 		execArgs.Command = []string{
 			"sudo",
