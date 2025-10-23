@@ -7,6 +7,8 @@
 How to add actions to your workshop
 ===================================
 
+.. @tests made redundant by tests/main/exec/task.yaml
+
 This guide explains how to add actions to an existing workshop
 to automate mundane tasks and enhance its functionality
 without modifying the SDKs themselves

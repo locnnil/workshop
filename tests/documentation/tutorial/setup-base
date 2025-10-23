@@ -1,2 +1,0 @@
-snap install --classic go
-echo "PATH=/home/workshop/go/bin:$PATH" | tee -a /home/workshop/.profile

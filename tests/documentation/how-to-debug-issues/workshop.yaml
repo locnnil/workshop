@@ -1,5 +1,0 @@
-name: dev-volatile
-base: ubuntu@22.04
-sdks:
-  - name: go
-    channel: latest/edge # This should cause failure

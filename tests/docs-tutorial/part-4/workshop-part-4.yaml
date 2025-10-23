@@ -1,0 +1,4 @@
+name: nimble
+base: ubuntu@22.04
+sdks:
+  - name: try-ollama

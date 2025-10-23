@@ -64,20 +64,29 @@ EOF
 }
 
 function setup_workshop() {
-    snap install --dangerous --classic /workshop/tests/workshop_*.snap
-    snap set workshop store.url=http://localhost:8080/storage/v1/
+    local use_real_store="${1:-false}"
+
+    snap install --dangerous --classic /workshop/tests/*.snap
+
+    if [ "$use_real_store" != "true" ]; then
+        snap set workshop store.url=http://localhost:8080/storage/v1/
+        start_sdk_store
+    fi
+
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
     snap alias workshop.sdk sdk
     snap restart workshop
 
     # required to keep /lib/systemd/systemd --user running for a regular user
     loginctl enable-linger ubuntu
-
-    start_sdk_store
 }
 
 function cleanup_workshop() {
-    stop_sdk_store
+    local use_real_store="${1:-false}"
+
+    if [ "$use_real_store" != "true" ]; then
+        stop_sdk_store
+    fi
 
     snap remove workshop --purge
     snap remove sdkcraft --purge

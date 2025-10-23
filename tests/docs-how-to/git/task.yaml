@@ -2,6 +2,9 @@ summary: Test 'How to use workshops with Git' to ensure it's operational
 execute: |
   . "$TESTSLIB"/utils.sh
   PROJECT=$(pwd)
+  lxc storage set default size=30GB
+
+  # Initialization
 
   git config --global user.email "wsuser@example.com"
   git config --global user.name "Workshop User"
@@ -13,13 +16,18 @@ execute: |
   chown -R ubuntu:ubuntu $PROJECT/original
   workshop_exec --project "$PROJECT/original" exec dev -- go build -x main.go
   workshop_exec --project "$PROJECT/original" remove
-  ./main
+  $PROJECT/original/main
   workshop_exec --project "$PROJECT/original" launch
+  echo ".workshop.lock" >> "$PROJECT/original/.gitignore"
   git config --global --add safe.directory "$PROJECT/original"
+
+
+  # Use worktrees
+
   git worktree add $PROJECT/hotfix
   cd $PROJECT/hotfix/
-  sed -i "s/22\.04/20.04/g" workshop.yaml
-  sed -i "s/latest/foxy/g" workshop.yaml
+  sed -i "s/22\.04/24.04/g" workshop.yaml
+  sed -i "s/jammy/noble/g" workshop.yaml
   workshop_exec --project "$PROJECT/hotfix" launch
   sleep 1
   git commit -am "solve problem with hotfix"

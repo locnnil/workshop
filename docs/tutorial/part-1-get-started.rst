@@ -387,6 +387,7 @@ We'll use the :samp:`tinyllama` model, which is small and quick to download:
 This downloads and then runs the :samp:`tinyllama` model.
 The model will be stored in the mounted :file:`models/` directory,
 so it persists between workshop refreshes.
+Quit the Ollama console by pressing :samp:`Ctrl+D`.
 
 You can also list the available models:
 

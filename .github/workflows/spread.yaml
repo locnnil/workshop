@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04-64]
-        suite: [main, documentation, integration]
+        suite: [main/, docs-how-to/, docs-tutorial/part-1, docs-tutorial/part-2, docs-tutorial/part-3, docs-tutorial/part-4, integration/]
     runs-on: [self-hosted, linux, jammy, x64, xlarge]
     steps:
       - name: Install LXD
@@ -81,10 +81,15 @@ jobs:
       - name: Run spread
         run: |
           mkdir ${{ github.workspace }}.cover
-          spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}/
+          spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}
+      - name: Trim trailing slash from matrix.suite
+        id: sanitize
+        run: |
+          suite_name="${{ matrix.suite }}"
+          sanitized_name="${suite_name%/}"
       - name: Upload Coverage
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-${{matrix.suite}}
+          name: code-coverage-${{ steps.sanitize.outputs.sanitized_name }}
           path: ${{ github.workspace }}.cover/lxd:ubuntu-24.04:tests/
           if-no-files-found: ignore

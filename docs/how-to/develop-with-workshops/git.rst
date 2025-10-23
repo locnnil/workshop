@@ -7,6 +7,8 @@
 How to use workshops with Git
 =============================
 
+.. @tests in tests/documentation/how-to-git/task.yaml
+
 .. @artefact workshop (container)
 
 Workshops are designed to be used in common development ecosystems,

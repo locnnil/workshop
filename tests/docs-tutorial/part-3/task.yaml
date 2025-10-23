@@ -1,0 +1,61 @@
+summary: Run tutorial part 3 commands to ensure it's operational
+restore: |
+  rm -rf ~/ollama-python-project ~/.ollama
+execute: |
+  . "$TESTSLIB"/utils.sh
+  lxc storage set default size=30GB
+
+  mkdir ollama-python-project/
+
+  chown -R ubuntu:ubuntu ollama-python-project/
+  cd ollama-python-project/
+  git init 2>/dev/null || true
+  cp ../workshop-part-3.yaml workshop.yaml
+  workshop_exec launch && zfs list -r workshop
+
+  # ----------------------------------------------------------------------------
+
+  # Part 3: Sketch SDKs
+
+
+  ## Start sketching
+
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  1/^hooks:$/a
+    setup-project: |
+      source /var/lib/workshop/sdk/jupyter/venv/bin/activate
+      pip install jupyter-console
+  .
+  wq
+  EOF
+
+  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
+
+  # workshop_exec exec nimble -- "source /var/lib/workshop/sdk/jupyter/venv/bin/activate && jupyter console -h"
+
+
+  ## Stash and restore
+
+  workshop_exec sketch-sdk --stash
+  workshop_exec sketch-sdk --restore
+
+
+  ## Explore sketches
+
+  workshop_exec sketches
+
+
+  ## Convert to in-project SDK
+
+  workshop_exec sketch-sdk --eject --name console
+  [ -f .workshop/console/sdk.yaml ]
+
+  git config --global --add safe.directory '*'
+  git add .workshop/
+  git commit -m "Add jupyter-console in-project SDK"
+
+
+  ## Clean up
+
+  workshop_exec sketch-sdk --remove
+  workshop_exec remove

@@ -7,6 +7,8 @@
 How to fix plug conflicts with binding
 ======================================
 
+.. @tests made redundant by tests/main/interface-mount/task.yaml, tests/main/remount/task.yaml
+
 This guide shows how to bind plugs for the :samp:`mount` interface,
 but the same process works for any other interface that supports bindings.
 

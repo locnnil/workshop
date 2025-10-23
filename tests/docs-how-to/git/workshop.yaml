@@ -1,5 +1,5 @@
-name: nimble
+name: dev
 base: ubuntu@22.04
 sdks:
   - name: test-sdk-go
-    channel: latest/stable
+    channel: jammy/stable

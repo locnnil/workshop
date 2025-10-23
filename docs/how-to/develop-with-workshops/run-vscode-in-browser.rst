@@ -7,6 +7,8 @@
 How to run VS Code in your browser
 ==================================
 
+.. @tests redundant, should be covered by SDK itself
+
 .. @artefact workshop (container)
 
 This guide explains how to use Visual Studio Code with Workshop 

@@ -1,14 +1,27 @@
 summary: Test 'How to debug issues in workshops' to ensure it's operational
 execute: |
   . "$TESTSLIB"/utils.sh
-  
+
+  # List tasks and changes
+
   echo "Expecting launch to fail..."
   workshop_exec launch || true
   echo "Expecting refresh to fail..."
   workshop_exec refresh || true
+  workshop_exec tasks
+  workshop_exec changes
+  workshop_exec tasks $(workshop changes | awk 'END{print $1}')
+
+
+  ## Wait on error
+
   workshop_exec refresh --wait-on-error || true
   echo "Skipping interactive exercises with --wait-on-error..."
   workshop_exec refresh --continue || true
   workshop_exec refresh --abort || true
-  workshop_exec changes
-  workshop_exec tasks $(workshop changes | awk 'END{print $1}')
+
+
+  ## List and suppress warnings
+
+  workshop_exec warnings
+  workshop_exec okay || true

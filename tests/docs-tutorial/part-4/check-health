@@ -1,0 +1,6 @@
+output=$(sudo -u workshop --login ollama list 2>&1)
+if [[ $? -eq 0 ]]; then
+  workshopctl set-health okay
+  exit 0
+fi
+workshopctl set-health error "$output"

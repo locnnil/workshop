@@ -1,0 +1,48 @@
+summary: Run tutorial part 2 commands to ensure it's operational
+restore: |
+  rm -rf ~/ollama-python-project ~/.ollama
+execute: |
+  . "$TESTSLIB"/utils.sh
+  lxc storage set default size=30GB
+
+  mkdir ollama-python-project/
+
+  chown -R ubuntu:ubuntu ollama-python-project/
+  cd ollama-python-project/
+  cp ../workshop-part-2.yaml workshop.yaml
+  workshop_exec launch && zfs list -r workshop
+
+  # ----------------------------------------------------------------------------
+
+  # Part 2: Interfaces
+
+
+  ## Manage connections
+
+  workshop_exec connections
+
+  workshop_exec disconnect nimble/ollama:models
+  workshop_exec connections
+  workshop_exec connect nimble/ollama:models :mount
+  workshop_exec connections
+
+  mkdir -p ~/.ollama/models
+  workshop_exec remount nimble/ollama:models ~/.ollama/models
+  workshop_exec info
+
+
+  ## Add plugs, slots
+
+  cat >> workshop.yaml <<EOF
+    - name: jupyter
+      channel: 22.04/edge
+    - name: system
+      plugs:
+        jupyter:
+          interface: tunnel
+          endpoint: 127.0.0.1:8989
+  EOF
+  workshop_exec refresh && zfs list -r workshop
+  workshop_exec connections --all
+  workshop_exec info
+  # curl http://127.0.0.1:8989/lab?

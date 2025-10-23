@@ -8,6 +8,8 @@
 Tutorial
 ========
 
+.. @tests in tests/documentation/tutorial/task.yaml
+
 Anyone new to |ws_markup| should start here.
 
 The tutorial is broken into four main parts:

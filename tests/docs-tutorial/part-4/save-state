@@ -1,0 +1,2 @@
+#!/usr/bin/bash
+sudo -u workshop printenv | grep OLLAMA | tee "$SDK_STATE_DIR"/env-vars

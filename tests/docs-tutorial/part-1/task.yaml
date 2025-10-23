@@ -1,0 +1,65 @@
+summary: Run tutorial part 1 commands to ensure it's operational
+restore: |
+  rm -rf ~/ollama-python-project
+execute: |
+  . "$TESTSLIB"/utils.sh
+  lxc storage set default size=30GB
+
+  # ----------------------------------------------------------------------------
+
+  # Part 1: Get Started
+
+
+  ## Define, add SDKs
+
+  mkdir ollama-python-project/
+
+  chown -R ubuntu:ubuntu ollama-python-project/
+  cd ollama-python-project/
+  git init 2>/dev/null || true
+  cp ../workshop-part-1.yaml workshop.yaml
+
+  workshop_exec list
+
+
+  ## Launch, start, and stop
+
+  workshop_exec launch && zfs list -r workshop
+  workshop_exec info
+  echo ".workshop.lock" >> .gitignore
+
+  workshop_exec stop
+  workshop_exec start
+
+
+  ## Refresh a workshop
+
+  sed -i "s/24.04/22.04/g" workshop.yaml
+  workshop_exec refresh && zfs list -r workshop
+
+
+  ## Execute commands
+
+  workshop_exec exec nimble -- ollama pull tinyllama  # Non-interactive version
+  workshop_exec exec nimble -- ollama list
+
+
+  ## Interactive shell
+
+  workshop_exec exec nimble bash -c "pwd"  # Non-interactive version
+  workshop_exec exec nimble bash -c "lsb_release -a"
+  workshop_exec exec nimble bash -c "echo \$USER"
+
+
+  ## Project directory updates
+
+  touch created_outside.txt
+  workshop_exec exec nimble -- ls /project/
+  workshop_exec exec nimble bash -c "[ -f \"created_outside.txt\" ]"
+  workshop_exec exec nimble -- touch /project/created_inside.txt
+  [ -f "created_inside.txt" ]
+
+
+  ## Track changes and tasks
+
+  workshop_exec tasks $(workshop_exec changes | awk 'END{print $1}')

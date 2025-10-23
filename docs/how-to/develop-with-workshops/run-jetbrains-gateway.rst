@@ -7,6 +7,8 @@
 How to use JetBrains Gateway with Workshop
 ==========================================
 
+.. @tests fall outside of current test coverage capabilities
+
 `JetBrains Gateway
 <https://www.jetbrains.com/remote-development/gateway/>`_
 allows you to connect to remote development environments

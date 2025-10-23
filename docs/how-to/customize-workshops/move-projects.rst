@@ -7,6 +7,8 @@
 How to move projects around
 ===========================
 
+.. @tests fall outside of current test coverage capabilities
+
 .. @artefact project
 
 It may be unclear how workshops react to everyday operations

@@ -1,0 +1,5 @@
+name: nimble
+base: ubuntu@24.04
+sdks:
+  - name: ollama
+    channel: 24.04/edge
