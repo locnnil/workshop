@@ -481,7 +481,7 @@ func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string
 	return retrieve, retrieveMap
 }
 
-func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
+func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
 	all := state.NewTaskSet()
 
 	var prev *state.Task
@@ -513,7 +513,7 @@ func installSdks(st *state.State, w string, sdks []sdk.Setup, retrieveTasks map[
 		register := sdkstate.Register(st, setup.Name, retrieveTask)
 		addTask(register)
 
-		hook := hookstate.Hook(st, w, setup.Name, 0, hookstate.SetupBase)
+		hook := hookstate.Hook(st, setup.Name, 0, hookstate.SetupBase)
 		addTask(hook)
 	}
 	return all
@@ -606,7 +606,7 @@ func launch(st *state.State, file *workshop.File, fileText string, fingerprint s
 	create := launchWorkshop(st, file.Name, fileText, fingerprint)
 	addTaskSet(create)
 
-	install := installSdks(st, file.Name, sdks, rmap)
+	install := installSdks(st, sdks, rmap)
 	addTaskSet(install)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
@@ -615,10 +615,10 @@ func launch(st *state.State, file *workshop.File, fileText string, fingerprint s
 	connect := autoconnectSdks(st, file.Name, sdks)
 	addTaskSet(connect)
 
-	setupProject := runHooks(st, file.Name, sdks, 0, hookstate.SetupProject)
+	setupProject := runHooks(st, sdks, 0, hookstate.SetupProject)
 	addTaskSet(setupProject)
 
-	checkHealth := runHooks(st, file.Name, sdks, checkHealthTimeout, hookstate.CheckHealth)
+	checkHealth := runHooks(st, sdks, checkHealthTimeout, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	for _, task := range all.Tasks() {
@@ -890,7 +890,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 
 	// Call save-state hooks for the SDKs that are installed and will not be
 	// removed after this refresh.
-	saveState := runHooks(st, file.Name, plan.IntactOrRefresh(), 0, hookstate.SaveState)
+	saveState := runHooks(st, plan.IntactOrRefresh(), 0, hookstate.SaveState)
 	addTaskSet(saveState)
 
 	disconnect := disconnectSdks(st, plan.IntactOrRemove())
@@ -912,7 +912,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	addTaskSet(register)
 
 	// Install updated SDKs to the rebuilt workshop.
-	install := installSdks(st, file.Name, plan.InstallOrRefresh(), rmap)
+	install := installSdks(st, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", w.Project.Path))
@@ -921,13 +921,13 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	connect := autoconnectSdks(st, file.Name, plan.InstallIntactOrRefresh())
 	addTaskSet(connect)
 
-	setupProject := runHooks(st, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.SetupProject)
+	setupProject := runHooks(st, plan.InstallIntactOrRefresh(), 0, hookstate.SetupProject)
 	addTaskSet(setupProject)
 
-	restoreState := runHooks(st, file.Name, plan.IntactOrRefresh(), 0, hookstate.RestoreState)
+	restoreState := runHooks(st, plan.IntactOrRefresh(), 0, hookstate.RestoreState)
 	addTaskSet(restoreState)
 
-	checkHealth := runHooks(st, file.Name, plan.InstallIntactOrRefresh(), 0, hookstate.CheckHealth)
+	checkHealth := runHooks(st, plan.InstallIntactOrRefresh(), 0, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	length := len(refresh.Tasks())
@@ -1040,11 +1040,11 @@ func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	return disconnSet
 }
 
-func runHooks(st *state.State, w string, installed []sdk.Setup, timeout time.Duration, hooktype hookstate.WorkshopHookType) *state.TaskSet {
+func runHooks(st *state.State, installed []sdk.Setup, timeout time.Duration, hooktype hookstate.WorkshopHookType) *state.TaskSet {
 	hooks := state.NewTaskSet()
 	prev := (*state.Task)(nil)
 	for _, sk := range installed {
-		hook := hookstate.Hook(st, w, sk.Name, timeout, hooktype)
+		hook := hookstate.Hook(st, sk.Name, timeout, hooktype)
 		hooks.AddTask(hook)
 		if prev != nil {
 			hook.WaitFor(prev)

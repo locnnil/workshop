@@ -48,7 +48,7 @@ func (s *healthSuite) SetUpTest(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	task := s.state.NewTask("test-task", "my test task")
-	setup := &hookstate.HookSetup{Workshop: "ws", Sdk: "test-sdk", HookType: hookstate.CheckHealth}
+	setup := &hookstate.HookSetup{Sdk: "test-sdk", HookType: hookstate.CheckHealth}
 
 	ctx, err := hookstate.NewContext(task, s.state, setup, s.mockHandler, "")
 	c.Assert(err, check.IsNil)
@@ -138,7 +138,7 @@ func (s *healthSuite) TestMessageTruncation(c *check.C) {
 }
 
 func (s *healthSuite) TestRegularRunIncorrectHook(c *check.C) {
-	setup := &hookstate.HookSetup{Workshop: "ws", Sdk: "test-sdk", HookType: hookstate.SetupBase}
+	setup := &hookstate.HookSetup{Sdk: "test-sdk", HookType: hookstate.SetupBase}
 	task, _ := s.mockContext.Task()
 	ctx, err := hookstate.NewContext(task, s.state, setup, s.mockHandler, "")
 	c.Assert(err, check.IsNil)

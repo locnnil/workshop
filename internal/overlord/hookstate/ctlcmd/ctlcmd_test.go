@@ -47,7 +47,7 @@ func (s *ctlcmdSuite) SetUpTest(c *C) {
 	defer state.Unlock()
 
 	task := state.NewTask("test-task", "my test task")
-	setup := &hookstate.HookSetup{Workshop: "ws", Sdk: "test-sdk", HookType: hookstate.SetupBase}
+	setup := &hookstate.HookSetup{Sdk: "test-sdk", HookType: hookstate.SetupBase}
 
 	var err error
 	s.mockContext, err = hookstate.NewContext(task, task.State(), setup, handler, "")
