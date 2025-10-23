@@ -519,7 +519,7 @@ The :samp:`jupyter` SDK shows this pattern:
    plugs:
      venv:
       interface: mount
-       workshop-target: $SDK/venv
+      workshop-target: $SDK/venv
 
 
 To establish the connection between these SDKs,
