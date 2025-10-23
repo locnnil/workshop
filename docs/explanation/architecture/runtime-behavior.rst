@@ -121,7 +121,7 @@ Workshop launch flow:
       through daemon processing, LXD container creation, SDK installation,
       and interface connection establishment.
   :align: center
-  :config: {"theme":"neutral"}
+  :zoom:
 
   sequenceDiagram
     participant CLI

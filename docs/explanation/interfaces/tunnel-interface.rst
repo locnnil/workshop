@@ -110,7 +110,6 @@ clients on the host can access services inside the workshop:
    :alt: Exposing SDK services to the host system
    :caption: Exposing SDK services to the host system
    :align: center
-   :config: {"theme":"neutral"}
 
    flowchart LR
      subgraph Host
@@ -137,7 +136,6 @@ clients in the workshop can access services on the host:
    :alt: Sharing system services with a workshop
    :caption: Sharing system services with a workshop
    :align: center
-   :config: {"theme":"neutral"}
 
    flowchart RL
      subgraph Workshop
