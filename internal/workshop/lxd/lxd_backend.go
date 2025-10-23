@@ -274,9 +274,7 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image workshop.BaseImage) error {
-	var err error
-
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
 	conn, layerConn, err := s.layerClients(ctx)
 	if err != nil {
 		return err
@@ -298,93 +296,93 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, image.Fingerprint)
+	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, snapshot.Image.Fingerprint)
 	if err != nil {
 		return err
 	}
-	devices := defaultDevices(projectId, file.Name)
-	source := api.InstanceSource{
-		Type:        api.SourceTypeImage,
-		Fingerprint: image.Fingerprint,
+	req := api.InstancesPost{
+		InstancePut: api.InstancePut{
+			Config:  config,
+			Devices: defaultDevices(projectId, file.Name),
+		},
+		Name: InstanceName(file.Name, projectId),
+		Type: api.InstanceTypeContainer,
 	}
 
-	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
-	switch {
-	case err != nil && !api.StatusErrorCheck(err, http.StatusNotFound):
-		return err
-	case err != nil && api.StatusErrorCheck(err, http.StatusNotFound):
-		// Create a new workshop.
-		req := api.InstancesPost{
-			InstancePut: api.InstancePut{
-				Devices: devices,
-				Config:  config,
-			},
-			Name:   InstanceName(file.Name, projectId),
-			Type:   api.InstanceTypeContainer,
-			Source: source,
+	if snapshot.IsBase() {
+		req.Source = api.InstanceSource{
+			Type:        api.SourceTypeImage,
+			Fingerprint: snapshot.Image.Fingerprint,
 		}
+		if err := s.launchOrRebuildFromImage(conn, layerConn, req); err != nil {
+			return err
+		}
+		return s.patchInstance(ctx, file.Name, file.Base)
+	}
+
+	return s.launchOrRebuildFromLayer(conn, layerConn, req, snapshot.Sdks)
+}
+
+func (s *Backend) launchOrRebuildFromImage(conn, layerConn lxd.InstanceServer, req api.InstancesPost) error {
+	inst, _, err := conn.GetInstance(req.Name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		// Create a new workshop.
 		op, err := conn.CreateInstance(req)
 		if err != nil {
 			return err
 		}
-		if err := op.Wait(); err != nil {
-			return err
-		}
-
-		return s.patchInstance(ctx, file.Name, file.Base)
-	default:
-		// Rebuild the existing workshop.
-		snapshots, err := s.layerNames(layerConn, projectId, file.Name, "sdk")
-		if err != nil {
-			return err
-		}
-
-		for _, snapshot := range snapshots {
-			if err := s.deleteLayer(layerConn, snapshot); err != nil {
-				return err
-			}
-		}
-
-		op, err := conn.RebuildInstance(inst.Name, api.InstanceRebuildPost{Source: source})
-		if err != nil {
-			return err
-		}
-		if err = op.Wait(); err != nil {
-			return err
-		}
-
-		// When rebuilding an instance from an image, LXD resets the
-		// image-related options: image.* and volatile.base_image. It
-		// also sets volatile.uuid.generation to volatile.uuid. The
-		// former seems to be unused for containers. Finally, it clears
-		// volatile.idmap.next and volatile.last_state.idmap. We are
-		// responsible for resetting the remaining options. Workshop
-		// only touches the options present in the default config, so
-		// we overwrite these options and assume everything else is
-		// managed by LXD. If we remove an option from the default
-		// config, we should also remove it from the config below.
-		rebuilt, etag, err := conn.GetInstance(inst.Name)
-		if err != nil {
-			return err
-		}
-
-		if rebuilt.Config == nil {
-			rebuilt.Config = config
-		} else {
-			maps.Copy(rebuilt.Config, config)
-		}
-		rebuilt.Devices = devices
-
-		op, err = conn.UpdateInstance(rebuilt.Name, rebuilt.Writable(), etag)
-		if err != nil {
-			return err
-		}
-		if err := op.Wait(); err != nil {
-			return err
-		}
-
-		return s.patchInstance(ctx, file.Name, file.Base)
+		return op.Wait()
 	}
+	if err != nil {
+		return err
+	}
+
+	// Rebuild the existing workshop.
+	projectId := inst.Config[workshop.ConfigProjectId]
+	name := inst.Config[workshop.ConfigWorkshopName]
+
+	snapshots, err := s.layerNames(layerConn, projectId, name, "sdk")
+	if err != nil {
+		return err
+	}
+	for _, snapshot := range snapshots {
+		if err := s.deleteLayer(layerConn, snapshot); err != nil {
+			return err
+		}
+	}
+
+	op, err := conn.RebuildInstance(inst.Name, api.InstanceRebuildPost{Source: req.Source})
+	if err != nil {
+		return err
+	}
+	if err = op.Wait(); err != nil {
+		return err
+	}
+
+	rebuilt, etag, err := conn.GetInstance(inst.Name)
+	if err != nil {
+		return err
+	}
+
+	// When rebuilding an instance from an image, LXD resets the image
+	// properties and volatile.base_image. It also copies volatile.uuid
+	// over volatile.uuid.generation. The latter seems to be unused for
+	// containers. Finally, it clears volatile.idmap.next and
+	// volatile.last_state.idmap. All other options are unchanged. We
+	// preserve the LXD-managed options and forget the other ones.
+	req.Config = maps.Clone(req.Config)
+	for k, v := range rebuilt.Config {
+		if _, ok := req.Config[k]; !ok && optionDomain(k) != customOption {
+			req.Config[k] = v
+		}
+	}
+
+	req.Architecture = rebuilt.Architecture
+	op, err = conn.UpdateInstance(rebuilt.Name, req.InstancePut, etag)
+	if err != nil {
+		return err
+	}
+	return op.Wait()
 }
 
 //go:embed snap-confine.old

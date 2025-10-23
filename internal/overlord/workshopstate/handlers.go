@@ -80,11 +80,11 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		return fmt.Errorf("invalid workshop file: %w", err)
 	}
 
-	var sdkSnapshot string
+	var snapshot workshop.Snapshot
 	st.Lock()
-	err = task.Get("sdk-snapshot", &sdkSnapshot)
+	err = task.Get("snapshot", &snapshot)
 	st.Unlock()
-	if err != nil && !errors.Is(err, state.ErrNoState) {
+	if err != nil {
 		return fmt.Errorf("internal error: %q workshop snapshot not found (task ID: %s)", w, task.ID())
 	}
 
@@ -105,30 +105,18 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		})
 	}
 
-	if sdkSnapshot == "" {
-		var image workshop.BaseImage
-		st.Lock()
-		err = task.Get("workshop-base", &image)
-		st.Unlock()
-		if err != nil {
-			return fmt.Errorf("internal error: %q workshop base image not found (task ID: %s)", w, task.ID())
-		}
+	if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, snapshot); err != nil {
+		return err
+	}
 
-		if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, image); err != nil {
-			return err
-		}
+	if snapshot.IsBase() {
 		// Create workshop base and run directories
 		fs, err := m.backend.WorkshopFs(ctx, wf.Name)
 		if err != nil {
 			return err
 		}
 		defer fs.Close()
-
 		if err = fs.MkdirAll(dirs.WorkshopRunDir, 0755); err != nil {
-			return err
-		}
-	} else {
-		if err = m.backend.Restore(ctx, w, sdkSnapshot, &wf); err != nil {
 			return err
 		}
 	}

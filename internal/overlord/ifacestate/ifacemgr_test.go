@@ -124,8 +124,8 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []sdk
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)

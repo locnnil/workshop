@@ -496,6 +496,39 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 	return s, nil
 }
 
+func sdkToSnapshotDevice(installOrder int, sk sdk.Id) map[string]string {
+	return map[string]string{
+		"type":                   "none",
+		"user.sdk.sha3-384":      sk.Sha3_384,
+		"user.sdk.is-volume":     strconv.FormatBool(sk.IsVolume),
+		"user.sdk.install-order": strconv.FormatInt(int64(installOrder), 10),
+	}
+}
+
+func maybeSdkId(key string, device map[string]string) (int, *sdk.Id, error) {
+	name, found := strings.CutPrefix(key, workshop.SdkDeviceName(""))
+	if !found {
+		return 0, nil, nil
+	}
+
+	isVolume, err := strconv.ParseBool(device["user.sdk.is-volume"])
+	if err != nil {
+		return 0, nil, err
+	}
+	s := &sdk.Id{
+		Name:     name,
+		Sha3_384: device["user.sdk.sha3-384"],
+		IsVolume: isVolume,
+	}
+
+	installOrder, err := strconv.ParseInt(device["user.sdk.install-order"], 10, 0)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return int(installOrder), s, nil
+}
+
 func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {

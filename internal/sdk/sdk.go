@@ -95,6 +95,16 @@ func (s Source) NeedsRetrieve() bool {
 	return s == StoreSource || s == SystemSource
 }
 
+type Id struct {
+	Name     string
+	Sha3_384 string
+	IsVolume bool
+}
+
+func SetupId(setup Setup) Id {
+	return Id{Name: setup.Name, Sha3_384: setup.Sha3_384, IsVolume: setup.IsVolume()}
+}
+
 type sdkYaml struct {
 	Name        string                 `yaml:"name"`
 	Base        string                 `yaml:"base"`

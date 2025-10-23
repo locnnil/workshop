@@ -91,8 +91,8 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop.Workshop {
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	wf := s.workshopFile(w, []*sdk.Info{info})
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot), check.IsNil)
 
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
@@ -127,8 +127,8 @@ func (s *apiSuite) mockInstalledSDKBoundPlug(c *check.C, yaml string, w string, 
 		Name:      to}
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
 	wf := s.workshopFile(w, []*sdk.Info{info})
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot), check.IsNil)
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
 	return wp

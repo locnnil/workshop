@@ -131,8 +131,8 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsFocal)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 
 	t1, err := s.wrkmgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
@@ -173,9 +173,9 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test2", Channel: "latest/stable"},
 	}}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
 
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 
 	chg := s.state.NewChange("sample", "...")
@@ -223,8 +223,8 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 
 	for _, wf := range wFiles {
-		image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-		err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+		snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+		err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 		c.Check(err, check.IsNil)
 
 		// create content directories
@@ -300,8 +300,8 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopDefinitionFound(c *check.
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
+	t1.Set("snapshot", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, t1)
-	t1.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
 
@@ -324,7 +324,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	t1.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	t1.Set("snapshot", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -352,7 +352,7 @@ func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	t1.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	t1.Set("snapshot", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -383,8 +383,8 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("rebuild-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage999"}
-	t1.Set("workshop-base", image)
+	snapshot := workshop.BaseOnly("ubuntu@22.04", "fakeimage123")
+	t1.Set("snapshot", snapshot)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	chg.AddTask(t1)
@@ -400,7 +400,7 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
 	ws, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	c.Check(ws.Image, check.Equals, image)
+	c.Check(ws.Image, check.Equals, snapshot.Image)
 }
 
 func (s *workshopHandlers) TestDownloadBase(c *check.C) {

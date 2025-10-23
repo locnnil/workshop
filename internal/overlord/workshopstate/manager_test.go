@@ -99,8 +99,8 @@ func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	c.Assert(err, check.IsNil)
 
 	wf := workshop.File{Name: ws, Base: "ubuntu@22.04"}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	workshop, err := s.backend.Workshop(s.ctx, ws)

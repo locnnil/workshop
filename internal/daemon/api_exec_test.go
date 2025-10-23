@@ -26,9 +26,9 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.createWFile(c, "ws", wsYaml)
 
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Actions: map[string]workshop.Action{"lint": "\n\n\ngolangci-lint run\n"}}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
 
-	err := s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	err := s.b.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	wp, err := s.b.Workshop(s.ctx, "ws")

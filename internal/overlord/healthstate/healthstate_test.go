@@ -113,8 +113,8 @@ var (
 
 func (s *healthSuite) launchWorkshopWithSDKs(c *check.C, sdks []workshop.SdkRecord, hooks map[string]map[string]string) *workshop.Workshop {
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: sdks}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
@@ -201,11 +201,11 @@ func (s *healthSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("launch", "test")
-	task := s.state.NewTask("create-workshop", "test task")
-	task.Set("workshop", "ws")
-	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
 	chg.Set("project-id", s.project.ProjectId)
+	task := s.state.NewTask("create-workshop", "test task")
+	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
+	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
+	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, nil, nil)
@@ -222,12 +222,12 @@ func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("refresh", "test")
+	chg.Set("project-id", s.project.ProjectId)
 	chg.SetStatus(state.WaitStatus)
 	task := s.state.NewTask("create-workshop", "test task")
-	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
-	chg.Set("project-id", s.project.ProjectId)
+	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
+	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, nil, nil)
@@ -244,6 +244,7 @@ func (s *healthSuite) TestWorkshopHealthSdkHealth(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("launch", "test")
+	chg.Set("project-id", s.project.ProjectId)
 	task := s.state.NewTask("run-hook", "test task")
 	healthCheck := healthstate.HealthCheck{
 		Sdk:         "one",
@@ -252,8 +253,7 @@ func (s *healthSuite) TestWorkshopHealthSdkHealth(c *check.C) {
 		Code:        "how-much-longer",
 	}
 	task.Set("health", healthCheck)
-	task.Set("workshop", "ws")
-	chg.Set("project-id", s.project.ProjectId)
+	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, oneSdk, nil)
@@ -285,12 +285,12 @@ func (s *healthSuite) TestCheckStatusPending(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("refresh", "test")
+	chg.Set("project-id", s.project.ProjectId)
 	chg.SetStatus(state.DoingStatus)
 	task := s.state.NewTask("create-workshop", "test task")
-	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
-	chg.Set("project-id", s.project.ProjectId)
+	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
+	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, nil, nil)
@@ -309,12 +309,12 @@ func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
 	defer s.state.Unlock()
 
 	chg := s.state.NewChange("refresh", "test")
+	chg.Set("project-id", s.project.ProjectId)
 	chg.SetStatus(state.WaitStatus)
 	task := s.state.NewTask("create-workshop", "test task")
-	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
-	chg.Set("project-id", s.project.ProjectId)
+	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
+	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
 	workshop := s.launchWorkshopWithSDKs(c, nil, nil)

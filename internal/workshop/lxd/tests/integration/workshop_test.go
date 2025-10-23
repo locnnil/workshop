@@ -145,7 +145,8 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = f.bd.DownloadBase(f.ctx, image, nil)
 	c.Assert(err, check.IsNil)
-	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, image)
+	snapshot := workshop.Snapshot{Image: image}
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	// Check snapshots are gone.
@@ -764,7 +765,8 @@ func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
-	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, image)
+	snapshot := workshop.Snapshot{Image: image}
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
@@ -796,7 +798,8 @@ func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = f.bd.DownloadBase(f.ctx, image, nil)
 	c.Assert(err, check.IsNil)
-	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, image)
+	snapshot := workshop.Snapshot{Image: image}
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	// Start workshop.
@@ -859,6 +862,13 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Assert(err, check.IsNil)
 	defer func() { c.Check(f.bd.UninstallSdk(f.ctx, "test", meta.Setup), check.IsNil) }()
 
+	// Check that "test-sdk" directory is mounted.
+	fs, err := f.bd.WorkshopFs(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	_, err = fs.Stat(sdk.SdkMetaPath(meta.Name))
+	fs.Close()
+	c.Check(err, check.IsNil)
+
 	info, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
 	saved := meta
@@ -879,7 +889,8 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
-	err = f.bd.Restore(f.ctx, "test", "test-sdk", wf)
+	snapshot := workshop.SdkSnapshot(w.Image, []sdk.Setup{meta.Setup})
+	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	w, err = f.bd.Workshop(f.ctx, "test")
@@ -887,18 +898,20 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Check(w.Running, check.Equals, false)
 
 	// Check that Restore uses the provided "user.workshop.file," keeps its
-	// base fingerprint and removes "test-sdk-2" setup from the workshop.
+	// base fingerprint and removes both SDKs from the workshop.
 	c.Check(w.File, check.DeepEquals, wf)
 	c.Check(w.Image, check.Equals, image)
-	c.Check(w.Sdks, check.HasLen, 1)
-	_, ok := w.Sdks[meta2.Name]
-	c.Check(ok, check.Equals, false)
+	c.Check(w.Sdks, check.HasLen, 0)
 
-	// Check that "test-sdk-2" volume is not present in the workshop filesystem
-	// anymore.
-	fs, err := f.bd.WorkshopFs(f.ctx, "test")
+	fs, err = f.bd.WorkshopFs(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	defer fs.Close()
+	// Check that "test-sdk" directory is present but not mounted.
+	_, err = fs.Stat(sdk.SdkDir(meta.Name))
+	c.Check(err, check.IsNil)
+	_, err = fs.Stat(sdk.SdkMetaPath(meta.Name))
+	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
+	// Check that "test-sdk-2" directory is not present in the filesystem.
 	_, err = fs.Stat(sdk.SdkDir(meta2.Name))
 	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
 }
