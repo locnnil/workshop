@@ -140,8 +140,13 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 	s.createWFile(c, "nav2", "name: nav2\nbase: ubuntu@20.04\n")
 	s.createWFile(c, "lerobot", "name: lerobot\nbase: ubuntu@20.04\n")
 
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "nav2", Base: "ubuntu@20.04"}, "fakeimage123"), check.IsNil)
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "lerobot", Base: "ubuntu@20.04"}, "fakeimage123"), check.IsNil)
+	wf := &workshop.File{Name: "nav2", Base: "ubuntu@20.04"}
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
+
+	wf = &workshop.File{Name: "lerobot", Base: "ubuntu@20.04"}
+	image = workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
 
 	// Add SDK setups with channels so the endpoint can report channels.
 	w1, err := s.b.Workshop(s.ctx, "nav2")
@@ -222,7 +227,9 @@ func (s *apiSuite) TestSdkInfoGetInvalidMetadata(c *check.C) {
 	s.daemon(c)
 
 	s.createWFile(c, "ws", "name: ws\nbase: ubuntu@20.04\n")
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "ws", Base: "ubuntu@20.04"}, "fakeimage123"), check.IsNil)
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
 	w, err := s.b.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: "bad", Channel: "latest/stable", Source: sdk.StoreSource, Revision: sdk.R(1)}), check.IsNil)

@@ -82,7 +82,8 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	c.Assert(err, check.IsNil)
 
 	wf := workshop.File{Name: ws, Base: "ubuntu@20.04", Sdks: sdks}
-	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, "fakeimage123")
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, image)
 	c.Assert(err, check.IsNil)
 
 	w, err := s.backend.Workshop(s.ctx, ws)

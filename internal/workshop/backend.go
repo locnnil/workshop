@@ -136,13 +136,18 @@ type VolumeManager interface {
 	Volume(ctx context.Context, name string) (VolumeInfo, error)
 }
 
+type BaseImage struct {
+	// Base name (e.g. ubuntu@24.04).
+	Name string `json:"name"`
+	// Base image identifier, typically a hash.
+	Fingerprint string `json:"fingerprint"`
+}
+
 type BaseImageManager interface {
-	// Lookup the latest image for the given base. On success, returns a
-	// string that uniquely identifies the latest image. This can be
-	// passed to DownloadBase and LaunchOrRebuildWorkshop.
-	GetBase(ctx context.Context, base string) (string, error)
-	// Download the base image with the given fingerprint.
-	DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error
+	// Lookup the latest image for the given base.
+	GetBase(ctx context.Context, base string) (BaseImage, error)
+	// Download the given base image.
+	DownloadBase(ctx context.Context, image BaseImage, report *progress.Reporter) error
 }
 
 type ExecArgs struct {
@@ -207,7 +212,7 @@ type Backend interface {
 	// configuration and devices of the rebuilt workshop will be reset to the
 	// default one. The given base fingerprint is combined with `file.Base` to
 	// determine the exact base image to use.
-	LaunchOrRebuildWorkshop(ctx context.Context, file *File, baseFingerprint string) error
+	LaunchOrRebuildWorkshop(ctx context.Context, file *File, image BaseImage) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error

@@ -40,8 +40,7 @@ type FsCall struct {
 }
 
 type DownloadCall struct {
-	Base        string
-	Fingerprint string
+	Image workshop.BaseImage
 }
 
 type AttachVolumeCall struct {
@@ -90,8 +89,8 @@ type FakeWorkshopBackend struct {
 	WorkshopFsCalls    []*FsCall
 
 	baseLock             sync.Mutex
-	GetBaseCallback      func(ctx context.Context, base string) (string, error)
-	DownloadBaseCallback func(ctx context.Context, base, fingerprint string, report *progress.Reporter) error
+	GetBaseCallback      func(ctx context.Context, base string) (workshop.BaseImage, error)
+	DownloadBaseCallback func(ctx context.Context, image workshop.BaseImage, report *progress.Reporter) error
 	DownloadBaseCalls    []*DownloadCall
 
 	AttachVolumeCalls []AttachVolumeCall
@@ -161,7 +160,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
+func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image workshop.BaseImage) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -182,14 +181,14 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 		// rebuild the workshop
 		ws = wpe
 		ws.File = file
-		ws.BaseFingerprint = baseFingerprint
+		ws.Image = image
 	} else {
 		ws.Workshop = &workshop.Workshop{Backend: f,
-			Name:            file.Name,
-			Running:         false,
-			Project:         *prj,
-			BaseFingerprint: baseFingerprint,
-			File:            file,
+			Name:    file.Name,
+			Running: false,
+			Project: *prj,
+			Image:   image,
+			File:    file,
 		}
 		f.Workshops[projectId][file.Name] = ws
 	}
@@ -693,23 +692,23 @@ func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, 
 	return userName, projectId, nil
 }
 
-func (b *FakeWorkshopBackend) GetBase(ctx context.Context, base string) (string, error) {
+func (b *FakeWorkshopBackend) GetBase(ctx context.Context, base string) (workshop.BaseImage, error) {
 	b.baseLock.Lock()
 	defer b.baseLock.Unlock()
 
 	if b.GetBaseCallback != nil {
 		return b.GetBaseCallback(ctx, base)
 	}
-	return "fakeimage123", nil
+	return workshop.BaseImage{Name: base, Fingerprint: "fakeimage123"}, nil
 }
 
-func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error {
+func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, image workshop.BaseImage, report *progress.Reporter) error {
 	b.baseLock.Lock()
 	defer b.baseLock.Unlock()
 
-	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Base: base, Fingerprint: fingerprint})
+	b.DownloadBaseCalls = append(b.DownloadBaseCalls, &DownloadCall{Image: image})
 	if b.DownloadBaseCallback != nil {
-		return b.DownloadBaseCallback(ctx, base, fingerprint, report)
+		return b.DownloadBaseCallback(ctx, image, report)
 	}
 	return nil
 }

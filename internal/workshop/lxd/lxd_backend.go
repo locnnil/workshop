@@ -274,7 +274,7 @@ func New() (*Backend, error) {
 	return &server, nil
 }
 
-func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, baseFingerprint string) error {
+func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image workshop.BaseImage) error {
 	var err error
 
 	conn, layerConn, err := s.layerClients(ctx)
@@ -298,14 +298,14 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, baseFingerprint)
+	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, image.Fingerprint)
 	if err != nil {
 		return err
 	}
 	devices := defaultDevices(projectId, file.Name)
 	source := api.InstanceSource{
 		Type:        api.SourceTypeImage,
-		Fingerprint: baseFingerprint,
+		Fingerprint: image.Fingerprint,
 	}
 
 	inst, _, err := conn.GetInstanceFull(InstanceName(file.Name, projectId))
@@ -834,6 +834,11 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
 	}
 
+	image := workshop.BaseImage{
+		Name:        f.Base,
+		Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
+	}
+
 	sdks := map[string]sdk.Setup{}
 	buf, exist := inst.Config[workshop.ConfigWorkshopSdks]
 	if exist {
@@ -856,14 +861,14 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	return &workshop.Workshop{
-		Backend:         b,
-		Project:         p,
-		Name:            f.Name,
-		BaseFingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
-		Running:         inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
-		Sdks:            sdks,
-		Profiles:        profs,
-		File:            f,
+		Backend:  b,
+		Project:  p,
+		Name:     f.Name,
+		Image:    image,
+		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		Sdks:     sdks,
+		Profiles: profs,
+		File:     f,
 	}, nil
 }
 

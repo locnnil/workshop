@@ -3206,8 +3206,8 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 	defer s.store.SetDownloadCallback(storeDownload)()
 
 	oldGetBase := s.b.GetBaseCallback
-	s.b.GetBaseCallback = func(ctx context.Context, base string) (string, error) {
-		return "oldimage123", nil
+	s.b.GetBaseCallback = func(ctx context.Context, base string) (workshop.BaseImage, error) {
+		return workshop.BaseImage{Name: base, Fingerprint: "oldimage123"}, nil
 	}
 	defer func() { s.b.GetBaseCallback = oldGetBase }()
 
@@ -3226,7 +3226,7 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 
 	wp, err := s.b.Workshop(s.ctx, "manysdks")
 	c.Assert(err, check.IsNil)
-	c.Check(wp.BaseFingerprint, check.Equals, "oldimage123")
+	c.Check(wp.Image, check.Equals, workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "oldimage123"})
 
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
@@ -3240,15 +3240,15 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 		},
 	}
 
-	s.b.GetBaseCallback = func(ctx context.Context, base string) (string, error) {
-		return "newimage321", nil
+	s.b.GetBaseCallback = func(ctx context.Context, base string) (workshop.BaseImage, error) {
+		return workshop.BaseImage{Name: base, Fingerprint: "newimage321"}, nil
 	}
 
 	s.runActionTest(c, requests, expected)
 
 	wp, err = s.b.Workshop(s.ctx, "manysdks")
 	c.Assert(err, check.IsNil)
-	c.Check(wp.BaseFingerprint, check.Equals, "newimage321")
+	c.Check(wp.Image, check.Equals, workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "newimage321"})
 
 	want := []expectedWorkshop{{
 		name: "manysdks",

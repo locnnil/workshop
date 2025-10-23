@@ -31,10 +31,10 @@ type Workshop struct {
 	Project Project
 	// Workshop file that was used to launch it; it may be out of sync with the
 	// file in the project directory due to user's edits, etc.
-	File            *File
-	Name            string
-	BaseFingerprint string
-	Running         bool
+	File    *File
+	Name    string
+	Image   BaseImage
+	Running bool
 	// Installed SDKs.
 	Sdks map[string]sdk.Setup
 	// Workshop devices installed.
