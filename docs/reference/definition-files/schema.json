@@ -9,6 +9,7 @@
       "type": "string",
       "description": "Name of the workshop.",
       "pattern": "^[a-z](?:-?[a-z0-9])*$",
+      "maxLength": 40,
       "errorMessage": "A workshop's name must start with a letter and can only include digits, lowercase letters, and hyphens joining them."
     },
     "base": {
@@ -32,6 +33,7 @@
             "type": "string",
             "description": "Name of the SDK.",
             "pattern": "^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$",
+            "maxLength": 40,
             "errorMessage": "An SDK's name must contain a letter, can only include digits, lowercase letters, and hyphens joining them."
           },
           "channel": {
