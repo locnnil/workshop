@@ -3,7 +3,6 @@ restore: |
   rm -rf ~/ollama
 execute: |
   . "$TESTSLIB"/utils.sh
-  lxc storage set default size=30GB
 
   # ----------------------------------------------------------------------------
 
@@ -18,5 +17,3 @@ execute: |
   run_sdkcraft clean
   run_sdkcraft pack
   run_sdkcraft try
-  # cp ../workshop-part-4.yaml workshop.yaml
-  # workshop launch && zfs list -r workshop
