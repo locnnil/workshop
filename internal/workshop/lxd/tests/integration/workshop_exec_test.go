@@ -17,6 +17,7 @@ import (
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/daemon"
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -54,6 +55,10 @@ func execTestDevices(projectDir string) func(pid, w string) ([]workshop.Mount, [
 }
 
 func (f *wsExec) SetUpSuite(c *check.C) {
+	dirs.SetRootDir(c.MkDir())
+	dirs.SetCacheDir(c.MkDir())
+	c.Assert(dirs.CreateDirs(), check.IsNil)
+
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
 
 	socketPath := c.MkDir() + ".workshop.socket"

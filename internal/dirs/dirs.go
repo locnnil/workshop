@@ -47,6 +47,8 @@ var (
 	CacheDir string
 	// Work directory
 	ExecDir string
+	// The directory to store downloaded base images and associated metadata
+	BaseDownloads string
 	// The directory to store downloaded SDKs
 	SdkDownloads string
 	// Path to the daemon's unix socket
@@ -112,6 +114,7 @@ func SetCacheDir(cachedir string) {
 	}
 	CacheDir = cachedir
 
+	BaseDownloads = filepath.Join(CacheDir, "base")
 	SdkDownloads = filepath.Join(CacheDir, "sdk")
 }
 
@@ -120,6 +123,9 @@ func CreateDirs() error {
 		return err
 	}
 	if err := os.MkdirAll(CacheDir, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(BaseDownloads, 0755); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(SdkDownloads, 0755); err != nil {

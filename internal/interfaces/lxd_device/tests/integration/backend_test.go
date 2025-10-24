@@ -80,6 +80,10 @@ func defaultTestDevices(pid, w string) ([]workshop.Mount, []workshop.ProxyEntry)
 }
 
 func (f *backendDeviceSuite) SetUpTest(c *check.C) {
+	dirs.SetRootDir(c.MkDir())
+	dirs.SetCacheDir(c.MkDir())
+	c.Assert(dirs.CreateDirs(), check.IsNil)
+
 	var err error
 	f.pid = "42424242"
 	f.usr = &user.User{
