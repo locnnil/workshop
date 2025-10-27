@@ -2,7 +2,6 @@ summary: Test 'How to use workshops with Git' to ensure it's operational
 execute: |
   . "$TESTSLIB"/utils.sh
   PROJECT=$(pwd)
-  lxc storage set default size=30GB
 
   # Initialization
 

@@ -78,6 +78,9 @@ jobs:
           pushd spread
           go install ./...
           popd
+      - name: Set LXD storage size
+        run: |
+          lxc storage set default volume.size=32GB
       - name: Run spread
         run: |
           mkdir ${{ github.workspace }}.cover

@@ -3,7 +3,6 @@ restore: |
   rm -rf ~/ollama-python-project
 execute: |
   . "$TESTSLIB"/utils.sh
-  lxc storage set default size=30GB
 
   # ----------------------------------------------------------------------------
 
@@ -20,6 +19,7 @@ execute: |
   cp ../workshop-part-1.yaml workshop.yaml
 
   workshop_exec list
+  lxc storage set workshop size=20GB
 
 
   ## Launch, start, and stop

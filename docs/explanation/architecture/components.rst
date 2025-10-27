@@ -331,7 +331,7 @@ The system components and their interactions:
           The systemd integration provides service lifecycle management,
           while ZFS storage handles persistent data and snapshots.
     :align: center
-    :config: {"theme":"neutral"}
+    :zoom:
 
     graph TB
         subgraph HOST ["Host system"]
