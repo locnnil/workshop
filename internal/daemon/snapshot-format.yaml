@@ -1,0 +1,100 @@
+# When updating this file, please carefully consider whether the snapshot
+# format revision number needs to be bumped. This file is used by the
+# apiSuite.TestSnapshotFormat test. It records direct changes to workshop and
+# snapshot filesystems, and also gives an overview of the types of tasks that
+# can affect snapshot filesystems. Specific tasks need to be tested in a
+# backend-specific manner.
+system:
+  files:
+    - drwxr-xr-x var
+    - drwxr-xr-x var/lib
+    - drwxr-xr-x var/lib/workshop
+    - drwxr-xr-x var/lib/workshop/run
+    - drwxr-xr-x var/lib/workshop/sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/system
+  tasks:
+    create-workshop: 1
+    start-workshop: 1
+    install-sdk: 1
+    register-sdk: 1
+    run-hook: 1
+  fs-calls: 4
+  exec-calls: []
+test-sdk-3:
+  files:
+    - drwxr-xr-x var
+    - drwxr-xr-x var/lib
+    - drwxr-xr-x var/lib/workshop
+    - drwxr-xr-x var/lib/workshop/run
+    - drwxr-xr-x var/lib/workshop/sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/system
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-3
+  tasks:
+    create-workshop: 1
+    start-workshop: 1
+    install-sdk: 2
+    register-sdk: 2
+    run-hook: 2
+    snapshot-sdk: 1
+  fs-calls: 7
+  exec-calls: []
+test-sdk-2:
+  files:
+    - drwxr-xr-x var
+    - drwxr-xr-x var/lib
+    - drwxr-xr-x var/lib/workshop
+    - drwxr-xr-x var/lib/workshop/run
+    - drwxr-xr-x var/lib/workshop/sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/system
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-2
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-3
+  tasks:
+    create-workshop: 1
+    start-workshop: 1
+    install-sdk: 3
+    register-sdk: 3
+    run-hook: 3
+    snapshot-sdk: 2
+  fs-calls: 10
+  exec-calls:
+    - ["bash", "-eo", "pipefail", "/var/lib/workshop/sdk/test-sdk-2/sdk/hooks/setup-base"]
+test-sdk:
+  files:
+    - drwxr-xr-x var
+    - drwxr-xr-x var/lib
+    - drwxr-xr-x var/lib/workshop
+    - drwxr-xr-x var/lib/workshop/run
+    - drwxr-xr-x var/lib/workshop/sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/system
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-2
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-3
+  tasks:
+    create-workshop: 1
+    start-workshop: 1
+    install-sdk: 4
+    register-sdk: 4
+    run-hook: 4
+    snapshot-sdk: 3
+  fs-calls: 13
+  exec-calls:
+    - ["bash", "-eo", "pipefail", "/var/lib/workshop/sdk/test-sdk-2/sdk/hooks/setup-base"]
+    - ["bash", "-eo", "pipefail", "/var/lib/workshop/sdk/test-sdk/sdk/hooks/setup-base"]
+sketch:
+  files:
+    - drwxr-xr-x var
+    - drwxr-xr-x var/lib
+    - drwxr-xr-x var/lib/workshop
+    - drwxr-xr-x var/lib/workshop/run
+    - drwxr-xr-x var/lib/workshop/sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/sketch
+    - Lrwxrwxrwx var/lib/workshop/sdk/system
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-2
+    - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-3
+  tasks:
+    rebuild-workshop: 1
+    start-workshop: 1
+    install-sdk: 5
+    register-sdk: 5
+    run-hook: 1

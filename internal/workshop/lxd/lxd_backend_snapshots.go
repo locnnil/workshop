@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/rand"
+	"crypto/sha3"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -65,6 +66,11 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	}
 	sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
 
+	digest, err := s.HashSnapshot(snapshot)
+	if err != nil {
+		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
+	}
+
 	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
@@ -82,7 +88,7 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	// Override all writable attributes. The snapshot is essentially a base
 	// image but is stored more efficiently. Config options and devices are
 	// reconstructed from scratch during launch and refresh.
-	config := configOverrides(projectId, name, sk, snapshot.Image, inst.Config)
+	config := configOverrides(projectId, name, sk, digest, snapshot.Image, inst.Config)
 	devices, err := deviceOverrides(inst.Devices)
 	if err != nil {
 		return err
@@ -106,7 +112,7 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	return rop.Wait()
 }
 
-func configOverrides(pid, name, sk string, image workshop.BaseImage, config map[string]string) map[string]string {
+func configOverrides(pid, name, sk, digest string, image workshop.BaseImage, config map[string]string) map[string]string {
 	// LXD will handle the options it owns. We remove all options set by
 	// Workshop, except for a handful that identify the snapshot. We also
 	// add security.protection.start to prevent it from starting.
@@ -117,6 +123,8 @@ func configOverrides(pid, name, sk string, image workshop.BaseImage, config map[
 		workshop.ConfigWorkshopBase:            image.Name,
 		workshop.ConfigWorkshopBaseFingerprint: image.Fingerprint,
 		workshop.ConfigWorkshopSnapshotType:    "sdk",
+		workshop.ConfigWorkshopSnapshotFormat:  SnapshotFormatRevision.String(),
+		workshop.ConfigWorkshopSha3_384:        digest,
 		workshop.ConfigWorkshopSdk:             sk,
 	}
 	for k := range config {
@@ -578,4 +586,48 @@ func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.
 	}
 
 	return conn, conn.UseProject(project), nil
+}
+
+// Hard coded number which represents the current "snapshot format," i.e. the
+// contents of the rootfs after installing a certain sequence of SDKs. This can
+// be influenced by a number of factors, including:
+// - Default workshop config (e.g. cloud-config)
+// - Default workshop devices (e.g. apt cache)
+// - SDK config and devices (e.g. volume mounts)
+// - Direct modifications (e.g. mkdir /var/lib/workshop/run)
+// If something like this changes, bump the revision number so that workshops
+// constructed using the next release of Workshop see the changes.
+var SnapshotFormatRevision = sdk.R(1)
+
+func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {
+	digest, err := hex.DecodeString(snapshot.Image.Fingerprint)
+	if err != nil {
+		return "", err
+	}
+
+	hash := sha3.New384()
+	if _, err := fmt.Fprintf(hash, "%s %s\x00%s", SnapshotFormatRevision, snapshot.Image.Name, digest); err != nil {
+		return "", err
+	}
+
+	for _, sk := range snapshot.Sdks {
+		// Different types of SDKs result in different workshops. There
+		// are really only two types: those which use SDK volumes and
+		// those which use local directories.
+		kind := "local"
+		if sk.IsVolume {
+			kind = "volume"
+		}
+
+		digest, err := hex.DecodeString(sk.Sha3_384)
+		if err != nil {
+			return "", err
+		}
+
+		if _, err := fmt.Fprintf(hash, "%s %s\x00%s", kind, sk.Name, digest); err != nil {
+			return "", err
+		}
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

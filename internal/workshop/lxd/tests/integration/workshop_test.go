@@ -97,11 +97,6 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
-	// Collect workshop metadata.
-	f.waitForNetwork(c, "test")
-	preStash := f.workshopMetadata(c, "test")
-	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
-
 	// Create some snapshots.
 	snapshot := workshop.Snapshot{
 		Image: workshop.BaseImage{
@@ -127,6 +122,11 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 	snapshots := f.listSnapshots(c, "test", false)
 	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
+
+	// Collect workshop metadata.
+	f.waitForNetwork(c, "test")
+	preStash := f.workshopMetadata(c, "test")
+	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
 
 	// Stash workshop.
 	err = f.bd.StashWorkshop(f.ctx, "test")
@@ -231,11 +231,17 @@ func (f *wsOps) stashMetadata(c *check.C, name string) metadata {
 }
 
 func instanceMetadata(c *check.C, conn lxd.InstanceServer, name string) metadata {
+	inst := fullInstance(c, conn, name)
+	return metadata{inst.Config, inst.Devices, ipAddresses(inst)}
+}
+
+func fullInstance(c *check.C, conn lxd.InstanceServer, name string) *api.InstanceFull {
 	inst, _, err := conn.GetInstanceFull(name)
 	c.Assert(err, check.IsNil)
 
 	maps.DeleteFunc(inst.Config, func(k, v string) bool { return !includeWhenCopying(k) })
-	return metadata{inst.Config, inst.Devices, ipAddresses(inst)}
+
+	return inst
 }
 
 func includeWhenCopying(key string) bool {

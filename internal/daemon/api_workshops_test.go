@@ -5,11 +5,14 @@ import (
 	"cmp"
 	"context"
 	"crypto/sha3"
+	_ "embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -18,6 +21,7 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
@@ -168,6 +172,16 @@ sdks:
     channel: latest/stable
   - name: test-sdk
     channel: latest/stable
+`
+
+	manysdks_diverse = `name: manysdks
+base: ubuntu@22.04
+sdks:
+  - name: system
+  - name: test-sdk-3
+    channel: latest/stable
+  - name: try-test-sdk-2
+  - name: project-test-sdk
 `
 
 	manysdks_system_extended = `name: manysdks
@@ -1221,6 +1235,267 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
+}
+
+//go:embed snapshot-format.yaml
+var snapshotFormat []byte
+
+// Attempt to specify the filesystem layout of a workshop. Changes to this may
+// invalidate snapshots of existing workshops, so the snapshot format revision
+// number should be bumped to force a full refresh. LXD-specific format is
+// covered by `snapshotSuite.TestLxdBackendSnapshotFormat`. Currently checks
+// all known factors which can influence a snapshot. Unknown factors are tested
+// below by `apiSuite.TestSnapshotIngredients`.
+func (s *apiSuite) TestSnapshotFormat(c *check.C) {
+	s.daemon(c)
+	st := s.d.overlord.State()
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	defer s.store.SetDownloadCallback(storeDownload)()
+	s.createWFile(c, "manysdks", manysdks_diverse)
+
+	s.mockTrySdk(c, "test-sdk-2", "test-sdk-2_all.sdk", testsdk2)
+	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
+	tryDir := workshop.TrySdkDir(userDataDir, "test-sdk-2")
+	setupBase := filepath.Join(tryDir, "test-sdk-2_all.sdk", "sdk", "hooks", "setup-base")
+	err := os.WriteFile(setupBase, nil, 0644)
+	c.Assert(err, check.IsNil)
+
+	s.mockProjectSdk(c, "test-sdk", testsdk)
+	projectDir := workshop.ProjectSdkPath(s.project.Path, "test-sdk")
+	setupBase = filepath.Join(projectDir, "hooks", "setup-base")
+	err = os.WriteFile(setupBase, nil, 0644)
+	c.Assert(err, check.IsNil)
+
+	// Validate completed tasks and rootfs changes at snapshot time.
+	summary := map[string]any{}
+	s.b.SnapshotCallback = func(ctx context.Context, name string, snapshot workshop.Snapshot) error {
+		sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
+
+		entry := map[string]any{
+			// Collect direct rootfs changes.
+			"files": s.listFiles(c, name),
+			// Check for indirect rootfs changes via tasks. The LXD
+			// integration tests have coverage for create-workshop,
+			// start-workshop, install-sdk and snapshot-sdk. New
+			// tasks may require similar tests, or might make
+			// rootfs changes directly.
+			"tasks": completedPostConstructTasks(c, st),
+		}
+
+		// Count WorkshopFs() calls and list Exec() commands. This
+		// accounts for rootfs changes which don't show up for the fake
+		// backend but do in production.
+		if sk != "sketch" {
+			execCalls := make([][]string, 0, len(s.b.ExecCalls))
+			for _, ec := range s.b.ExecCalls {
+				execCalls = append(execCalls, ec.Args.Command)
+			}
+
+			entry["fs-calls"] = len(s.b.WorkshopFsCalls)
+			entry["exec-calls"] = execCalls
+		}
+
+		summary[sk] = entry
+		return nil
+	}
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.mockSketchSdk(c, "manysdks", `name: sketch
+`)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "refresh",
+			Summary: `Refresh "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	// Ensure this test covers all SDK sources.
+	wp, err := s.b.Workshop(s.ctx, "manysdks")
+	c.Assert(err, check.IsNil)
+	sources := map[sdk.Source]bool{}
+	for _, sk := range wp.Sdks {
+		sources[sk.Source] = true
+	}
+	// We assume there are N sources, 0 through N-1. If len(sources) casts
+	// to a valid source it means len(sources) < N and there's at least one
+	// type of source that isn't present in the workshop under test.
+	_, err = sdk.Source(len(sources)).MarshalText()
+	c.Assert(err, check.NotNil)
+
+	// Compare with approved summary.
+	var approved map[string]any
+	err = yaml.Unmarshal(snapshotFormat, &approved)
+	c.Assert(err, check.IsNil)
+	c.Check(summary, testutil.JsonEquals, approved)
+}
+
+//go:embed snapshot-ingredients.yaml
+var snapshotIngredients []byte
+
+// Check that the above test covers a decent variety of inputs and validates
+// all relevant outputs. It's quite crude, using reflection to detect added or
+// modified fields in relevant data types. Expect some false positives.
+func (s *apiSuite) TestSnapshotIngredients(c *check.C) {
+	// Load expected test output.
+	var fields map[string]map[string]any
+	err := yaml.Unmarshal(snapshotIngredients, &fields)
+	c.Assert(err, check.IsNil)
+
+	// Ensure we have coverage for various types of workshops. Currently,
+	// the workshop base and SDKs can influence snapshots. Changing the
+	// base already invalidates snapshots, so the above test focuses on
+	// installing a variety of SDKs. If more fields are added to the
+	// workshop definition, or the SDK records within, the following checks
+	// will fail, and we might need to expand the test.
+	expectFields[workshop.File](c, fields["File"])
+	expectFields[workshop.SdkRecord](c, fields["SdkRecord"])
+
+	// Check for changes to workshop metadata. This is mostly covered by
+	// the LXD tests, but new fields might affect the files and metadata
+	// that we snapshot. In that case we should bump the snapshot format
+	// revision number, and test the format of the new metadata.
+	expectFields[workshop.Workshop](c, fields["Workshop"])
+	expectFields[workshop.BaseImage](c, fields["BaseImage"])
+	expectFields[workshop.SdkInstallation](c, fields["SdkInstallation"])
+	expectFields[sdk.Setup](c, fields["Setup"])
+
+	// Check for changes to the fake backend. For example, Exec() has the
+	// potential to change the workshop's rootfs in production, but the
+	// fake backend makes it a no-op by default. We rely on ExecCalls to
+	// capture these changes. A new field might have similar properties,
+	// and the format tests should take it into account.
+	expectFields[fakebackend.FakeWorkshopBackend](c, fields["FakeWorkshopBackend"])
+	expectFields[fakebackend.FakeWorkshop](c, fields["FakeWorkshop"])
+}
+
+// Like ls -lR for the given workshop's rootfs.
+func (s *apiSuite) listFiles(c *check.C, workshop string) []string {
+	wfs, err := s.b.WorkshopFs(s.ctx, workshop)
+	c.Assert(err, check.IsNil)
+	defer wfs.Close()
+
+	root, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath("")
+	c.Assert(err, check.IsNil)
+
+	var files []string
+	walk := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		name, err1 := filepath.Rel(root, path)
+		info, err2 := d.Info()
+		if err := cmp.Or(err1, err2); err != nil {
+			return err
+		}
+
+		if name != "." {
+			files = append(files, info.Mode().String()+" "+name)
+		}
+		return nil
+	}
+
+	c.Assert(filepath.WalkDir(root, walk), check.IsNil)
+	return files
+}
+
+// Count completed tasks by kind among those which depend, directly or
+// indirectly, on create-workshop or rebuild-workshop.
+func completedPostConstructTasks(c *check.C, st *state.State) map[string]int {
+	st.Lock()
+	defer st.Unlock()
+
+	// Find current Change (in DoingStatus).
+	changes := st.Changes()
+	idx := slices.IndexFunc(changes, func(c *state.Change) bool {
+		return c.Status() == state.DoingStatus
+	})
+	c.Assert(idx, testutil.IntGreaterEqual, 0)
+	change := changes[idx]
+
+	// Find construct (launch or rebuild) task.
+	tasks := change.Tasks()
+	idx = slices.IndexFunc(tasks, func(t *state.Task) bool {
+		return t.Kind() == "create-workshop" || t.Kind() == "rebuild-workshop"
+	})
+	c.Assert(idx, testutil.IntGreaterEqual, 0)
+	construct := tasks[idx]
+
+	// Count tasks by kind. Only considers tasks in DoneStatus which
+	// wait for `construct` (directly or indirectly).
+	doneCount := map[string]int{}
+
+	stack := []*state.Task{construct}
+	seen := map[string]bool{construct.ID(): true}
+	for len(stack) > 0 {
+		task := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		if task.Status() != state.DoneStatus {
+			continue
+		}
+		doneCount[task.Kind()] += 1
+
+		for _, t := range task.HaltTasks() {
+			if !seen[t.ID()] {
+				seen[t.ID()] = true
+				stack = append(stack, t)
+			}
+		}
+	}
+
+	return doneCount
+}
+
+func expectFields[T any](c *check.C, expected map[string]any) {
+	fields := fieldTypes[T]()
+	for k, v := range expected {
+		if v != nil {
+			continue
+		}
+
+		_, ok := fields[k]
+		c.Check(ok, check.Equals, true, check.Commentf("field %q can be removed", k))
+
+		delete(expected, k)
+		delete(fields, k)
+	}
+	c.Check(fields, testutil.JsonEquals, expected)
+}
+
+func fieldTypes[T any]() map[string]string {
+	st := reflect.TypeFor[T]()
+
+	fields := make(map[string]string, st.NumField())
+	for i := range st.NumField() {
+		field := st.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		fields[field.Name] = field.Type.String()
+	}
+	return fields
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
