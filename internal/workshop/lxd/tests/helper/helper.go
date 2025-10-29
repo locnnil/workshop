@@ -37,8 +37,7 @@ func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 	c.Check(err, check.IsNil)
 	for _, i := range fingers {
 		op, err := cli.DeleteImage(i)
-		c.Check(err, check.IsNil)
-		if err == nil {
+		if c.Check(err, check.IsNil) {
 			c.Check(op.Wait(), check.IsNil)
 		}
 	}
@@ -54,15 +53,13 @@ func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 			}
 
 			op, err := cli.UpdateInstanceState(i.Name, req, "")
-			c.Check(err, check.IsNil)
-			if err == nil {
+			if c.Check(err, check.IsNil) {
 				c.Check(op.Wait(), check.IsNil)
 			}
 		}
 
 		op, err := cli.DeleteInstance(i.Name)
-		c.Check(err, check.IsNil)
-		if err == nil {
+		if c.Check(err, check.IsNil) {
 			c.Check(op.Wait(), check.IsNil)
 		}
 	}
