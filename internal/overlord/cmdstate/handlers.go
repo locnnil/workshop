@@ -209,32 +209,26 @@ func (e *execution) do(ctx context.Context, task *state.Task, backend workshop.B
 	}()
 
 	if e.execArgs.Interactive {
-		wgOutputSent.Add(1)
-		go func() {
-			defer wgOutputSent.Done()
+		wgOutputSent.Go(func() {
 			logger.Debugf("Exec %s: started mirroring stdout websocket", task.ID())
 			defer logger.Debugf("Exec %s: finished mirroring stdout websocket", task.ID())
 			<-wsutil.WebsocketSendStream(ioConn, stdoutReader, -1)
-		}()
+		})
 	} else {
 		stdoutConn := e.getWebsocket(wsStdout)
-		wgOutputSent.Add(1)
-		go func() {
-			defer wgOutputSent.Done()
+		wgOutputSent.Go(func() {
 			logger.Debugf("Exec %s: started mirroring stdout websocket", task.ID())
 			defer logger.Debugf("Exec %s: finished mirroring stdout websocket", task.ID())
 			<-wsutil.WebsocketSendStream(stdoutConn, stdoutReader, -1)
-		}()
+		})
 
 		stderrConn := e.getWebsocket(wsStderr)
 		stderrReader, stderrWriter = io.Pipe()
-		wgOutputSent.Add(1)
-		go func() {
-			defer wgOutputSent.Done()
+		wgOutputSent.Go(func() {
 			logger.Debugf("Exec %s: started mirroring stderr websocket", task.ID())
 			defer logger.Debugf("Exec %s: finished mirroring stderr websocket", task.ID())
 			<-wsutil.WebsocketSendStream(stderrConn, stderrReader, -1)
-		}()
+		})
 		beforeClosers = append(beforeClosers, stderrWriter)
 		afterClosers = append(afterClosers, stderrReader)
 	}
