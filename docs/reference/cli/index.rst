@@ -17,5 +17,6 @@ while :program:`workshopctl` is operated by SDK authors who use |sdk_markup|:
 .. toctree::
    :maxdepth: 1
 
+   sdkcraft/index
    workshop
    workshopctl
