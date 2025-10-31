@@ -493,8 +493,8 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
 	<-change.Ready()
 
 	st.Lock()
+	defer st.Unlock()
 	c.Assert(change.Err(), check.IsNil)
-	st.Unlock()
 }
 
 func (s *apiSuite) TestGetWorkshops(c *check.C) {
