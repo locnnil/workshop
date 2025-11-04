@@ -411,8 +411,9 @@ How-to guides:
 
 Reference:
 
+- :ref:`ref_workshop__cli`
+- :ref:`ref_workshop_actions`
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_definition`
 - :ref:`ref_workshop_run`
-- :ref:`ref_workshop_actions`
 - :ref:`ref_workshop_status`

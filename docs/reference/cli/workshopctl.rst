@@ -1,4 +1,4 @@
-.. _ref_workshopctl:
+.. _ref_workshopctl__cli:
 
 
 .. meta::
@@ -84,4 +84,4 @@ Explanation:
 Reference:
 
 - :ref:`ref_sdk_hooks`
-- :ref:`ref_workshop_cli`
+- :ref:`ref_workshop__cli`

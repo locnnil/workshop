@@ -199,5 +199,5 @@ Explanation:
 
 Reference:
 
-- :ref:`ref_workshop_cli`
+- :ref:`ref_workshop__cli`
 - :ref:`ref_workshop_status`

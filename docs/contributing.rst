@@ -460,7 +460,7 @@ Here's the publishing checklist to follow:
   this builds the release snaps for the supported architectures
   to be published on GitHub
   and adds a pull request to update the
-  :ref:`CLI reference <ref_workshop_cli>`
+  :ref:`CLI reference <ref_workshop__cli>`
 
 - Generate the
   `change log <https://github.com/canonical/workshop/releases/new>`_
@@ -516,7 +516,7 @@ See the relevant documentation before making changes:
 CLI reference
 ~~~~~~~~~~~~~
 
-The :ref:`command-line reference <ref_workshop_cli>`
+The :ref:`command-line reference <ref_workshop__cli>`
 is produced directly from the Cobra command tree:
 
 .. code-block:: console

@@ -20,19 +20,3 @@ with |ws_markup| and |sdk_markup|:
    SDKs versus Dockerfiles <sdk-vs-dockerfile>
    Design best practices <best-practices>
    Parts <parts>
-
-
-See also
---------
-
-Explanation:
-
-- :ref:`exp_interfaces`
-- :ref:`exp_workshop`
-
-
-Reference:
-
-- :ref:`ref_sdk_internals`
-- :ref:`ref_sdk_definition`
-- :ref:`ref_workshopctl`

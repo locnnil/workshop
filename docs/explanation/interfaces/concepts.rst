@@ -220,8 +220,8 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshop`
 - :ref:`exp_sdks`
+- :ref:`exp_workshop`
 
 
 How-to guides:
@@ -236,3 +236,7 @@ Reference:
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_definition`
 - :ref:`ref_workshop_disconnect`
+- :ref:`ref_workshop_info`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_remove`
