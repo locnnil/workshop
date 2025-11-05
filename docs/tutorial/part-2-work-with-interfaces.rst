@@ -120,9 +120,13 @@ act as the models storage for the workshop.
 Add plugs, slots
 ----------------
 
-Lastly, you can add plugs and slots to the SDKs in the workshop definition,
-allowing you to tailor the initial plug and slot layout to your requirements.
-The need to do this usually arises
+You can modify the behavior of the SDKs you installed in your workshop,
+tailoring it to your needs and connecting them to other SDKs or the host system.
+
+To do this, you add plugs and slots to the SDKs in the workshop definition,
+allowing you to customize the initial plug and slot layout to your requirements.
+
+This scenario usually arises
 when you want to connect different SDKs running in the workshop
 or expose some service from the workshop to the host system.
 
