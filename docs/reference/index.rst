@@ -19,13 +19,10 @@ These articles share the usage details of the command-line tools
 provided by |ws_markup| and |sdk_markup|:
 
 .. toctree::
-   :hidden:
+   :titlesonly:
+   :class: flat-toctree
 
    CLI <cli/index>
-
-
-- :doc:`cli/workshop`
-- :doc:`cli/workshopctl`
 
 
 Definition file formats
@@ -39,17 +36,14 @@ such as plugs, base images and so on.
 However, both definition types have different purposes and structure:
 
 .. toctree::
-   :hidden:
+   :titlesonly:
+   :class: flat-toctree
 
    Definition files <definition-files/index>
 
 
-- :doc:`definition-files/workshop-definition`
-- :doc:`definition-files/sdk-definition`
-
-
 Structure and behavior
------------------------
+----------------------
 
 These topics provide detailed guidance on various aspects
 of operating an SDK or a workshop at run-time.
@@ -58,7 +52,8 @@ to understand how a workshop runs and the status it has,
 it's crucial to know how SDKs are structured and operated:
 
 .. toctree::
-   :maxdepth: 1
+   :titlesonly:
+   :class: flat-toctree
 
    sdks
    workshops

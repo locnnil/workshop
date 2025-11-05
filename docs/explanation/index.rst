@@ -21,14 +21,10 @@ its components
 and how they work together to provide isolated development environments.
 
 .. toctree::
-   :hidden:
    :titlesonly:
+   :class: flat-toctree
 
    architecture/index
-
-
-- :doc:`architecture/components`
-- :doc:`architecture/runtime-behavior`
 
 
 Workshops and projects
@@ -44,14 +40,10 @@ In turn, a project is a working directory
 where multiple workshop definitions can be placed.
 
 .. toctree::
-   :hidden:
+   :titlesonly:
+   :class: flat-toctree
 
    workshops/index
-
-- :doc:`workshops/concepts`
-- :doc:`workshops/changes-tasks`
-- :doc:`workshops/projects`
-- :doc:`workshops/workshop-cli`
 
 
 SDKs
@@ -63,14 +55,10 @@ SDKs are packages of software dependencies that can be installed in workshops
 to create tailored development environments.
 
 .. toctree::
-   :hidden:
+   :titlesonly:
+   :class: flat-toctree
 
    sdks/index
-
-
-- :doc:`sdks/concepts`
-- :doc:`SDKs versus Dockerfiles <sdks/sdk-vs-dockerfile>`
-- :doc:`Parts <sdks/parts>`
 
 
 Interfaces
@@ -81,17 +69,10 @@ between a workshop and the host system,
 as well as between the different SDKs that are part of a workshop.
 
 .. toctree::
-   :hidden:
+   :titlesonly:
+   :class: flat-toctree
 
    interfaces/index
-
-- :doc:`interfaces/concepts`
-- :doc:`interfaces/camera-interface`
-- :doc:`interfaces/desktop-interface`
-- :doc:`interfaces/gpu-interface`
-- :doc:`interfaces/mount-interface`
-- :doc:`interfaces/ssh-interface`
-- :doc:`interfaces/tunnel-interface`
 
 
 Security considerations

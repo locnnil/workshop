@@ -1,7 +1,11 @@
 import datetime
 import ast
 import os
+import sys
 import yaml
+
+# Add _extensions directory to Python path for custom extensions
+sys.path.insert(0, os.path.abspath('_extensions'))
 
 # Configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -244,6 +248,7 @@ extensions = [
     "sphinx_last_updated_by_git",
     "sphinx.ext.intersphinx",
     "sphinx_sitemap",
+    "flat_toctree",
 ]
 
 # Excludes files or directories from processing
@@ -254,12 +259,15 @@ exclude_patterns = ["readme.rst", "reference/cli/workshop-*.rst", "coverage.md"]
 
 html_css_files = [
     "workshop.css",
+    "flat-toctree.css",
 ]
 
 
 # Adds custom JavaScript files, located under 'html_static_path'
 
-# html_js_files = []
+html_js_files = [
+    "flat-toctree.js",
+]
 
 
 # Specifies a reST snippet to be appended to each .rst file
