@@ -158,12 +158,11 @@ func (s *CommonStateFuncs) TestInjectTasksMainAborted(c *check.C) {
 	t0.SetStatus(state.DoingStatus)
 	chg.AddTask(t0)
 	t0.JoinLane(lane)
-	t01 := s.state.NewTask("task1-1", "")
-	t01.WaitFor(t0)
-	t02 := s.state.NewTask("task1-2", "")
-	t02.WaitFor(t0)
 
+	t01 := s.state.NewTask("task1-1", "")
+	t02 := s.state.NewTask("task1-2", "")
 	ts := state.NewTaskSet(t01, t02)
+
 	// This will abort the main task.
 	chg.Abort()
 	handlersetup.InjectTasks(t0, ts)
