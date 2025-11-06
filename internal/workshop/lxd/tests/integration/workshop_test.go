@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package lxdbackend_integration_test
 

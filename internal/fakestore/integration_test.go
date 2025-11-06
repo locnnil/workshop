@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package store_test
 
