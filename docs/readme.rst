@@ -32,10 +32,10 @@ then run ``workshop launch``:
    :caption: workshop.yaml
 
    name: dev
-   base: ubuntu@22.04
+   base: ubuntu@24.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: all/edge
 
 
 .. code-block:: console
