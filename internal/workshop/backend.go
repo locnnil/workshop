@@ -55,11 +55,6 @@ func (e *ErrExec) Error() string {
 	return fmt.Sprintf("command exit code %d", e.Status)
 }
 
-type WorkshopConfigValue struct {
-	Name  string
-	Value string
-}
-
 type Stash interface {
 	// Make a stash of the workshop. The workshop will be stopped and will not
 	// be available to other workshop operations, e.g. list, stop, start and so
@@ -221,11 +216,11 @@ type Backend interface {
 	// Removes a workshop mount.
 	RemoveWorkshopMount(ctx context.Context, name, mount string) error
 
-	// TODO: these methods are too generic and should be wrapped with a proper
-	// interface method where required. We should not let the client to change
-	// any workshop property arbitrarily.
-	AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error
-	RemoveWorkshopConfig(ctx context.Context, name string, key string) error
+	// Mount an SDK volume and add the SDK to the Sdks field.
+	InstallSdk(ctx context.Context, name string, setup sdk.Setup) error
+
+	// Remove an SDK from the Sdks field and unmount the SDK volume.
+	UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error
 
 	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to

@@ -492,7 +492,7 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 	}
 
 	// Workshop started, enable autostart.
-	if err := s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "true"}); err != nil {
+	if err := s.setAutoStart(conn, ctx, name, true); err != nil {
 		return err
 	}
 
@@ -544,7 +544,7 @@ func (s *Backend) StopWorkshop(ctx context.Context, name string, force bool) err
 
 func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, name string, force bool) error {
 	// Workshop stopped, disable autostart.
-	if err := s.addWorkshopConfig(conn, ctx, name, &workshop.WorkshopConfigValue{Name: "boot.autostart", Value: "false"}); err != nil {
+	if err := s.setAutoStart(conn, ctx, name, false); err != nil {
 		return err
 	}
 
@@ -563,17 +563,7 @@ func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, nam
 	return nil
 }
 
-func (s *Backend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	return s.addWorkshopConfig(conn, ctx, name, item)
-}
-
-func (s *Backend) addWorkshopConfig(conn lxd.InstanceServer, ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
+func (s *Backend) setAutoStart(conn lxd.InstanceServer, ctx context.Context, name string, autostart bool) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -584,39 +574,13 @@ func (s *Backend) addWorkshopConfig(conn lxd.InstanceServer, ctx context.Context
 		return err
 	}
 
-	inst.Config[item.Name] = item.Value
+	inst.Config["boot.autostart"] = strconv.FormatBool(autostart)
+
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
 	}
-
 	return op.WaitContext(ctx)
-}
-
-func (s *Backend) RemoveWorkshopConfig(ctx context.Context, name string, key string) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
-	}
-
-	delete(inst.Config, key)
-	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
-	if err != nil {
-		return err
-	}
-
-	return op.Wait()
 }
 
 func (s *Backend) AddWorkshopMount(ctx context.Context, name string, mount workshop.Mount) error {

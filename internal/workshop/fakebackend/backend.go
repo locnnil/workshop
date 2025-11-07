@@ -2,7 +2,6 @@ package fakebackend
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -26,7 +25,6 @@ type ExecFunc func(ctx context.Context, name string, args *workshop.Execution) (
 
 type FakeWorkshop struct {
 	*workshop.Workshop
-	Config             map[string]string
 	Devices            map[string]map[string]string
 	WorkshopFilesystem fsutil.Fs
 }
@@ -198,8 +196,6 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	}
 	ws.WorkshopFilesystem = fsutil.NewBasePathFs(wfspath)
 
-	ws.Config = make(map[string]string)
-	ws.Config[workshop.ConfigWorkshopSdks] = `{}`
 	ws.Devices = make(map[string]map[string]string)
 
 	ws.Sdks = make(map[string]workshop.SdkInstallation)
@@ -224,10 +220,8 @@ func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) e
 	}
 
 	for _, sk := range wp.Sdks {
-		if sk.IsVolume() {
-			if err := f.DetachVolume(ctx, name, sdk.VolumeName(sk.Name, sk.Revision)); err != nil {
-				return err
-			}
+		if err := f.UninstallSdk(ctx, name, sk.Setup); err != nil {
+			return err
 		}
 	}
 
@@ -325,32 +319,6 @@ func (f *FakeWorkshopBackend) RemoveWorkshopMount(ctx context.Context, name, mou
 	return os.Remove(where)
 }
 
-func (f *FakeWorkshopBackend) AddWorkshopConfig(ctx context.Context, name string, item *workshop.WorkshopConfigValue) error {
-	_, projectId, err := f.userProject(ctx)
-	if err != nil {
-		return err
-	}
-
-	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
-	f.Workshops[projectId][name].Config[item.Name] = item.Value
-	return nil
-}
-
-func (f *FakeWorkshopBackend) RemoveWorkshopConfig(ctx context.Context, name string, key string) error {
-	_, projectId, err := f.userProject(ctx)
-	if err != nil {
-		return err
-	}
-
-	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
-	delete(f.Workshops[projectId][name].Config, key)
-	return nil
-}
-
 func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*workshop.Workshop, error) {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
@@ -369,12 +337,6 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*works
 	if wp == nil {
 		return nil, workshop.ErrWorkshopNotLaunched
 	}
-
-	var sdks map[string]workshop.SdkInstallation
-	if err := json.Unmarshal([]byte(f.Workshops[projectId][name].Config[workshop.ConfigWorkshopSdks]), &sdks); err != nil {
-		return nil, err
-	}
-	wp.Sdks = sdks
 	return wp.Workshop, nil
 }
 
@@ -697,6 +659,47 @@ func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, image workshop.B
 	return nil
 }
 
+func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+	_, projectId, err := b.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	b.workshopLock.Lock()
+	wp := b.Workshops[projectId][name]
+	b.workshopLock.Unlock()
+	if _, exist := wp.Sdks[setup.Name]; exist {
+		return fmt.Errorf("%q SDK is already installed", setup.Name)
+	}
+
+	wp.Sdks[setup.Name] = workshop.SdkInstallation{Setup: setup, InstallTime: workshop.InstallTimeNow()}
+
+	userDataDir := filepath.Join(b.BaseDir, "share")
+	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
+	if mount.Type == workshop.Volume {
+		return b.AttachVolume(ctx, name, mount.What, mount.Where, mount.ReadOnly)
+	}
+	return b.AddWorkshopMount(ctx, name, mount)
+}
+
+func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+	_, projectId, err := b.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	b.workshopLock.Lock()
+	wp := b.Workshops[projectId][name]
+	b.workshopLock.Unlock()
+	delete(wp.Sdks, setup.Name)
+
+	what := sdk.VolumeName(setup.Name, setup.Revision)
+	if setup.IsVolume() {
+		return b.DetachVolume(ctx, name, what)
+	}
+	return b.RemoveWorkshopMount(ctx, name, what)
+}
+
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, sk string) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
@@ -734,25 +737,9 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, sk string, file
 
 	// Remove SDKs from after the snapshot.
 	for _, u := range unwantedSdks {
-		delete(wp.Sdks, u.Name)
-		// Restore would detach the volume attached after the snapshot.
-		if u.IsVolume() {
-			if err = s.DetachVolume(ctx, name, sdk.VolumeName(u.Name, u.Revision)); err != nil {
-				return err
-			}
-		} else {
-			if err = fs.RemoveAll(sdk.SdkDir(u.Name)); err != nil {
-				return err
-			}
+		if err := s.UninstallSdk(ctx, name, u.Setup); err != nil {
+			return err
 		}
-	}
-	value, err := json.Marshal(wp.Sdks)
-	if err != nil {
-		return err
-	}
-	item := &workshop.WorkshopConfigValue{Name: workshop.ConfigWorkshopSdks, Value: string(value)}
-	if err := s.AddWorkshopConfig(ctx, name, item); err != nil {
-		return err
 	}
 
 	wp.File = file

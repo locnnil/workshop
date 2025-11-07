@@ -95,3 +95,22 @@ func SdkSourcePath(userDataDir string, project Project, w, sk string, source sdk
 		return ""
 	}
 }
+
+func SdkMount(userDataDir, pid, w string, setup sdk.Setup) Mount {
+	mount := Mount{
+		Name:      sdk.VolumeName(setup.Name, setup.Revision),
+		Where:     sdk.SdkDir(setup.Name),
+		MakeWhere: true,
+		ReadOnly:  true,
+	}
+
+	if setup.IsVolume() {
+		mount.Type = Volume
+		mount.What = sdk.VolumeName(setup.Name, setup.Revision)
+		return mount
+	}
+
+	mount.Type = HostWorkshop
+	mount.What = filepath.Join(LocalSdkDir(userDataDir, pid, w, setup.Name), setup.Sha3_384)
+	return mount
+}

@@ -1,24 +1,19 @@
 package sdkstate
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/workshop"
@@ -161,23 +156,12 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	// Directory: /var/lib/workshop/sdk/<name>/
-	fs, err := m.backend.WorkshopFs(ctx, w)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-	if err = fs.MkdirAll(dirs.WorkshopSdksDir, 0755); err != nil {
-		return err
-	}
-
+	// TODO: Remove this section when we can download a specific SDK
+	// revision from the Store (this revision was validated earlier).
 	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
 	}
-
-	// TODO: Remove this section when we can download a specific SDK
-	// revision from the Store (this revision was validated earlier).
 	sdkYaml, err := maybeSdkYaml(task)
 	if err != nil {
 		return err
@@ -188,55 +172,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		}
 	}
 
-	rev := revert.New()
-	defer rev.Fail()
-
-	if err := m.mountSdk(ctx, user, project, w, sdkSetup); err != nil {
-		return err
-	}
-	st := task.State()
-	rev.Add(func() {
-		if reverr := m.unmountSdk(ctx, w, sdkSetup); reverr != nil {
-			st.Lock()
-			task.Logf("Install SDK cleanup: could not unmount %q SDK: %v", sdkSetup.Name, reverr)
-			st.Unlock()
-		}
-	})
-
-	if err = wp.AddSdk(ctx, sdkSetup); err != nil {
-		return err
-	}
-
-	rev.Success()
-	return nil
-}
-
-func (m *SdkManager) mountSdk(ctx context.Context, user string, project *workshop.Project, w string, sdkSetup sdk.Setup) error {
-	// Mount the SDK content at the workshop location.
-	name := sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision)
-	sdkPath := sdk.SdkDir(sdkSetup.Name)
-
-	if sdkSetup.IsVolume() {
-		return m.backend.AttachVolume(ctx, w, name, sdkPath, true)
-	}
-
-	usr, env, err := osutil.UserAndEnv(user)
-	if err != nil {
-		return err
-	}
-	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-
-	sdkDir := workshop.LocalSdkDir(userDataDir, project.ProjectId, w, sdkSetup.Name)
-	what := filepath.Join(sdkDir, sdkSetup.Sha3_384)
-
-	mnt := workshop.Mount{
-		Name:     name,
-		Type:     workshop.HostWorkshop,
-		What:     what,
-		Where:    sdkPath,
-		ReadOnly: true,
-	}
-	return m.backend.AddWorkshopMount(ctx, w, mnt)
+	return m.backend.InstallSdk(ctx, w, sdkSetup)
 }
 
 func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -253,24 +189,7 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	wp, err := m.backend.Workshop(ctx, w)
-	if err != nil {
-		return err
-	}
-
-	if err := wp.RemoveSdk(ctx, sdkSetup.Name); err != nil {
-		return err
-	}
-
-	return m.unmountSdk(ctx, w, sdkSetup)
-}
-
-func (m *SdkManager) unmountSdk(ctx context.Context, w string, sdkSetup sdk.Setup) error {
-	name := sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision)
-	if sdkSetup.IsVolume() {
-		return m.backend.DetachVolume(ctx, w, name)
-	}
-	return m.backend.RemoveWorkshopMount(ctx, w, name)
+	return m.backend.UninstallSdk(ctx, w, sdkSetup)
 }
 
 func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {

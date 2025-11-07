@@ -2,7 +2,6 @@ package workshop
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
@@ -45,40 +44,6 @@ type Workshop struct {
 type SdkInstallation struct {
 	sdk.Setup
 	InstallTime time.Time `json:"install-time"`
-}
-
-// Associate an SDK with the workshop by adding the SDK to the Sdks field.
-func (w *Workshop) AddSdk(ctx context.Context, s sdk.Setup) error {
-	if _, exist := w.Sdks[s.Name]; exist {
-		return fmt.Errorf("%q SDK is already installed", s.Name)
-	}
-
-	w.Sdks[s.Name] = SdkInstallation{Setup: s, InstallTime: InstallTimeNow()}
-	value, err := json.Marshal(w.Sdks)
-	if err != nil {
-		return err
-	}
-
-	item := &WorkshopConfigValue{
-		Name:  ConfigWorkshopSdks,
-		Value: string(value),
-	}
-	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
-}
-
-// Stops associating an SDK with the workshop by removing the SDK from the Sdks field.
-func (w *Workshop) RemoveSdk(ctx context.Context, name string) error {
-	delete(w.Sdks, name)
-	value, err := json.Marshal(w.Sdks)
-	if err != nil {
-		return err
-	}
-
-	item := &WorkshopConfigValue{
-		Name:  ConfigWorkshopSdks,
-		Value: string(value),
-	}
-	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
 }
 
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {

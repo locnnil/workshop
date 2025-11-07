@@ -27,13 +27,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 
 	"github.com/canonical/x-go/strutil"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/client"
-	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/builtin"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
@@ -90,15 +88,7 @@ func (s *apiSuite) workshopFile(ws string, sdks []*sdk.Info) *workshop.File {
 	return file
 }
 
-func (s *apiSuite) writeSDKMetaFile(c *check.C, fs fsutil.Fs, name, yaml string) {
-	sdkPath := sdk.SdkMetaDir(name)
-	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
-	metaPath := filepath.Join(sdkPath, "sdk.yaml")
-	c.Assert(fs.WriteFile(metaPath, []byte(yaml), 0644), check.IsNil)
-}
-
 func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop.Workshop {
-
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	wf := s.workshopFile(w, []*sdk.Info{info})
 	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
@@ -107,21 +97,20 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
 
-	wfs, err := s.b.WorkshopFs(s.ctx, w)
-	c.Assert(err, check.IsNil)
-	defer wfs.Close()
-	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
-
 	digest := sha3.Sum384([]byte(yaml))
-
-	setup := sdk.Setup{
-		Name:     info.Name,
-		Channel:  info.Channel,
-		Source:   info.Source,
-		Revision: info.Revision,
-		Sha3_384: hex.EncodeToString(digest[:]),
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     info.Name,
+			Channel:  info.Channel,
+			Source:   info.Source,
+			Revision: info.Revision,
+			Sha3_384: hex.EncodeToString(digest[:]),
+		},
+		SdkYAML: yaml,
 	}
-	err = wp.AddSdk(s.ctx, setup)
+	s.importSdkVolume(c, meta, 0)
+
+	err = s.b.InstallSdk(s.ctx, w, meta.Setup)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)

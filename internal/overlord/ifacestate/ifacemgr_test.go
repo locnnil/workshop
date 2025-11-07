@@ -146,9 +146,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []sdk
 	s.state.Unlock()
 
 	for _, sk := range allsdks {
-		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), sdk.SdkDir(sk.Name), true)
-		c.Assert(err, check.IsNil)
-		err = w.AddSdk(ctx, sk.Setup)
+		err = be.InstallSdk(ctx, ws, sk.Setup)
 		c.Assert(err, check.IsNil)
 	}
 
