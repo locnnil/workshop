@@ -100,9 +100,6 @@ type VolumeManager interface {
 	// workshop as a separate operation.
 	CreateVolume(ctx context.Context, info VolumeSetup) error
 
-	// Import a tarball into the volume.
-	ImportVolume(ctx context.Context, info VolumeSetup, tarball *os.File) error
-
 	// Attach the volume to the workshop. The volume must be created before.
 	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error
 
@@ -133,6 +130,11 @@ type BaseImageManager interface {
 	GetBase(ctx context.Context, base string) (BaseImage, error)
 	// Download the given base image.
 	DownloadBase(ctx context.Context, image BaseImage, report *progress.Reporter) error
+}
+
+type SdkManager interface {
+	// Import an SDK tarball as a new volume.
+	ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error
 }
 
 type ExecArgs struct {
@@ -170,6 +172,7 @@ type Backend interface {
 	Stash
 	VolumeManager
 	BaseImageManager
+	SdkManager
 	Snapshot
 
 	// The backend will attempt to load a project for the given path

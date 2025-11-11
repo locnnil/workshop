@@ -161,17 +161,10 @@ func (s *sdkStateSuite) mockSdk(c *check.C, meta sdk.Meta) {
 	c.Assert(err, check.IsNil)
 	err = os.WriteFile(path, []byte(meta.SdkYAML), 0644)
 	c.Assert(err, check.IsNil)
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
 	file, err := os.Open(vfs)
 	c.Assert(err, check.IsNil)
 	defer file.Close()
-	err = s.backend.ImportVolume(s.ctx, volume, file)
+	err = s.backend.ImportSdk(s.ctx, meta, file)
 	c.Assert(err, check.IsNil)
 }
 

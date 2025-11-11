@@ -69,15 +69,7 @@ func (s *requestSuite) importSdkVolume(c *check.C, meta sdk.Meta) {
 	c.Assert(err, check.IsNil)
 	defer tarball.Close()
 
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
-	c.Assert(s.backend.ImportVolume(s.ctx, volume, tarball), check.IsNil)
+	c.Assert(s.backend.ImportSdk(s.ctx, meta, tarball), check.IsNil)
 }
 
 func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) {

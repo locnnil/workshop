@@ -337,16 +337,17 @@ description: SDK
 sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
 `
 
-func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
+func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	// Execute
-	volume := workshop.VolumeSetup{
-		Name:     "test-1",
-		Kind:     "sdk",
-		Sdk:      "test",
-		Revision: sdk.R(1),
-		Metadata: testsdk,
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "test",
+			Revision: sdk.R(1),
+			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: testsdk,
 	}
-	tarball := helper.MockSdkTarball(c, volume.Sdk, testsdk)
+	tarball := helper.MockSdkTarball(c, meta.Name, testsdk)
 
 	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
 
@@ -358,7 +359,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 			file, err := os.Open(tarball)
 			c.Assert(err, check.IsNil)
 			defer file.Close()
-			if err := f.bd.ImportVolume(f.ctx, volume, file); err == nil {
+			if err := f.bd.ImportSdk(f.ctx, meta, file); err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 				atomic.AddInt32(&existCnt, 1)
@@ -376,6 +377,14 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
+	volume := workshop.VolumeSetup{
+		Name:     sdk.VolumeName(meta.Name, meta.Revision),
+		Kind:     "sdk",
+		Sha3_384: meta.Sha3_384,
+		Sdk:      meta.Name,
+		Revision: meta.Revision,
+		Metadata: meta.SdkYAML,
+	}
 	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
@@ -383,16 +392,17 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
+func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 	// Execute
-	volume := workshop.VolumeSetup{
-		Name:     "test-1",
-		Kind:     "sdk",
-		Sdk:      "test",
-		Revision: sdk.R(1),
-		Metadata: testsdk,
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "test",
+			Revision: sdk.R(1),
+			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: testsdk,
 	}
-	tarball := helper.MockSdkTarball(c, volume.Sdk, testsdk)
+	tarball := helper.MockSdkTarball(c, meta.Name, testsdk)
 
 	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
 
@@ -412,7 +422,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 			file, err := os.Open(tarball)
 			c.Assert(err, check.IsNil)
 			defer file.Close()
-			if err := f.bd.ImportVolume(newctx, volume, file); err == nil {
+			if err := f.bd.ImportSdk(newctx, meta, file); err == nil {
 				atomic.AddInt32(&successCnt, 1)
 			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
 				atomic.AddInt32(&existCnt, 1)
@@ -433,6 +443,14 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 
 	vinfo, err := f.bd.Volume(f.ctx, "test-1")
 	c.Check(err, check.IsNil)
+	volume := workshop.VolumeSetup{
+		Name:     sdk.VolumeName(meta.Name, meta.Revision),
+		Kind:     "sdk",
+		Sha3_384: meta.Sha3_384,
+		Sdk:      meta.Name,
+		Revision: meta.Revision,
+		Metadata: meta.SdkYAML,
+	}
 	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 

@@ -90,17 +90,10 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, meta sdk.Meta) {
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
 	file, err := os.Open(vfs)
 	c.Assert(err, check.IsNil)
 	defer file.Close()
-	if err := be.ImportVolume(s.ctx, volume, file); err != nil {
+	if err := be.ImportSdk(s.ctx, meta, file); err != nil {
 		c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeAlreadyExists)
 	}
 }

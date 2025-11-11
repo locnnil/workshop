@@ -166,6 +166,14 @@ func MockSdkTarball(c *check.C, sdkname, sdkYaml string) string {
 }
 
 func MockSdkVolume(c *check.C, ctx context.Context, bd workshop.Backend, meta sdk.Meta) workshop.VolumeSetup {
+	tarball := MockSdkTarball(c, meta.Name, meta.SdkYAML)
+	file, err := os.Open(tarball)
+	c.Assert(err, check.IsNil)
+	defer file.Close()
+
+	err = bd.ImportSdk(ctx, meta, file)
+	c.Assert(err, check.IsNil)
+
 	volume := workshop.VolumeSetup{
 		Name:     sdk.VolumeName(meta.Name, meta.Revision),
 		Kind:     "sdk",
@@ -174,14 +182,6 @@ func MockSdkVolume(c *check.C, ctx context.Context, bd workshop.Backend, meta sd
 		Revision: meta.Revision,
 		Metadata: meta.SdkYAML,
 	}
-
-	tarball := MockSdkTarball(c, meta.Name, meta.SdkYAML)
-	file, err := os.Open(tarball)
-	c.Assert(err, check.IsNil)
-	defer file.Close()
-
-	err = bd.ImportVolume(ctx, volume, file)
-	c.Assert(err, check.IsNil)
 
 	return volume
 }

@@ -561,30 +561,6 @@ func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string)
 	return err
 }
 
-// ImportVolume imports a tarball into the volume. The tarball must be a valid
-// directory (unpacked so that the tests could provide a temp directory instead
-// of a packed tarball).
-func (s *FakeWorkshopBackend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, tarball *os.File) error {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	if _, ok := s.SdkVolumes[info.Name]; ok {
-		return workshop.ErrVolumeAlreadyExists
-	}
-
-	// TODO: Remove when we can reliably fetch metadata from the store.
-	if info.Kind == "sdk" && info.Metadata == "" {
-		meta, err := os.ReadFile(filepath.Join(tarball.Name(), "meta", "sdk.yaml"))
-		if err == nil {
-			info.Metadata = string(meta)
-		}
-	}
-
-	s.SdkVolumeContents[info.Name] = tarball.Name()
-	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string), Size: 0}
-	return nil
-}
-
 func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) error {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
@@ -656,6 +632,31 @@ func (b *FakeWorkshopBackend) DownloadBase(ctx context.Context, image workshop.B
 	if b.DownloadBaseCallback != nil {
 		return b.DownloadBaseCallback(ctx, image, report)
 	}
+	return nil
+}
+
+// ImportSdk imports an SDK tarball into the volume. The tarball must be a valid
+// directory (unpacked so that the tests could provide a temp directory instead
+// of a packed tarball).
+func (s *FakeWorkshopBackend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error {
+	s.volumeLock.Lock()
+	defer s.volumeLock.Unlock()
+
+	name := sdk.VolumeName(meta.Name, meta.Revision)
+	if _, ok := s.SdkVolumes[name]; ok {
+		return workshop.ErrVolumeAlreadyExists
+	}
+
+	setup := workshop.VolumeSetup{
+		Name:     sdk.VolumeName(meta.Name, meta.Revision),
+		Kind:     "sdk",
+		Sha3_384: meta.Sha3_384,
+		Sdk:      meta.Name,
+		Revision: meta.Revision,
+		Metadata: meta.SdkYAML,
+	}
+	s.SdkVolumeContents[name] = tarball.Name()
+	s.SdkVolumes[name] = workshop.VolumeInfo{VolumeSetup: setup, Workshops: make(map[string][]string), Size: 0}
 	return nil
 }
 

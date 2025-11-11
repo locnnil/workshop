@@ -2,13 +2,9 @@ package lxdbackend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -19,21 +15,6 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
-
-var volumeIndex = `name: %s
-backend: %s
-type: custom
-config:
-  volume:
-    name: %s
-    description: "SDK Volume"
-    type: custom
-    content_type: filesystem
-`
-
-func volumeIndexContent(name string) string {
-	return fmt.Sprintf(volumeIndex, name, storagePool, name)
-}
 
 // LockVolume ensures exclusive access to the specified volume. If there is an
 // ongoing operation on the volume, the calling goroutine will block until the
@@ -116,137 +97,6 @@ func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeSetup) e
 		return workshop.ErrVolumeAlreadyExists
 	}
 	return err
-}
-
-func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, tarball *os.File) error {
-	// There could be multiple launches that require the same volume. We don't
-	// want to unpack and import the volume multiple times.
-	if err := lockVolume(ctx, info.Name); err != nil {
-		return err
-	}
-	defer unlockVolume(info.Name)
-
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
-
-	_, _, err = conn.GetStoragePoolVolume(storagePool, "custom", info.Name)
-	if err == nil {
-		return workshop.ErrVolumeAlreadyExists
-	}
-	if !api.StatusErrorCheck(err, http.StatusNotFound) {
-		return err
-	}
-
-	// The tarballs will be transformed into a LXD-compatible backup format to
-	// create them directly as a custom volume. The LXD's tar archive has the
-	// following format:
-	//
-	// backup/
-	//  volume/
-	//  index.yaml
-
-	dir, err := os.MkdirTemp("", info.Name)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir)
-
-	// umask 0 with --no-same-permissions preserves normal permissions,
-	// just not setuid, setgid, etc. The parent directory should be empty
-	// with 700 permissions. For more details see
-	// https://www.gnu.org/software/tar/manual/html_section/Security.html
-	unpack := exec.CommandContext(ctx, "bash",
-		"-c",
-		`umask 0 && exec -- "$0" "$@"`,
-		"tar",
-		"--extract",
-		"--no-same-owner",
-		"--no-same-permissions",
-		"--keep-old-files",
-		"--file=/dev/stdin",
-		"--transform",
-		"s,^,volume/,",
-		"--directory="+dir,
-	)
-	unpack.Stdin = tarball
-
-	if _, err := unpack.Output(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			logger.Debugf("Failed to unpack volume tarball: %s", exitErr.Stderr)
-		}
-		return err
-	}
-
-	// Generate index.yaml for the volume.
-	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(info.Name)), 0644); err != nil {
-		return err
-	}
-
-	// TODO: Remove when we can reliably fetch metadata from the store.
-	if info.Kind == "sdk" && info.Metadata == "" {
-		// Read the metadata to store it as a volume's property. This is not ideal
-		// when the backend knows the name of the file with metadata as the volume
-		// manager should be able to import any tarball as a volume. But given that
-		// it is only applicable to SDKs in the nearest future, it should be acceptable
-		// as the alternative would be to change the interface to accept the metadata.
-		meta, err := os.ReadFile(filepath.Join(dir, "volume", "meta", "sdk.yaml"))
-		if err != nil {
-			return err
-		}
-		info.Metadata = string(meta)
-	}
-
-	newtar := filepath.Join(dir, filepath.Base(tarball.Name()))
-	repack := exec.CommandContext(ctx, "tar",
-		"--create",
-		"--format=posix",
-		"--force-local",
-		"--remove-files",
-		"--file",
-		newtar,
-		"--transform",
-		"s,^,backup/,",
-		"--directory="+dir,
-		"--no-same-owner",
-		"volume/",
-		"index.yaml",
-	)
-
-	if _, err := repack.Output(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			logger.Debugf("Failed to repack volume tarball: %s", exitErr.Stderr)
-			return exitErr
-		}
-		return err
-	}
-
-	f, err := os.Open(newtar)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	vol := lxd.StoragePoolVolumeBackupArgs{
-		BackupFile: f,
-		Name:       info.Name,
-	}
-
-	op, err := conn.CreateStoragePoolVolumeFromBackup(storagePool, vol)
-	if err != nil {
-		return err
-	}
-
-	if err = op.WaitContext(ctx); err != nil {
-		return err
-	}
-
-	volPut := api.StorageVolumePut{Config: volumeSetupToConfig(info)}
-	return conn.UpdateStoragePoolVolume(storagePool, "custom", info.Name, volPut, "")
 }
 
 func (s *Backend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {

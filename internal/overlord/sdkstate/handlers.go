@@ -121,21 +121,14 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		st.Unlock()
 	}
 
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-	}
 	file, err := os.Open(meta.Filepath())
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	err = m.backend.ImportVolume(ctx, volume, file)
+	err = m.backend.ImportSdk(ctx, *meta, file)
 	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", volume.Name)
+		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(meta.Name, meta.Revision))
 		return nil
 	}
 
