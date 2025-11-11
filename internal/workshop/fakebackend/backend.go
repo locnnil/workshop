@@ -74,7 +74,7 @@ type FakeWorkshopBackend struct {
 	StashedWorkshops map[string]map[string]*FakeWorkshop
 	// storage volumes, the key is a volume name
 	volumeLock           sync.Mutex
-	SdkVolumes           map[string]workshop.VolumeInfo
+	SdkVolumes           map[string]workshop.SdkVolume
 	SdkVolumeContents    map[string]string
 	SdkVolumeMountPoints map[WorkshopVolumeMount]string
 	// the key is a username
@@ -109,7 +109,7 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
-	be.SdkVolumes = make(map[string]workshop.VolumeInfo)
+	be.SdkVolumes = make(map[string]workshop.SdkVolume)
 	be.SdkVolumeContents = make(map[string]string)
 	be.SdkVolumeMountPoints = make(map[WorkshopVolumeMount]string)
 	be.projects = make(map[string][]workshop.Project)
@@ -488,7 +488,7 @@ func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, info workshop.Vo
 	}
 
 	s.SdkVolumeContents[info.Name] = vfs
-	s.SdkVolumes[info.Name] = workshop.VolumeInfo{VolumeSetup: info, Workshops: make(map[string][]string), Size: 0}
+	s.SdkVolumes[info.Name] = workshop.SdkVolume{Workshops: make(map[string][]string), Size: 0}
 	return nil
 }
 
@@ -576,31 +576,6 @@ func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) err
 	return nil
 }
 
-func (s *FakeWorkshopBackend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeInfo, error) {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	var infos []workshop.VolumeInfo
-	for _, info := range s.SdkVolumes {
-		if info.Kind == kind {
-			infos = append(infos, info)
-		}
-	}
-
-	return infos, nil
-}
-
-func (s *FakeWorkshopBackend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	info, ok := s.SdkVolumes[name]
-	if !ok {
-		return workshop.VolumeInfo{}, workshop.ErrVolumeNotFound
-	}
-	return info, nil
-}
-
 func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
@@ -647,22 +622,32 @@ func (s *FakeWorkshopBackend) ImportSdk(ctx context.Context, meta sdk.Meta, tarb
 		return workshop.ErrVolumeAlreadyExists
 	}
 
-	setup := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
 	s.SdkVolumeContents[name] = tarball.Name()
-	s.SdkVolumes[name] = workshop.VolumeInfo{VolumeSetup: setup, Workshops: make(map[string][]string), Size: 0}
+	s.SdkVolumes[name] = workshop.SdkVolume{Meta: meta, Workshops: make(map[string][]string), Size: 0}
 	return nil
 }
 
 func (b *FakeWorkshopBackend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
 	what := sdk.VolumeName(setup.Name, setup.Revision)
 	return b.DeleteVolume(ctx, what)
+}
+
+func (s *FakeWorkshopBackend) Sdks(ctx context.Context) ([]workshop.SdkVolume, error) {
+	s.volumeLock.Lock()
+	defer s.volumeLock.Unlock()
+
+	return slices.Collect(maps.Values(s.SdkVolumes)), nil
+}
+
+func (s *FakeWorkshopBackend) Sdk(ctx context.Context, setup sdk.Setup) (workshop.SdkVolume, error) {
+	s.volumeLock.Lock()
+	defer s.volumeLock.Unlock()
+
+	info, ok := s.SdkVolumes[sdk.VolumeName(setup.Name, setup.Revision)]
+	if !ok {
+		return workshop.SdkVolume{}, workshop.ErrVolumeNotFound
+	}
+	return info, nil
 }
 
 func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {

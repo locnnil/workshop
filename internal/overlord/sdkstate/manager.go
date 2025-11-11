@@ -66,14 +66,14 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 }
 
 func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
-	volumes, err := w.backend.Volumes(ctx, "sdk")
+	sdks, err := w.backend.Sdks(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	entries := make([]SdkVolume, 0, len(volumes))
-	for _, vol := range volumes {
-		info, err := sdk.ReadSdkInfo([]byte(vol.Metadata), "", "")
+	entries := make([]SdkVolume, 0, len(sdks))
+	for _, s := range sdks {
+		info, err := sdk.ReadSdkInfo([]byte(s.SdkYAML), "", "")
 		if err != nil {
 
 			return nil, err
@@ -82,31 +82,31 @@ func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
 		entries = append(entries, SdkVolume{
 			Name:      info.Name,
 			Version:   info.Version,
-			Revision:  vol.Revision.String(),
+			Revision:  s.Revision.String(),
 			BuildTime: info.BuildTime,
-			Size:      vol.Size,
+			Size:      s.Size,
 		})
 	}
 	return entries, nil
 }
 
 func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error) {
-	volumes, err := w.backend.Volumes(ctx, "sdk")
+	sdks, err := w.backend.Sdks(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	volumes = slices.DeleteFunc(volumes, func(a workshop.VolumeInfo) bool { return a.Sdk != name })
-	if len(volumes) == 0 {
+	sdks = slices.DeleteFunc(sdks, func(s workshop.SdkVolume) bool { return s.Name != name })
+	if len(sdks) == 0 {
 		return nil, workshop.ErrVolumeNotFound
 	}
 
 	full := SdkFullInfo{
 		Name:      name,
-		Installed: make([]SdkInstalled, 0, len(volumes)),
+		Installed: make([]SdkInstalled, 0, len(sdks)),
 	}
-	for _, vol := range volumes {
-		info, err := sdk.ReadSdkInfo([]byte(vol.Metadata), "", "")
+	for _, s := range sdks {
+		info, err := sdk.ReadSdkInfo([]byte(s.SdkYAML), "", "")
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 			full.Description = info.Description
 		}
 
-		for pid, wps := range vol.Workshops {
+		for pid, wps := range s.Workshops {
 			pctx := context.WithValue(ctx, workshop.ContextProjectId, pid)
 			for _, wp := range wps {
 				winfo, err := w.backend.Workshop(pctx, wp)
@@ -138,9 +138,9 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 					SdkVolume: SdkVolume{
 						Name:      info.Name,
 						Version:   info.Version,
-						Revision:  vol.Revision.String(),
+						Revision:  s.Revision.String(),
 						BuildTime: info.BuildTime,
-						Size:      vol.Size,
+						Size:      s.Size,
 					},
 					Workshop:    winfo.Name,
 					ProjectPath: winfo.Project.Path,

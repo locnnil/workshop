@@ -217,7 +217,7 @@ type localSdkFinder struct {
 	user        *user.User
 	userDataDir string
 	project     workshop.Project
-	sdkVolumes  []workshop.VolumeInfo
+	sdkVolumes  []workshop.SdkVolume
 }
 
 func (s *localSdkFinder) findLocalSdks(ctx context.Context, wp *workshop.Workshop, file *workshop.File) ([]sdk.Meta, error) {
@@ -281,7 +281,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 
 	minRevision := sdk.Revision{}
 	for _, volume := range volumes {
-		if volume.Sdk != sk || !volume.Revision.Local() {
+		if volume.Name != sk || !volume.Revision.Local() {
 			continue
 		}
 		if volume.Revision.N < minRevision.N {
@@ -289,13 +289,9 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 		}
 
 		if volume.Sha3_384 == digest {
-			setup := sdk.Setup{
-				Name:     volume.Sdk,
-				Source:   sdk.TrySource,
-				Revision: volume.Revision,
-				Sha3_384: volume.Sha3_384,
-			}
-			return &sdk.Meta{Setup: setup, SdkYAML: volume.Metadata}, nil
+			meta := volume.Meta
+			meta.Source = sdk.TrySource
+			return &meta, nil
 		}
 	}
 
@@ -315,37 +311,29 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 	return &meta, nil
 }
 
-func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.VolumeInfo, error) {
+func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.SdkVolume, error) {
 	if s.sdkVolumes != nil {
 		// The state is locked, preventing other launches and refreshes
 		// from calling ImportSdk, so it's safe to reuse sdkVolumes.
 		return s.sdkVolumes, nil
 	}
 
-	vols, err := s.backend.Volumes(ctx, "sdk")
+	sdks, err := s.backend.Sdks(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if vols == nil {
-		vols = []workshop.VolumeInfo{}
+	if sdks == nil {
+		sdks = []workshop.SdkVolume{}
 	}
-	s.sdkVolumes = vols
-	return vols, nil
+	s.sdkVolumes = sdks
+	return sdks, nil
 }
 
 func (s *localSdkFinder) importSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error {
 	if err := s.backend.ImportSdk(ctx, meta, tarball); err != nil {
 		return err
 	}
-	setup := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
-	s.sdkVolumes = append(s.sdkVolumes, workshop.VolumeInfo{VolumeSetup: setup, Workshops: make(map[string][]string)})
+	s.sdkVolumes = append(s.sdkVolumes, workshop.SdkVolume{Meta: meta, Workshops: make(map[string][]string)})
 	return nil
 }
 

@@ -569,7 +569,7 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	c.Check(chg.Err(), check.IsNil)
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
 	c.Assert(t.IsClean(), check.Equals, true)
 }
@@ -610,7 +610,7 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
 
 	s.state.Lock()
 	defer s.state.Unlock()
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
 	c.Assert(t.IsClean(), check.Equals, true)
 }
@@ -645,7 +645,7 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C
 
 	s.state.Lock()
 	defer s.state.Unlock()
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(t.IsClean(), check.Equals, true)
 }
@@ -684,7 +684,7 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	// The volume should still exist
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.IsNil)
 	// The task should not be clean (cleanup not performed)
 	c.Assert(t.IsClean(), check.Equals, false)
@@ -730,7 +730,7 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 
 	s.state.Lock()
 
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(t.IsClean(), check.Equals, true)
 	c.Assert(t2.IsClean(), check.Equals, true)
@@ -779,7 +779,7 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 
 	s.state.Lock()
 
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Check(err, check.IsNil)
 	c.Check(t.IsClean(), check.Equals, false)
 
@@ -797,7 +797,7 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 	s.state.Lock()
 	defer s.state.Unlock()
 	c.Check(t.IsClean(), check.Equals, true)
-	_, err = s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err = s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
 	c.Check(t2.IsClean(), check.Equals, true)
 }
@@ -851,7 +851,7 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	c.Assert(t1.IsClean(), check.Equals, true)
 	// The second task should not be clean (cleanup not performed, cooldown not passed)
 	c.Assert(t2.IsClean(), check.Equals, false)
-	_, err := s.backend.Volume(s.ctx, sdk.VolumeName("test", sdk.R(1)))
+	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
 	c.Assert(err, check.IsNil)
 }
 

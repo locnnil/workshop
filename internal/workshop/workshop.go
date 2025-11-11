@@ -47,15 +47,15 @@ type SdkInstallation struct {
 }
 
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
-	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
+	vinfo, err := w.Backend.Sdk(ctx, setup)
 	if err != nil {
 		return "", err
 	}
 
-	if vinfo.Metadata == "" {
+	if vinfo.SdkYAML == "" {
 		return "", fmt.Errorf("cannot find %q SDK metadata", setup.Name)
 	}
-	return vinfo.Metadata, nil
+	return vinfo.SdkYAML, nil
 }
 
 func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, error) {

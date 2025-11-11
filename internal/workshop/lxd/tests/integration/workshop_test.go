@@ -301,7 +301,6 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 }
 
 func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
-	// Execute
 	volume := workshop.VolumeSetup{
 		Name:     "test",
 		Kind:     "testkind",
@@ -310,22 +309,8 @@ func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
 	err := f.bd.CreateVolume(f.ctx, volume)
 	c.Assert(err, check.IsNil)
 
-	// Validate
-	vols, err := f.bd.Volumes(f.ctx, "testkind")
-	c.Assert(err, check.IsNil)
-	c.Check(vols, check.HasLen, 1)
-
-	c.Check(vols[0].VolumeSetup, check.DeepEquals, volume)
-	c.Check(vols[0].Workshops, check.HasLen, 0)
-
-	// Execute
 	err = f.bd.DeleteVolume(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-
-	// Validate
-	vols, err = f.bd.Volumes(f.ctx, "testkind")
-	c.Assert(err, check.IsNil)
-	c.Check(vols, check.HasLen, 0)
 }
 
 var testsdk = `name: test-sdk
@@ -354,7 +339,7 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	var wg sync.WaitGroup
 
 	var successCnt, existCnt int32
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Go(func() {
 			file, err := os.Open(tarball)
 			c.Assert(err, check.IsNil)
@@ -375,17 +360,9 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 
 	c.Check(cmd.Calls(), check.HasLen, 2)
 
-	vinfo, err := f.bd.Volume(f.ctx, "test-1")
+	vinfo, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Check(err, check.IsNil)
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
-	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
+	c.Check(vinfo.Meta, check.Equals, meta)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
 	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
@@ -409,7 +386,7 @@ func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 	var wg sync.WaitGroup
 
 	var successCnt, existCnt, canceled int32
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		newctx, cancel := context.WithCancel(f.ctx)
 
 		if i%2 == 0 {
@@ -441,17 +418,9 @@ func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 
 	c.Check(cmd.Calls(), check.HasLen, 2)
 
-	vinfo, err := f.bd.Volume(f.ctx, "test-1")
+	vinfo, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Check(err, check.IsNil)
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
-	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
+	c.Check(vinfo.Meta, check.Equals, meta)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
 	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
@@ -877,7 +846,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 		},
 		SdkYAML: testsdk,
 	}
-	volume := helper.MockSdkVolume(c, f.ctx, f.bd, meta)
+	helper.MockSdkVolume(c, f.ctx, f.bd, meta)
 	defer func() { c.Check(f.bd.DeleteSdk(f.ctx, meta.Setup), check.IsNil) }()
 
 	meta2 := sdk.Meta{
@@ -903,9 +872,11 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Assert(err, check.IsNil)
 	defer func() { c.Check(f.bd.UninstallSdk(f.ctx, "test", meta.Setup), check.IsNil) }()
 
-	info, err := f.bd.Volume(f.ctx, volume.Name)
+	info, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
-	c.Check(info.VolumeSetup, check.DeepEquals, volume)
+	saved := meta
+	saved.Source = 0
+	c.Check(info.Meta, check.Equals, saved)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}})
 
 	err = f.bd.Snapshot(f.ctx, "test", "test-sdk")
@@ -964,7 +935,7 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 		},
 		SdkYAML: testsdk,
 	}
-	volume := helper.MockSdkVolume(c, f.ctx, f.bd, meta)
+	helper.MockSdkVolume(c, f.ctx, f.bd, meta)
 	defer func() { c.Check(f.bd.DeleteSdk(f.ctx, meta.Setup), check.IsNil) }()
 
 	// Attach the volume to both workshops.
@@ -978,9 +949,9 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeInUse)
 
 	// Validate UsedBy in VolumeInfo.
-	info, err := f.bd.Volume(f.ctx, volume.Name)
+	info, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
-	c.Check(info.VolumeSetup, check.DeepEquals, volume)
+	c.Check(info.Meta, check.Equals, meta)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}})
 
 	// Detach the volume from the first workshop.
@@ -988,9 +959,9 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Validate UsedBy in VolumeInfo.
-	info, err = f.bd.Volume(f.ctx, volume.Name)
+	info, err = f.bd.Sdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
-	c.Check(info.VolumeSetup, check.DeepEquals, volume)
+	c.Check(info.Meta, check.Equals, meta)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{other.ProjectId: {"test"}})
 
 	err = f.bd.UninstallSdk(otherCtx, "test", meta.Setup)

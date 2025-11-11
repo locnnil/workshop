@@ -165,7 +165,7 @@ func MockSdkTarball(c *check.C, sdkname, sdkYaml string) string {
 	return tarball
 }
 
-func MockSdkVolume(c *check.C, ctx context.Context, bd workshop.Backend, meta sdk.Meta) workshop.VolumeSetup {
+func MockSdkVolume(c *check.C, ctx context.Context, bd workshop.Backend, meta sdk.Meta) {
 	tarball := MockSdkTarball(c, meta.Name, meta.SdkYAML)
 	file, err := os.Open(tarball)
 	c.Assert(err, check.IsNil)
@@ -173,15 +173,4 @@ func MockSdkVolume(c *check.C, ctx context.Context, bd workshop.Backend, meta sd
 
 	err = bd.ImportSdk(ctx, meta, file)
 	c.Assert(err, check.IsNil)
-
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sha3_384: meta.Sha3_384,
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
-
-	return volume
 }

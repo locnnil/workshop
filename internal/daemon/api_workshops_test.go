@@ -1732,20 +1732,18 @@ func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
 		s.d.overlord.StateEngine().Wait()
 	}
 
-	vols, err := s.b.Volumes(s.ctx, "sdk")
+	sdks, err := s.b.Sdks(s.ctx)
 	c.Assert(err, check.IsNil)
-	c.Assert(vols, check.HasLen, len(want))
+	c.Assert(sdks, check.HasLen, len(want))
 
-	for _, wv := range want {
-		v := slices.IndexFunc(vols, func(v workshop.VolumeInfo) bool {
-			return v.Name == wv
+	for _, name := range want {
+		idx := slices.IndexFunc(sdks, func(v workshop.SdkVolume) bool {
+			return sdk.VolumeName(v.Name, v.Revision) == name
 		})
-		c.Assert(v, check.Not(check.Equals), -1)
-		vol := vols[v]
-		c.Check(vol.Kind, check.Equals, "sdk")
-		c.Check(vol.Sha3_384, check.Not(check.Equals), "")
-		c.Check(sdk.VolumeName(vol.Sdk, vol.Revision), check.Equals, vol.Name)
-		c.Check(vol.Metadata, check.Not(check.Equals), "")
+		c.Assert(idx, check.Not(check.Equals), -1)
+		sk := sdks[idx]
+		c.Check(sk.Sha3_384, check.Not(check.Equals), "")
+		c.Check(sk.SdkYAML, check.Not(check.Equals), "")
 	}
 }
 

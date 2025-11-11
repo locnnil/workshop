@@ -86,8 +86,8 @@ type VolumeSetup struct {
 	Metadata string
 }
 
-type VolumeInfo struct {
-	VolumeSetup
+type SdkVolume struct {
+	sdk.Meta
 	// Project ID / Workshop pairs that the volume is attached to.
 	Workshops map[string][]string
 	// Size reports the current volume usage in bytes when available.
@@ -110,12 +110,6 @@ type VolumeManager interface {
 	// the volume from the workshop if mounted. No error is returned if the
 	// volume does not exist.
 	DeleteVolume(ctx context.Context, name string) error
-
-	// List volumes of a given kind.
-	Volumes(ctx context.Context, kind string) ([]VolumeInfo, error)
-
-	// Get the volume information.
-	Volume(ctx context.Context, name string) (VolumeInfo, error)
 }
 
 type BaseImage struct {
@@ -139,6 +133,12 @@ type SdkManager interface {
 	// Delete an SDK volume. It does not unmount the volume from workshops
 	// where it is mounted. No error is returned if the SDK does not exist.
 	DeleteSdk(ctx context.Context, setup sdk.Setup) error
+
+	// List available SDK volumes.
+	Sdks(ctx context.Context) ([]SdkVolume, error)
+
+	// Get the SDK volume information.
+	Sdk(ctx context.Context, setup sdk.Setup) (SdkVolume, error)
 }
 
 type ExecArgs struct {
