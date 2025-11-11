@@ -353,7 +353,7 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 	}
 
 	// Delete volume ignores ErrVolumeNotFound.
-	err = m.backend.DeleteVolume(ctx, sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
+	err = m.backend.DeleteSdk(ctx, sdkSetup)
 	if err == nil || errors.Is(err, workshop.ErrVolumeInUse) {
 		if errors.Is(err, workshop.ErrVolumeInUse) {
 			logger.Debugf("On SdkManager.Cleanup: the %q SDK volume is still in use, skip clean up", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))

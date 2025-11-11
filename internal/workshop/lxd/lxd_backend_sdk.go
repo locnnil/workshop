@@ -161,6 +161,10 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	return conn.UpdateStoragePoolVolume(storagePool, "custom", name, volPut, "")
 }
 
+func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
+	return s.DeleteVolume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
+}
+
 func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {

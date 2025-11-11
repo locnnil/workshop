@@ -135,6 +135,10 @@ type BaseImageManager interface {
 type SdkManager interface {
 	// Import an SDK tarball as a new volume.
 	ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error
+
+	// Delete an SDK volume. It does not unmount the volume from workshops
+	// where it is mounted. No error is returned if the SDK does not exist.
+	DeleteSdk(ctx context.Context, setup sdk.Setup) error
 }
 
 type ExecArgs struct {

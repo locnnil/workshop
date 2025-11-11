@@ -388,7 +388,7 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
-	err = f.bd.DeleteVolume(f.ctx, "test-1")
+	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
 }
 
@@ -454,7 +454,7 @@ func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 	c.Check(vinfo.VolumeSetup, check.DeepEquals, volume)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
-	err = f.bd.DeleteVolume(f.ctx, "test-1")
+	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
 }
 
@@ -878,7 +878,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 		SdkYAML: testsdk,
 	}
 	volume := helper.MockSdkVolume(c, f.ctx, f.bd, meta)
-	defer func() { c.Check(f.bd.DeleteVolume(f.ctx, volume.Name), check.IsNil) }()
+	defer func() { c.Check(f.bd.DeleteSdk(f.ctx, meta.Setup), check.IsNil) }()
 
 	meta2 := sdk.Meta{
 		Setup: sdk.Setup{
@@ -889,8 +889,8 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 		},
 		SdkYAML: testsdk,
 	}
-	volume2 := helper.MockSdkVolume(c, f.ctx, f.bd, meta2)
-	defer func() { c.Check(f.bd.DeleteVolume(f.ctx, volume2.Name), check.IsNil) }()
+	helper.MockSdkVolume(c, f.ctx, f.bd, meta2)
+	defer func() { c.Check(f.bd.DeleteSdk(f.ctx, meta2.Setup), check.IsNil) }()
 
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
@@ -965,7 +965,7 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 		SdkYAML: testsdk,
 	}
 	volume := helper.MockSdkVolume(c, f.ctx, f.bd, meta)
-	defer func() { c.Check(f.bd.DeleteVolume(f.ctx, volume.Name), check.IsNil) }()
+	defer func() { c.Check(f.bd.DeleteSdk(f.ctx, meta.Setup), check.IsNil) }()
 
 	// Attach the volume to both workshops.
 	err := f.bd.InstallSdk(f.ctx, "test", meta.Setup)
@@ -974,7 +974,7 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Ensure the volume cannot be deleted while attached to workshops.
-	err = f.bd.DeleteVolume(f.ctx, volume.Name)
+	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
 	c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeInUse)
 
 	// Validate UsedBy in VolumeInfo.

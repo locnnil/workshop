@@ -660,6 +660,11 @@ func (s *FakeWorkshopBackend) ImportSdk(ctx context.Context, meta sdk.Meta, tarb
 	return nil
 }
 
+func (b *FakeWorkshopBackend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
+	what := sdk.VolumeName(setup.Name, setup.Revision)
+	return b.DeleteVolume(ctx, what)
+}
+
 func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
 	_, projectId, err := b.userProject(ctx)
 	if err != nil {
