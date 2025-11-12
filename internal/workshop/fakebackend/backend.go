@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -144,11 +145,7 @@ func (f *FakeWorkshopBackend) Projects(ctx context.Context) (map[string][]worksh
 	if ok {
 		return map[string][]workshop.Project{userName: f.projects[userName]}, nil
 	}
-	all := map[string][]workshop.Project{}
-	for name, prjs := range f.projects {
-		all[name] = prjs
-	}
-	return all, nil
+	return maps.Clone(f.projects), nil
 }
 
 func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
