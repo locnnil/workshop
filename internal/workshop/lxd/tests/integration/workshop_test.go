@@ -350,10 +350,8 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 	var wg sync.WaitGroup
 
 	var successCnt, existCnt int32
-	wg.Add(5)
 	for i := 0; i < 5; i++ {
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			file, err := os.Open(tarball)
 			c.Assert(err, check.IsNil)
 			defer file.Close()
@@ -364,7 +362,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportOK(c *check.C) {
 			} else {
 				c.Assert(err, check.IsNil)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -399,7 +397,6 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 	var wg sync.WaitGroup
 
 	var successCnt, existCnt, canceled int32
-	wg.Add(5)
 	for i := 0; i < 5; i++ {
 		newctx, cancel := context.WithCancel(f.ctx)
 
@@ -409,8 +406,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 			defer cancel()
 		}
 
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			file, err := os.Open(tarball)
 			c.Assert(err, check.IsNil)
 			defer file.Close()
@@ -423,7 +419,7 @@ func (f *wsOps) TestLxdBackendStorageVolumeImportInterrupted(c *check.C) {
 			} else {
 				c.Assert(err, check.IsNil)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -514,13 +510,11 @@ func (f *wsOps) TestLxdBackendDownloadBase(c *check.C) {
 	c.Assert(fingerprint, check.Not(check.Equals), "")
 
 	var wg sync.WaitGroup
-	wg.Add(5)
 	for range 5 {
-		go func() {
+		wg.Go(func() {
 			err := f.bd.DownloadBase(f.ctx, "ubuntu@22.04", fingerprint, nil)
 			c.Check(err, check.IsNil)
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -575,13 +569,11 @@ func (f *wsOps) TestLxdBackendDownloadProtocolNotSupported(c *check.C) {
 
 func (f *wsOps) TestLxdBackendDownloadConcurrentErrors(c *check.C) {
 	var wg sync.WaitGroup
-	wg.Add(5)
 	for range 5 {
-		go func() {
+		wg.Go(func() {
 			err := f.bd.DownloadBase(f.ctx, "ubuntu@22.04", "##################", nil)
 			c.Check(err, check.ErrorMatches, `"ubuntu@22.04" download failed.*`)
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -599,9 +591,8 @@ func (f *wsOps) TestLxdBackendDownloadBaseResumeAfterCancellation(c *check.C) {
 
 	var wg sync.WaitGroup
 	var once sync.Once
-	wg.Add(3)
 	for range 3 {
-		go func() {
+		wg.Go(func() {
 			r := &progress.Reporter{
 				Name: "1",
 				Report: func(label string, done, total int) {
@@ -610,8 +601,7 @@ func (f *wsOps) TestLxdBackendDownloadBaseResumeAfterCancellation(c *check.C) {
 			}
 			err := f.bd.DownloadBase(wcancel, "ubuntu@22.04", fingerprint, r)
 			c.Check(err, testutil.ErrorIs, context.Canceled)
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -636,11 +626,8 @@ func (f *wsOps) TestLxdBackendDownloadMultipleBasesConcurrently(c *check.C) {
 	fingerprints := make([]string, len(workshop.SupportedBases))
 
 	var wg sync.WaitGroup
-	wg.Add(len(workshop.SupportedBases))
 	for i, b := range workshop.SupportedBases {
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			fingerprint, err := f.bd.GetBase(f.ctx, b)
 			c.Assert(err, check.IsNil)
 			c.Assert(fingerprint, check.Not(check.Equals), "")
@@ -648,7 +635,7 @@ func (f *wsOps) TestLxdBackendDownloadMultipleBasesConcurrently(c *check.C) {
 
 			err = f.bd.DownloadBase(f.ctx, b, fingerprint, nil)
 			c.Assert(err, check.IsNil)
-		}()
+		})
 	}
 	wg.Wait()
 

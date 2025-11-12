@@ -115,17 +115,14 @@ func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.
 	c.Assert(fl.Lock(), check.IsNil)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		result, err := s.DownloadSdk(context.Background(), setup, nil)
 		c.Assert(err, check.IsNil)
 		c.Check(result.Setup, check.Equals, setup)
 		c.Check(result.MD5, check.Equals, "md5sum")
 		c.Check(result.SdkYAML, check.Equals, "name: test-sdk-basic")
 		c.Check(m.String(), check.Matches, fmt.Sprintf(`(?s)*.DEBUG: SDK Store on Download: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_1.sdk.*`, dirs.SdkDownloads))
-	}()
+	})
 
 	// "download" is finished
 	c.Assert(os.WriteFile(target, nil, 0666), check.IsNil)
