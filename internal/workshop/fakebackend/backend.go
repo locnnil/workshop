@@ -105,6 +105,8 @@ type FakeWorkshopBackend struct {
 	BaseDir string
 }
 
+var _ workshop.Backend = (*FakeWorkshopBackend)(nil)
+
 func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)

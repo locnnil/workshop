@@ -79,6 +79,8 @@ func init() {
 type Backend struct {
 }
 
+var _ workshop.Backend = (*Backend)(nil)
+
 func InstanceName(name string, project_id string) string {
 	return fmt.Sprintf("%s-%s", name, project_id)
 }
