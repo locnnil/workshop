@@ -24,6 +24,7 @@ Releases
 .. toctree::
    :hidden:
 
+   Workshop v0.1.28 <v0.1.28>
    Workshop v0.1.27 <v0.1.27>
    Workshop v0.1.26 <v0.1.26>
    Workshop v0.1.25 <v0.1.25>
@@ -35,7 +36,6 @@ Releases
    Workshop v0.1.19 <v0.1.19>
    Workshop v0.1.18 <v0.1.18>
    Workshop v0.1.17 <v0.1.17>
-   Workshop v0.1.15 <v0.1.15>
 
 
 We provide two binaries: |ws_markup| and |sdk_markup|.
@@ -53,10 +53,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.27 <v0.1.27>`
+- :doc:`Workshop v0.1.28 <v0.1.28>`
 
 Recent versions:
 
+- :doc:`Workshop v0.1.27 <v0.1.27>`
 - :doc:`Workshop v0.1.26 <v0.1.26>`
 - :doc:`Workshop v0.1.25 <v0.1.25>`
 - :doc:`Workshop v0.1.24 <v0.1.24>`
@@ -67,12 +68,13 @@ Recent versions:
 - :doc:`Workshop v0.1.19 <v0.1.19>`
 - :doc:`Workshop v0.1.18 <v0.1.18>`
 - :doc:`Workshop v0.1.17 <v0.1.17>`
-- Workshop v0.1.16 didn't go public
-- :doc:`Workshop v0.1.15 <v0.1.15>`
 
 
 Older versions:
 
+
+- Workshop v0.1.16 didn't go public
+- `Workshop v0.1.15 <https://github.com/canonical/workshop/releases/tag/v0.1.15>`_
 - `Workshop v0.1.14 <https://github.com/canonical/workshop/releases/tag/v0.1.14>`_
 - `Workshop v0.1.13 <https://github.com/canonical/workshop/releases/tag/v0.1.13>`_
 - `Workshop v0.1.12 <https://github.com/canonical/workshop/releases/tag/v0.1.12>`_
@@ -153,7 +155,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.27_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.28_amd64.snap
 
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.

@@ -31,10 +31,28 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Name of the SDK.",
-            "pattern": "^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$",
-            "maxLength": 40,
-            "errorMessage": "An SDK's name must contain a letter, can only include digits, lowercase letters, and hyphens joining them."
+            "description": "Name of the SDK. Optionally prefix with 'try-' or 'project-' exactly once to reference those sources.",
+            "if": {
+              "pattern": "^try-"
+            },
+            "then": {
+              "maxLength": 44,
+              "pattern": "^(?!(?:try-|project-)?agent$)try-(?!try-|project-)(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$"
+            },
+            "else": {
+              "if": {
+                "pattern": "^project-"
+              },
+              "then": {
+                "maxLength": 48,
+                "pattern": "^(?!(?:try-|project-)?agent$)project-(?!try-|project-)(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$"
+              },
+              "else": {
+                "maxLength": 40,
+                "pattern": "^(?!(?:try-|project-)?agent$)(?!try-|project-)(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$"
+              }
+            },
+            "errorMessage": "An SDK's name must contain a letter, may have a single 'try-' or 'project-' prefix, must not chain prefixes, and the underlying name cannot be 'agent'."
           },
           "channel": {
             "type": "string",
@@ -47,8 +65,7 @@
             "description": "Plugs for the SDK.",
             "patternProperties": {
               "^[a-z](?:-?[a-z0-9])*$": {
-                "type": "object",
-                "description": "Plug definition. If 'bind' is provided, the plug is bound and MUST NOT define any other attributes. Otherwise, any additional attributes are accepted and forwarded to the interface implementation.",
+                "description": "Plug definition. Provide any YAML value for inline plug attributes, or set 'bind' to reference another plug. When 'bind' is set, no other attributes may be defined.",
                 "properties": {
                   "bind": {
                     "type": "string",
@@ -58,16 +75,15 @@
                   }
                 },
                 "if": {
+                  "type": "object",
                   "required": [
                     "bind"
                   ]
                 },
                 "then": {
+                  "type": "object",
                   "additionalProperties": false,
                   "errorMessage": "When 'bind' is set, no other attributes are allowed on the plug."
-                },
-                "else": {
-                  "additionalProperties": true
                 }
               }
             }
@@ -133,18 +149,6 @@
       },
       "additionalProperties": false,
       "errorMessage": "Action names must be unique and only appear once."
-    },
-    "scripts": {
-      "type": "object",
-      "description": "List of scripts to be run in the workshop (deprecated, use 'actions' instead).",
-      "patternProperties": {
-        "^[a-z](?:-?[a-z0-9])*$": {
-          "type": "string",
-          "description": "Shell script."
-        }
-      },
-      "additionalProperties": false,
-      "errorMessage": "Script names must be unique and only appear once."
     }
   },
   "required": [

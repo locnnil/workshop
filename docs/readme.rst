@@ -72,7 +72,7 @@ for example:
 
 .. code-block:: console
 
-   sudo snap install --dangerous --classic ./workshop_0.1.27_amd64.snap
+   sudo snap install --dangerous --classic ./workshop_0.1.28_amd64.snap
 
 
 Prerequisites
