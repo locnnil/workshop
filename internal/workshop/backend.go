@@ -71,45 +71,12 @@ type Stash interface {
 	RemoveWorkshopStash(ctx context.Context, name string) error
 }
 
-type VolumeSetup struct {
-	// Volume name.
-	Name string
-	// Kind of volume, e.g. "sdk".
-	Kind string
-	// Hash of tarball used to create volume.
-	Sha3_384 string
-	// Name of SDK associated with volume, if any.
-	Sdk string
-	// Revision of SDK associated with volume, if any.
-	Revision sdk.Revision
-	// For SDK volumes, a copy of meta/sdk.yaml.
-	Metadata string
-}
-
 type SdkVolume struct {
 	sdk.Meta
 	// Project ID / Workshop pairs that the volume is attached to.
 	Workshops map[string][]string
 	// Size reports the current volume usage in bytes when available.
 	Size uint64
-}
-
-type VolumeManager interface {
-	// Create a temporary storage volume for the workshop. It does not
-	// mount the device to the workshop, it must be mounted to the required
-	// workshop as a separate operation.
-	CreateVolume(ctx context.Context, info VolumeSetup) error
-
-	// Attach the volume to the workshop. The volume must be created before.
-	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error
-
-	// Detach the volume from the workshop.
-	DetachVolume(ctx context.Context, wp, name string) error
-
-	// Delete a temporary storage volume for the workshop. It does not unmount
-	// the volume from the workshop if mounted. No error is returned if the
-	// volume does not exist.
-	DeleteVolume(ctx context.Context, name string) error
 }
 
 type BaseImage struct {
@@ -174,7 +141,6 @@ type ExecContext struct {
 
 type Backend interface {
 	Stash
-	VolumeManager
 	BaseImageManager
 	SdkManager
 	Snapshot

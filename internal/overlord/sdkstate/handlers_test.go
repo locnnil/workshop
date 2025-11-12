@@ -214,8 +214,12 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 	c.Check(chg.Status(), check.Equals, state.DoneStatus)
 
-	c.Assert(s.backend.SdkVolumeMountPoints, check.HasLen, 1)
-	c.Assert(s.backend.SdkVolumeMountPoints[fakebackend.WorkshopVolumeMount{ProjectId: "projectId", Workshop: "ws", VolumeName: "test-2"}], check.Equals, "/var/lib/workshop/sdk/test")
+	c.Check(s.backend.Volumes, check.HasLen, 1)
+	volume := s.backend.Volumes[sdk.VolumeName(newSdk.Name, newSdk.Revision)]
+	c.Assert(volume.Mounts, check.HasLen, 1)
+	c.Check(volume.Mounts[0].ProjectId, check.Equals, "projectId")
+	c.Check(volume.Mounts[0].Workshop, check.Equals, "ws")
+	c.Check(volume.Mounts[0].Where, check.Equals, "/var/lib/workshop/sdk/test")
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
@@ -272,7 +276,9 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 
 	c.Check(t1.Status(), check.Equals, state.UndoneStatus)
 
-	c.Assert(s.backend.SdkVolumeMountPoints, check.HasLen, 0)
+	c.Check(s.backend.Volumes, check.HasLen, 1)
+	volume := s.backend.Volumes[sdk.VolumeName(newSdk.Name, newSdk.Revision)]
+	c.Check(volume.Mounts, check.HasLen, 0)
 }
 
 func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {

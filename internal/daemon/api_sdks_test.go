@@ -167,9 +167,9 @@ func (s *apiSuite) importSdkVolume(c *check.C, meta sdk.Meta, size uint64) {
 	c.Assert(s.b.ImportSdk(s.ctx, meta, tarball), check.IsNil)
 
 	name := sdk.VolumeName(meta.Name, meta.Revision)
-	info := s.b.SdkVolumes[name]
+	info := s.b.Volumes[name]
 	info.Size = size
-	s.b.SdkVolumes[name] = info
+	s.b.Volumes[name] = info
 }
 
 func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {

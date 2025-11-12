@@ -300,19 +300,6 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	c.Assert(err, check.ErrorMatches, "workshop not launched")
 }
 
-func (f *wsOps) TestLxdBackendStorageVolumeAddRemove(c *check.C) {
-	volume := workshop.VolumeSetup{
-		Name:     "test",
-		Kind:     "testkind",
-		Sha3_384: "abc123",
-	}
-	err := f.bd.CreateVolume(f.ctx, volume)
-	c.Assert(err, check.IsNil)
-
-	err = f.bd.DeleteVolume(f.ctx, "test")
-	c.Assert(err, check.IsNil)
-}
-
 var testsdk = `name: test-sdk
 title: title
 base: ubuntu@20.04

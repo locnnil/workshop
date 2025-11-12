@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -34,6 +35,68 @@ config:
 
 func volumeIndexContent(name string) string {
 	return fmt.Sprintf(volumeIndex, name, storagePool, name)
+}
+
+// LockVolume ensures exclusive access to the specified volume. If there is an
+// ongoing operation on the volume, the calling goroutine will block until the
+// lock is available. This function creates a new channel for the volume (if one
+// doesn't already exist) and uses it to synchronize access by allowing only one
+// goroutine at a time to perform operations on the volume.
+//
+// The channel operates as a mutex: each goroutine trying to access the volume
+// must receive a value from the channel, and only the first goroutine to do so
+// will acquire the lock. Once a goroutine finishes its operation, it will
+// release the lock by sending to the channel (thus allowing the next goroutine
+// to proceed).
+func lockVolume(ctx context.Context, volume string) error {
+	volumeGuardsLock.Lock()
+	guard, ok := volumeGuards[volume]
+	if !ok {
+		guard = &volumeGuard{}
+		guard.counter = 0
+		guard.c = make(chan struct{}, 1)
+		volumeGuards[volume] = guard
+
+		guard.c <- struct{}{}
+	}
+	guard.counter += 1
+	volumeGuardsLock.Unlock()
+
+	select {
+	case <-guard.c:
+		return nil
+	case <-ctx.Done():
+		volumeGuardsLock.Lock()
+		guard.counter -= 1
+		if guard.counter == 0 {
+			close(guard.c)
+			delete(volumeGuards, volume)
+		}
+		volumeGuardsLock.Unlock()
+		return ctx.Err()
+	}
+}
+
+// UnlockVolume releases the lock on the specified volume, allowing other
+// goroutines to access it. If there are no remaining goroutines waiting for the
+// volume, the channel used for synchronisation will be closed and removed. This
+// ensures that resources are cleaned up and no unnecessary channels remain in
+// memory once the volume is no longer locked.
+func unlockVolume(volume string) {
+	volumeGuardsLock.Lock()
+	defer volumeGuardsLock.Unlock()
+
+	guard, ok := volumeGuards[volume]
+	if !ok {
+		panic(fmt.Errorf("%q volume is not locked", volume))
+	}
+	guard.c <- struct{}{}
+
+	guard.counter -= 1
+	if guard.counter == 0 {
+		close(guard.c)
+		delete(volumeGuards, volume)
+	}
 }
 
 func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error {
@@ -164,7 +227,24 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 }
 
 func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
-	return s.DeleteVolume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	name := sdk.VolumeName(setup.Name, setup.Revision)
+	if err = conn.DeleteStoragePoolVolume(storagePool, "custom", name); err != nil {
+		if api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil
+		}
+		if api.StatusErrorCheck(err, http.StatusBadRequest) && strings.Contains(err.Error(), "still in use") {
+			return workshop.ErrVolumeInUse
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (s *Backend) Sdks(ctx context.Context) ([]workshop.SdkVolume, error) {

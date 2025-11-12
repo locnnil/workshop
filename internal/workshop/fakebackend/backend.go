@@ -29,6 +29,19 @@ type FakeWorkshop struct {
 	WorkshopFilesystem fsutil.Fs
 }
 
+type FakeVolume struct {
+	Kind   string
+	What   string
+	Mounts []WorkshopVolumeMount
+	Size   uint64
+}
+
+type WorkshopVolumeMount struct {
+	ProjectId string
+	Workshop  string
+	Where     string
+}
+
 type ExecCall struct {
 	Name string
 	Args *workshop.Execution
@@ -58,12 +71,6 @@ type RestoreCall struct {
 	File     *workshop.File
 }
 
-type WorkshopVolumeMount struct {
-	ProjectId  string
-	Workshop   string
-	VolumeName string
-}
-
 type WorkshopFsCallback func(ctx context.Context, name string) (fsutil.Fs, error)
 
 type FakeWorkshopBackend struct {
@@ -73,10 +80,9 @@ type FakeWorkshopBackend struct {
 	// workshops put to stash (e.g. during refresh)
 	StashedWorkshops map[string]map[string]*FakeWorkshop
 	// storage volumes, the key is a volume name
-	volumeLock           sync.Mutex
-	SdkVolumes           map[string]workshop.SdkVolume
-	SdkVolumeContents    map[string]string
-	SdkVolumeMountPoints map[WorkshopVolumeMount]string
+	volumeLock sync.Mutex
+	Volumes    map[string]FakeVolume
+	SdkVolumes map[string]sdk.Meta
 	// the key is a username
 	projects map[string][]workshop.Project
 
@@ -109,9 +115,8 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend
 	be.Workshops = make(map[string]map[string]*FakeWorkshop)
 	be.StashedWorkshops = make(map[string]map[string]*FakeWorkshop)
-	be.SdkVolumes = make(map[string]workshop.SdkVolume)
-	be.SdkVolumeContents = make(map[string]string)
-	be.SdkVolumeMountPoints = make(map[WorkshopVolumeMount]string)
+	be.Volumes = make(map[string]FakeVolume)
+	be.SdkVolumes = make(map[string]sdk.Meta)
 	be.projects = make(map[string][]workshop.Project)
 
 	be.ExecCallback = DoExecDefault
@@ -166,17 +171,27 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	prj := f.project(user, projectId)
 
 	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
 	if f.Workshops[projectId] == nil {
 		f.Workshops[projectId] = make(map[string]*FakeWorkshop)
 	}
+	ws, ok := f.Workshops[projectId][file.Name]
+	if !ok {
+		ws = &FakeWorkshop{}
+		f.Workshops[projectId][file.Name] = ws
+	}
+	f.workshopLock.Unlock()
 
-	ws := &FakeWorkshop{}
+	if ok {
+		// Remove SDKs.
+		sdks := ws.SdksByInstallOrder()
+		slices.Reverse(sdks)
+		for _, setup := range sdks {
+			if err := f.UninstallSdk(ctx, file.Name, setup.Setup); err != nil {
+				return err
+			}
+		}
 
-	if wpe, ok := f.Workshops[projectId][file.Name]; ok {
 		// rebuild the workshop
-		ws = wpe
 		ws.File = file
 		ws.Image = image
 	} else {
@@ -187,7 +202,6 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 			Image:   image,
 			File:    file,
 		}
-		f.Workshops[projectId][file.Name] = ws
 	}
 
 	wfspath, err := os.MkdirTemp(f.BaseDir, "*")
@@ -474,108 +488,6 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	return nil
 }
 
-func (s *FakeWorkshopBackend) CreateVolume(ctx context.Context, info workshop.VolumeSetup) error {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	if _, ok := s.SdkVolumes[info.Name]; ok {
-		return workshop.ErrVolumeAlreadyExists
-	}
-
-	vfs := filepath.Join(s.BaseDir, "volumes", info.Name)
-	if err := os.MkdirAll(vfs, 0755); err != nil {
-		return err
-	}
-
-	s.SdkVolumeContents[info.Name] = vfs
-	s.SdkVolumes[info.Name] = workshop.SdkVolume{Workshops: make(map[string][]string), Size: 0}
-	return nil
-}
-
-func (s *FakeWorkshopBackend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: wp, Name: name})
-
-	wfs, err := s.WorkshopFs(ctx, wp)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	mnt, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath(where)
-	if err != nil {
-		return err
-	}
-
-	volumeFs := s.SdkVolumeContents[name]
-	if volumeFs == "" {
-		return fmt.Errorf("volume %q not found", name)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
-		return err
-	}
-
-	if err := os.Symlink(volumeFs, mnt); err != nil {
-		return err
-	}
-
-	s.SdkVolumes[name].Workshops[projectId] = append(s.SdkVolumes[name].Workshops[projectId], wp)
-	s.SdkVolumeMountPoints[WorkshopVolumeMount{ProjectId: projectId, Workshop: wp, VolumeName: name}] = where
-	return nil
-}
-
-func (s *FakeWorkshopBackend) DetachVolume(ctx context.Context, wp, name string) error {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
-	if !ok {
-		return fmt.Errorf("context key project-id not found")
-	}
-
-	target := s.SdkVolumeMountPoints[WorkshopVolumeMount{ProjectId: projectId, Workshop: wp, VolumeName: name}]
-
-	wfs, err := s.WorkshopFs(ctx, wp)
-	if err != nil {
-		return err
-	}
-	defer wfs.Close()
-
-	err = wfs.Remove(target)
-	if err != nil {
-		return err
-	}
-	delete(s.SdkVolumeMountPoints, WorkshopVolumeMount{ProjectId: projectId, Workshop: wp, VolumeName: name})
-
-	s.SdkVolumes[name].Workshops[projectId] = slices.DeleteFunc(s.SdkVolumes[name].Workshops[projectId], func(w string) bool {
-		return w == wp
-	})
-	return err
-}
-
-func (s *FakeWorkshopBackend) DeleteVolume(ctx context.Context, name string) error {
-	s.volumeLock.Lock()
-	defer s.volumeLock.Unlock()
-
-	for volume := range s.SdkVolumeMountPoints {
-		if volume.VolumeName == name {
-			return workshop.ErrVolumeInUse
-		}
-	}
-
-	delete(s.SdkVolumes, name)
-	delete(s.SdkVolumeContents, name)
-	return nil
-}
-
 func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
@@ -618,36 +530,71 @@ func (s *FakeWorkshopBackend) ImportSdk(ctx context.Context, meta sdk.Meta, tarb
 	defer s.volumeLock.Unlock()
 
 	name := sdk.VolumeName(meta.Name, meta.Revision)
-	if _, ok := s.SdkVolumes[name]; ok {
+	if _, ok := s.Volumes[name]; ok {
 		return workshop.ErrVolumeAlreadyExists
 	}
 
-	s.SdkVolumeContents[name] = tarball.Name()
-	s.SdkVolumes[name] = workshop.SdkVolume{Meta: meta, Workshops: make(map[string][]string), Size: 0}
+	s.Volumes[name] = FakeVolume{Kind: "sdk", What: tarball.Name()}
+	s.SdkVolumes[name] = meta
 	return nil
 }
 
 func (b *FakeWorkshopBackend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
+	b.volumeLock.Lock()
+	defer b.volumeLock.Unlock()
+
 	what := sdk.VolumeName(setup.Name, setup.Revision)
-	return b.DeleteVolume(ctx, what)
+	volume, ok := b.Volumes[what]
+	if !ok {
+		return nil
+	}
+
+	if len(volume.Mounts) > 0 {
+		return workshop.ErrVolumeInUse
+	}
+
+	delete(b.Volumes, what)
+	delete(b.SdkVolumes, what)
+	return nil
 }
 
 func (s *FakeWorkshopBackend) Sdks(ctx context.Context) ([]workshop.SdkVolume, error) {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	return slices.Collect(maps.Values(s.SdkVolumes)), nil
+	var sdks []workshop.SdkVolume
+	for name, volume := range s.Volumes {
+		if volume.Kind != "sdk" {
+			continue
+		}
+		sdks = append(sdks, s.sdkVolume(name, volume))
+	}
+	return sdks, nil
 }
 
 func (s *FakeWorkshopBackend) Sdk(ctx context.Context, setup sdk.Setup) (workshop.SdkVolume, error) {
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	info, ok := s.SdkVolumes[sdk.VolumeName(setup.Name, setup.Revision)]
+	name := sdk.VolumeName(setup.Name, setup.Revision)
+	volume, ok := s.Volumes[name]
 	if !ok {
 		return workshop.SdkVolume{}, workshop.ErrVolumeNotFound
 	}
-	return info, nil
+	return s.sdkVolume(name, volume), nil
+}
+
+func (s *FakeWorkshopBackend) sdkVolume(name string, volume FakeVolume) workshop.SdkVolume {
+	workshops := map[string][]string{}
+	for _, mount := range volume.Mounts {
+		workshops[mount.ProjectId] = append(workshops[mount.ProjectId], mount.Workshop)
+	}
+
+	return workshop.SdkVolume{
+		Meta:      s.SdkVolumes[name],
+		Workshops: workshops,
+		Size:      volume.Size,
+	}
 }
 
 func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
@@ -668,9 +615,53 @@ func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup
 	userDataDir := filepath.Join(b.BaseDir, "share")
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
 	if mount.Type == workshop.Volume {
-		return b.AttachVolume(ctx, name, mount.What, mount.Where, mount.ReadOnly)
+		return b.attachVolume(ctx, name, mount)
 	}
 	return b.AddWorkshopMount(ctx, name, mount)
+}
+
+func (s *FakeWorkshopBackend) attachVolume(ctx context.Context, name string, mount workshop.Mount) error {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	s.volumeLock.Lock()
+	defer s.volumeLock.Unlock()
+
+	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: name, Name: mount.Name})
+
+	wfs, err := s.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	mnt, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath(mount.Where)
+	if err != nil {
+		return err
+	}
+
+	volume, ok := s.Volumes[mount.What]
+	if !ok {
+		return fmt.Errorf("volume %q not found", mount.What)
+	}
+	entry := WorkshopVolumeMount{ProjectId: projectId, Workshop: name, Where: mount.Where}
+	if slices.Contains(volume.Mounts, entry) {
+		return fmt.Errorf("volume %q already mounted in %q", mount.What, name)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(mnt), 0755); err != nil {
+		return err
+	}
+
+	if err := os.Symlink(volume.What, mnt); err != nil {
+		return err
+	}
+
+	volume.Mounts = append(volume.Mounts, entry)
+	s.Volumes[mount.What] = volume
+	return nil
 }
 
 func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
@@ -686,9 +677,46 @@ func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, set
 
 	what := sdk.VolumeName(setup.Name, setup.Revision)
 	if setup.IsVolume() {
-		return b.DetachVolume(ctx, name, what)
+		where := sdk.SdkDir(setup.Name)
+		return b.detachVolume(ctx, name, what, where)
 	}
 	return b.RemoveWorkshopMount(ctx, name, what)
+}
+
+func (s *FakeWorkshopBackend) detachVolume(ctx context.Context, name, what, where string) error {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	s.volumeLock.Lock()
+	defer s.volumeLock.Unlock()
+
+	volume, ok := s.Volumes[what]
+	if !ok {
+		return fmt.Errorf("volume %q not found", what)
+	}
+	idx := slices.IndexFunc(volume.Mounts, func(m WorkshopVolumeMount) bool {
+		return m.ProjectId == projectId && m.Workshop == name && m.Where == where
+	})
+	if idx < 0 {
+		return fmt.Errorf("volume %q not mounted in %q", what, name)
+	}
+
+	wfs, err := s.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer wfs.Close()
+
+	err = wfs.Remove(volume.Mounts[idx].Where)
+	if err != nil {
+		return err
+	}
+
+	volume.Mounts = slices.Delete(volume.Mounts, idx, idx+1)
+	s.Volumes[what] = volume
+	return err
 }
 
 func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, sk string) error {
@@ -714,6 +742,7 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, sk string, file
 		return fmt.Errorf("invalid snapshot %q", sk)
 	}
 	unwantedSdks := sdks[lastIntact+1:]
+	slices.Reverse(unwantedSdks)
 
 	fs, err := s.WorkshopFs(ctx, name)
 	if err != nil {
