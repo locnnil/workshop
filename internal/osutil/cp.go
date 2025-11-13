@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"syscall"
 
 	"github.com/canonical/workshop/internal/osutil/sys"
@@ -237,6 +238,21 @@ func copyDirChown(info os.FileInfo, src, dst string, uid sys.UserID, gid sys.Gro
 	}
 
 	return d.Sync()
+}
+
+func regularFilesDirsAndLinks(path string) ([]os.FileInfo, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	infos, err := DirInfos(entries)
+	if err != nil {
+		return nil, err
+	}
+
+	const keep = os.ModeDir | os.ModeSymlink
+	infos = slices.DeleteFunc(infos, func(info os.FileInfo) bool { return info.Mode().Type()|keep != keep })
+	return infos, nil
 }
 
 func copyChown(info os.FileInfo, src, dst string, uid sys.UserID, gid sys.GroupID) error {

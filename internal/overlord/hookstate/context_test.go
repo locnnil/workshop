@@ -44,7 +44,7 @@ func (s *contextSuite) SetUpTest(c *C) {
 	defer s.state.Unlock()
 
 	s.task = s.state.NewTask("test-task", "my test task")
-	s.setup = &HookSetup{Workshop: "ws", Sdk: "test-sdk", HookType: SetupBase}
+	s.setup = &HookSetup{Sdk: "test-sdk", HookType: SetupBase}
 	var err error
 	s.context, err = NewContext(s.task, s.task.State(), s.setup, nil, "")
 	c.Check(err, IsNil)
@@ -149,7 +149,7 @@ func (s *contextSuite) TestDone(c *C) {
 }
 
 func (s *contextSuite) TestEphemeralContextGetSet(c *C) {
-	context, err := NewContext(nil, s.state, &HookSetup{Workshop: "ws", Sdk: "test-sdk"}, nil, "")
+	context, err := NewContext(nil, s.state, &HookSetup{Sdk: "test-sdk"}, nil, "")
 	c.Assert(err, IsNil)
 	context.Lock()
 	defer context.Unlock()
@@ -166,7 +166,7 @@ func (s *contextSuite) TestEphemeralContextGetSet(c *C) {
 }
 
 func (s *contextSuite) TestChangeID(c *C) {
-	context, err := NewContext(nil, s.state, &HookSetup{Workshop: "ws", Sdk: "test-sdk"}, nil, "")
+	context, err := NewContext(nil, s.state, &HookSetup{Sdk: "test-sdk"}, nil, "")
 	c.Assert(err, IsNil)
 	c.Check(context.ChangeID(), Equals, "")
 
@@ -174,13 +174,13 @@ func (s *contextSuite) TestChangeID(c *C) {
 	defer s.state.Unlock()
 
 	task := s.state.NewTask("foo", "")
-	context, err = NewContext(task, s.state, &HookSetup{Workshop: "ws", Sdk: "test-sdk"}, nil, "")
+	context, err = NewContext(task, s.state, &HookSetup{Sdk: "test-sdk"}, nil, "")
 	c.Assert(err, IsNil)
 	c.Check(context.ChangeID(), Equals, "")
 
 	chg := s.state.NewChange("bar", "")
 	chg.AddTask(task)
-	context, err = NewContext(task, s.state, &HookSetup{Workshop: "ws", Sdk: "test-sdk"}, nil, "")
+	context, err = NewContext(task, s.state, &HookSetup{Sdk: "test-sdk"}, nil, "")
 	c.Assert(err, IsNil)
 	c.Check(context.ChangeID(), Equals, chg.ID())
 }
@@ -212,7 +212,7 @@ func (s *contextSuite) TestChangeErrorf(c *C) {
 		// normal hooks only log errors to the task
 		{task2, false, ``, `.* ERROR some error`},
 	} {
-		hs := &HookSetup{Workshop: "ws", Sdk: "test-sdk", IgnoreError: tc.ignoreError}
+		hs := &HookSetup{Sdk: "test-sdk", IgnoreError: tc.ignoreError}
 		context, err := NewContext(tc.task, s.state, hs, nil, "")
 		c.Assert(err, IsNil)
 		context.Lock()

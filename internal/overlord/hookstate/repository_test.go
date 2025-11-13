@@ -45,7 +45,7 @@ func (s *repositorySuite) TestAddHandlerGenerator(c *C) {
 	state := state.New(nil)
 	state.Lock()
 	task := state.NewTask("test-task", "my test task")
-	setup := &HookSetup{Workshop: "test-workshop", Sdk: "test-sdk", HookType: SetupBase}
+	setup := &HookSetup{Sdk: "test-sdk", HookType: SetupBase}
 	context := &Context{task: task, setup: setup}
 	state.Unlock()
 

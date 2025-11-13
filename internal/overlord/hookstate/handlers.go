@@ -90,7 +90,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
 		}
 
-		return h.executeHook(ctx, task, &hook, execArgs)
+		return h.executeHook(ctx, task, w, &hook, execArgs)
 	case RestoreState:
 		fs, err := h.backend.WorkshopFs(ctx, w)
 		if err != nil {
@@ -106,12 +106,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: state storage path is not a directory", hook.Sdk)
 		}
 
-		return h.executeHook(ctx, task, &hook, execArgs)
-	case SetupBase:
-		if err = h.executeHook(ctx, task, &hook, execArgs); err != nil {
-			return err
-		}
-		return h.backend.Snapshot(ctx, w, hook.Sdk)
+		return h.executeHook(ctx, task, w, &hook, execArgs)
 	case SetupProject:
 		execArgs.Command = []string{
 			"sudo",
@@ -140,9 +135,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		xdgRuntimeDir := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid)
 		execArgs.Environment["XDG_RUNTIME_DIR"] = xdgRuntimeDir
 		execArgs.Environment["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + filepath.Join(xdgRuntimeDir, "bus")
-		return h.executeHook(ctx, task, &hook, execArgs)
+		return h.executeHook(ctx, task, w, &hook, execArgs)
 	default:
-		return h.executeHook(ctx, task, &hook, execArgs)
+		return h.executeHook(ctx, task, w, &hook, execArgs)
 	}
 }
 
@@ -192,10 +187,10 @@ func (h *HookLog) flush() {
 	}
 }
 
-func (h *HookManager) executeHook(ctx context.Context, task *state.Task, hook *HookSetup, execArgs *workshop.ExecArgs) error {
+func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w string, hook *HookSetup, execArgs *workshop.ExecArgs) error {
 	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
 
-	wsFs, err := h.backend.WorkshopFs(ctx, hook.Workshop)
+	wsFs, err := h.backend.WorkshopFs(ctx, w)
 	if err != nil {
 		return err
 	}
@@ -244,7 +239,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, hook *H
 		},
 	}
 
-	exectx, err := h.backend.Exec(ctx, hook.Workshop, &args)
+	exectx, err := h.backend.Exec(ctx, w, &args)
 	// Handle errors that are unrelated to the command, for example, LXD-related
 	// issues. An error here means the execution has not started at all.
 	if err != nil {

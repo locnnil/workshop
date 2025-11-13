@@ -308,10 +308,11 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 			continue
 		}
 
-		r, err := system.SystemSdkFs.Open(hdr.Name)
+		expected, err := system.SystemSdkFs.ReadFile(hdr.Name)
 		c.Assert(err, check.IsNil)
-		c.Check(osutil.StreamsEqual(r, tr), check.Equals, true)
-		r.Close()
+		actual, err := io.ReadAll(tr)
+		c.Assert(err, check.IsNil)
+		c.Check(actual, check.DeepEquals, expected)
 	}
 
 	c.Check(entries, check.DeepEquals, []string{"drwxr-xr-x meta/", "-rw-r--r-- meta/sdk.yaml"})

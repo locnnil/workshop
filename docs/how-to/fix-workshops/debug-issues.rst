@@ -80,6 +80,7 @@ this time supplying the change ID as the argument:
    $ workshop tasks 81
 
      Status    Duration  Summary
+     Done          59ms  Retrieve "go" SDK from channel "latest/stable"
      Undone        42ms  Create SDK state storage
      Done          28ms  Run hook "save-state" for "go" SDK
      Done          31ms  Disconnect interfaces of "go" SDK
@@ -91,15 +92,16 @@ this time supplying the change ID as the argument:
      Undone        67ms  Install "go" SDK
      Undone        33ms  Register "go" SDK plugs and slots
      Error      1m12.5s  Run hook "setup-base" for "go" SDK
-     Hold             -  Auto-connect interfaces of "system" SDK
+     Hold             -  Snapshot "go" SDK installation
+     Hold             -  Mount project directory
+     Hold             -  Resolve relations between interfaces of "dev-volatile" workshop
      Hold             -  Auto-connect interfaces of "go" SDK
+     Hold             -  Run hook "setup-project" for "go" SDK
      Hold             -  Run hook "restore-state" for "go" SDK
-     Hold             -  Run hook "check-health" for "system" SDK
      Hold             -  Run hook "check-health" for "go" SDK
      Hold             -  Remove SDK state storage
      Hold             -  Remove "dev-volatile" workshop from stash
      Done          24ms  Remove "go" SDK profile
-     Done          26ms  Remove "system" SDK profile
 
      ......................................................................
      Run hook "save-state" for "go" SDK

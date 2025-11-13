@@ -29,8 +29,6 @@ type Handler interface {
 type HandlerGenerator func(*Context) Handler
 
 type HookSetup struct {
-	ProjectId   string           `json:"project-id"`
-	Workshop    string           `json:"workshop"`
 	Sdk         string           `json:"sdk"`
 	HookType    WorkshopHookType `json:"type"`
 	Timeout     time.Duration    `json:"timeout"`
@@ -97,9 +95,9 @@ func (m *HookManager) ephemeralContext(cookieID string) (context *Context, err e
 	if err != nil {
 		return nil, fmt.Errorf("cannot get workshop cookies: %v", err)
 	}
-	if workshop, ok := contexts[cookieID]; ok {
+	if _, ok := contexts[cookieID]; ok {
 		// create new ephemeral context
-		context, err = NewContext(nil, m.state, &HookSetup{Workshop: workshop}, nil, cookieID)
+		context, err = NewContext(nil, m.state, &HookSetup{}, nil, cookieID)
 		return context, err
 	}
 	return nil, fmt.Errorf("invalid workshop cookie requested")

@@ -28,8 +28,6 @@ import (
 )
 
 var (
-	FilesAreEqualChunked      = filesAreEqualChunked
-	StreamsEqualChunked       = streamsEqualChunked
 	ParseRawEnvironment       = parseRawEnvironment
 	ParseSystemctlEnvironment = parseSystemctlEnvironment
 	DoCopyFile                = doCopyFile

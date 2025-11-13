@@ -334,6 +334,28 @@ func (m *SdkManager) doUnregisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return m.repo.RemoveSdk(project.ProjectId, w, setup.Name)
 }
 
+func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
+	user, project, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	st := task.State()
+	var sdk string
+
+	st.Lock()
+	err = task.Get("sdk", &sdk)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
+	defer cancel()
+
+	return m.backend.Snapshot(ctx, w, sdk)
+}
+
 type SdkVolumeCooldownTimeKey string
 
 // doDeleteUnusedSdkVolumes is a cleanup handler that deletes unused SDK volumes.
