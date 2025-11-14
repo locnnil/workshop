@@ -4,6 +4,8 @@ on: [workflow_dispatch, workflow_call]
 jobs:
   build-snap:
     runs-on: ubuntu-latest
+    outputs:
+      snap_workshop: ${{ steps.snapcraft_workshop.outputs.snap }}
     steps:
       - name: Checkout Workshop
         uses: actions/checkout@v4
@@ -103,11 +105,11 @@ jobs:
       - name: Download snap artifact
         uses: actions/download-artifact@v4
         with:
-          name: snap
+          name: snap_workshop
       - uses: canonical/action-publish@v1
         if: github.event_name == 'push'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_CREDENTIALS }}
         with:
-          snap: ${{ needs.build-snap.outputs.snap }}
+          snap: ${{ needs.build-snap.outputs.snap_workshop }}
           release: edge
