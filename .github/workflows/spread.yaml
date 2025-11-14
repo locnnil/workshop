@@ -96,3 +96,18 @@ jobs:
           name: code-coverage-${{ steps.sanitize.outputs.sanitized_name }}
           path: ${{ github.workspace }}.cover/lxd:ubuntu-24.04:tests/
           if-no-files-found: ignore
+  publish:
+    needs: [build-snap, snap-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: snap
+      - uses: canonical/action-publish@v1
+        if: github.event_name == 'push'
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_CREDENTIALS }}
+        with:
+          snap: ${{ needs.build-snap.outputs.snap }}
+          release: edge

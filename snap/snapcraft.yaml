@@ -35,8 +35,6 @@ apps:
       unix:
         listen-stream: $SNAP_COMMON/workshop/workshop.socket
         socket-mode: 0666
-    plugs:
-      - network-bind
   workshopctl:
     command: bin/workshopctl
   sdk:
