@@ -35,8 +35,6 @@ apps:
       unix:
         listen-stream: $SNAP_COMMON/workshop/workshop.socket
         socket-mode: 0666
-    plugs:
-      - network-bind
   workshopctl:
     command: bin/workshopctl
   sdk:
@@ -48,6 +46,8 @@ parts:
     plugin: go
     source: .
     source-type: local
+    build-packages:
+      - git
     build-snaps:
       - go/1.25/stable
     build-environment:
@@ -63,9 +63,10 @@ parts:
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshopctl" ./cmd/workshopctl
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/sdk" ./cmd/sdk
 
-      # Set snap version
+      # Set snap version including git commit hash
       VERSION="$("${CRAFT_PART_INSTALL}/bin/workshop" --version)"
-      craftctl set version="$VERSION"
+      COMMIT_HASH="$(git rev-parse --short HEAD)"
+      craftctl set version="${VERSION}-${COMMIT_HASH}"
     stage-packages:
       - zstd
     prime:

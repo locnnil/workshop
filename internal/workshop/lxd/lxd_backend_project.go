@@ -28,7 +28,7 @@ func lxdProjectConfig(username string) map[string]string {
 }
 
 // Checks if a user name can be used in a LXD project name.
-var isValidProjectSuffix = regexp.MustCompile(`^[a-zA-Z][-a-zA-Z0-9._]*$`).MatchString
+var isValidProjectSuffix = regexp.MustCompile(`^[a-zA-Z][-a-zA-Z0-9.]{0,31}$`).MatchString
 
 func projectName(prefix, username string) (string, error) {
 	if isValidProjectSuffix(username) {
