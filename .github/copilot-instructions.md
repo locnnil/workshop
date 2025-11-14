@@ -18,7 +18,7 @@ The Workshop project follows a structured documentation approach based on the [C
 
 ### Documentation Style Requirements
 - **Markup**: reStructuredText (reST) is the preferred format
-- **Style Guide**: Follow the [reST style guide](https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/style-guide/) from the starter pack
+- **Style Guide**: Follow the [reST style guide](https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/) from the starter pack
 - **Building**: Documentation is built using a custom Workshop in-project SDK located in `.workshop/starter-pack`
 - **Testing**: All documentation changes must pass Sphinx build without warnings
 

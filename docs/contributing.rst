@@ -502,13 +502,13 @@ with some opinionated style choices evident in the source.
 See the relevant documentation before making changes:
 
 - `Starter pack
-  <https://canonical-starter-pack.readthedocs-hosted.com/latest/>`_
+  <https://canonical-starter-pack.readthedocs-hosted.com/stable/>`_
 
 - `reST style guide
-  <https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/style-guide/>`_
+  <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/>`_
 
 - `reST cheat sheet
-  <https://canonical-starter-pack.readthedocs-hosted.com/latest/reference/doc-cheat-sheet/>`_
+  <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/doc-cheat-sheet/>`_
 
 
 .. _contributing_doc_generation:
