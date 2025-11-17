@@ -107,33 +107,41 @@ func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	w := workshop.Workshop{File: file, Name: "test-workshop"}
-	w.Sdks = map[string]sdk.Setup{
+	w.Sdks = map[string]workshop.SdkInstallation{
 		"test-sdk-1": {
-			Name:     "test-sdk-1",
-			Channel:  "latest/stable",
-			Revision: sdk.R(1),
-			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
+			Setup: sdk.Setup{
+				Name:     "test-sdk-1",
+				Channel:  "latest/stable",
+				Revision: sdk.R(1),
+				Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
+			},
 		},
 		"test-sdk-2": {
-			Name:     "test-sdk-2",
-			Channel:  "latest/edge",
-			Revision: sdk.R(1),
-			Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+			Setup: sdk.Setup{
+				Name:     "test-sdk-2",
+				Channel:  "latest/edge",
+				Revision: sdk.R(1),
+				Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+			},
 		},
 		"system": {
-			Name:     "system",
-			Source:   sdk.SystemSource,
-			Revision: sdk.R(1),
-			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+			Setup: sdk.Setup{
+				Name:     "system",
+				Source:   sdk.SystemSource,
+				Revision: sdk.R(1),
+				Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+			},
 		},
 		"sketch": {
-			Name:     "sketch",
-			Source:   sdk.SketchSource,
-			Revision: sdk.R(-3),
-			Sha3_384: "dd4b5a4cba8539e858e5fdcc318e46d9a2940439b0d8e7bd9c6bfc8b474f410d91aee43f5d4e18cb2c1b7dbaaba06fc3",
+			Setup: sdk.Setup{
+				Name:     "sketch",
+				Source:   sdk.SketchSource,
+				Revision: sdk.R(-3),
+				Sha3_384: "dd4b5a4cba8539e858e5fdcc318e46d9a2940439b0d8e7bd9c6bfc8b474f410d91aee43f5d4e18cb2c1b7dbaaba06fc3",
+			},
 		},
 	}
 
 	sdks := w.SdksByInstallOrder()
-	c.Assert(sdks, check.DeepEquals, []sdk.Setup{w.Sdks["system"], w.Sdks["test-sdk-1"], w.Sdks["test-sdk-2"], w.Sdks["sketch"]})
+	c.Assert(sdks, check.DeepEquals, []workshop.SdkInstallation{w.Sdks["system"], w.Sdks["test-sdk-1"], w.Sdks["test-sdk-2"], w.Sdks["sketch"]})
 }

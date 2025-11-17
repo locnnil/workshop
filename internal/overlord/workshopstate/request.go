@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -724,7 +723,12 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 				return nil, fmt.Errorf("cannot refresh %q: invalid workshop file: %w", name, err)
 			}
 
-			sdks := wp.SdksByInstallOrder()
+			installed := wp.SdksByInstallOrder()
+			sdks := make([]sdk.Setup, 0, len(installed))
+			for _, sk := range installed {
+				sdks = append(sdks, sk.Setup)
+			}
+
 			plan := resolveRefresh(wp, wp.File, wp.Image, sdks)
 			tasks := refresh(w.state, plan, wp, wp.File, string(fileBlob))
 			taskset = append(taskset, tasks)
@@ -829,7 +833,7 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop
 			}
 			// Has this SDK had any updates?
 			// If so, break the loop as the rest require to be reinstalled.
-			if maybeRefresh(w.Sdks[s.Name], s) {
+			if maybeRefresh(w.Sdks[s.Name].Setup, s) {
 				break
 			}
 
@@ -840,20 +844,21 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop
 	}
 
 	for _, s := range candidates[len(plan.intact):] {
-		if installed, exist := w.Sdks[s.Name]; exist {
+		installed, exist := w.Sdks[s.Name]
+		if exist {
 			plan.refresh = append(plan.refresh, s)
-			plan.remove = append(plan.remove, installed)
+			plan.remove = append(plan.remove, installed.Setup)
 		} else {
 			plan.install = append(plan.install, s)
 		}
 	}
 
 	// SDKs that only exist in the previous workshop are to be removed.
-	for _, rec := range w.Sdks {
-		if !slices.ContainsFunc(candidates, func(r sdk.Setup) bool {
-			return r.Name == rec.Name
+	for _, s := range w.Sdks {
+		if !slices.ContainsFunc(candidates, func(c sdk.Setup) bool {
+			return c.Name == s.Name
 		}) {
-			plan.remove = append(plan.remove, rec)
+			plan.remove = append(plan.remove, s.Setup)
 		}
 	}
 
@@ -1250,13 +1255,18 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 		removeSet.AddAll(ts)
 	}
 
-	disconnectSet := disconnectSdks(st, slices.Collect(maps.Values(w.Sdks)))
+	sdks := make([]sdk.Setup, 0, len(w.Sdks))
+	for _, sk := range w.Sdks {
+		sdks = append(sdks, sk.Setup)
+	}
+
+	disconnectSet := disconnectSdks(st, sdks)
 	addTaskSet(disconnectSet)
 
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	addTaskSet(state.NewTaskSet(discard))
 
-	unregister, _ := unregisterSdks(st, slices.Collect(maps.Values(w.Sdks)))
+	unregister, _ := unregisterSdks(st, sdks)
 	addTaskSet(unregister)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))

@@ -26,7 +26,6 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -839,7 +838,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
 	}
 
-	sdks := map[string]sdk.Setup{}
+	sdks := map[string]workshop.SdkInstallation{}
 	buf, exist := inst.Config[workshop.ConfigWorkshopSdks]
 	if exist {
 		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {

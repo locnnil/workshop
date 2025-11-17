@@ -924,7 +924,8 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Check(w.File, check.DeepEquals, wf)
 	c.Check(w.Image, check.Equals, image)
 	c.Check(w.Sdks, check.HasLen, 1)
-	c.Check(w.Sdks[setup2.Name], check.DeepEquals, sdk.Setup{})
+	_, ok := w.Sdks[setup2.Name]
+	c.Check(ok, check.Equals, false)
 
 	// Check that "test-sdk-2" volume is not present in the workshop filesystem
 	// anymore.

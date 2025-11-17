@@ -192,11 +192,10 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	newSdk := sdk.Setup{
-		Name:        "test",
-		Channel:     "latest/stable",
-		Revision:    sdk.R(2),
-		Sha3_384:    "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
-		InstallTime: &s.installTime,
+		Name:     "test",
+		Channel:  "latest/stable",
+		Revision: sdk.R(2),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 	}
 	s.mockSdk(c, "test", sdkYaml, sdk.R(2))
 
@@ -224,8 +223,8 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	info := props.Sdks
-	c.Check(info["test"], check.DeepEquals, newSdk)
+	c.Check(props.Sdks["test"].Setup, check.DeepEquals, newSdk)
+	c.Check(props.Sdks["test"].InstallTime, check.Equals, s.installTime)
 
 	sdkInfo, err := props.SdkInfo(s.ctx, "test")
 	c.Assert(err, check.IsNil)
@@ -238,11 +237,10 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	defer s.state.Unlock()
 
 	newSdk := sdk.Setup{
-		Name:        "test-2",
-		Channel:     "latest/stable",
-		Revision:    sdk.R(2),
-		Sha3_384:    "335783e65660ee5cfeb96b1323585f0c2ad006582c3c3dde89dd62a9f081c24b81e4972c8ce87787531c85e0683479a5",
-		InstallTime: &s.installTime,
+		Name:     "test-2",
+		Channel:  "latest/stable",
+		Revision: sdk.R(2),
+		Sha3_384: "335783e65660ee5cfeb96b1323585f0c2ad006582c3c3dde89dd62a9f081c24b81e4972c8ce87787531c85e0683479a5",
 	}
 	s.mockSdk(c, "test-2", sdkYaml, sdk.R(2))
 
@@ -343,11 +341,10 @@ func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	testSdk := sdk.Setup{
-		Name:        "test",
-		Channel:     "latest/stable",
-		Revision:    sdk.R(1),
-		Sha3_384:    "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
-		InstallTime: &s.installTime,
+		Name:     "test",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 	}
 	s.mockSdk(c, "test", sdkYaml, sdk.R(1))
 
@@ -388,11 +385,10 @@ func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
 	s.mockSdk(c, "test-broken", sdkYamlViolatesPolicy, sdk.R(2))
 
 	testSdk := sdk.Setup{
-		Name:        "test-broken",
-		Channel:     "latest/stable",
-		Revision:    sdk.R(2),
-		Sha3_384:    "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
-		InstallTime: &s.installTime,
+		Name:     "test-broken",
+		Channel:  "latest/stable",
+		Revision: sdk.R(2),
+		Sha3_384: "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
 	}
 
 	t := s.state.NewTask("fake-task", "retrieve")

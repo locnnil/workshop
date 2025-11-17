@@ -16,12 +16,11 @@ import (
 )
 
 type Setup struct {
-	Name        string     `json:"name"`
-	Channel     string     `json:"channel,omitempty"`
-	Source      Source     `json:"source,omitempty"`
-	Revision    Revision   `json:"revision"`
-	Sha3_384    string     `json:"sha3-384"`
-	InstallTime *time.Time `json:"install-time"`
+	Name     string   `json:"name"`
+	Channel  string   `json:"channel,omitempty"`
+	Source   Source   `json:"source,omitempty"`
+	Revision Revision `json:"revision"`
+	Sha3_384 string   `json:"sha3-384"`
 }
 
 func (s *Setup) Filepath() string {

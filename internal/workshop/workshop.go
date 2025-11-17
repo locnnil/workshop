@@ -36,23 +36,23 @@ type Workshop struct {
 	Image   BaseImage
 	Running bool
 	// Installed SDKs.
-	Sdks map[string]sdk.Setup
+	Sdks map[string]SdkInstallation
 	// Workshop devices installed.
 	Profiles map[string]SdkProfile
 }
 
+type SdkInstallation struct {
+	sdk.Setup
+	InstallTime time.Time `json:"install-time"`
+}
+
 // Associate an SDK with the workshop by adding the SDK to the Sdks field.
 func (w *Workshop) AddSdk(ctx context.Context, s sdk.Setup) error {
-	now := InstallTimeNow()
-	s.InstallTime = &now
-
-	_, exist := w.Sdks[s.Name]
-	if exist {
+	if _, exist := w.Sdks[s.Name]; exist {
 		return fmt.Errorf("%q SDK is already installed", s.Name)
-	} else {
-		w.Sdks[s.Name] = s
 	}
 
+	w.Sdks[s.Name] = SdkInstallation{Setup: s, InstallTime: InstallTimeNow()}
 	value, err := json.Marshal(w.Sdks)
 	if err != nil {
 		return err
@@ -136,17 +136,17 @@ func ValidateSdkInfo(projectId string, file *File, name, sdkYaml string) error {
 
 // Reads information about the installed SDK from its meta file.
 func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, error) {
-	setup, ok := w.Sdks[sdkName]
+	sk, ok := w.Sdks[sdkName]
 	if !ok {
 		return nil, fmt.Errorf("SDK %q is not installed in %q workshop", sdkName, w.Name)
 	}
 
 	var err error
 	var meta string
-	if setup.IsVolume() {
-		meta, err = w.metaFromVolume(ctx, setup)
+	if sk.IsVolume() {
+		meta, err = w.metaFromVolume(ctx, sk.Setup)
 	} else {
-		meta, err = w.metaFromFile(ctx, setup)
+		meta, err = w.metaFromFile(ctx, sk.Setup)
 	}
 
 	if err != nil {
@@ -161,9 +161,9 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 		return nil, fmt.Errorf("SDK must be named %q (now: %q)", sdkName, info.Name)
 	}
 
-	info.Revision = setup.Revision
-	info.Channel = setup.Channel
-	info.Source = setup.Source
+	info.Revision = sk.Revision
+	info.Channel = sk.Channel
+	info.Source = sk.Source
 
 	// Now add changes defined for this SDK in the workshop file (e.g. plug
 	// binds, slots).
@@ -234,7 +234,7 @@ func (w *Workshop) SdkInfosByInstallOrder(ctx context.Context) ([]*sdk.Info, err
 }
 
 // Returns the list of SDKs of the workshop sorted by installation order.
-func (w *Workshop) SdksByInstallOrder() []sdk.Setup {
+func (w *Workshop) SdksByInstallOrder() []SdkInstallation {
 	// Sort the SDKs in installation order.
 	orderMap := make(map[string]int)
 	for i, v := range w.File.Sdks {

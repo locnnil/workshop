@@ -203,7 +203,7 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	ws.Config[workshop.ConfigWorkshopSdks] = `{}`
 	ws.Devices = make(map[string]map[string]string)
 
-	ws.Sdks = make(map[string]sdk.Setup)
+	ws.Sdks = make(map[string]workshop.SdkInstallation)
 	ws.Profiles = make(map[string]workshop.SdkProfile, 0)
 
 	return nil
@@ -371,11 +371,11 @@ func (f *FakeWorkshopBackend) Workshop(ctx context.Context, name string) (*works
 		return nil, workshop.ErrWorkshopNotLaunched
 	}
 
-	var c map[string]sdk.Setup
-	if err := json.Unmarshal([]byte(f.Workshops[projectId][name].Config[workshop.ConfigWorkshopSdks]), &c); err != nil {
+	var sdks map[string]workshop.SdkInstallation
+	if err := json.Unmarshal([]byte(f.Workshops[projectId][name].Config[workshop.ConfigWorkshopSdks]), &sdks); err != nil {
 		return nil, err
 	}
-	wp.Sdks = c
+	wp.Sdks = sdks
 	return wp.Workshop, nil
 }
 
@@ -731,7 +731,7 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, sk string, file
 	}
 
 	sdks := wp.SdksByInstallOrder()
-	lastIntact := slices.IndexFunc(sdks, func(s sdk.Setup) bool { return s.Name == sk })
+	lastIntact := slices.IndexFunc(sdks, func(s workshop.SdkInstallation) bool { return s.Name == sk })
 	if lastIntact < 0 {
 		return fmt.Errorf("invalid snapshot %q", sk)
 	}
@@ -749,15 +749,15 @@ func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, sk string, file
 	}
 
 	// Remove SDKs from after the snapshot.
-	for _, setup := range unwantedSdks {
-		delete(wp.Sdks, setup.Name)
+	for _, u := range unwantedSdks {
+		delete(wp.Sdks, u.Name)
 		// Restore would detach the volume attached after the snapshot.
-		if setup.IsVolume() {
-			if err = s.DetachVolume(ctx, name, sdk.VolumeName(setup.Name, setup.Revision)); err != nil {
+		if u.IsVolume() {
+			if err = s.DetachVolume(ctx, name, sdk.VolumeName(u.Name, u.Revision)); err != nil {
 				return err
 			}
 		} else {
-			if err = fs.RemoveAll(sdk.SdkDir(setup.Name)); err != nil {
+			if err = fs.RemoveAll(sdk.SdkDir(u.Name)); err != nil {
 				return err
 			}
 		}
