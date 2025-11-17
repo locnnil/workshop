@@ -87,7 +87,7 @@ type Stash interface {
 type VolumeSetup struct {
 	// Volume name.
 	Name string
-	// Kind of volume, e.g. "sdk" or "state-storage."
+	// Kind of volume, e.g. "sdk".
 	Kind string
 	// Hash of tarball used to create volume.
 	Sha3_384 string

@@ -179,28 +179,14 @@ func (m *WorkshopManager) doRemoveWorkshopStorage(task *state.Task, tomb *tomb.T
 		return err
 	}
 
-	var errs []error
-	if err := m.cleanupWorkshopData(user, prj.ProjectId, w); err != nil {
-		errs = append(errs, err)
-	}
-	if err := m.cleanupWorkshopCache(prj.ProjectId, w); err != nil {
-		errs = append(errs, err)
-	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-
-	st := task.State()
-	st.Lock()
-	for _, err := range errs[:len(errs)-1] {
-		task.Errorf("%v", err)
-	}
-	st.Unlock()
-	return errs[len(errs)-1]
+	return errors.Join(
+		m.cleanupWorkshopUserData(user, prj.ProjectId, w),
+		m.cleanupWorkshopCache(prj.ProjectId, w),
+		m.cleanupWorkshopData(prj.ProjectId, w),
+	)
 }
 
-func (m *WorkshopManager) cleanupWorkshopData(user, projectId, w string) error {
+func (m *WorkshopManager) cleanupWorkshopUserData(user, projectId, w string) error {
 	usr, env, err := osutil.UserAndEnv(user)
 	if err != nil {
 		return err
@@ -222,6 +208,15 @@ func (m *WorkshopManager) cleanupWorkshopCache(projectId, w string) error {
 	}
 
 	return removeIfEmpty(workshop.ProjectCacheDir(projectId))
+}
+
+func (m *WorkshopManager) cleanupWorkshopData(projectId, w string) error {
+	workshopData := workshop.DataDir(projectId, w)
+	if err := os.RemoveAll(workshopData); err != nil {
+		return err
+	}
+
+	return removeIfEmpty(workshop.ProjectDataDir(projectId))
 }
 
 func removeIfEmpty(path string) error {
@@ -366,29 +361,41 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 }
 
 func (m *WorkshopManager) doCreateStateStorage(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, w, err := UserProjectWorkshop(task)
+	username, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
-
-	volume := workshop.VolumeSetup{
-		Name: workshop.WorkshopStateVolumeName(w, prj.ProjectId),
-		Kind: "state-storage",
+	// The workshop's root user needs write access to the state storage.
+	// We use the client user (mapped to the workshop user) for simplicity.
+	// Another approach would be to add shift=true to the mount device,
+	// but it's risky in terms of security (e.g. setuid binaries).
+	user, err := osutil.UserLookup(username)
+	if err != nil {
+		return err
 	}
-	return m.backend.CreateVolume(ctx, volume)
+	uid, gid, err := osutil.UidGid(user)
+	if err != nil {
+		return err
+	}
+
+	storage := workshop.StateStorageDir(prj.ProjectId, w)
+	if err := os.MkdirAll(storage, 0755); err != nil {
+		return err
+	}
+	if err = sys.ChownPath(storage, uid, gid); err != nil {
+		return &os.PathError{Op: "chown", Path: storage, Err: err}
+	}
+
+	return nil
 }
 
 func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb) error {
-	user, prj, w, err := UserProjectWorkshop(task)
+	_, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
-	defer cancel()
-
-	return m.backend.DeleteVolume(ctx, workshop.WorkshopStateVolumeName(w, prj.ProjectId))
+	storage := workshop.StateStorageDir(prj.ProjectId, w)
+	return os.RemoveAll(storage)
 }

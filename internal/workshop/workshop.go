@@ -22,6 +22,7 @@ var (
 	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
 	ConfigWorkshopSdks            = "user.workshop.sdks"
 	ConfigProjectPathDevice       = "workshop.project"
+	ConfigStateStorageDevice      = "workshop.state-storage"
 )
 
 var InstallTimeNow = time.Now
@@ -78,10 +79,6 @@ func (w *Workshop) RemoveSdk(ctx context.Context, name string) error {
 		Value: string(value),
 	}
 	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
-}
-
-func WorkshopStateVolumeName(ws, pid string) string {
-	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
 }
 
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
