@@ -98,15 +98,15 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
-	var result *sdk.SdkResult
+	var meta *sdk.Meta
 	if rec.Source == sdk.SystemSource {
-		result, err = system.RetrieveSystemSdk(rec, reporter)
+		meta, err = system.RetrieveSystemSdk(rec, reporter)
 	} else {
 		st.Lock()
 		store := sdk.StoreService(st)
 		st.Unlock()
 
-		result, err = store.DownloadSdk(ctx, rec, reporter)
+		meta, err = store.DownloadSdk(ctx, rec, reporter)
 	}
 	if err != nil {
 		return err
@@ -114,26 +114,26 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 
 	// TODO: We should be downloading a specific revision. Remove this when
 	// the Store supports that (it will probably have to be removed anyway
-	// since DownloadSdk won't return a result after that).
-	if result.Revision != rec.Revision {
+	// since DownloadSdk won't return metadata after that).
+	if meta.Revision != rec.Revision {
 		st.Lock()
-		task.Set("sdk-setup", result.Setup)
+		task.Set("sdk-setup", meta.Setup)
 		// Ideally we would validate the YAML here, but we can't check
 		// the base without knowing about the workshop. And this task
 		// should remain workshop-agnostic if possible. Instead we
 		// pass it to doInstallSdk and validate there.
-		task.Set("sdk-yaml", result.SdkYAML)
+		task.Set("sdk-yaml", meta.SdkYAML)
 		st.Unlock()
 	}
 
 	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(result.Name, result.Revision),
+		Name:     sdk.VolumeName(meta.Name, meta.Revision),
 		Kind:     "sdk",
-		Sha3_384: result.Sha3_384,
-		Sdk:      result.Name,
-		Revision: result.Revision,
+		Sha3_384: meta.Sha3_384,
+		Sdk:      meta.Name,
+		Revision: meta.Revision,
 	}
-	file, err := os.Open(result.Filepath())
+	file, err := os.Open(meta.Filepath())
 	if err != nil {
 		return err
 	}

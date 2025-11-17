@@ -106,11 +106,11 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
-		setups, err := validateSdkResults(projectId, req.file, localSdks)
+		localSetups, err := validateSdkMeta(projectId, req.file, localSdks)
 		if err != nil {
 			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
 		}
-		sdks := ordered(req.installOrder, req.storeSdks, setups)
+		sdks := ordered(req.installOrder, req.storeSdks, localSetups)
 
 		tasks := launch(w.state, req.file, req.fileText, req.image, sdks, project)
 		taskset = append(taskset, tasks)
@@ -171,7 +171,7 @@ func (w *WorkshopManager) findRemoteArtifacts(ctx context.Context, project works
 		if err != nil {
 			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
-		setups, err := validateSdkResults(project.ProjectId, file, sdks)
+		setups, err := validateSdkMeta(project.ProjectId, file, sdks)
 		if err != nil {
 			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
@@ -188,8 +188,8 @@ func (w *WorkshopManager) findRemoteArtifacts(ctx context.Context, project works
 	return reqs, nil
 }
 
-func findStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.SdkResult, error) {
-	result, err := system.SystemSdkResult()
+func findStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *workshop.File) ([]sdk.Meta, error) {
+	systemMeta, err := system.SystemSdkMeta()
 	if err != nil {
 		return nil, err
 	}
@@ -203,13 +203,13 @@ func findStoreSdks(sto sdk.Store, ctx context.Context, projectid string, file *w
 		acts = append(acts, act)
 	}
 
-	results, err := sto.SdkAction(ctx, acts)
+	sdks, err := sto.SdkAction(ctx, acts)
 	if err != nil {
 		return nil, err
 	}
 
-	results = slices.Insert(results, 0, *result)
-	return results, nil
+	sdks = slices.Insert(sdks, 0, *systemMeta)
+	return sdks, nil
 }
 
 type localSdkFinder struct {
@@ -220,31 +220,31 @@ type localSdkFinder struct {
 	sdkVolumes  []workshop.VolumeInfo
 }
 
-func (s *localSdkFinder) findLocalSdks(ctx context.Context, wp *workshop.Workshop, file *workshop.File) ([]sdk.SdkResult, error) {
-	localSdks := []sdk.SdkResult{}
+func (s *localSdkFinder) findLocalSdks(ctx context.Context, wp *workshop.Workshop, file *workshop.File) ([]sdk.Meta, error) {
+	localSdks := []sdk.Meta{}
 
 	for _, sd := range file.Sdks {
-		result, err := s.maybeFindLocalSdk(ctx, wp, file, sd)
+		meta, err := s.maybeFindLocalSdk(ctx, wp, file, sd)
 		if err != nil {
 			return nil, err
 		}
-		if result != nil {
-			localSdks = append(localSdks, *result)
+		if meta != nil {
+			localSdks = append(localSdks, *meta)
 		}
 	}
 
-	result, err := s.maybeFindSketchSdk(wp, file.Name)
+	meta, err := s.maybeFindSketchSdk(wp, file.Name)
 	if err != nil {
 		return nil, err
 	}
-	if result != nil {
-		localSdks = append(localSdks, *result)
+	if meta != nil {
+		localSdks = append(localSdks, *meta)
 	}
 
 	return localSdks, nil
 }
 
-func (s *localSdkFinder) maybeFindLocalSdk(ctx context.Context, wp *workshop.Workshop, file *workshop.File, sd workshop.SdkRecord) (*sdk.SdkResult, error) {
+func (s *localSdkFinder) maybeFindLocalSdk(ctx context.Context, wp *workshop.Workshop, file *workshop.File, sd workshop.SdkRecord) (*sdk.Meta, error) {
 	switch sd.Source {
 	case sdk.TrySource:
 		return s.findTrySdk(ctx, file.Base, sd.Name)
@@ -255,7 +255,7 @@ func (s *localSdkFinder) maybeFindLocalSdk(ctx context.Context, wp *workshop.Wor
 	}
 }
 
-func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.SdkResult, error) {
+func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.Meta, error) {
 	trydir := workshop.TrySdkDir(s.userDataDir, sk)
 	root, err := os.OpenRoot(trydir)
 	if err != nil {
@@ -295,7 +295,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 				Revision: volume.Revision,
 				Sha3_384: volume.Sha3_384,
 			}
-			return &sdk.SdkResult{Setup: setup, SdkYAML: volume.Metadata}, nil
+			return &sdk.Meta{Setup: setup, SdkYAML: volume.Metadata}, nil
 		}
 	}
 
@@ -317,7 +317,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 		Revision: volume.Revision,
 		Sha3_384: volume.Sha3_384,
 	}
-	return &sdk.SdkResult{Setup: setup, SdkYAML: volume.Metadata}, nil
+	return &sdk.Meta{Setup: setup, SdkYAML: volume.Metadata}, nil
 }
 
 func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.VolumeInfo, error) {
@@ -388,12 +388,12 @@ func prependRootPath(root *os.Root, err error) error {
 	return err
 }
 
-func (s *localSdkFinder) findInProjectSdk(wp *workshop.Workshop, w, sk string) (*sdk.SdkResult, error) {
+func (s *localSdkFinder) findInProjectSdk(wp *workshop.Workshop, w, sk string) (*sdk.Meta, error) {
 	sdkdir := workshop.ProjectSdkPath(s.project.Path, sk)
 	return s.commitRevision(wp, w, sk, sdk.ProjectSource, sdkdir)
 }
 
-func (s *localSdkFinder) maybeFindSketchSdk(wp *workshop.Workshop, w string) (*sdk.SdkResult, error) {
+func (s *localSdkFinder) maybeFindSketchSdk(wp *workshop.Workshop, w string) (*sdk.Meta, error) {
 	sketchdir := workshop.SketchSdkCurrent(s.userDataDir, s.project.ProjectId, w)
 
 	recs, err := os.ReadDir(sketchdir)
@@ -418,7 +418,7 @@ func (s *localSdkFinder) maybeFindSketchSdk(wp *workshop.Workshop, w string) (*s
 	return s.commitRevision(wp, w, sdk.Sketch, sdk.SketchSource, sketchdir)
 }
 
-func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, source sdk.Source, path string) (*sdk.SdkResult, error) {
+func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, source sdk.Source, path string) (*sdk.Meta, error) {
 	var installed sdk.Revision
 	if wp != nil {
 		installed = wp.Sdks[sk].Revision
@@ -441,10 +441,10 @@ func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, sou
 		Revision: revision,
 		Sha3_384: digest,
 	}
-	return &sdk.SdkResult{Setup: setup, SdkYAML: string(sdkYaml)}, nil
+	return &sdk.Meta{Setup: setup, SdkYAML: string(sdkYaml)}, nil
 }
 
-func validateSdkResults(projectId string, file *workshop.File, sdks []sdk.SdkResult) ([]sdk.Setup, error) {
+func validateSdkMeta(projectId string, file *workshop.File, sdks []sdk.Meta) ([]sdk.Setup, error) {
 	setups := make([]sdk.Setup, 0, len(sdks))
 	for _, s := range sdks {
 		if s.Sha3_384 == "" {
@@ -695,11 +695,11 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			if err != nil {
 				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 			}
-			setups, err := validateSdkResults(projectId, req.file, localSdks)
+			localSetups, err := validateSdkMeta(projectId, req.file, localSdks)
 			if err != nil {
 				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 			}
-			sdks := ordered(req.installOrder, req.storeSdks, setups)
+			sdks := ordered(req.installOrder, req.storeSdks, localSetups)
 
 			plan := resolveRefresh(wp, req.file, req.image, sdks)
 			if plan.HasUpdates() {

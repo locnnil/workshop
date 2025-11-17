@@ -437,44 +437,38 @@ sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
 `
 )
 
-// TODO: Consider replacing with SdkResult once SDK structs are finalised.
-type testSdk struct {
-	s    sdk.Setup
-	meta string
-}
-
-var apiSuiteSdks = map[string]testSdk{
+var apiSuiteSdks = map[string]sdk.Meta{
 	"test-sdk": {
-		s: sdk.Setup{
+		Setup: sdk.Setup{
 			Name:     "test-sdk",
 			Revision: sdk.R(1),
 			Sha3_384: "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
 		},
-		meta: testsdk,
+		SdkYAML: testsdk,
 	},
 	"test-sdk-2": {
-		s: sdk.Setup{
+		Setup: sdk.Setup{
 			Name:     "test-sdk-2",
 			Revision: sdk.R(1),
 			Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		},
-		meta: testsdk2,
+		SdkYAML: testsdk2,
 	},
 	"mount-conflict": {
-		s: sdk.Setup{
+		Setup: sdk.Setup{
 			Name:     "mount-conflict",
 			Revision: sdk.R(1),
 			Sha3_384: "b2bd882ceec6746f00ea2b6cbb6c2073d46d5844b2a3a92a573dd6ea02847a98085b7a7b192d7e24c3f87ba01bbf554e",
 		},
-		meta: mount_conflict,
+		SdkYAML: mount_conflict,
 	},
 	"test-sdk-3": {
-		s: sdk.Setup{
+		Setup: sdk.Setup{
 			Name:     "test-sdk-3",
 			Revision: sdk.R(1),
 			Sha3_384: "0b4b94c4685db0970a15d294ce8e0683b5c6957b08a94ab8a3b14d3aac90f06a4d2cc1240dad04e5be0fe358276e64fc",
 		},
-		meta: testsdk3,
+		SdkYAML: testsdk3,
 	},
 }
 
@@ -1002,18 +996,18 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 	}
 	metadir := filepath.Join(sdkdir, "meta")
 	hooksdir := filepath.Join(sdkdir, "sdk", "hooks")
-	return mockSdk(metadir, hooksdir, apiSuiteSdks[setup.Name].meta)
+	return mockSdk(metadir, hooksdir, apiSuiteSdks[setup.Name].SdkYAML)
 }
 
-func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
-	result := make([]sdk.SdkResult, 0, len(actions))
+func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
+	sdks := make([]sdk.Meta, 0, len(actions))
 	for _, act := range actions {
-		setup := apiSuiteSdks[act.Name].s
+		setup := apiSuiteSdks[act.Name].Setup
 		setup.Channel = act.Channel
-		sdkYaml := apiSuiteSdks[act.Name].meta
-		result = append(result, sdk.SdkResult{Setup: setup, SdkYAML: sdkYaml})
+		sdkYaml := apiSuiteSdks[act.Name].SdkYAML
+		sdks = append(sdks, sdk.Meta{Setup: setup, SdkYAML: sdkYaml})
 	}
-	return result, nil
+	return sdks, nil
 }
 
 func mockSdk(metadir, hooksdir string, meta string) error {
@@ -2238,15 +2232,15 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 }
 
 func updateSdkStoreRev(name string, rev int, meta string) func() {
-	oldrev := apiSuiteSdks[name].s
-	oldmeta := apiSuiteSdks[name].meta
+	oldrev := apiSuiteSdks[name]
 
 	newrev := oldrev
 	newrev.Revision = sdk.R(rev)
-	apiSuiteSdks[name] = testSdk{s: newrev, meta: meta}
+	newrev.SdkYAML = meta
+	apiSuiteSdks[name] = newrev
 
 	return func() {
-		apiSuiteSdks[name] = testSdk{s: oldrev, meta: oldmeta}
+		apiSuiteSdks[name] = oldrev
 	}
 }
 
@@ -4347,8 +4341,8 @@ func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
-	s1 := apiSuiteSdks["test-sdk"].s
-	s2 := apiSuiteSdks["test-sdk-2"].s
+	s1 := apiSuiteSdks["test-sdk"].Setup
+	s2 := apiSuiteSdks["test-sdk-2"].Setup
 
 	c.Assert(s.b.AttachVolumeCalls, check.DeepEquals, []fakebackend.AttachVolumeCall{
 		{Workshop: "manysdks", Name: sdk.VolumeName(sdk.System.String(), system.SystemSdkRevision)},

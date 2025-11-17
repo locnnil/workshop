@@ -19,11 +19,6 @@ func (s StoreAction) String() string {
 	return [...]string{"install", "refresh"}[s]
 }
 
-type SdkResult struct {
-	Setup
-	SdkYAML string
-}
-
 type SdkAction struct {
 	ProjectId string
 	Workshop  string
@@ -61,8 +56,8 @@ func StoreService(st *state.State) Store {
 }
 
 type Store interface {
-	SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
-	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*SdkResult, error)
+	SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error)
+	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)
 }
 
 func NewFakeStore() Store {
@@ -85,11 +80,11 @@ type FakeStore struct {
 	downloadLock  sync.Mutex
 	DownloadCalls []TestDownloadCall
 
-	ActionCallback   func(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
+	ActionCallback   func(ctx context.Context, actions []SdkAction) ([]Meta, error)
 	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) error
 }
 
-func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]SdkResult, error)) func() {
+func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]Meta, error)) func() {
 	old := f.ActionCallback
 	f.ActionCallback = fa
 	return func() {
@@ -105,7 +100,7 @@ func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup
 	}
 }
 
-func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error) {
+func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error) {
 	f.ActionCalls = append(f.ActionCalls, TestActionCall{
 		Actions: actions,
 	})
@@ -115,7 +110,7 @@ func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]SdkRe
 	return nil, nil
 }
 
-func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*SdkResult, error) {
+func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error) {
 	f.downloadLock.Lock()
 	defer f.downloadLock.Unlock()
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
@@ -127,5 +122,5 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 		}
 	}
 
-	return &SdkResult{Setup: setup, SdkYAML: "name: " + setup.Name}, nil
+	return &Meta{Setup: setup, SdkYAML: "name: " + setup.Name}, nil
 }

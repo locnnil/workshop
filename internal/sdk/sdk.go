@@ -15,6 +15,11 @@ import (
 	"github.com/canonical/workshop/internal/metautil"
 )
 
+type Meta struct {
+	Setup
+	SdkYAML string
+}
+
 type Setup struct {
 	Name     string   `json:"name"`
 	Channel  string   `json:"channel,omitempty"`

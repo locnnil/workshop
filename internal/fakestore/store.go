@@ -80,8 +80,8 @@ type ClientWrapper struct {
 	isTesting bool
 }
 
-func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
-	results := []sdk.SdkResult{}
+func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
+	sdks := make([]sdk.Meta, 0, len(actions))
 	actError := &SdkActionError{
 		errors: make(map[string]error),
 	}
@@ -95,17 +95,17 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 			}
 
 			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision, Sha3_384: s.Sha3_384}
-			results = append(results, sdk.SdkResult{Setup: setup, SdkYAML: s.SdkYAML})
+			sdks = append(sdks, sdk.Meta{Setup: setup, SdkYAML: s.SdkYAML})
 		default:
 			return nil, fmt.Errorf("unknown SDK store action")
 		}
 	}
 
 	if len(actError.errors) > 0 {
-		return results, actError
+		return sdks, actError
 	}
 
-	return results, nil
+	return sdks, nil
 }
 
 type reporterWriter struct {
@@ -121,7 +121,7 @@ func (r *reporterWriter) Write(p []byte) (n int, err error) {
 	return plen, nil
 }
 
-func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {
+func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
 	fl, err := sdk.OpenLock(setup.Name)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 			return nil, err
 		}
 
-		return &sdk.SdkResult{Setup: setup, SdkYAML: sdkYaml}, nil
+		return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 	}
 
 	r, err := storeSdkReader(ctx, setup)
@@ -219,7 +219,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		}
 	}
 
-	return &sdk.SdkResult{Setup: setup, SdkYAML: sdkYaml}, nil
+	return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 }
 
 func hashSdk(setup sdk.Setup) (string, error) {
