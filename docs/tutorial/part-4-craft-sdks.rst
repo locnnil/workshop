@@ -122,12 +122,12 @@ to explore what goes into an SDK.
 Update metadata
 ---------------
 
-Update the metadata in :file:`sdk.yaml`,
-adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
+Update the metadata in :file:`sdk.yaml`
+to describe Ollama
+and build SDKs for several platforms:
 
 .. code-block:: yaml
    :caption: sdk.yaml
-   :emphasize-lines: 1,4-6
 
    name: ollama
    version: "0.9.6"
