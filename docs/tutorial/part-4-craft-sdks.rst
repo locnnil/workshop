@@ -556,12 +556,6 @@ The resulting SDK can be accessed by |ws_markup| as follows:
 Note that the workshop :samp:`base`
 must match one of the SDK's supported :samp:`platforms`.
 
-.. note::
-
-   Currently, you can't use unpublished SDKs in a workshop.
-   However, the :ref:`sketch SDK <tut_sketch_sdks>` and in-project SDKs provide
-   a subset of |sdk_markup|'s functionality.
-
 
 Summary
 -------
