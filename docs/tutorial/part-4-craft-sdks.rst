@@ -198,7 +198,7 @@ create a file named :file:`ollama.service`:
 
    [Unit]
    Description=Ollama Service
-   After=network-online.target
+   After=network.target
 
    [Service]
    ExecStart=/bin/bash -lc "ollama serve"
@@ -206,7 +206,7 @@ create a file named :file:`ollama.service`:
    RestartSec=3
 
    [Install]
-   WantedBy=multi-user.target
+   WantedBy=default.target
 
 
 This defines how the Ollama daemon should run:
@@ -412,12 +412,11 @@ Finally, create a hook named :file:`check-health`:
 .. code-block:: shell
    :caption: check-health
 
-   output=$(sudo -u workshop --login ollama list 2>&1)
-   if [[ $? -eq 0 ]]; then
-     workshopctl set-health okay
-     exit 0
+   if ! output=$(sudo -u workshop --login ollama list 2>&1); then
+     workshopctl set-health error "$output"
+     exit
    fi
-   workshopctl set-health error "$output"
+   workshopctl set-health okay
 
 
 It checks whether the Ollama installation is functional
