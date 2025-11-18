@@ -507,8 +507,9 @@ To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
 .. code-block:: yaml
    :caption: workshop.yaml
 
+   name: dev
+   base: ubuntu@24.04
    sdks:
-     # ...
      - name: try-ollama
 
 
