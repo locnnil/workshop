@@ -167,9 +167,9 @@ func (s *localSdk) TestCommitKeepsInstalled(c *check.C) {
 	t3 := time.Now()
 	t2 := t3.Add(-time.Minute)
 	t1 := t2.Add(-time.Minute)
-	c.Assert(os.Chtimes(filepath.Join(s.target, "x42"), time.Time{}, t2), check.IsNil)
-	c.Assert(os.Chtimes(filepath.Join(s.target, "x43"), time.Time{}, t1), check.IsNil)
-	c.Assert(os.Chtimes(filepath.Join(s.target, "x44"), time.Time{}, t3), check.IsNil)
+	c.Assert(sys.Lchtimes(filepath.Join(s.target, "x42"), time.Time{}, t2), check.IsNil)
+	c.Assert(sys.Lchtimes(filepath.Join(s.target, "x43"), time.Time{}, t1), check.IsNil)
+	c.Assert(sys.Lchtimes(filepath.Join(s.target, "x44"), time.Time{}, t3), check.IsNil)
 
 	source := s.createSource(c, "45")
 	revision, digest45, err := sdk.CommitRevision(s.user, source, s.target, sdk.R(-43))
