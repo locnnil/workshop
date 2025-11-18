@@ -858,7 +858,7 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 
 			rev.Add(func() {
 				if err1 := backend.Remove(ctx, ref); err1 != nil {
-					logger.Noticef(`On doSetupProfiles: Failed to clean up %q SDK backend setup`, ref.ShortRef())
+					logger.Noticef(`On doSetupProfiles: Failed to clean up %q SDK backend setup (%v)`, ref.ShortRef(), err1)
 				}
 			})
 		}
@@ -869,19 +869,12 @@ func (m *InterfaceManager) doSetupProfiles(task *state.Task, tomb *tomb.Tomb) er
 
 func (m *InterfaceManager) undoSetupProfiles(task *state.Task, tomb *tomb.Tomb) error {
 	st := task.State()
-	user, p, w, err := handlersetup.UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
 	st.Lock()
-	s, err := handlersetup.Sdk(task)
+	user, err := handlersetup.User(task.Change())
 	st.Unlock()
 	if err != nil {
 		return err
 	}
-
-	sdkRef := sdk.Ref{ProjectId: p.ProjectId, Workshop: w, Sdk: s}
 
 	var sdks []sdk.Ref
 	st.Lock()
@@ -895,14 +888,8 @@ func (m *InterfaceManager) undoSetupProfiles(task *state.Task, tomb *tomb.Tomb) 
 		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
 		defer cancel()
 		for _, backend := range m.repo.Backends() {
-			if ref != sdkRef {
-				if err := backend.Setup(ctx, ref, m.repo); err != nil {
-					return err
-				}
-			} else {
-				if err := backend.Remove(ctx, sdkRef); err != nil {
-					return err
-				}
+			if err := backend.Remove(ctx, ref); err != nil {
+				logger.Noticef(`On undoSetupProfiles: Failed to remove %q SDK profile (%v)`, ref.ShortRef(), err)
 			}
 		}
 	}
