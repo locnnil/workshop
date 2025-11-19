@@ -122,12 +122,12 @@ to explore what goes into an SDK.
 Update metadata
 ---------------
 
-Update the metadata in :file:`sdk.yaml`,
-adjusting its :samp:`name`, :samp:`summary` and :samp:`description`:
+Update the metadata in :file:`sdk.yaml`
+to describe Ollama
+and build SDKs for several platforms:
 
 .. code-block:: yaml
    :caption: sdk.yaml
-   :emphasize-lines: 1,4-6
 
    name: ollama
    version: "0.9.6"
@@ -198,7 +198,7 @@ create a file named :file:`ollama.service`:
 
    [Unit]
    Description=Ollama Service
-   After=network-online.target
+   After=network.target
 
    [Service]
    ExecStart=/bin/bash -lc "ollama serve"
@@ -206,7 +206,7 @@ create a file named :file:`ollama.service`:
    RestartSec=3
 
    [Install]
-   WantedBy=multi-user.target
+   WantedBy=default.target
 
 
 This defines how the Ollama daemon should run:
@@ -327,20 +327,14 @@ named :file:`setup-base`:
 
 
 It runs when the workshop is launched or refreshed,
-installing system packages and preparing the workshop for use.
+and is typically used to install system packages
+and configure the environment.
 
 .. note::
 
    For workshops,
    :command:`apt` is configured to exclude recommended or suggested packages
    and answer 'yes' to all confirmation prompts.
-
-   Also, the use of :command:`sudo -u workshop` here is important
-   because only the :samp:`setup-project` hook runs as a normal user by default;
-   other hooks, like :samp:`setup-base`, run as root.
-   Running commands as the non-root user
-   helps preserve the correct environment variables and file ownership,
-   and can be easier than adjusting permissions afterwards.
 
 
 In the same directory,
@@ -412,12 +406,11 @@ Finally, create a hook named :file:`check-health`:
 .. code-block:: shell
    :caption: check-health
 
-   output=$(sudo -u workshop --login ollama list 2>&1)
-   if [[ $? -eq 0 ]]; then
-     workshopctl set-health okay
-     exit 0
+   if ! output=$(sudo -u workshop --login ollama list 2>&1); then
+     workshopctl set-health error "$output"
+     exit
    fi
-   workshopctl set-health error "$output"
+   workshopctl set-health okay
 
 
 It checks whether the Ollama installation is functional
@@ -435,6 +428,15 @@ You can also set the health to :samp:`waiting`
 to signal that the hook should be retried for a few seconds.
 Unless the hook sets the health to a different value during such a retry,
 the health is eventually set to :samp:`error` automatically.
+
+.. note::
+
+   The use of :command:`sudo -u workshop` here is important
+   because only the :samp:`setup-project` hook runs as a normal user by default;
+   other hooks, like :samp:`check-health`, run as root.
+   Running commands as the non-root user
+   helps preserve the correct environment variables and file ownership,
+   and can be easier than adjusting permissions afterwards.
 
 
 .. _how_sdkcraft_build_sdk:
@@ -505,8 +507,9 @@ To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
 .. code-block:: yaml
    :caption: workshop.yaml
 
+   name: dev
+   base: ubuntu@24.04
    sdks:
-     # ...
      - name: try-ollama
 
 
@@ -556,12 +559,6 @@ The resulting SDK can be accessed by |ws_markup| as follows:
 
 Note that the workshop :samp:`base`
 must match one of the SDK's supported :samp:`platforms`.
-
-.. note::
-
-   Currently, you can't use unpublished SDKs in a workshop.
-   However, the :ref:`sketch SDK <tut_sketch_sdks>` and in-project SDKs provide
-   a subset of |sdk_markup|'s functionality.
 
 
 Summary
