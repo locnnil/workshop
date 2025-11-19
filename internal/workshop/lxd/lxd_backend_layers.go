@@ -128,7 +128,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 
 	rev.Add(func() {
 		if rerr := s.startWorkshop(conn, ctx, name); rerr != nil {
-			logger.Debugf("On StashWorkshop: Cannot restart %q workshop after failed stash operation: %v", name, rerr)
+			logger.Noticef("On StashWorkshop: Cannot restart %q workshop after failed stash operation: %v", name, rerr)
 		}
 	})
 
@@ -145,6 +145,11 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		if err := s.copyInstance(layerConn, layerConn, layer, newname, false, config, nil); err != nil {
 			return err
 		}
+		rev.Add(func() {
+			if rerr := s.deleteLayer(layerConn, newname); rerr != nil {
+				logger.Noticef("On StashWorkshop: Cannot remove layer %q after failed stash operation: %v", newname, rerr)
+			}
+		})
 	}
 
 	// Backup the workshop itself.
