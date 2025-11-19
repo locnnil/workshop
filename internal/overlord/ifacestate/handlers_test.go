@@ -545,6 +545,47 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
+func (s *interfaceHandlersSuite) TestUndoAutoConnect(c *check.C) {
+	// Setup
+	// Create an already installed workshop with a candidate SDK/slot
+	repo := s.mgr.Repository()
+	_, err := s.launchWorkshop(c, "ws-producer", []testSdkSetup{{psetup, producer}})
+	c.Check(err, check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer, s.prj.ProjectId, "ws-producer")), check.IsNil)
+
+	// Launch another workshop with a candidate plug
+	_, err = s.launchWorkshop(c, "ws", []testSdkSetup{{csetup, consumer}})
+	c.Check(err, check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer, s.prj.ProjectId, "ws")), check.IsNil)
+
+	// Execute
+	s.state.Lock()
+	chg := s.newAutoconnectChange()
+	terr := s.state.NewTask("error-trigger", "...")
+	terr.WaitAll(state.NewTaskSet(chg.Tasks()...))
+	chg.AddTask(terr)
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*error-trigger task.*")
+
+	// Validate
+	ref, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 0)
+	c.Assert(err, check.IsNil)
+
+	ref, err = repo.Connected(s.prj.ProjectId, "ws-producer", "producer", "slot")
+	c.Assert(ref, check.HasLen, 0)
+	c.Assert(err, check.IsNil)
+
+	// ensure that backend profiles were set for both SDKs
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 2)
+}
+
 func (s *interfaceHandlersSuite) newRemountChange(newSource string) *state.Change {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -1098,7 +1139,7 @@ func (s *interfaceHandlersSuite) newUndoDisconnectInterfacesChange(sdkName strin
 	return chg
 }
 
-func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesSuccess(c *check.C) {
+func (s *interfaceHandlersSuite) TestUndoAutoDisconnect(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
 	s.launchWorkshop(c, "ws-consumer", []testSdkSetup{
@@ -1149,7 +1190,7 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesSuccess(c *check.C)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
-func (s *interfaceHandlersSuite) TestUndoDisconnectInterfacesManualRestored(c *check.C) {
+func (s *interfaceHandlersSuite) TestUndoAutoDisconnectManualRestored(c *check.C) {
 	// Setup
 	repo := s.mgr.Repository()
 	s.launchWorkshop(c, "ws-consumer", []testSdkSetup{
@@ -1359,7 +1400,7 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
-func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
+func (s *interfaceHandlersSuite) TestUndoDisconnect(c *check.C) {
 	// Setup
 	s.launchWorkshop(c, "ws", []testSdkSetup{
 		{csetup, consumer},
@@ -1382,7 +1423,7 @@ func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
 	chg := s.disconnectChange(c, "ws", false)
 	s.state.Lock()
 	terr := s.state.NewTask("error-trigger", "...")
-	terr.WaitFor(chg.Tasks()[0])
+	terr.WaitAll(state.NewTaskSet(chg.Tasks()...))
 	chg.AddTask(terr)
 	s.state.Unlock()
 
@@ -1411,7 +1452,7 @@ func (s *interfaceHandlersSuite) TestundoDisconnectSuccess(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
-func (s *interfaceHandlersSuite) TestundoDisconnectUndesiredSuccess(c *check.C) {
+func (s *interfaceHandlersSuite) TestUndoDisconnectUndesiredSuccess(c *check.C) {
 	// Setup
 	s.launchWorkshop(c, "ws", []testSdkSetup{
 		{csetup, consumer},
