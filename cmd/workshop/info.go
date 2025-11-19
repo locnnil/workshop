@@ -20,7 +20,7 @@ import (
 )
 
 type CmdInfo struct {
-	waitMixin
+	cmdutil.ColorMixin
 	root *CmdRoot
 }
 
@@ -67,13 +67,13 @@ $ workshop info`,
 //
 // becomes:
 //
-//	.../17942561/mount/go/mod-cache
-func shortenDefaultPath(source, xdg string) string {
+//	…/17942561/mount/go/mod-cache
+func shortenDefaultPath(source, xdg string, esc *cmdutil.Escapes) string {
 	defaultPathPrefix := filepath.Join(xdg, "workshop", "id")
 	if after, ok := strings.CutPrefix(source, defaultPathPrefix); ok {
-		return "..." + after
+		return esc.Ellipsis + after
 	}
-	return source
+	return cmdutil.ContractHome(source)
 }
 
 func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
@@ -115,10 +115,16 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
+	esc := c.GetEscapes()
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = ""
+	}
+
 	w := tabWriter()
 	fmt.Fprintf(w, "name:\t%s\n", workshop.Name)
 	fmt.Fprintf(w, "base:\t%s\n", workshop.Base)
-	fmt.Fprintf(w, "project:\t%s\n", project.Path)
+	fmt.Fprintf(w, "project:\t%s\n", cmdutil.ContractHome(project.Path))
 	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workshop.Status))
 
 	// get the workshop notes
@@ -172,10 +178,12 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				fmt.Fprintf(w, "    mounts:\n")
 				slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 				for _, mount := range sk.Mounts {
-					hostSource := shortenDefaultPath(mount.HostSource, xdg)
+					text := shortenDefaultPath(mount.HostSource, xdg, esc)
+					link := "file://" + hostname + mount.HostSource
+					fallback := cmdutil.ContractHome(mount.HostSource)
 					if mount.HostSource != "" {
 						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-						fmt.Fprintf(w, "        host-source:\t%s\n", hostSource)
+						fmt.Fprintf(w, "        host-source:\t%s\n", esc.MakeLink(text, link, fallback))
 						fmt.Fprintf(w, "        workshop-target:\t%s\n", mount.WorkshopTarget)
 						continue
 					}

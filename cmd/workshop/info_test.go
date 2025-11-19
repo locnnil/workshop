@@ -195,7 +195,7 @@ sdks:
     installed:  1.8.0  2017-02-19  \(1\)
     mounts:
       plug-default:
-        host-source:      .../17942561/ws/mount/go/mod-cache
+        host-source:      %s/workshop/id/17942561/ws/mount/go/mod-cache
         workshop-target:  /home/workshop/target
       plug-name:
         host-source:      /home/user/src
@@ -233,7 +233,7 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgUnset(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir))
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "~/.local/share"))
 	c.Check(n, check.Equals, 2)
 }
 
@@ -268,7 +268,7 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgSet(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir))
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "~/xdghomedir"))
 	c.Check(n, check.Equals, 2)
 }
 

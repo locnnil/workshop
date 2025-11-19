@@ -33,11 +33,13 @@ type UnicodeMixin struct {
 func (ux UnicodeMixin) addUnicodeChars(esc *Escapes) {
 	if canUnicode(ux.Unicode) {
 		esc.Dash = "–" // that's an en dash (so yaml is happy)
+		esc.Ellipsis = "…"
 		esc.UpArrow = "↑"
 		esc.Tick = "✓"
 		esc.Star = "✪"
 	} else {
 		esc.Dash = "--" // two dashes keeps yaml happy also
+		esc.Ellipsis = "..."
 		esc.UpArrow = "^"
 		esc.Tick = "**"
 		esc.Star = "*"
@@ -118,7 +120,17 @@ type Escapes struct {
 	Bold         string
 	End          string
 
-	Tick, Dash, UpArrow, Star string
+	hyperlink  string
+	terminator string
+
+	Tick, Dash, Ellipsis, UpArrow, Star string
+}
+
+func (e *Escapes) MakeLink(text, url, fallback string) string {
+	if e.hyperlink == "" {
+		return fallback
+	}
+	return e.hyperlink + url + e.terminator + text + e.hyperlink + e.terminator
 }
 
 var (
@@ -127,6 +139,8 @@ var (
 		BrightYellow: "\033[93m",
 		Bold:         "\033[1m",
 		End:          "\033[0m",
+		hyperlink:    "\033]8;;",
+		terminator:   "\033\\",
 	}
 
 	mono = Escapes{
@@ -134,6 +148,8 @@ var (
 		BrightYellow: "\033[2m", // dim
 		Bold:         "\033[1m",
 		End:          "\033[0m",
+		hyperlink:    "\033]8;;",
+		terminator:   "\033\\",
 	}
 
 	noesc = Escapes{}
