@@ -48,7 +48,7 @@ func (f *storeIntegration) TestStoreDownloadOK(c *check.C) {
 	setup.Revision = result.Revision
 	c.Check(result.Setup, check.Equals, setup)
 	c.Check(result.Revision, check.Not(check.Equals), sdk.R(0))
-	c.Check(result.MD5, check.Not(check.Equals), "")
+	c.Check(result.Sha3_384, check.Not(check.Equals), "")
 	c.Check(result.SdkYAML, check.Not(check.Equals), "")
 	c.Assert(result.Filepath(), testutil.FilePresent)
 }
@@ -119,14 +119,14 @@ func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.
 		result, err := s.DownloadSdk(context.Background(), setup, nil)
 		c.Assert(err, check.IsNil)
 		c.Check(result.Setup, check.Equals, setup)
-		c.Check(result.MD5, check.Equals, "md5sum")
+		c.Check(result.Sha3_384, check.Equals, "19133c4b2d9157b9edf9128e583245a621f172725abb5965282c8b2d9dfa60eae592d08cb0a0a5d48205ce8f25d2be91")
 		c.Check(result.SdkYAML, check.Equals, "name: test-sdk-basic")
 		c.Check(m.String(), check.Matches, fmt.Sprintf(`(?s)*.DEBUG: SDK Store on Download: SDK "test-sdk-basic" found locally: %s/test-sdk-basic_1.sdk.*`, dirs.SdkDownloads))
 	})
 
 	// "download" is finished
 	c.Assert(os.WriteFile(target, nil, 0666), check.IsNil)
-	c.Assert(os.WriteFile(target+".md5", []byte("md5sum"), 0666), check.IsNil)
+	c.Assert(os.WriteFile(target+".sha3-384", []byte("19133c4b2d9157b9edf9128e583245a621f172725abb5965282c8b2d9dfa60eae592d08cb0a0a5d48205ce8f25d2be91"), 0666), check.IsNil)
 	c.Assert(os.WriteFile(target+".yaml", []byte("name: test-sdk-basic"), 0666), check.IsNil)
 	fl.Close()
 	wg.Wait()

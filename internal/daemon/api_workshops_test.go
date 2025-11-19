@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"crypto/md5"
 	"crypto/sha3"
 	"encoding/hex"
 	"errors"
@@ -987,8 +986,8 @@ func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult,
 		setup := apiSuiteSdks[act.Name].s
 		setup.Channel = act.Channel
 		sdkYaml := apiSuiteSdks[act.Name].meta
-		digest := md5.Sum([]byte(sdkYaml))
-		result = append(result, sdk.SdkResult{Setup: setup, MD5: hex.EncodeToString(digest[:]), SdkYAML: sdkYaml})
+		digest := sha3.Sum384([]byte(sdkYaml))
+		result = append(result, sdk.SdkResult{Setup: setup, Sha3_384: hex.EncodeToString(digest[:]), SdkYAML: sdkYaml})
 	}
 	return result, nil
 }
@@ -1723,9 +1722,7 @@ func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
 		c.Assert(v, check.Not(check.Equals), -1)
 		vol := vols[v]
 		c.Check(vol.Kind, check.Equals, "sdk")
-		if vol.Sha3_384 == "" {
-			c.Check(vol.MD5, check.Not(check.Equals), "")
-		}
+		c.Check(vol.Sha3_384, check.Not(check.Equals), "")
 		c.Check(sdk.VolumeName(vol.Sdk, vol.Revision), check.Equals, vol.Name)
 		c.Check(vol.Metadata, check.Not(check.Equals), "")
 	}

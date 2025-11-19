@@ -91,8 +91,6 @@ type VolumeSetup struct {
 	Kind string
 	// Hash of tarball used to create volume.
 	Sha3_384 string
-	// MD5 hash of tarball used to create volume (TODO: remove during Store migration).
-	MD5 string
 	// Name of SDK associated with volume, if any.
 	Sdk string
 	// Revision of SDK associated with volume, if any.

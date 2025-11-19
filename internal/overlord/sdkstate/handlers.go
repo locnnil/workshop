@@ -131,7 +131,6 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		Name:     sdk.VolumeName(result.Name, result.Revision),
 		Kind:     "sdk",
 		Sha3_384: result.Sha3_384,
-		MD5:      result.MD5,
 		Sdk:      result.Name,
 		Revision: result.Revision,
 	}

@@ -2,11 +2,9 @@ package sdk
 
 import (
 	"context"
-	"crypto/md5"
 	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
-	"hash"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -27,7 +25,6 @@ func (s StoreAction) String() string {
 type SdkResult struct {
 	Setup
 	Sha3_384 string
-	MD5      string
 	SdkYAML  string
 }
 
@@ -139,20 +136,9 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 		return nil, err
 	}
 
-	var hash hash.Hash
-	if IsSystem(setup.Name) {
-		hash = sha3.New384()
-	} else {
-		hash = md5.New()
-	}
-	fmt.Fprintf(hash, "%s:%s:%s:%s", setup.Name, source, setup.Channel, setup.Revision)
-	digest := hex.EncodeToString(hash.Sum(nil))
+	sum := sha3.Sum384(fmt.Appendf(nil, "%s:%s:%s:%s", setup.Name, source, setup.Channel, setup.Revision))
+	digest := hex.EncodeToString(sum[:])
 
-	result := &SdkResult{Setup: setup, SdkYAML: "name: " + setup.Name}
-	if IsSystem(setup.Name) {
-		result.Sha3_384 = digest
-	} else {
-		result.MD5 = digest
-	}
+	result := &SdkResult{Setup: setup, Sha3_384: digest, SdkYAML: "name: " + setup.Name}
 	return result, nil
 }
