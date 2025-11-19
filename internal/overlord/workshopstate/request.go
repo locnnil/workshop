@@ -624,6 +624,9 @@ func launch(st *state.State, file *workshop.File, fileText string, image worksho
 	install := installSdks(st, sdks, rmap)
 	addTaskSet(install)
 
+	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", file.Name))
+	addTaskSet(state.NewTaskSet(configureTimezone))
+
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))
 
@@ -935,6 +938,9 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	// Install updated SDKs to the rebuilt workshop.
 	install := installSdks(st, plan.InstallOrRefresh(), rmap)
 	addTaskSet(install)
+
+	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", file.Name))
+	addTaskSet(state.NewTaskSet(configureTimezone))
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", w.Project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))

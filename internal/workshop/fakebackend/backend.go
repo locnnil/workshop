@@ -81,6 +81,7 @@ type FakeWorkshopBackend struct {
 	// the key is a username
 	projects map[string][]workshop.Project
 
+	execLock     sync.Mutex
 	ExecCallback ExecFunc
 	ExecCalls    []*ExecCall
 
@@ -455,7 +456,9 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (fsut
 }
 
 func (f *FakeWorkshopBackend) Exec(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+	f.execLock.Lock()
 	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, *args})
+	f.execLock.Unlock()
 	return f.ExecCallback(ctx, name, args)
 }
 

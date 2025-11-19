@@ -232,6 +232,73 @@ func removeIfEmpty(path string) error {
 	return err
 }
 
+func (m *WorkshopManager) doConfigureTimezone(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	timezone, err := osutil.Timezone()
+	if err != nil {
+		st := task.State()
+		st.Lock()
+		defer st.Unlock()
+		st.Warnf("cannot determine system time zone: %v", err)
+		return nil
+	}
+
+	// Set /etc/localtime in workshop. Ubuntu 22.04 and below use a patched
+	// systemd that will also write to /etc/timezone.
+	args := workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
+			Command: []string{
+				"timedatectl",
+				"set-timezone",
+				timezone,
+			},
+			WorkDir: "/",
+			Timeout: time.Minute,
+		},
+	}
+	exectx, err := m.backend.Exec(ctx, w, &args)
+	if err != nil {
+		return err
+	}
+	if err := exectx.WaitExecution(ctx); err != nil {
+		return err
+	}
+
+	// Ensure /etc/timezone is updated (for Ubuntu 24.04 and above). It's
+	// looking like Ubuntu 26.04 will remove /etc/timezone, so this command
+	// only affects Ubuntu 24.04. It can be removed when we drop support.
+	args = workshop.Execution{
+		ExecArgs: workshop.ExecArgs{
+			Command: []string{
+				"dpkg-reconfigure",
+				"--frontend=noninteractive",
+				"tzdata",
+			},
+			WorkDir: "/",
+			Timeout: time.Minute,
+		},
+	}
+	exectx, err = m.backend.Exec(ctx, w, &args)
+	if err != nil {
+		return err
+	}
+	err = exectx.WaitExecution(ctx)
+	var errExec *workshop.ErrExec
+	if errors.As(err, &errExec) && errExec.Status == osutil.CommandNotFound {
+		// If dpkg-reconfigure doesn't exist, /etc/timezone probably
+		// doesn't either.
+		err = nil
+	}
+	return err
+}
+
 func (m *WorkshopManager) doMountProject(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
