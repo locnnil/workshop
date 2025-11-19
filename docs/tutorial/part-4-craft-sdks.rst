@@ -327,20 +327,14 @@ named :file:`setup-base`:
 
 
 It runs when the workshop is launched or refreshed,
-installing system packages and preparing the workshop for use.
+and is typically used to install system packages
+and configure the environment.
 
 .. note::
 
    For workshops,
    :command:`apt` is configured to exclude recommended or suggested packages
    and answer 'yes' to all confirmation prompts.
-
-   Also, the use of :command:`sudo -u workshop` here is important
-   because only the :samp:`setup-project` hook runs as a normal user by default;
-   other hooks, like :samp:`setup-base`, run as root.
-   Running commands as the non-root user
-   helps preserve the correct environment variables and file ownership,
-   and can be easier than adjusting permissions afterwards.
 
 
 In the same directory,
@@ -434,6 +428,15 @@ You can also set the health to :samp:`waiting`
 to signal that the hook should be retried for a few seconds.
 Unless the hook sets the health to a different value during such a retry,
 the health is eventually set to :samp:`error` automatically.
+
+.. note::
+
+   The use of :command:`sudo -u workshop` here is important
+   because only the :samp:`setup-project` hook runs as a normal user by default;
+   other hooks, like :samp:`check-health`, run as root.
+   Running commands as the non-root user
+   helps preserve the correct environment variables and file ownership,
+   and can be easier than adjusting permissions afterwards.
 
 
 .. _how_sdkcraft_build_sdk:
