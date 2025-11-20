@@ -296,7 +296,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	c.Check(projectCache, testutil.FileAbsent)
 }
 
-func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *check.C) {
+func (s *workshopHandlers) TestCreateWorkshopNoWorkshopDefinitionFound(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
@@ -315,7 +315,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopConfigurationFound(c *che
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop configuration not found.*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*internal error: "ws" workshop definition not found.*`)
 }
 
 func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
