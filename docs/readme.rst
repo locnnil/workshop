@@ -1,6 +1,18 @@
 Workshop
 ========
 
+.. warning::
+
+   Workshop is currently an internal Canonical project.
+   All code, documentation, and materials in this repository
+   are company-private and must not be shared outside Canonical
+   without prior authorization.
+   
+   Do not redistribute or discuss this content or the project externally
+   (at public forums, in social media, with customers)
+   until an official public release is announced.
+
+
 .. image:: https://readthedocs.com/projects/canonical-workshop/badge/?version=stable&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
    :target: https://canonical-workshop.readthedocs-hosted.com/stable/?badge=stable
    :alt: Documentation status
