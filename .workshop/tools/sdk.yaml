@@ -3,3 +3,6 @@ slots:
   fake-store:
     interface: tunnel
     endpoint: 8080
+  sphinx-build:
+    interface: tunnel
+    endpoint: 8000

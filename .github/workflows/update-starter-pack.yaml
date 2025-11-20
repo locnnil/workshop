@@ -1,0 +1,62 @@
+name: Update starter pack
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Mondays
+
+jobs:
+  update-starter-pack:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Update starter pack files
+        run: |
+          # Create a temporary directory for the starter pack clone
+          TMP_DIR=$(mktemp -d)
+          trap 'rm -rf "$TMP_DIR"' EXIT
+          
+          # Clone the latest starter pack
+          git clone --depth 1 https://github.com/canonical/sphinx-docs-starter-pack "$TMP_DIR"
+          
+          # Clean up any previous installation
+          rm -rf docs/Makefile docs/.sphinx docs/requirements.txt
+          
+          # Ensure the docs directory exists
+          mkdir -p docs
+          
+          # Copy the Makefile and .sphinx directory to the project's docs directory
+          cp -ar "$TMP_DIR/docs/Makefile" "$TMP_DIR/docs/.sphinx" "$TMP_DIR/docs/requirements.txt" docs/
+          
+          echo "Starter pack files updated successfully"
+
+      - name: Install documentation dependencies
+        run: make -C docs install
+
+      - name: Check for changes, commit, and create PR if any
+        run: |
+          if git diff --exit-code; then
+            echo "No changes detected, skipping commit and PR creation."
+          else
+            pr_branch="update/starter-pack-$(date +'%Y%m%d%H%M%S')"
+            git checkout -b $pr_branch
+            
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            
+            git add .
+            git commit -m "Update documentation starter pack files"
+            git push --set-upstream origin $pr_branch
+
+            gh pr create --title "Update documentation starter pack files" --body "This PR updates the documentation starter pack files from the upstream repository." --base main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
