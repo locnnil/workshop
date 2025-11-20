@@ -34,9 +34,16 @@ On top of the base image, one or more SDKs are usually applied,
 which provide tools for development and runtime tasks.
 SDKs are downloaded from the SDK Store that is specific to |ws_markup|.
 
-After the SDKs are installed, their :samp:`setup-base` hooks run
-in the order the SDKs are listed;
-this serves to customize the workshop and prepare the SDKs for use.
+SDKs are installed in the order dictated by the workshop definition:
+first :samp:`system`, then user-listed SDKs, and finally :samp:`sketch`.
+Each SDK's :samp:`setup-base` hook runs immediately after that SDK is installed;
+this serves to customize the workshop
+and prepare each SDK for use before proceeding further.
+
+After all SDKs are installed,
+the following hooks execute sequentially in the same deterministic order:
+:samp:`setup-project` hooks run first to prepare the project environment,
+followed by :samp:`check-health` hooks to verify the workshop is ready for use.
 
 The host user running |ws_markup| is mapped to the default workshop user,
 named :samp:`workshop` in the container,

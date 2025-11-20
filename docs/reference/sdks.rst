@@ -502,11 +502,14 @@ a zero code indicates success.
 
 .. note::
 
-   The hooks aren't mentioned in the :ref:`definition <ref_sdk_definition>`;
+   The hooks aren't mentioned in the :ref:`SDK definition <ref_sdk_definition>`;
    |sdk_markup| automatically enumerates them when packing the SDK.
 
-   Hooks of the same type from multiple SDKs run non-deterministically,
-   so you shouldn't rely on any particular order of their execution.
+   An SDK's position in the :ref:`workshop definition <ref_workshop_definition>`
+   determines when its hooks execute.
+   SDKs are always processed in the following order:
+   :samp:`system`, user-listed SDKs, :samp:`sketch`.
+   Each hook waits for the previous one to complete before executing.
 
 
 .. _ref_sdk_state:
