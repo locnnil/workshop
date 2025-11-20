@@ -45,7 +45,10 @@ To check out the connected interfaces of a workshop, list the connections:
      mount      dev/ollama:models  dev/system:mount  -
 
 
-This lists a GPU interface plug named :samp:`dev/ollama:gpu`.
+This lists two interface plugs,
+both provided by the :samp:`ollama` SDK under the :samp:`dev` workshop.
+
+The first one is a GPU interface plug named :samp:`dev/ollama:gpu`.
 It enables the workshop to use the host system's GPU
 by connecting to the :samp:`dev/system:gpu` slot.
 
@@ -83,8 +86,9 @@ To check the connection state, run :command:`workshop connections`:
 
 
 You can remount a mount interface plug to a new location on the host.
-For example, to preserve models after the workshop is removed
-or use some models downloaded previously,
+For example, to preserve models,
+conventionally stored under :file:`~/.ollama/models/`,
+after the workshop is removed or use some models downloaded previously,
 you can remount to a directory in your home:
 
 .. @artefact workshop remount
@@ -159,7 +163,7 @@ to run Jupyter notebooks with the Ollama models:
 Next, add the tunnel interface plug under the :samp:`system` SDK
 in the workshop definition;
 this exposes the Jupyter server, now available in the workshop,
-to the host system:
+to the host system at a port of your choice (here, :samp:`8989`):
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -179,7 +183,8 @@ to the host system:
            endpoint: 127.0.0.1:8989
 
 
-The slot we're going to connect this plug to is defined by the SDK itself,
+The slot we're going to connect this plug to comes from the SDK itself
+and is named :samp:`dev/jupyter:jupyter`,
 so you don't have to add it manually:
 
 .. code-block:: console

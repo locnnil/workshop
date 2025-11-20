@@ -89,6 +89,8 @@ Once you have installed |sdk_markup|,
 use it to initialize, define, and pack your first :ref:`SDK <exp_sdks>`.
 Here, we'll build an SDK that installs Ollama
 for running large language models in the workshop.
+This demonstrates creating an SDK for a specific application,
+but SDKs can package any software that aligns with the |ws_markup| way.
 
 First, create a directory named :file:`ollama/`:
 
@@ -123,7 +125,8 @@ Update metadata
 ---------------
 
 Update the metadata in :file:`sdk.yaml`
-to describe Ollama
+with some domain-specific information
+to describe the project
 and build SDKs for several platforms:
 
 .. code-block:: yaml
@@ -133,7 +136,7 @@ and build SDKs for several platforms:
    version: "0.9.6"
    summary: Get up and running with large language models
    description: |
-     Get up and running with Llama 3.3, DeepSeek-R1, Phi-4, 
+     Get up and running with Llama 3.3, DeepSeek-R1, Phi-4,
      Gemma 3, Mistral Small 3.1 and other large language models.
    license: MIT
    platforms:
@@ -155,7 +158,7 @@ to obtain data from different sources, process it in various ways,
 and prepare an SDK package for publishing.
 
 In our Ollama SDK, we'll define two parts:
-one to download the Ollama binary
+one to download the Ollama binary from its GitHub release page,
 and another for the :program:`systemd` service file:
 
 .. code-block:: yaml
@@ -175,10 +178,15 @@ and another for the :program:`systemd` service file:
 
 The :samp:`ollama` part uses the :samp:`dump` plugin
 to download and extract the official Ollama binary from GitHub releases.
+
 The :samp:`user-service` part includes a :program:`systemd` service file
 that will be used to manage the Ollama daemon.
 
 .. note::
+
+   The service file is specific to Ollama and how it runs as a daemon.
+   This is just one way to manage a long-running process in an SDK,
+   and other SDKs may use different part layouts depending on their needs.
 
    For in-depth details,
    refer to the `Parts
@@ -332,13 +340,20 @@ and configure the environment.
 
 .. note::
 
-   For workshops,
+   |ws_markup| tweaks this hook's environment a bit.
+
+   First, note the :envvar:`$SDK` variable,
+   which points to the root of the SDK installation.
+   This allows you to reference files installed by the SDK.
+
+   Also, when invoked from any hooks,
    :command:`apt` is configured to exclude recommended or suggested packages
    and answer 'yes' to all confirmation prompts.
 
 
 In the same directory,
-create a file named :file:`setup-project`:
+create a file named :file:`setup-project`
+for Ollama-specific setup:
 
 .. code-block:: shell
    :caption: setup-project
@@ -399,7 +414,9 @@ Report: check health
 
 .. @artefact check-health
 
-Finally, create a hook named :file:`check-health`:
+Finally, create a hook named :file:`check-health`
+to test whether the installation is functional
+and report to |ws_markup| accordingly:
 
 .. @artefact workshopctl
 

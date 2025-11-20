@@ -58,7 +58,8 @@ when we discussed :ref:`tut_work_with_interfaces`:
            endpoint: 127.0.0.1:8989
 
 
-This setup allows you to work with AI models using Ollama and Jupyter.
+In our example workshop,
+this setup allows you to work with AI models using Ollama and Jupyter.
 But what if the SDKs in your workshop don't provide some tools?
 For instance, you may have a HuggingFace SDK without :program:`huggingface-cli`.
 Should you create and publish an SDK just for your personal setup? Probably not.
@@ -149,8 +150,13 @@ so add the following to install Jupyter Console:
 
 
 This uses the existing Jupyter virtual environment,
-created by the :samp:`jupyter` SDK,
+created by the :samp:`jupyter` SDK
 to install the :samp:`jupyter-console` package.
+
+Here, the path follows a certain structure:
+:file:`/var/lib/workshop/sdk/` is the location of all SDKs inside a workshop,
+:file:`jupyter/` is the specific SDK name,
+and :file:`venv/` is a directory specific to the SDK.
 
 Once you save and exit :file:`sdk.yaml`,
 |ws_markup| refreshes the workshop, running the new hooks:
@@ -194,7 +200,9 @@ each edit with :command:`workshop sketch-sdk` bumps the revision number.
 At this point, you've created a functional, albeit simple, SDK in minutes.
 Now you can use Jupyter Console to interactively work with your Ollama models.
 
-Start the Jupyter Console:
+Start the Jupyter Console
+by activating the virtual environment provided by the :samp:`jupyter` SDK
+and using the :program:`jupyter console` command enabled by the sketch SDK:
 
 .. code-block:: console
 
