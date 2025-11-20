@@ -18,24 +18,27 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Checkout starter pack repository
+        uses: actions/checkout@v6
+        with:
+          repository: canonical/sphinx-docs-starter-pack
+          path: starter-pack-temp
+
       - name: Update starter pack files
         run: |
-          # Create a temporary directory for the starter pack clone
-          TMP_DIR=$(mktemp -d)
-          trap 'rm -rf "$TMP_DIR"' EXIT
-          
-          # Clone the latest starter pack
-          git clone --depth 1 https://github.com/canonical/sphinx-docs-starter-pack "$TMP_DIR"
-          
           # Clean up any previous installation
-          rm -rf docs/Makefile docs/.sphinx docs/requirements.txt
-          
+          make -C docs clean
+          rm -rf docs/{Makefile,.sphinx,requirements.txt}
+
           # Ensure the docs directory exists
           mkdir -p docs
-          
+
           # Copy the Makefile and .sphinx directory to the project's docs directory
-          cp -ar "$TMP_DIR/docs/Makefile" "$TMP_DIR/docs/.sphinx" "$TMP_DIR/docs/requirements.txt" docs/
-          
+          cp -a starter-pack-temp/docs/{Makefile,.sphinx,requirements.txt} docs/
+
+          # Clean up the temporary checkout
+          rm -rf starter-pack-temp
+
           echo "Starter pack files updated successfully"
 
       - name: Install documentation dependencies
@@ -48,10 +51,10 @@ jobs:
           else
             pr_branch="update/starter-pack-$(date +'%Y%m%d%H%M%S')"
             git checkout -b $pr_branch
-            
+
             git config --global user.name 'github-actions[bot]'
             git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-            
+
             git add .
             git commit -m "Update documentation starter pack files"
             git push --set-upstream origin $pr_branch
