@@ -21,7 +21,7 @@ actions:
   docs-clean: |
     make -C docs/ clean-doc
   docs-check: |
-    make -C docs/ {spelling,linkcheck,woke,lint-md}
+    make -C docs/ spelling linkcheck woke lint-md
   lint: |
     golangci-lint run
     golangci-lint run --new-from-rev='HEAD~' --config=.golangci.errcheck.yaml

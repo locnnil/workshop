@@ -301,13 +301,15 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_sdk_definition`
 - :ref:`ref_sdk_hooks`
-- :ref:`ref_workshopctl`
+- :ref:`ref_sdk_internals`
+- :ref:`ref_workshop_changes`
 - :ref:`ref_workshop_connect`
 - :ref:`ref_workshop_connections`
-- :ref:`ref_workshop_changes`
 - :ref:`ref_workshop_disconnect`
 - :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_start`
 - :ref:`ref_workshop_tasks`
+- :ref:`ref_workshopctl__cli`

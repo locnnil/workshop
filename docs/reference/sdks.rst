@@ -482,7 +482,7 @@ which can be defined when the SDK is built using |sdk_markup|:
 
      - Sets the state of the SDK
        (:samp:`okay`, :samp:`waiting` or :samp:`error`)
-       using :ref:`workshopctl <ref_workshopctl>`,
+       using :ref:`workshopctl <ref_workshopctl__cli>`,
        which affects the :ref:`status <ref_workshop_status>` of the workshop.
 
 

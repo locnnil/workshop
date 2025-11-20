@@ -20,19 +20,3 @@ specifically the eponymous *workshop*:
    changes-tasks
    projects
    workshop-cli
-
-
-See also
---------
-
-Explanation:
-
-- :ref:`exp_interfaces`
-- :ref:`exp_sdks`
-
-
-Reference:
-
-- :ref:`ref_cli`
-- :ref:`ref_workshop_definition`
-- :ref:`ref_workshop_status`

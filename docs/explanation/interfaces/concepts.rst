@@ -12,7 +12,7 @@ Interface concepts
 .. @artefact SDK
 .. @artefact interface
 
-Interface connections are a mechanism for communication and resource sharing.
+Interfaces are a mechanism for communication and resource sharing.
 It is an integral part of workshop confinement,
 ensuring that each workshop operates in its own isolated environment,
 while still allowing controlled interactions among the SDKs and with the host.
@@ -105,12 +105,8 @@ Connections
 
 .. @artefact interface connection
 
-Interface connections are a mechanism for communication and resource sharing.
-It is an integral part of workshop confinement,
-ensuring that each workshop operates in its own isolated environment,
-while still allowing controlled interactions among the SDKs and with the system.
-
-Here's how it works from the outside:
+From the user perspective,
+connections can be established through the interface system in several ways:
 
 - The :samp:`connections` section of the workshop definition
   and the :command:`workshop connect` command
@@ -124,6 +120,7 @@ Here's how it works from the outside:
 - Finally, the :command:`workshop connections` command
   lists all existing connections and their states,
   providing an overview of how workshop connections are laid out.
+
 
 Some plugs can be auto-connected to their slots at launch or refresh.
 This behavior varies by interface,
@@ -220,8 +217,8 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshop`
 - :ref:`exp_sdks`
+- :ref:`exp_workshop`
 
 
 How-to guides:
@@ -236,3 +233,7 @@ Reference:
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_definition`
 - :ref:`ref_workshop_disconnect`
+- :ref:`ref_workshop_info`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_remove`

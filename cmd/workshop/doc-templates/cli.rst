@@ -1,4 +1,4 @@
-.. _ref_workshop_cli:
+.. _ref_workshop__cli:
 
 .. meta::
    :description: Overview of the 'workshop' CLI utility, listing available
@@ -29,7 +29,7 @@ and also has a number of global flags:
 {{ end }}
 
 
-.. _ref_workshop_cli_completion:
+.. _ref_workshop__cli_completion:
 
 Shell completion
 ----------------

@@ -373,7 +373,8 @@ to serve as our workspace.
    :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
 
 
-First, let's download a simple AI model *inside the workshop*
+First, let's put our example workshop to practical use;
+download a simple AI model *inside the workshop*
 using the :command:`workshop exec` command.
 We'll use the :samp:`tinyllama` model, which is small and quick to download:
 
