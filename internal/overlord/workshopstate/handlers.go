@@ -1,7 +1,6 @@
 package workshopstate
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -34,13 +33,12 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	st := task.State()
-	var base, fingerprint string
+	var image workshop.BaseImage
 	st.Lock()
-	err1 := task.Get("workshop-base", &base)
-	err2 := task.Get("workshop-base-fingerprint", &fingerprint)
+	err = task.Get("workshop-base", &image)
 	st.Unlock()
-	if cmp.Or(err1, err2) != nil {
-		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+	if err != nil {
+		return fmt.Errorf("internal error: %q workshop base image not found (task ID: %s)", w, task.ID())
 	}
 
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
@@ -55,7 +53,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 		},
 	}
 
-	return m.backend.DownloadBase(ctx, base, fingerprint, reporter)
+	return m.backend.DownloadBase(ctx, image, reporter)
 }
 
 func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -74,7 +72,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	err = task.Get("workshop-file", &fileText)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+		return fmt.Errorf("internal error: %q workshop definition not found (task ID: %s)", w, task.ID())
 	}
 
 	var wf workshop.File
@@ -87,7 +85,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	err = task.Get("sdk-snapshot", &sdkSnapshot)
 	st.Unlock()
 	if err != nil && !errors.Is(err, state.ErrNoState) {
-		return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+		return fmt.Errorf("internal error: %q workshop snapshot not found (task ID: %s)", w, task.ID())
 	}
 
 	rev := revert.New()
@@ -108,15 +106,15 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	}
 
 	if sdkSnapshot == "" {
-		var fingerprint string
+		var image workshop.BaseImage
 		st.Lock()
-		err = task.Get("workshop-base-fingerprint", &fingerprint)
+		err = task.Get("workshop-base", &image)
 		st.Unlock()
 		if err != nil {
-			return fmt.Errorf("internal error: %q workshop configuration not found (task ID: %s)", w, task.ID())
+			return fmt.Errorf("internal error: %q workshop base image not found (task ID: %s)", w, task.ID())
 		}
 
-		if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, fingerprint); err != nil {
+		if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, image); err != nil {
 			return err
 		}
 		// Create workshop base and run directories

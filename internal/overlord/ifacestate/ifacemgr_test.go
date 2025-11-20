@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
@@ -69,11 +70,6 @@ func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.BaseTest.TearDownTest(c)
 }
 
-type testSdkSetup struct {
-	sdk.Setup
-	yaml string
-}
-
 var systemYaml = `name: system
 base: ubuntu@22.04
 type: system
@@ -82,24 +78,24 @@ slots:
     interface: mount
 `
 
-func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sdk.Revision) {
+func (s *interfaceManagerSuite) mockSdk(c *check.C, meta sdk.Meta) {
 	vfs := c.MkDir()
 
-	meta := filepath.Join(vfs, "meta")
-	err := os.MkdirAll(meta, 0755)
+	path := filepath.Join(vfs, "meta", "sdk.yaml")
+	err := os.MkdirAll(filepath.Dir(path), 0755)
 	c.Assert(err, check.IsNil)
-	err = os.WriteFile(filepath.Join(meta, "sdk.yaml"), []byte(sdkYaml), 0644)
+	err = os.WriteFile(path, []byte(meta.SdkYAML), 0644)
 	c.Assert(err, check.IsNil)
 
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
 	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(name, rev),
+		Name:     sdk.VolumeName(meta.Name, meta.Revision),
 		Kind:     "sdk",
-		Sdk:      name,
-		Revision: rev,
-		Metadata: sdkYaml,
+		Sdk:      meta.Name,
+		Revision: meta.Revision,
+		Metadata: meta.SdkYAML,
 	}
 	file, err := os.Open(vfs)
 	c.Assert(err, check.IsNil)
@@ -109,7 +105,7 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, name, sdkYaml string, rev sd
 	}
 }
 
-func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []testSdkSetup) (*workshop.Workshop, error) {
+func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []sdk.Meta) *workshop.Workshop {
 	ctx := context.WithValue(s.ctx, workshop.ContextProjectId, s.prj.ProjectId)
 
 	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
@@ -122,18 +118,24 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 
-	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, "fakeimage123")
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, image)
 	c.Assert(err, check.IsNil)
 
 	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)
 	c.Assert(err, check.IsNil)
 	defer wsfs.Close()
 
-	allsdks := []testSdkSetup{{Setup: sdk.Setup{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: sdk.R(1)}, yaml: systemYaml}}
-	allsdks = append(allsdks, sdks...)
+	systemSetup := sdk.Setup{
+		Name:     sdk.System.String(),
+		Source:   sdk.SystemSource,
+		Revision: sdk.R(1),
+		Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+	}
+	allsdks := slices.Insert(sdks, 0, sdk.Meta{Setup: systemSetup, SdkYAML: systemYaml})
 
-	for _, setup := range allsdks {
-		s.mockSdk(c, setup.Name, setup.yaml, setup.Revision)
+	for _, meta := range allsdks {
+		s.mockSdk(c, meta)
 	}
 
 	w, err := s.wsbackend.Workshop(ctx, ws)
@@ -150,7 +152,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []tes
 		c.Assert(err, check.IsNil)
 	}
 
-	return w, nil
+	return w
 }
 
 func (s *interfaceManagerSuite) TestManagerReloadsConnections(c *check.C) {
@@ -163,8 +165,8 @@ plugs:
   attr: plug-value
 `
 
-	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.Revision{N: 1}}, consumerYaml},
+	s.launchWorkshop(c, "ws", []sdk.Meta{
+		{Setup: consumer.Setup, SdkYAML: consumerYaml},
 	})
 
 	s.state.Lock()
@@ -231,9 +233,9 @@ slots:
   interface: mount
   attr2: value2
 `
-	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.R(1)}, consumerYaml},
-		{sdk.Setup{Name: "producer", Channel: "latest/stable", Revision: sdk.R(1)}, producerYaml},
+	s.launchWorkshop(c, "ws", []sdk.Meta{
+		{Setup: consumer.Setup, SdkYAML: consumerYaml},
+		{Setup: producer.Setup, SdkYAML: producerYaml},
 	})
 
 	s.state.Lock()
@@ -274,9 +276,9 @@ slots:
   interface: mount
   attr2: value2
 `
-	s.launchWorkshop(c, "ws", []testSdkSetup{
-		{sdk.Setup{Name: "consumer", Channel: "latest/stable", Revision: sdk.R(1)}, consumerYaml},
-		{sdk.Setup{Name: "producer", Channel: "latest/stable", Revision: sdk.R(1)}, producerYaml},
+	s.launchWorkshop(c, "ws", []sdk.Meta{
+		{Setup: consumer.Setup, SdkYAML: consumerYaml},
+		{Setup: producer.Setup, SdkYAML: producerYaml},
 	})
 
 	s.state.Lock()

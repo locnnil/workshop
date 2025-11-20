@@ -21,6 +21,8 @@ package daemon
 
 import (
 	"bytes"
+	"crypto/sha3"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -99,7 +101,8 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 
 	info := sdk.MockInfo(c, yaml, s.project.ProjectId, w)
 	wf := s.workshopFile(w, []*sdk.Info{info})
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123"), check.IsNil)
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
 
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
@@ -109,7 +112,16 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	defer wfs.Close()
 	s.writeSDKMetaFile(c, wfs, info.Name, yaml)
 
-	err = wp.AddSdk(s.ctx, sdk.Setup{Name: info.Name, Channel: info.Channel, Source: info.Source, Revision: info.Revision})
+	digest := sha3.Sum384([]byte(yaml))
+
+	setup := sdk.Setup{
+		Name:     info.Name,
+		Channel:  info.Channel,
+		Source:   info.Source,
+		Revision: info.Revision,
+		Sha3_384: hex.EncodeToString(digest[:]),
+	}
+	err = wp.AddSdk(s.ctx, setup)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
@@ -126,7 +138,8 @@ func (s *apiSuite) mockInstalledSDKBoundPlug(c *check.C, yaml string, w string, 
 		Name:      to}
 	c.Assert(s.d.overlord.InterfaceManager().Repository().AddSdk(info), check.IsNil)
 	wf := s.workshopFile(w, []*sdk.Info{info})
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123"), check.IsNil)
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
 	wp, err := s.b.Workshop(s.ctx, w)
 	c.Check(err, check.IsNil)
 	return wp

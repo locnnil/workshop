@@ -140,22 +140,42 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 	s.createWFile(c, "nav2", "name: nav2\nbase: ubuntu@20.04\n")
 	s.createWFile(c, "lerobot", "name: lerobot\nbase: ubuntu@20.04\n")
 
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "nav2", Base: "ubuntu@20.04"}, "fakeimage123"), check.IsNil)
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "lerobot", Base: "ubuntu@20.04"}, "fakeimage123"), check.IsNil)
+	wf := &workshop.File{Name: "nav2", Base: "ubuntu@20.04"}
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
+
+	wf = &workshop.File{Name: "lerobot", Base: "ubuntu@20.04"}
+	image = workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
 
 	// Add SDK setups with channels so the endpoint can report channels.
 	w1, err := s.b.Workshop(s.ctx, "nav2")
 	c.Assert(err, check.IsNil)
-	c.Assert(w1.AddSdk(s.ctx, sdk.Setup{Name: "openvino", Channel: "latest/stable", Source: sdk.StoreSource, Revision: sdk.R(85)}), check.IsNil)
+	setup := sdk.Setup{
+		Name:     "openvino",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(85),
+		Sha3_384: "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
+	}
+	c.Assert(w1.AddSdk(s.ctx, setup), check.IsNil)
 
 	w2, err := s.b.Workshop(s.ctx, "lerobot")
 	c.Assert(err, check.IsNil)
-	c.Assert(w2.AddSdk(s.ctx, sdk.Setup{Name: "openvino", Channel: "latest/edge", Source: sdk.StoreSource, Revision: sdk.R(82)}), check.IsNil)
+	setup = sdk.Setup{
+		Name:     "openvino",
+		Channel:  "latest/edge",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(82),
+		Sha3_384: "6ca811792aa9c9a4859726425bc6f3059bf90aefd1e3371b81bca7317b6429fceb9546fa47457eacbf84b373a8215059",
+	}
+	c.Assert(w2.AddSdk(s.ctx, setup), check.IsNil)
 
 	// Create volumes and attach to workshops.
 	s.createVolume(c, workshop.VolumeSetup{
 		Name:     "openvino-85",
 		Kind:     "sdk",
+		Sha3_384: "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
 		Sdk:      "openvino",
 		Revision: sdk.R(85),
 		Metadata: "name: openvino\nversion: 2.1-084c8c8\nsummary: Intel OpenVINO toolkit\ndescription: Accelerated toolkit\nsdkcraft-started-at: 2024-11-20T00:00:00Z\n",
@@ -164,6 +184,7 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 	s.createVolume(c, workshop.VolumeSetup{
 		Name:     "openvino-82",
 		Kind:     "sdk",
+		Sha3_384: "6ca811792aa9c9a4859726425bc6f3059bf90aefd1e3371b81bca7317b6429fceb9546fa47457eacbf84b373a8215059",
 		Sdk:      "openvino",
 		Revision: sdk.R(82),
 		Metadata: "name: openvino\nversion: 2.0\nsummary: Intel OpenVINO toolkit (legacy)\ndescription: Legacy release\nsdkcraft-started-at: 2024-11-25T00:00:00Z\n",
@@ -222,10 +243,19 @@ func (s *apiSuite) TestSdkInfoGetInvalidMetadata(c *check.C) {
 	s.daemon(c)
 
 	s.createWFile(c, "ws", "name: ws\nbase: ubuntu@20.04\n")
-	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, &workshop.File{Name: "ws", Base: "ubuntu@20.04"}, "fakeimage123"), check.IsNil)
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, image), check.IsNil)
 	w, err := s.b.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	c.Assert(w.AddSdk(s.ctx, sdk.Setup{Name: "bad", Channel: "latest/stable", Source: sdk.StoreSource, Revision: sdk.R(1)}), check.IsNil)
+	setup := sdk.Setup{
+		Name:     "bad",
+		Channel:  "latest/stable",
+		Source:   sdk.StoreSource,
+		Revision: sdk.R(1),
+		Sha3_384: "71baf962e8a7abd38480289e173d6a48364c8f6f5f8a391fdb83465b4ad676aa7504d100906a0efa8749c97fd61d367e",
+	}
+	c.Assert(w.AddSdk(s.ctx, setup), check.IsNil)
 
 	s.createVolume(c, workshop.VolumeSetup{
 		Name:     "bad-1",

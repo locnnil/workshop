@@ -18,7 +18,6 @@ import (
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -262,7 +261,7 @@ func (s *Backend) layerNamesAfter(layerConn lxd.InstanceServer, pid, w, sk strin
 	}
 
 	// Find the installed SDKs at the time of the snapshot.
-	sdks := map[string]sdk.Setup{}
+	sdks := map[string]workshop.SdkInstallation{}
 	buf, exist := layers[idx].Config[workshop.ConfigWorkshopSdks]
 	if exist {
 		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {

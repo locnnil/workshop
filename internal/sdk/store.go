@@ -2,11 +2,6 @@ package sdk
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/sha3"
-	"encoding/hex"
-	"fmt"
-	"hash"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -22,13 +17,6 @@ const (
 
 func (s StoreAction) String() string {
 	return [...]string{"install", "refresh"}[s]
-}
-
-type SdkResult struct {
-	Setup
-	Sha3_384 string
-	MD5      string
-	SdkYAML  string
 }
 
 type SdkAction struct {
@@ -68,8 +56,8 @@ func StoreService(st *state.State) Store {
 }
 
 type Store interface {
-	SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
-	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*SdkResult, error)
+	SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error)
+	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)
 }
 
 func NewFakeStore() Store {
@@ -92,11 +80,11 @@ type FakeStore struct {
 	downloadLock  sync.Mutex
 	DownloadCalls []TestDownloadCall
 
-	ActionCallback   func(ctx context.Context, actions []SdkAction) ([]SdkResult, error)
+	ActionCallback   func(ctx context.Context, actions []SdkAction) ([]Meta, error)
 	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) error
 }
 
-func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]SdkResult, error)) func() {
+func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]Meta, error)) func() {
 	old := f.ActionCallback
 	f.ActionCallback = fa
 	return func() {
@@ -112,7 +100,7 @@ func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup
 	}
 }
 
-func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]SdkResult, error) {
+func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error) {
 	f.ActionCalls = append(f.ActionCalls, TestActionCall{
 		Actions: actions,
 	})
@@ -122,7 +110,7 @@ func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]SdkRe
 	return nil, nil
 }
 
-func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*SdkResult, error) {
+func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error) {
 	f.downloadLock.Lock()
 	defer f.downloadLock.Unlock()
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{
@@ -134,25 +122,5 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 		}
 	}
 
-	source, err := setup.Source.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-
-	var hash hash.Hash
-	if IsSystem(setup.Name) {
-		hash = sha3.New384()
-	} else {
-		hash = md5.New()
-	}
-	fmt.Fprintf(hash, "%s:%s:%s:%s", setup.Name, source, setup.Channel, setup.Revision)
-	digest := hex.EncodeToString(hash.Sum(nil))
-
-	result := &SdkResult{Setup: setup, SdkYAML: "name: " + setup.Name}
-	if IsSystem(setup.Name) {
-		result.Sha3_384 = digest
-	} else {
-		result.MD5 = digest
-	}
-	return result, nil
+	return &Meta{Setup: setup, SdkYAML: "name: " + setup.Name}, nil
 }

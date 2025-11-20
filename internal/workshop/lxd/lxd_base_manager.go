@@ -19,6 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 var (
@@ -26,31 +27,31 @@ var (
 	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
 )
 
-func (b *Backend) GetBase(ctx context.Context, base string) (string, error) {
+func (b *Backend) GetBase(ctx context.Context, base string) (workshop.BaseImage, error) {
 	source, err := baseImageSource(base)
 	if err != nil {
-		return "", err
+		return workshop.BaseImage{}, err
 	}
 
 	imageServer, err := connectImageServer(*source)
 	if err != nil {
-		return "", err
+		return workshop.BaseImage{}, err
 	}
 	defer imageServer.Disconnect()
 
 	alias, _, err := imageServer.GetImageAliasType(source.ImageType, source.Alias)
 	if err != nil {
-		return "", fmt.Errorf("base %q not found: %w", base, err)
+		return workshop.BaseImage{}, fmt.Errorf("base %q not found: %w", base, err)
 	}
 
-	return alias.Target, nil
+	return workshop.BaseImage{Name: base, Fingerprint: alias.Target}, nil
 }
 
-func (b *Backend) DownloadBase(ctx context.Context, base, fingerprint string, report *progress.Reporter) error {
+func (b *Backend) DownloadBase(ctx context.Context, image workshop.BaseImage, report *progress.Reporter) error {
 	defer func() {
 		if report != nil {
 			imageLock.Lock()
-			if op, exist := currentDownloads[fingerprint]; exist {
+			if op, exist := currentDownloads[image.Fingerprint]; exist {
 				op.RemoveReporter(report.Name)
 			}
 			imageLock.Unlock()
@@ -58,7 +59,7 @@ func (b *Backend) DownloadBase(ctx context.Context, base, fingerprint string, re
 	}()
 
 	imageLock.Lock()
-	op, exist := currentDownloads[fingerprint]
+	op, exist := currentDownloads[image.Fingerprint]
 	if exist {
 		if report != nil {
 			op.AddReporter(report)
@@ -71,25 +72,25 @@ func (b *Backend) DownloadBase(ctx context.Context, base, fingerprint string, re
 	if report != nil {
 		op.AddReporter(report)
 	}
-	currentDownloads[fingerprint] = op
+	currentDownloads[image.Fingerprint] = op
 	imageLock.Unlock()
 
-	go b.tryDownloadBase(ctx, op, base, fingerprint)
+	go b.tryDownloadBase(ctx, op, image)
 
 	return waitDownloadOp(ctx, op)
 }
 
-func (b *Backend) tryDownloadBase(ctx context.Context, op *downloadOp, base, fingerprint string) {
-	op.err = b.downloadBase(ctx, op, base, fingerprint)
+func (b *Backend) tryDownloadBase(ctx context.Context, op *downloadOp, image workshop.BaseImage) {
+	op.err = b.downloadBase(ctx, op, image)
 	close(op.waitCh)
 
 	imageLock.Lock()
-	delete(currentDownloads, fingerprint)
+	delete(currentDownloads, image.Fingerprint)
 	imageLock.Unlock()
 }
 
-func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, base, fingerprint string) error {
-	source, err := baseImageSource(base)
+func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, image workshop.BaseImage) error {
+	source, err := baseImageSource(image.Name)
 	if err != nil {
 		return err
 	}
@@ -102,18 +103,18 @@ func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, base, finger
 
 	// TODO: Remove this query once LXD starts reporting more detailed
 	// progress information.
-	image, _, err := imageServer.GetImage(fingerprint)
+	imageInfo, _, err := imageServer.GetImage(image.Fingerprint)
 	if err != nil {
-		return fmt.Errorf("%q download failed: %w", base, err)
+		return fmt.Errorf("%q download failed: %w", image.Name, err)
 	}
 
 	req := api.ImagesPost{
 		ImagePut: api.ImagePut{
-			Properties: map[string]string{"workshop-base": base},
+			Properties: map[string]string{"workshop-base": image.Name},
 		},
 		Source: &api.ImagesPostSource{
 			ImageSource: *source,
-			Fingerprint: fingerprint,
+			Fingerprint: image.Fingerprint,
 			Type:        api.SourceTypeImage,
 		},
 	}
@@ -124,8 +125,8 @@ func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, base, finger
 	}
 	req.Source.Certificate = info.Certificate
 
-	if !image.Public && source.Protocol != "simplestreams" {
-		secret, err := imageServer.GetImageSecret(fingerprint)
+	if !imageInfo.Public && source.Protocol != "simplestreams" {
+		secret, err := imageServer.GetImageSecret(image.Fingerprint)
 		if err != nil {
 			return err
 		}
@@ -154,20 +155,20 @@ func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, base, finger
 
 	copyop, err := conn.CreateImage(req, nil)
 	if err != nil {
-		return fmt.Errorf("%q download failed: %w", base, err)
+		return fmt.Errorf("%q download failed: %w", image.Name, err)
 	}
 
 	copyop.AddHandler(func(o api.Operation) {
-		if o.Metadata == nil || image.Size <= 0 {
+		if o.Metadata == nil || imageInfo.Size <= 0 {
 			return
 		}
-		if upd := handleImageUpdate(o.Metadata, int(image.Size)); upd != nil {
+		if upd := handleImageUpdate(o.Metadata, int(imageInfo.Size)); upd != nil {
 			op.Update(*upd)
 		}
 	})
 
 	if err := copyop.Wait(); err != nil {
-		return fmt.Errorf("%q download failed: %w", base, err)
+		return fmt.Errorf("%q download failed: %w", image.Name, err)
 	}
 
 	return nil

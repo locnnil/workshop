@@ -113,7 +113,8 @@ var (
 
 func (s *healthSuite) launchWorkshopWithSDKs(c *check.C, sdks []workshop.SdkRecord, hooks map[string]map[string]string) *workshop.Workshop {
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: sdks}
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, "fakeimage123")
+	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
@@ -203,7 +204,7 @@ func (s *healthSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base-fingerprint", "fakeimage123")
+	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
@@ -225,7 +226,7 @@ func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base-fingerprint", "fakeimage123")
+	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
@@ -288,7 +289,7 @@ func (s *healthSuite) TestCheckStatusPending(c *check.C) {
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base-fingerprint", "fakeimage123")
+	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 
@@ -312,7 +313,7 @@ func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop", "ws")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("workshop-base-fingerprint", "fakeimage123")
+	task.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
 	chg.Set("project-id", s.project.ProjectId)
 	chg.AddTask(task)
 

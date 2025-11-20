@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/sha3"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -51,7 +52,7 @@ type storeSdk struct {
 	Channel  string       `json:"channel"`
 	Revision sdk.Revision `json:"revision"`
 	SdkYAML  string       `json:"sdk-yaml"`
-	MD5      string       `json:"md5"`
+	Sha3_384 string       `json:"sha3-384"`
 }
 
 type sdkReader struct {
@@ -79,8 +80,8 @@ type ClientWrapper struct {
 	isTesting bool
 }
 
-func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.SdkResult, error) {
-	results := []sdk.SdkResult{}
+func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
+	sdks := make([]sdk.Meta, 0, len(actions))
 	actError := &SdkActionError{
 		errors: make(map[string]error),
 	}
@@ -93,18 +94,18 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 				continue
 			}
 
-			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision}
-			results = append(results, sdk.SdkResult{Setup: setup, MD5: s.MD5, SdkYAML: s.SdkYAML})
+			setup := sdk.Setup{Name: s.Name, Channel: s.Channel, Revision: s.Revision, Sha3_384: s.Sha3_384}
+			sdks = append(sdks, sdk.Meta{Setup: setup, SdkYAML: s.SdkYAML})
 		default:
 			return nil, fmt.Errorf("unknown SDK store action")
 		}
 	}
 
 	if len(actError.errors) > 0 {
-		return results, actError
+		return sdks, actError
 	}
 
-	return results, nil
+	return sdks, nil
 }
 
 type reporterWriter struct {
@@ -120,7 +121,7 @@ func (r *reporterWriter) Write(p []byte) (n int, err error) {
 	return plen, nil
 }
 
-func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {
+func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
 	fl, err := sdk.OpenLock(setup.Name)
 	if err != nil {
 		return nil, err
@@ -137,7 +138,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		// that the hash and metadata are stored next to the SDK file.
 		// Probably not worth changing the code since they will likely
 		// be pulled from the Store instead of computed client side.
-		digest, err := hashSdk(setup)
+		setup.Sha3_384, err = hashSdk(setup)
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +147,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 			return nil, err
 		}
 
-		return &sdk.SdkResult{Setup: setup, MD5: digest, SdkYAML: sdkYaml}, nil
+		return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 	}
 
 	r, err := storeSdkReader(ctx, setup)
@@ -185,11 +186,11 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		return nil, err
 	}
 
-	digest := hex.EncodeToString(hash.Sum(nil))
-	if err := os.WriteFile(target+".md5", []byte(digest+"\n"), 0666); err != nil {
+	setup.Sha3_384 = md5ToSha3(hash.Sum(nil))
+	if err := os.WriteFile(target+".sha3-384", []byte(setup.Sha3_384+"\n"), 0666); err != nil {
 		return nil, err
 	}
-	reverter.Add(func() { _ = os.Remove(target + ".md5") })
+	reverter.Add(func() { _ = os.Remove(target + ".sha3-384") })
 
 	sdkYaml, err := extractSdkYAML(ctx, setup)
 	if err != nil {
@@ -210,7 +211,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		if err := os.Remove(m); err != nil {
 			logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err)
 		}
-		if err := os.Remove(m + ".md5"); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err := os.Remove(m + ".sha3-384"); err != nil && !errors.Is(err, os.ErrNotExist) {
 			logger.Noticef("SDK Store on Download: Cannot cleanup previous download (%s): %v", m, err)
 		}
 		if err := os.Remove(m + ".yaml"); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -218,12 +219,12 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 		}
 	}
 
-	return &sdk.SdkResult{Setup: setup, MD5: digest, SdkYAML: sdkYaml}, nil
+	return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 }
 
 func hashSdk(setup sdk.Setup) (string, error) {
 	target := setup.Filepath()
-	cache := target + ".md5"
+	cache := target + ".sha3-384"
 
 	content, err := os.ReadFile(cache)
 	if err == nil {
@@ -241,11 +242,18 @@ func hashSdk(setup sdk.Setup) (string, error) {
 		return "", err
 	}
 
-	digest := hex.EncodeToString(hash.Sum(nil))
+	digest := md5ToSha3(hash.Sum(nil))
 	if err := os.WriteFile(cache, []byte(digest+"\n"), 0666); err != nil {
 		return "", err
 	}
 	return digest, nil
+}
+
+// Since the current Store only supports MD5, but we expect the actual store to
+// use SHA3, for now we just hash the md5sum to convert it.
+func md5ToSha3(md5sum []byte) string {
+	sum := sha3.Sum384(append([]byte("md5\x00"), md5sum...))
+	return hex.EncodeToString(sum[:])
 }
 
 func extractSdkYAML(ctx context.Context, setup sdk.Setup) (string, error) {
@@ -331,7 +339,7 @@ func storeSdkInfoImpl(ctx context.Context, name, channel string) (storeSdk, erro
 	sSdk.Channel = channel
 	// A simple modulo to keep revision numbers in a readable form for testing
 	sSdk.Revision = sdk.Revision{N: int(atr.Generation%1000) + 1}
-	sSdk.MD5 = hex.EncodeToString(atr.MD5)
+	sSdk.Sha3_384 = md5ToSha3(atr.MD5)
 	// The test server for the SDK store cannot store metadata.
 	if !client.isTesting {
 		if _, ok := atr.Metadata["sdk-yaml"]; !ok {

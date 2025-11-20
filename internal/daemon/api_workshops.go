@@ -51,7 +51,7 @@ type SdkInfo struct {
 	Source      string           `json:"source,omitempty"`
 	Revision    string           `json:"revision"`
 	BuildTime   *time.Time       `json:"build-time,omitempty"`
-	InstallTime *time.Time       `json:"install-time,omitempty"`
+	InstallTime time.Time        `json:"install-time,omitempty"`
 	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 	Mounts      []*Mount         `json:"mounts,omitempty"`
 	Tunnels     []*Tunnel        `json:"tunnels,omitempty"`

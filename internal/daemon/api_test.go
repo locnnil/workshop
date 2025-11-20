@@ -81,7 +81,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	}
 
 	s.store = &sdk.FakeStore{}
-	retrieveSystemSdk := func(setup sdk.Setup, report *progress.Reporter) (*sdk.SdkResult, error) {
+	retrieveSystemSdk := func(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
 		return s.store.DownloadSdk(context.TODO(), setup, report)
 	}
 	s.restoreRetrieve = system.FakeRetrieveSystemSdk(retrieveSystemSdk)

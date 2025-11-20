@@ -129,8 +129,9 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 				}
 
 				channel := ""
-				if setup, ok := winfo.Sdks[name]; ok {
-					channel = setup.Channel
+				sk, ok := winfo.Sdks[name]
+				if ok {
+					channel = sk.Channel
 				}
 
 				full.Installed = append(full.Installed, SdkInstalled{
