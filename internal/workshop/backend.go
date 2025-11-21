@@ -20,8 +20,6 @@ import (
 type ContextKeyProjectId string
 type ContextKeyUser string
 
-type WorkshopConfigFilter func(config map[string]string) bool
-
 const (
 	ContextProjectId = ContextKeyProjectId("project-id")
 	ContextUser      = ContextKeyUser("user")
@@ -48,12 +46,6 @@ var (
 		HomeDir:  "/home/workshop",
 	}
 )
-
-func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {
-	return func(config map[string]string) bool {
-		return config[key] == value
-	}
-}
 
 type ErrExec struct {
 	Status int

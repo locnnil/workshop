@@ -399,21 +399,6 @@ func (f *FakeWorkshopBackend) ProjectWorkshops(ctx context.Context) ([]*workshop
 	return workshops, nil
 }
 
-func (f *FakeWorkshopBackend) GetWorkshopsByConfig(ctx context.Context, filter workshop.WorkshopConfigFilter) ([]*workshop.Workshop, error) {
-	f.workshopLock.Lock()
-	defer f.workshopLock.Unlock()
-
-	res := make([]*workshop.Workshop, 0)
-	for _, i := range f.Workshops {
-		for _, j := range i {
-			if filter(j.Config) {
-				res = append(res, j.Workshop)
-			}
-		}
-	}
-	return res, nil
-}
-
 func (s *FakeWorkshopBackend) SetWorkshopFsCallback(c WorkshopFsCallback) func() {
 	s.workshopFsLock.Lock()
 	defer s.workshopFsLock.Unlock()

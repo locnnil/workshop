@@ -263,7 +263,8 @@ func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, 
 		// Could not recover the directory, reconcile the project from the
 		// list of projects that we track (only if there are no remaining
 		// workshops for this project)
-		workshops, err := s.filterLxdInstancesByConfig(client, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, prj.ProjectId))
+		filters := []string{"config.user.workshop.project-id=" + prj.ProjectId}
+		workshops, err := client.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 		if err != nil {
 			return nil, false, err
 		}
@@ -278,7 +279,8 @@ func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, 
 }
 
 func (s *Backend) projectFsRoot(conn lxd.InstanceServer, ctx context.Context, projectId string) (path string, err error) {
-	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, projectId))
+	filters := []string{"config.user.workshop.project-id=" + projectId}
+	workshops, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 	if err != nil {
 		return "", err
 	}
@@ -364,7 +366,8 @@ func saveProjects(projects []workshop.Project) (string, error) {
 func (s *Backend) updateProjectMounts(conn lxd.InstanceServer, ctx context.Context, project workshop.Project) error {
 	projectCtx := context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
 
-	workshops, err := s.filterLxdInstancesByConfig(conn, workshop.NewWorkshopConfigFilter(workshop.ConfigProjectId, project.ProjectId))
+	filters := []string{"config.user.workshop.project-id=" + project.ProjectId}
+	workshops, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 	if err != nil {
 		return err
 	}

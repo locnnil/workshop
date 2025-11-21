@@ -873,22 +873,6 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}, nil
 }
 
-func (s *Backend) filterLxdInstancesByConfig(conn lxd.InstanceServer, filter workshop.WorkshopConfigFilter) ([]api.Instance, error) {
-	instances, err := conn.GetInstances(api.InstanceTypeContainer)
-	if err != nil {
-		return nil, err
-	}
-
-	toReturn := make([]api.Instance, 0, len(instances))
-	for _, i := range instances {
-		if filter(i.Config) {
-			toReturn = append(toReturn, i)
-		}
-	}
-
-	return toReturn, nil
-}
-
 func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
