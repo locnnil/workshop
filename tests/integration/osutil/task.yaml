@@ -1,0 +1,14 @@
+summary: Run LXD integration tests for OS utilities
+prepare: |
+  loginctl enable-linger ubuntu
+execute: |
+  # Run as normal user first, then root.
+  sudo -u ubuntu go test "$SPREAD_PATH"/internal/osutil -timeout=30m -tags=integration -check.v -check.f integrationSuite
+
+  rm -rf cover
+  mkdir cover
+
+  go test -cover "$SPREAD_PATH"/internal/osutil/ -timeout=30m -tags=integration -check.v -check.f integrationSuite -coverpkg=github.com/canonical/workshop/internal/osutil -args -test.gocoverdir="$PWD"/cover
+
+artifacts:
+  - cover
