@@ -32,7 +32,7 @@ type FakeWorkshop struct {
 
 type ExecCall struct {
 	Name string
-	Args *workshop.Execution
+	Args workshop.Execution
 }
 
 type FsCall struct {
@@ -455,7 +455,7 @@ func (s *FakeWorkshopBackend) WorkshopFs(ctx context.Context, name string) (fsut
 }
 
 func (f *FakeWorkshopBackend) Exec(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
-	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, args})
+	f.ExecCalls = append(f.ExecCalls, &ExecCall{name, *args})
 	return f.ExecCallback(ctx, name, args)
 }
 
