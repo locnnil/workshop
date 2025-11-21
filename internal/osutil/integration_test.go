@@ -4,6 +4,7 @@ package osutil_test
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -39,4 +40,17 @@ func (s *integrationSuite) TestUserAndEnv(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Check(env["FAKE_VARIABLE_FOR_TESTING"], check.Equals, "fakeValueForTest")
+}
+
+func (s *integrationSuite) TestTimezone(c *check.C) {
+	timezone, err := osutil.Timezone()
+	c.Assert(err, check.IsNil)
+
+	localtime, err := os.Stat("/etc/localtime")
+	c.Assert(err, check.IsNil)
+
+	zoneinfo, err := os.Stat(filepath.Join("/usr/share/zoneinfo", timezone))
+	c.Assert(err, check.IsNil)
+
+	c.Check(os.SameFile(localtime, zoneinfo), check.Equals, true)
 }

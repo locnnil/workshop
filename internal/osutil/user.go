@@ -35,6 +35,7 @@ var (
 	UserEnv           = userEnvironment
 	UserAndEnv        = userAndEnv
 	CurrentUserAndEnv = currentUserAndEnv
+	Timezone          = timezone
 )
 
 // RealUser finds the user behind a sudo invocation when root, if applicable
@@ -235,6 +236,19 @@ func userEnvironment(user *user.User) (map[string]string, error) {
 	return parseSystemctlEnvironment(rawEnv)
 }
 
+func timezone() (string, error) {
+	// Compatibility: timedatectl show was added in systemd v239:
+	// https://github.com/systemd/systemd/pull/9250
+	cmd := exec.Command("timedatectl", "show", "--property=Timezone", "--value")
+	out, errOut, err := RunCmd(cmd)
+	if err != nil {
+		return "", fmt.Errorf("timedatectl show: %s", errOut)
+	}
+
+	timezone := strings.TrimSpace(string(out))
+	return timezone, nil
+}
+
 func FakeUserEnvironment(f func(user *user.User) (map[string]string, error)) func() {
 	UserEnv = f
 	return func() {
@@ -273,6 +287,12 @@ func FakeUserLookupGroup(f func(name string) (*user.Group, error)) func() {
 	oldUserLookupGroup := UserLookupGroup
 	UserLookupGroup = f
 	return func() { UserLookupGroup = oldUserLookupGroup }
+}
+
+func FakeTimezone(f func() (string, error)) func() {
+	oldTimezone := Timezone
+	Timezone = f
+	return func() { Timezone = oldTimezone }
 }
 
 // Note: this is best effort, comparing err here with UnknownUserError
