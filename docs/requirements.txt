@@ -9,7 +9,6 @@ sphinx-design
 sphinx-notfound-page
 sphinx-reredirects
 sphinx-roles
-sphinx-tabs
 sphinxcontrib-jquery
 sphinxext-opengraph
 
