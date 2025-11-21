@@ -65,8 +65,13 @@ parts:
 
       # Set snap version including git commit hash
       VERSION="$("${CRAFT_PART_INSTALL}/bin/workshop" --version)"
-      COMMIT_HASH="$(git rev-parse --short HEAD)"
-      craftctl set version="${VERSION}-${COMMIT_HASH}"
+      if [ -d .git ]; then
+        VERSION="${VERSION}-$(git rev-parse --short HEAD)"
+      elif [ -f .git ]; then
+        # Likely building from a git worktree
+        VERSION="${VERSION}-dev"
+      fi
+      craftctl set version="${VERSION}"
     stage-packages:
       - zstd
     prime:
