@@ -87,16 +87,18 @@ At the container launch, |ws_markup| does the following:
 - Spins up the container with mapped user and group IDs,
   configures basic devices like the root disk and network bridge.
 
-- Installs the SDKs, then runs their setup hooks in the container.
+- Installs the SDKs, then runs their :samp:`setup-base` hooks in the container.
 
-- Sets up interface plugs and slots defined by the workshop and its SDKs
-  for extra devices and capabilities.
+- Configures the container's time zone to match the host.
 
 - Maps the project directory on the host to :file:`/project` in the container;
   this allows to transparently work on the host-based files
   using the tools provided by the SDKs.
 
-- Starts the container so it is ready for development tasks.
+- Sets up interface plugs and slots defined by the workshop and its SDKs
+  for extra devices and capabilities.
+
+- Runs :samp:`setup-project` and :samp:`check-health` hooks for all SDKs.
 
 
 Thus, the container is built, or launched in |ws_markup| terms.
