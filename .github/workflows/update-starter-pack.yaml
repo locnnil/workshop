@@ -28,13 +28,16 @@ jobs:
         run: |
           # Clean up any previous installation
           make -C docs clean
-          rm -rf docs/{Makefile,.sphinx,requirements.txt}
+          rm -rf docs/{Makefile,.sphinx}
 
           # Ensure the docs directory exists
           mkdir -p docs
 
           # Copy the Makefile and .sphinx directory to the project's docs directory
-          cp -a starter-pack-temp/docs/{Makefile,.sphinx,requirements.txt} docs/
+          cp -a starter-pack-temp/docs/{Makefile,.sphinx} docs/
+
+          # Merge and sort requirements.txt files
+          cat docs/requirements.txt starter-pack-temp/docs/requirements.txt | sort -u | sponge docs/requirements.txt
 
           # Clean up the temporary checkout
           rm -rf starter-pack-temp

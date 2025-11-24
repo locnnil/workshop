@@ -232,7 +232,6 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_reredirects",
-    "sphinx_tabs.tabs",
     "sphinxcontrib.jquery",
     "sphinxcontrib.mermaid",
     "sphinxext.opengraph",
