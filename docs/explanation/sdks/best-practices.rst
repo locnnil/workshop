@@ -57,12 +57,15 @@ The file provides appropriate service configuration:
 
    [Unit]
    Description=Ollama Service
-   After=network-online.target
+   After=network.target
 
    [Service]
    ExecStart=/bin/bash -lc "ollama serve"
    Restart=always
    RestartSec=3
+
+   [Install]
+   WantedBy=default.target
 
 
 And gets installed during the :samp:`setup-project` phase:
@@ -284,7 +287,7 @@ and create larger SDK artifacts.
 The :samp:`ros2` SDK exemplifies this approach:
 
 .. code-block:: shell
-   :caption: java/hooks/setup-base
+   :caption: ros2/hooks/setup-base
 
    apt-get update
    apt-get install ros-dev-tools
@@ -455,12 +458,11 @@ by testing actual service functionality and channeling its error output:
 .. code-block:: shell
    :caption: ollama/hooks/check-health
 
-   output=$(sudo -u workshop --login ollama list 2>&1)
-   if [[ $? -eq 0 ]]; then
-     workshopctl set-health okay
-     exit 0
+   if ! output=$(sudo -u workshop --login ollama list 2>&1); then
+     workshopctl set-health error "$output"
+     exit
    fi
-   workshopctl set-health error -- "$output"
+   workshopctl set-health okay
 
 
 When the workshop is launched with :option:`!--wait-on-error`,
