@@ -142,7 +142,8 @@ if err != nil {
 #### Integration Tests
 - Spread framework used for end-to-end tests (`.spread.yaml`)
 - Test suites in `tests/main/`, `tests/integration/`, `tests/docs-tutorial/`, `tests/docs-how-to/`
-- Install Spread from the custom fork: https://github.com/dmitry-lyfar/spread
+- Install Spread from the custom fork: https://github.com/dmitry-lyfar/spread  
+  The custom fork is required because it includes patches and features necessary for Workshop's integration tests (such as improved LXD support and bug fixes) that are not yet available in the official Spread release.
 
 #### Linting
 - `golangci-lint` configured in `.golangci.yaml`
