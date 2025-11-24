@@ -37,7 +37,8 @@ jobs:
           cp -a starter-pack-temp/docs/{Makefile,.sphinx} docs/
 
           # Merge and sort requirements.txt files
-          cat docs/requirements.txt starter-pack-temp/docs/requirements.txt | sort -u | sponge docs/requirements.txt
+          cat docs/requirements.txt starter-pack-temp/docs/requirements.txt | sort -u > docs/requirements.txt.tmp
+          mv docs/requirements.txt.tmp docs/requirements.txt
 
           # Clean up the temporary checkout
           rm -rf starter-pack-temp
