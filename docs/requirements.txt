@@ -1,35 +1,34 @@
+
 # Canonical theme (still needed for Furo theme and custom templates)
-canonical-sphinx>=0.5.1
-
 # Extensions previously auto-loaded by canonical-sphinx
-myst-parser
-sphinx-autobuild
-sphinx-copybutton
-sphinx-design
-sphinx-notfound-page
-sphinx-reredirects
-sphinx-roles
-sphinxcontrib-jquery
-sphinxext-opengraph
-
 # Extra extensions, previously bundled as canonical-sphinx-extensions
-sphinx-config-options>=0.1.0
-sphinx-contributor-listing>=0.1.0
-sphinx-filtered-toctree>=0.1.0
-sphinx-related-links>=0.1.1
-sphinx-roles>=0.1.0
-sphinx-terminal>=0.1.1
-sphinx-ubuntu-images>=0.1.0
-sphinx-youtube-links>=0.1.0
-
 # Other dependencies
+# Vale dependencies
+canonical-sphinx>=0.5.1
+myst-parser
 packaging
 pre-commit
+rst2html
+sphinx-autobuild
+sphinx-config-options>=0.1.0
+sphinx-contributor-listing>=0.1.0
+sphinx-copybutton
+sphinx-design
+sphinx-filtered-toctree>=0.1.0
+sphinx-last-updated-by-git
+sphinx-notfound-page
+sphinx-related-links>=0.1.1
+sphinx-reredirects
+sphinx-roles
+sphinx-roles>=0.1.0
+sphinx-sitemap
+sphinx-tabs
+sphinx-terminal>=0.1.1
+sphinx-terminal>=1.0.2
+sphinx-ubuntu-images>=0.1.0
+sphinx-youtube-links>=0.1.0
+sphinxcontrib-jquery
 sphinxcontrib-mermaid
 sphinxcontrib-svg2pdfconverter[CairoSVG]
-sphinx-last-updated-by-git
-sphinx-sitemap
-
-# Vale dependencies
-rst2html
+sphinxext-opengraph
 vale
