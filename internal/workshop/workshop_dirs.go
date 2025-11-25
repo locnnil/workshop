@@ -59,6 +59,18 @@ func TrySdkDir(userDataDir, sdk string) string {
 	return filepath.Join(userDataDir, "try", sdk)
 }
 
+func ProjectDataDir(pid string) string {
+	return filepath.Join(dirs.BaseDir, "id", pid)
+}
+
+func DataDir(pid, w string) string {
+	return filepath.Join(ProjectDataDir(pid), w)
+}
+
+func StateStorageDir(pid, w string) string {
+	return filepath.Join(DataDir(pid, w), "state")
+}
+
 func ProjectCacheDir(pid string) string {
 	return filepath.Join(dirs.CacheDir, "id", pid)
 }
@@ -82,4 +94,23 @@ func SdkSourcePath(userDataDir string, project Project, w, sk string, source sdk
 	default:
 		return ""
 	}
+}
+
+func SdkMount(userDataDir, pid, w string, setup sdk.Setup) Mount {
+	mount := Mount{
+		Name:      sdk.VolumeName(setup.Name, setup.Revision),
+		Where:     sdk.SdkDir(setup.Name),
+		MakeWhere: true,
+		ReadOnly:  true,
+	}
+
+	if setup.IsVolume() {
+		mount.Type = Volume
+		mount.What = sdk.VolumeName(setup.Name, setup.Revision)
+		return mount
+	}
+
+	mount.Type = HostWorkshop
+	mount.What = filepath.Join(LocalSdkDir(userDataDir, pid, w, setup.Name), setup.Sha3_384)
+	return mount
 }

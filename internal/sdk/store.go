@@ -2,6 +2,8 @@ package sdk
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -122,5 +124,11 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 		}
 	}
 
-	return &Meta{Setup: setup, SdkYAML: "name: " + setup.Name}, nil
+	sdkYaml := "name: " + setup.Name
+	content, err := os.ReadFile(filepath.Join(setup.Filepath(), "meta", "sdk.yaml"))
+	if err == nil {
+		sdkYaml = string(content)
+	}
+
+	return &Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 }

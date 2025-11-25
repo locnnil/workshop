@@ -13,6 +13,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -126,14 +127,15 @@ func RemoveTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend) {
 	c.Assert(err, check.IsNil)
 }
 
-func MockSdkTarball(c *check.C, sdkname, path, meta string) string {
+func MockSdkTarball(c *check.C, sdkname, sdkYaml string) string {
+	path := c.MkDir()
 	sdkfs := filepath.Join(path, sdkname)
 
 	metadir := filepath.Join(sdkfs, "meta")
 	err := os.MkdirAll(metadir, 0755)
 	c.Assert(err, check.IsNil)
 
-	err = os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(meta), 0644)
+	err = os.WriteFile(filepath.Join(metadir, "sdk.yaml"), []byte(sdkYaml), 0644)
 	c.Assert(err, check.IsNil)
 
 	hooksdir := filepath.Join(sdkfs, "sdk", "hooks")
@@ -161,4 +163,14 @@ func MockSdkTarball(c *check.C, sdkname, path, meta string) string {
 	c.Check(err, check.IsNil, check.Commentf("%s", string(output)))
 
 	return tarball
+}
+
+func MockSdkVolume(c *check.C, ctx context.Context, bd workshop.Backend, meta sdk.Meta) {
+	tarball := MockSdkTarball(c, meta.Name, meta.SdkYAML)
+	file, err := os.Open(tarball)
+	c.Assert(err, check.IsNil)
+	defer file.Close()
+
+	err = bd.ImportSdk(ctx, meta, file)
+	c.Assert(err, check.IsNil)
 }

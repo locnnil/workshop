@@ -217,7 +217,7 @@ type localSdkFinder struct {
 	user        *user.User
 	userDataDir string
 	project     workshop.Project
-	sdkVolumes  []workshop.VolumeInfo
+	sdkVolumes  []workshop.SdkVolume
 }
 
 func (s *localSdkFinder) findLocalSdks(ctx context.Context, wp *workshop.Workshop, file *workshop.File) ([]sdk.Meta, error) {
@@ -269,7 +269,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 	}
 	defer file.Close()
 
-	digest, meta, err := readTrySdkMetadata(root, filename)
+	digest, sdkYaml, err := readTrySdkMetadata(root, filename)
 	if err != nil {
 		return nil, fmt.Errorf("invalid SDK %q: %w", "try-"+sk, err)
 	}
@@ -281,7 +281,7 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 
 	minRevision := sdk.Revision{}
 	for _, volume := range volumes {
-		if volume.Sdk != sk || !volume.Revision.Local() {
+		if volume.Name != sk || !volume.Revision.Local() {
 			continue
 		}
 		if volume.Revision.N < minRevision.N {
@@ -289,60 +289,51 @@ func (s *localSdkFinder) findTrySdk(ctx context.Context, base, sk string) (*sdk.
 		}
 
 		if volume.Sha3_384 == digest {
-			setup := sdk.Setup{
-				Name:     volume.Sdk,
-				Source:   sdk.TrySource,
-				Revision: volume.Revision,
-				Sha3_384: volume.Sha3_384,
-			}
-			return &sdk.Meta{Setup: setup, SdkYAML: volume.Metadata}, nil
+			meta := volume.Meta
+			meta.Source = sdk.TrySource
+			return &meta, nil
 		}
 	}
 
 	revision := sdk.Revision{N: minRevision.N - 1}
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(sk, revision),
-		Kind:     "sdk",
-		Sha3_384: digest,
-		Sdk:      sk,
-		Revision: revision,
-		Metadata: meta,
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     sk,
+			Source:   sdk.TrySource,
+			Revision: revision,
+			Sha3_384: digest,
+		},
+		SdkYAML: sdkYaml,
 	}
-	if err := s.importVolume(ctx, volume, file); err != nil {
+	if err := s.importSdk(ctx, meta, file); err != nil {
 		return nil, err
 	}
-	setup := sdk.Setup{
-		Name:     volume.Sdk,
-		Source:   sdk.TrySource,
-		Revision: volume.Revision,
-		Sha3_384: volume.Sha3_384,
-	}
-	return &sdk.Meta{Setup: setup, SdkYAML: volume.Metadata}, nil
+	return &meta, nil
 }
 
-func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.VolumeInfo, error) {
+func (s *localSdkFinder) volumes(ctx context.Context) ([]workshop.SdkVolume, error) {
 	if s.sdkVolumes != nil {
 		// The state is locked, preventing other launches and refreshes
-		// from calling ImportVolume, so it's safe to reuse sdkVolumes.
+		// from calling ImportSdk, so it's safe to reuse sdkVolumes.
 		return s.sdkVolumes, nil
 	}
 
-	vols, err := s.backend.Volumes(ctx, "sdk")
+	sdks, err := s.backend.Sdks(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if vols == nil {
-		vols = []workshop.VolumeInfo{}
+	if sdks == nil {
+		sdks = []workshop.SdkVolume{}
 	}
-	s.sdkVolumes = vols
-	return vols, nil
+	s.sdkVolumes = sdks
+	return sdks, nil
 }
 
-func (s *localSdkFinder) importVolume(ctx context.Context, setup workshop.VolumeSetup, tarball *os.File) error {
-	if err := s.backend.ImportVolume(ctx, setup, tarball); err != nil {
+func (s *localSdkFinder) importSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error {
+	if err := s.backend.ImportSdk(ctx, meta, tarball); err != nil {
 		return err
 	}
-	s.sdkVolumes = append(s.sdkVolumes, workshop.VolumeInfo{VolumeSetup: setup, Workshops: make(map[string][]string)})
+	s.sdkVolumes = append(s.sdkVolumes, workshop.SdkVolume{Meta: meta, Workshops: make(map[string][]string)})
 	return nil
 }
 
@@ -447,9 +438,6 @@ func (s *localSdkFinder) commitRevision(wp *workshop.Workshop, w, sk string, sou
 func validateSdkMeta(projectId string, file *workshop.File, sdks []sdk.Meta) ([]sdk.Setup, error) {
 	setups := make([]sdk.Setup, 0, len(sdks))
 	for _, s := range sdks {
-		if s.Sha3_384 == "" {
-			return nil, fmt.Errorf("internal error: hash not found for %q SDK", s.Name)
-		}
 		if err := workshop.ValidateSdkInfo(projectId, file, s.Name, s.SdkYAML); err != nil {
 			return nil, err
 		}

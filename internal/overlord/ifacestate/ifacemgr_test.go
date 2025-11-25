@@ -90,17 +90,10 @@ func (s *interfaceManagerSuite) mockSdk(c *check.C, meta sdk.Meta) {
 	s.state.Lock()
 	be := s.o.WorkshopBackend()
 	s.state.Unlock()
-	volume := workshop.VolumeSetup{
-		Name:     sdk.VolumeName(meta.Name, meta.Revision),
-		Kind:     "sdk",
-		Sdk:      meta.Name,
-		Revision: meta.Revision,
-		Metadata: meta.SdkYAML,
-	}
 	file, err := os.Open(vfs)
 	c.Assert(err, check.IsNil)
 	defer file.Close()
-	if err := be.ImportVolume(s.ctx, volume, file); err != nil {
+	if err := be.ImportSdk(s.ctx, meta, file); err != nil {
 		c.Assert(err, testutil.ErrorIs, workshop.ErrVolumeAlreadyExists)
 	}
 }
@@ -146,9 +139,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []sdk
 	s.state.Unlock()
 
 	for _, sk := range allsdks {
-		err = be.AttachVolume(ctx, ws, sdk.VolumeName(sk.Name, sk.Revision), sdk.SdkDir(sk.Name), true)
-		c.Assert(err, check.IsNil)
-		err = w.AddSdk(ctx, sk.Setup)
+		err = be.InstallSdk(ctx, ws, sk.Setup)
 		c.Assert(err, check.IsNil)
 	}
 

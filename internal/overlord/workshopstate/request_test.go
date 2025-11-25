@@ -13,7 +13,6 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -61,11 +60,16 @@ var sdkTemplate = `name: %s
 base: ubuntu@20.04
 `
 
-func (s *requestSuite) writeSDKMetaFile(c *check.C, fs fsutil.Fs, name, yaml string) {
-	sdkPath := sdk.SdkMetaDir(name)
-	c.Assert(fs.MkdirAll(sdkPath, 0755), check.IsNil)
-	metaPath := filepath.Join(sdkPath, "sdk.yaml")
-	c.Assert(fs.WriteFile(metaPath, []byte(yaml), 0644), check.IsNil)
+func (s *requestSuite) importSdkVolume(c *check.C, meta sdk.Meta) {
+	path := filepath.Join(c.MkDir(), "meta", "sdk.yaml")
+	c.Assert(os.MkdirAll(filepath.Dir(path), 0755), check.IsNil)
+	c.Assert(os.WriteFile(path, []byte(meta.SdkYAML), 0644), check.IsNil)
+
+	tarball, err := os.Open(path)
+	c.Assert(err, check.IsNil)
+	defer tarball.Close()
+
+	c.Assert(s.backend.ImportSdk(s.ctx, meta, tarball), check.IsNil)
 }
 
 func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) {
@@ -88,25 +92,21 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, image)
 	c.Assert(err, check.IsNil)
 
-	w, err := s.backend.Workshop(s.ctx, ws)
-	c.Assert(err, check.IsNil)
-
-	wfs, err := s.backend.WorkshopFs(s.ctx, w.Name)
-	c.Assert(err, check.IsNil)
-	defer wfs.Close()
-
 	for _, sd := range sdks {
 		sdkYaml := fmt.Sprintf(sdkTemplate, sd.Name)
-		s.writeSDKMetaFile(c, wfs, sd.Name, sdkYaml)
 		digest := sha3.Sum384([]byte(sdkYaml))
-		setup := sdk.Setup{
-			Name:     sd.Name,
-			Channel:  sd.Channel,
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: hex.EncodeToString(digest[:]),
+		meta := sdk.Meta{
+			Setup: sdk.Setup{
+				Name:     sd.Name,
+				Channel:  sd.Channel,
+				Source:   sdk.StoreSource,
+				Revision: sdk.R(1),
+				Sha3_384: hex.EncodeToString(digest[:]),
+			},
+			SdkYAML: sdkYaml,
 		}
-		c.Assert(w.AddSdk(s.ctx, setup), check.IsNil)
+		s.importSdkVolume(c, meta)
+		c.Assert(s.backend.InstallSdk(s.ctx, ws, meta.Setup), check.IsNil)
 	}
 }
 

@@ -2,6 +2,7 @@ package lxdbackend
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/canonical/lxd/shared/entity"
 
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -97,34 +99,15 @@ func unlockVolume(volume string) {
 	}
 }
 
-func (s *Backend) CreateVolume(ctx context.Context, info workshop.VolumeSetup) error {
-	conn, err := s.LxdClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Disconnect()
+func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error {
+	name := sdk.VolumeName(meta.Name, meta.Revision)
 
-	// Create the storage volume entry
-	vol := api.StorageVolumesPost{}
-	vol.Name = info.Name
-	vol.Type = "custom"
-	vol.ContentType = "filesystem"
-	vol.Config = volumeSetupToConfig(info)
-
-	err = conn.CreateStoragePoolVolume(storagePool, vol)
-	if api.StatusErrorCheck(err, http.StatusConflict) {
-		return workshop.ErrVolumeAlreadyExists
-	}
-	return err
-}
-
-func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, tarball *os.File) error {
 	// There could be multiple launches that require the same volume. We don't
 	// want to unpack and import the volume multiple times.
-	if err := lockVolume(ctx, info.Name); err != nil {
+	if err := lockVolume(ctx, name); err != nil {
 		return err
 	}
-	defer unlockVolume(info.Name)
+	defer unlockVolume(name)
 
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
@@ -132,7 +115,7 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 	}
 	defer conn.Disconnect()
 
-	_, _, err = conn.GetStoragePoolVolume(storagePool, "custom", info.Name)
+	_, _, err = conn.GetStoragePoolVolume(storagePool, "custom", name)
 	if err == nil {
 		return workshop.ErrVolumeAlreadyExists
 	}
@@ -148,7 +131,7 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 	//  volume/
 	//  index.yaml
 
-	dir, err := os.MkdirTemp("", info.Name)
+	dir, err := os.MkdirTemp("", name)
 	if err != nil {
 		return err
 	}
@@ -182,22 +165,8 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 	}
 
 	// Generate index.yaml for the volume.
-	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(info.Name)), 0644); err != nil {
+	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(name)), 0644); err != nil {
 		return err
-	}
-
-	// TODO: Remove when we can reliably fetch metadata from the store.
-	if info.Kind == "sdk" && info.Metadata == "" {
-		// Read the metadata to store it as a volume's property. This is not ideal
-		// when the backend knows the name of the file with metadata as the volume
-		// manager should be able to import any tarball as a volume. But given that
-		// it is only applicable to SDKs in the nearest future, it should be acceptable
-		// as the alternative would be to change the interface to accept the metadata.
-		meta, err := os.ReadFile(filepath.Join(dir, "volume", "meta", "sdk.yaml"))
-		if err != nil {
-			return err
-		}
-		info.Metadata = string(meta)
 	}
 
 	newtar := filepath.Join(dir, filepath.Base(tarball.Name()))
@@ -233,7 +202,7 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 
 	vol := lxd.StoragePoolVolumeBackupArgs{
 		BackupFile: f,
-		Name:       info.Name,
+		Name:       name,
 	}
 
 	op, err := conn.CreateStoragePoolVolumeFromBackup(storagePool, vol)
@@ -245,25 +214,26 @@ func (s *Backend) ImportVolume(ctx context.Context, info workshop.VolumeSetup, t
 		return err
 	}
 
-	volPut := api.StorageVolumePut{Config: volumeSetupToConfig(info)}
-	return conn.UpdateStoragePoolVolume(storagePool, "custom", info.Name, volPut, "")
+	volPut := api.StorageVolumePut{
+		Config: map[string]string{
+			"user.kind":         "sdk",
+			"user.sdk.name":     meta.Name,
+			"user.sdk.revision": meta.Revision.String(),
+			"user.sha3-384":     meta.Sha3_384,
+			"user.sdk.meta":     meta.SdkYAML,
+		},
+	}
+	return conn.UpdateStoragePoolVolume(storagePool, "custom", name, volPut, "")
 }
 
-func (s *Backend) AttachVolume(ctx context.Context, wp, name, where string, ro bool) error {
-	return s.AddWorkshopMount(ctx, wp, workshop.Mount{Name: name, Type: workshop.Volume, What: name, Where: where, ReadOnly: ro})
-}
-
-func (s *Backend) DetachVolume(ctx context.Context, wp, name string) error {
-	return s.RemoveWorkshopMount(ctx, wp, name)
-}
-
-func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
+func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
+	name := sdk.VolumeName(setup.Name, setup.Revision)
 	if err = conn.DeleteStoragePoolVolume(storagePool, "custom", name); err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
@@ -277,7 +247,7 @@ func (s *Backend) DeleteVolume(ctx context.Context, name string) error {
 	return nil
 }
 
-func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeInfo, error) {
+func (s *Backend) Sdks(ctx context.Context) ([]workshop.SdkVolume, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return nil, err
@@ -289,108 +259,46 @@ func (s *Backend) Volumes(ctx context.Context, kind string) ([]workshop.VolumeIn
 		return nil, err
 	}
 
-	filters := []string{
-		"type=custom",
-		fmt.Sprintf("config.user.kind=%s", kind),
-	}
+	filters := []string{"type=custom", "config.user.kind=sdk"}
 	vols, err := conn.GetStoragePoolVolumesWithFilter(storagePool, filters)
 	if err != nil {
 		return nil, err
 	}
 
-	infos := make([]workshop.VolumeInfo, 0, len(vols))
+	sdks := make([]workshop.SdkVolume, 0, len(vols))
 	for _, vol := range vols {
 		size := volumeSize(conn, vol.Name)
-		infos = append(infos, volumeToInfo(&vol, info.Project, size))
+		sk, err := sdkVolume(&vol, info.Project, size)
+		if err != nil {
+			return nil, err
+		}
+		sdks = append(sdks, sk)
 	}
-	return infos, nil
+	return sdks, nil
 }
 
-func (s *Backend) Volume(ctx context.Context, name string) (workshop.VolumeInfo, error) {
+func (s *Backend) Sdk(ctx context.Context, setup sdk.Setup) (workshop.SdkVolume, error) {
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
-		return workshop.VolumeInfo{}, err
+		return workshop.SdkVolume{}, err
 	}
 	defer conn.Disconnect()
 
 	info, err := conn.GetConnectionInfo()
 	if err != nil {
-		return workshop.VolumeInfo{}, err
+		return workshop.SdkVolume{}, err
 	}
 
-	vol, _, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
+	vol, _, err := conn.GetStoragePoolVolume(storagePool, "custom", sdk.VolumeName(setup.Name, setup.Revision))
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return workshop.VolumeInfo{}, workshop.ErrVolumeNotFound
+		return workshop.SdkVolume{}, workshop.ErrVolumeNotFound
 	}
 	if err != nil {
-		return workshop.VolumeInfo{}, err
+		return workshop.SdkVolume{}, err
 	}
 
 	size := volumeSize(conn, vol.Name)
-	return volumeToInfo(vol, info.Project, size), nil
-}
-
-func volumeSetupToConfig(info workshop.VolumeSetup) map[string]string {
-	config := map[string]string{
-		"user.kind": info.Kind,
-	}
-	if info.Sha3_384 != "" {
-		config["user.sha3-384"] = info.Sha3_384
-	}
-	if info.Sdk != "" {
-		config["user.sdk.name"] = info.Sdk
-	}
-	if !info.Revision.Unset() {
-		config["user.sdk.revision"] = info.Revision.String()
-	}
-	if info.Metadata != "" {
-		config["user.sdk.meta"] = info.Metadata
-	}
-	return config
-}
-
-func volumeToInfo(volume *api.StorageVolume, lxdProject string, size uint64) workshop.VolumeInfo {
-	revision, err := sdk.ParseRevision(volume.Config["user.sdk.revision"])
-	if err != nil {
-		revision = sdk.Revision{}
-	}
-
-	workshops := make(map[string][]string)
-	for _, u := range volume.UsedBy {
-		parsedURL, err := url.Parse(u)
-		if err != nil {
-			logger.Debugf("Failed to parse URL %q: %v", u, err)
-			continue
-		}
-		entityType, projectName, _, pathArgs, err := entity.ParseURL(*parsedURL)
-		if err != nil {
-			logger.Debugf("Failed to parse entity from URL %q: %v", parsedURL.String(), err)
-			continue
-		}
-		if entityType != entity.TypeInstance || len(pathArgs) == 0 {
-			logger.Debugf("URL %q does not point to an instance, skipping", parsedURL.String())
-			continue
-		}
-		if projectName != lxdProject {
-			// Ignore SDK layers, and workshops owned by other users.
-			continue
-		}
-		wp, pid := workshopProjectId(pathArgs[0])
-		workshops[pid] = append(workshops[pid], wp)
-	}
-
-	return workshop.VolumeInfo{
-		VolumeSetup: workshop.VolumeSetup{
-			Name:     volume.Name,
-			Kind:     volume.Config["user.kind"],
-			Sha3_384: volume.Config["user.sha3-384"],
-			Sdk:      volume.Config["user.sdk.name"],
-			Revision: revision,
-			Metadata: volume.Config["user.sdk.meta"],
-		},
-		Workshops: workshops,
-		Size:      size,
-	}
+	return sdkVolume(vol, info.Project, size)
 }
 
 func volumeSize(conn lxd.InstanceServer, name string) uint64 {
@@ -405,4 +313,181 @@ func volumeSize(conn lxd.InstanceServer, name string) uint64 {
 	}
 
 	return 0
+}
+
+func sdkVolume(volume *api.StorageVolume, lxdProject string, size uint64) (workshop.SdkVolume, error) {
+	revision, err := sdk.ParseRevision(volume.Config["user.sdk.revision"])
+	if err != nil {
+		return workshop.SdkVolume{}, err
+	}
+
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     volume.Config["user.sdk.name"],
+			Revision: revision,
+			Sha3_384: volume.Config["user.sha3-384"],
+		},
+		SdkYAML: volume.Config["user.sdk.meta"],
+	}
+
+	workshops := make(map[string][]string)
+	for _, u := range volume.UsedBy {
+		parsedURL, err := url.Parse(u)
+		if err != nil {
+			return workshop.SdkVolume{}, err
+		}
+		entityType, projectName, _, pathArgs, err := entity.ParseURL(*parsedURL)
+		if err != nil {
+			return workshop.SdkVolume{}, err
+		}
+		if entityType != entity.TypeInstance || len(pathArgs) == 0 {
+			logger.Debugf("URL %q does not point to an instance, skipping", parsedURL.String())
+			continue
+		}
+		if projectName != lxdProject {
+			// Ignore SDK layers, and workshops owned by other users.
+			continue
+		}
+		wp, pid := workshopProjectId(pathArgs[0])
+		workshops[pid] = append(workshops[pid], wp)
+	}
+
+	sk := workshop.SdkVolume{
+		Meta:      meta,
+		Workshops: workshops,
+		Size:      size,
+	}
+	return sk, nil
+}
+
+func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return fmt.Errorf("context key %s not found", workshop.ContextUser)
+	}
+
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	usr, env, err := osutil.UserAndEnv(user)
+	if err != nil {
+		return err
+	}
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
+
+	if mount.MakeWhere {
+		if err := s.mkdir(ctx, name, mount.Where); err != nil {
+			return err
+		}
+	}
+
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	inst.Devices[mount.Name] = mountToLxdDisk(mount)
+
+	if err := addSdk(inst.Config, setup); err != nil {
+		return err
+	}
+
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.WaitContext(ctx)
+}
+
+func (s *Backend) mkdir(ctx context.Context, name string, path string) error {
+	fs, err := s.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	return fs.MkdirAll(path, 0755)
+}
+
+func addSdk(config map[string]string, setup sdk.Setup) error {
+	var sdks map[string]workshop.SdkInstallation
+	value, exist := config[workshop.ConfigWorkshopSdks]
+	if !exist {
+		sdks = map[string]workshop.SdkInstallation{}
+	} else if err := json.Unmarshal([]byte(value), &sdks); err != nil {
+		return err
+	} else if _, exist := sdks[setup.Name]; exist {
+		return fmt.Errorf("%q SDK is already installed", setup.Name)
+	}
+
+	sdks[setup.Name] = workshop.SdkInstallation{Setup: setup, InstallTime: workshop.InstallTimeNow()}
+
+	buf, err := json.Marshal(sdks)
+	if err != nil {
+		return err
+	}
+	config[workshop.ConfigWorkshopSdks] = string(buf)
+
+	return nil
+}
+
+func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
+	if !ok {
+		return fmt.Errorf("context key project-id not found")
+	}
+
+	conn, err := s.LxdClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
+	if err != nil {
+		return err
+	}
+
+	if err := removeSdk(inst.Config, setup.Name); err != nil {
+		return err
+	}
+
+	delete(inst.Devices, sdk.VolumeName(setup.Name, setup.Revision))
+
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.WaitContext(ctx)
+}
+
+func removeSdk(config map[string]string, sk string) error {
+	var sdks map[string]workshop.SdkInstallation
+	value, exist := config[workshop.ConfigWorkshopSdks]
+	if !exist {
+		return nil
+	}
+
+	if err := json.Unmarshal([]byte(value), &sdks); err != nil {
+		return err
+	}
+
+	delete(sdks, sk)
+
+	buf, err := json.Marshal(sdks)
+	if err != nil {
+		return err
+	}
+	config[workshop.ConfigWorkshopSdks] = string(buf)
+
+	return nil
 }

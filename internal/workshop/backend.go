@@ -20,8 +20,6 @@ import (
 type ContextKeyProjectId string
 type ContextKeyUser string
 
-type WorkshopConfigFilter func(config map[string]string) bool
-
 const (
 	ContextProjectId = ContextKeyProjectId("project-id")
 	ContextUser      = ContextKeyUser("user")
@@ -49,23 +47,12 @@ var (
 	}
 )
 
-func NewWorkshopConfigFilter(key string, value string) WorkshopConfigFilter {
-	return func(config map[string]string) bool {
-		return config[key] == value
-	}
-}
-
 type ErrExec struct {
 	Status int
 }
 
 func (e *ErrExec) Error() string {
 	return fmt.Sprintf("command exit code %d", e.Status)
-}
-
-type WorkshopConfigValue struct {
-	Name  string
-	Value string
 }
 
 type Stash interface {
@@ -84,54 +71,12 @@ type Stash interface {
 	RemoveWorkshopStash(ctx context.Context, name string) error
 }
 
-type VolumeSetup struct {
-	// Volume name.
-	Name string
-	// Kind of volume, e.g. "sdk" or "state-storage."
-	Kind string
-	// Hash of tarball used to create volume.
-	Sha3_384 string
-	// Name of SDK associated with volume, if any.
-	Sdk string
-	// Revision of SDK associated with volume, if any.
-	Revision sdk.Revision
-	// For SDK volumes, a copy of meta/sdk.yaml.
-	Metadata string
-}
-
-type VolumeInfo struct {
-	VolumeSetup
+type SdkVolume struct {
+	sdk.Meta
 	// Project ID / Workshop pairs that the volume is attached to.
 	Workshops map[string][]string
 	// Size reports the current volume usage in bytes when available.
 	Size uint64
-}
-
-type VolumeManager interface {
-	// Create a temporary storage volume for the workshop. It does not
-	// mount the device to the workshop, it must be mounted to the required
-	// workshop as a separate operation.
-	CreateVolume(ctx context.Context, info VolumeSetup) error
-
-	// Import a tarball into the volume.
-	ImportVolume(ctx context.Context, info VolumeSetup, tarball *os.File) error
-
-	// Attach the volume to the workshop. The volume must be created before.
-	AttachVolume(ctx context.Context, wp, name, where string, ro bool) error
-
-	// Detach the volume from the workshop.
-	DetachVolume(ctx context.Context, wp, name string) error
-
-	// Delete a temporary storage volume for the workshop. It does not unmount
-	// the volume from the workshop if mounted. No error is returned if the
-	// volume does not exist.
-	DeleteVolume(ctx context.Context, name string) error
-
-	// List volumes of a given kind.
-	Volumes(ctx context.Context, kind string) ([]VolumeInfo, error)
-
-	// Get the volume information.
-	Volume(ctx context.Context, name string) (VolumeInfo, error)
 }
 
 type BaseImage struct {
@@ -146,6 +91,21 @@ type BaseImageManager interface {
 	GetBase(ctx context.Context, base string) (BaseImage, error)
 	// Download the given base image.
 	DownloadBase(ctx context.Context, image BaseImage, report *progress.Reporter) error
+}
+
+type SdkManager interface {
+	// Import an SDK tarball as a new volume.
+	ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error
+
+	// Delete an SDK volume. It does not unmount the volume from workshops
+	// where it is mounted. No error is returned if the SDK does not exist.
+	DeleteSdk(ctx context.Context, setup sdk.Setup) error
+
+	// List available SDK volumes.
+	Sdks(ctx context.Context) ([]SdkVolume, error)
+
+	// Get the SDK volume information.
+	Sdk(ctx context.Context, setup sdk.Setup) (SdkVolume, error)
 }
 
 type ExecArgs struct {
@@ -181,8 +141,8 @@ type ExecContext struct {
 
 type Backend interface {
 	Stash
-	VolumeManager
 	BaseImageManager
+	SdkManager
 	Snapshot
 
 	// The backend will attempt to load a project for the given path
@@ -229,11 +189,11 @@ type Backend interface {
 	// Removes a workshop mount.
 	RemoveWorkshopMount(ctx context.Context, name, mount string) error
 
-	// TODO: these methods are too generic and should be wrapped with a proper
-	// interface method where required. We should not let the client to change
-	// any workshop property arbitrarily.
-	AddWorkshopConfig(ctx context.Context, name string, item *WorkshopConfigValue) error
-	RemoveWorkshopConfig(ctx context.Context, name string, key string) error
+	// Mount an SDK volume and add the SDK to the Sdks field.
+	InstallSdk(ctx context.Context, name string, setup sdk.Setup) error
+
+	// Remove an SDK from the Sdks field and unmount the SDK volume.
+	UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error
 
 	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to

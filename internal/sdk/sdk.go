@@ -512,12 +512,8 @@ func SdkDir(sdkName string) string {
 	return filepath.Join(dirs.WorkshopSdksDir, sdkName)
 }
 
-func SdkMetaDir(sdkName string) string {
-	return filepath.Join(SdkDir(sdkName), "meta")
-}
-
 func SdkMetaPath(sdkName string) string {
-	return filepath.Join(SdkMetaDir(sdkName), "sdk.yaml")
+	return filepath.Join(SdkDir(sdkName), "meta", "sdk.yaml")
 }
 
 func SdkHooksDir(sdkName string) string {

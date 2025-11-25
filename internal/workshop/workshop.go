@@ -2,7 +2,6 @@ package workshop
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
@@ -22,6 +21,7 @@ var (
 	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
 	ConfigWorkshopSdks            = "user.workshop.sdks"
 	ConfigProjectPathDevice       = "workshop.project"
+	ConfigStateStorageDevice      = "workshop.state-storage"
 )
 
 var InstallTimeNow = time.Now
@@ -46,54 +46,16 @@ type SdkInstallation struct {
 	InstallTime time.Time `json:"install-time"`
 }
 
-// Associate an SDK with the workshop by adding the SDK to the Sdks field.
-func (w *Workshop) AddSdk(ctx context.Context, s sdk.Setup) error {
-	if _, exist := w.Sdks[s.Name]; exist {
-		return fmt.Errorf("%q SDK is already installed", s.Name)
-	}
-
-	w.Sdks[s.Name] = SdkInstallation{Setup: s, InstallTime: InstallTimeNow()}
-	value, err := json.Marshal(w.Sdks)
-	if err != nil {
-		return err
-	}
-
-	item := &WorkshopConfigValue{
-		Name:  ConfigWorkshopSdks,
-		Value: string(value),
-	}
-	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
-}
-
-// Stops associating an SDK with the workshop by removing the SDK from the Sdks field.
-func (w *Workshop) RemoveSdk(ctx context.Context, name string) error {
-	delete(w.Sdks, name)
-	value, err := json.Marshal(w.Sdks)
-	if err != nil {
-		return err
-	}
-
-	item := &WorkshopConfigValue{
-		Name:  ConfigWorkshopSdks,
-		Value: string(value),
-	}
-	return w.Backend.AddWorkshopConfig(ctx, w.Name, item)
-}
-
-func WorkshopStateVolumeName(ws, pid string) string {
-	return fmt.Sprintf("%s-%s-state-volume", ws, pid)
-}
-
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
-	vinfo, err := w.Backend.Volume(ctx, sdk.VolumeName(setup.Name, setup.Revision))
+	vinfo, err := w.Backend.Sdk(ctx, setup)
 	if err != nil {
 		return "", err
 	}
 
-	if vinfo.Metadata == "" {
+	if vinfo.SdkYAML == "" {
 		return "", fmt.Errorf("cannot find %q SDK metadata", setup.Name)
 	}
-	return vinfo.Metadata, nil
+	return vinfo.SdkYAML, nil
 }
 
 func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, error) {
