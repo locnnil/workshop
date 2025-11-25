@@ -30,8 +30,8 @@ type interfaceHandlersSuite struct {
 	restoreSimple            func()
 	restoreDeny              func()
 	restoreSecurtityBackends func()
-	restoreUserEnv           func()
 	restoreUserLookup        func()
+	restoreUserEnv           func()
 }
 
 var _ = check.Suite(&interfaceHandlersSuite{})
@@ -157,6 +157,21 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 	s.restoreSimple = builtin.MockInterface(simpleIface{name: "mock-network"})
 	s.restoreDeny = builtin.MockInterface(denyAutoIface{name: "mock-ssh-agent"})
 
+	// Real UID and GID are required to create source directories on remount.
+	// TODO: make filesystem operations more secure (e.g. drop privileges if possible) and easy to test.
+	actual, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
+
 	s.mgr = ifacestate.New(s.state, s.runner)
 	c.Assert(s.mgr, check.NotNil)
 
@@ -171,26 +186,8 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 
 	s.o.AddManager(s.mgr)
 	s.o.AddManager(s.runner)
-	err := s.o.StartUp()
+	err = s.o.StartUp()
 	c.Assert(err, check.IsNil)
-
-	// Real UID and GID are required to create source directories on remount.
-	// TODO: make filesystem operations more secure (e.g. drop privileges if possible) and easy to test.
-	actual, err := user.Current()
-	c.Assert(err, check.IsNil)
-	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		if name != "testuser" {
-			return nil, nil, user.UnknownUserError("not found")
-		}
-		return s.user, nil, nil
-	})
-	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
-		if name != "testuser" {
-			return nil, user.UnknownUserError("not found")
-		}
-		return s.user, nil
-	})
 }
 
 func (s *interfaceHandlersSuite) TearDownTest(c *check.C) {

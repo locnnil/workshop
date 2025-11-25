@@ -36,8 +36,8 @@ type wsOps struct {
 	ctx                context.Context
 	usr                *user.User
 	project            workshop.Project
-	restoreLookupUsr   func()
-	restoreUserAndEnv  func()
+	restoreUserLookup  func()
+	restoreUserEnv     func()
 	restoreNewId       func()
 	restoreDevices     func()
 	restoreImageServer func()
@@ -64,11 +64,11 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 
 	f.restoreDevices = workshop.FakeDefaultDevices(helper.DefaultTestDevices)
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
-	f.restoreLookupUsr = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+	f.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return f.usr, nil
 	})
-	f.restoreUserAndEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return f.usr, nil, nil
+	f.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
 	})
 	f.restoreNewId = testutil.FakeFunc(func() (string, error) {
 		return f.project.ProjectId, nil
@@ -82,8 +82,8 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 
 	helper.CleanupLxdProject(c, lxdclient, "workshop."+f.usr.Username)
 	helper.CleanupLxdProject(c, lxdclient, "workshop-layers."+f.usr.Username)
-	f.restoreLookupUsr()
-	f.restoreUserAndEnv()
+	f.restoreUserEnv()
+	f.restoreUserLookup()
 	f.restoreNewId()
 
 	f.restoreDevices()

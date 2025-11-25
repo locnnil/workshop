@@ -32,15 +32,17 @@ base: ubuntu@22.04
 `
 
 type workshopHandlers struct {
-	backend        *fakebackend.FakeWorkshopBackend
-	state          *state.State
-	runner         *state.TaskRunner
-	se             *overlord.StateEngine
-	wrkmgr         *workshopstate.WorkshopManager
-	ctx            context.Context
-	project        workshop.Project
-	user           *user.User
-	restoreUserEnv func()
+	backend *fakebackend.FakeWorkshopBackend
+	state   *state.State
+	runner  *state.TaskRunner
+	se      *overlord.StateEngine
+	wrkmgr  *workshopstate.WorkshopManager
+	ctx     context.Context
+	project workshop.Project
+	user    *user.User
+
+	restoreUserLookup func()
+	restoreUserEnv    func()
 }
 
 var _ = check.Suite(&workshopHandlers{})
@@ -88,11 +90,14 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 		Uid:     actual.Uid,
 		Gid:     actual.Gid,
 	}
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		if name != "testuser" {
-			return nil, nil, user.UnknownUserError("not found")
+			return nil, user.UnknownUserError("not found")
 		}
-		return s.user, nil, nil
+		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
 	})
 
 	s.state = state.New(nil)
@@ -118,6 +123,7 @@ func (s *workshopHandlers) SetUpTest(c *check.C) {
 
 func (s *workshopHandlers) TearDownTest(c *check.C) {
 	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
@@ -198,14 +204,6 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	cacheDir := dirs.CacheDir
 	dirs.SetCacheDir(c.MkDir())
 	defer dirs.SetCacheDir(cacheDir)
-
-	restoreUserLookup := osutil.FakeUserLookup(func(name string) (*user.User, error) {
-		if name != "testuser" {
-			return nil, user.UnknownUserError("not found")
-		}
-		return s.user, nil
-	})
-	defer restoreUserLookup()
 
 	s.state.Lock()
 	defer s.state.Unlock()

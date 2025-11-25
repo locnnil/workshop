@@ -29,7 +29,8 @@ type managerSuite struct {
 	ctx     context.Context
 	project workshop.Project
 
-	restoreUserEnv func()
+	restoreUserEnv    func()
+	restoreUserLookup func()
 }
 
 var _ = check.Suite(&managerSuite{})
@@ -43,8 +44,11 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)
 	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &user.User{HomeDir: c.MkDir()}, nil, nil
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return &user.User{HomeDir: c.MkDir()}, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
 	})
 
 	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
@@ -56,6 +60,7 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 
 func (s *managerSuite) TearDownTest(c *check.C) {
 	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {

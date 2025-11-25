@@ -18,6 +18,8 @@ import (
 type desktopSuite struct {
 	iface     interfaces.Interface
 	projectId string
+
+	restoreUserLookup func()
 }
 
 var _ = check.Suite(&desktopSuite{
@@ -27,6 +29,14 @@ var _ = check.Suite(&desktopSuite{
 func (s *desktopSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
 	testuser.HomeDir = c.MkDir()
+
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return &testuser, nil
+	})
+}
+
+func (s *desktopSuite) TearDownSuite(c *check.C) {
+	s.restoreUserLookup()
 }
 
 func (s *desktopSuite) TestName(c *check.C) {
@@ -39,8 +49,8 @@ func (s *desktopSuite) TestInterfaces(c *check.C) {
 
 func (s *desktopSuite) TestDesktopInterfaceWayland(c *check.C) {
 	env := map[string]string{"XDG_RUNTIME_DIR": "/tmp", "WAYLAND_DISPLAY": "wayland-1"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -76,8 +86,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopInterfaceX11(c *check.C) {
 	env := map[string]string{"DISPLAY": ":0"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -113,8 +123,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopInterfaceBoth(c *check.C) {
 	env := map[string]string{"DISPLAY": ":2.0", "WAYLAND_DISPLAY": "/var/run/wayland-0"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -159,8 +169,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopInterfaceXauth(c *check.C) {
 	env := map[string]string{"DISPLAY": ":0", "XAUTHORITY": "/tmp/.Xauthority"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -195,8 +205,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopInterfaceXauthFail(c *check.C) {
 	env := map[string]string{"DISPLAY": ":0"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -223,8 +233,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopEnvWaylandFail(c *check.C) {
 	env := map[string]string{}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -249,8 +259,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopEnvXDGFail(c *check.C) {
 	env := map[string]string{"XDG_RUNTIME_DIR": "", "WAYLAND_DISPLAY": "wayland-7"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer
@@ -275,8 +285,8 @@ slots:
 
 func (s *desktopSuite) TestDesktopEnvX11Fail(c *check.C) {
 	env := map[string]string{"DISPLAY": "remote:0"}
-	defer osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, env, nil
+	defer osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return env, nil
 	})()
 
 	plug := builtin.MockPlug(c, `name: consumer

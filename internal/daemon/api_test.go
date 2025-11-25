@@ -105,17 +105,14 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.secBackend = &ifacetest.TestSecurityBackend{BackendName: "api-suite"}
 	s.restoreSecBackend = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
 
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		if name != "testuser" {
-			return nil, nil, user.UnknownUserError("not found")
-		}
-		return s.user, nil, nil
-	})
 	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		if name != "testuser" {
 			return nil, user.UnknownUserError("not found")
 		}
 		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
 	})
 }
 
@@ -127,6 +124,7 @@ func (s *apiSuite) TearDownTest(c *check.C) {
 	s.restoreRetrieve()
 	s.restoreProjectId()
 	s.restoreUserEnv()
+	s.restoreUserLookup()
 	s.restoreTime()
 	s.restoreSanitize()
 	s.restoreSecBackend()

@@ -38,10 +38,12 @@ import (
 )
 
 type mountSuite struct {
-	iface          interfaces.Interface
-	projectId      string
-	restoreUserEnv func()
-	env            map[string]string
+	iface     interfaces.Interface
+	projectId string
+	env       map[string]string
+
+	restoreUserLookup func()
+	restoreUserEnv    func()
 }
 
 func Test(t *testing.T) {
@@ -56,13 +58,17 @@ func (s *mountSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
 	testuser.HomeDir = c.MkDir()
 	s.env = make(map[string]string)
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, s.env, nil
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return &testuser, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return s.env, nil
 	})
 }
 
 func (s *mountSuite) TearDownSuite(c *check.C) {
 	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 func (s *mountSuite) TestName(c *check.C) {
