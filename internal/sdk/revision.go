@@ -50,6 +50,18 @@ func (r Revision) Store() bool {
 	return r.N > 0
 }
 
+func (r Revision) MarshalText() ([]byte, error) {
+	return []byte(r.String()), nil
+}
+
+func (r *Revision) UnmarshalText(text []byte) error {
+	parsed, err := ParseRevision(string(text))
+	if err == nil {
+		*r = parsed
+	}
+	return err
+}
+
 func (r Revision) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + r.String() + `"`), nil
 }
