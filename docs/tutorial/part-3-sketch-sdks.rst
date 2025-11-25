@@ -45,12 +45,12 @@ when we discussed :ref:`tut_work_with_interfaces`:
    :caption: workshop.yaml
 
    name: dev
-   base: ubuntu@22.04
+   base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 22.04/edge
+       channel: 24.04/edge
      - name: jupyter
-       channel: 22.04/edge
+       channel: 24.04/edge
      - name: system
        plugs:
          jupyter:
