@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"net/http"
@@ -259,20 +258,13 @@ func (s *Backend) layerNamesAfter(layerConn lxd.InstanceServer, pid, w, sk strin
 	if idx < 0 {
 		return "", nil, fmt.Errorf("%q SDK snapshot not found in workshop %q", sk, w)
 	}
-
-	// Find the installed SDKs at the time of the snapshot.
-	sdks := map[string]workshop.SdkInstallation{}
-	buf, exist := layers[idx].Config[workshop.ConfigWorkshopSdks]
-	if exist {
-		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {
-			return "", nil, err
-		}
-	}
+	devices := layers[idx].Devices
 
 	// Any SDK which wasn't installed must have been added later.
 	obstacles := make([]string, 0, len(layers))
 	for _, layer := range layers {
-		if _, ok := sdks[layer.Config["user.workshop.sdk"]]; !ok {
+		device := workshop.SdkDeviceName(layer.Config["user.workshop.sdk"])
+		if _, ok := devices[device]; !ok {
 			obstacles = append(obstacles, layer.Name)
 		}
 	}

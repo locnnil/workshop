@@ -19,7 +19,6 @@ var (
 	ConfigProjectId               = "user.workshop.project-id"
 	ConfigWorkshopFile            = "user.workshop.file"
 	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
-	ConfigWorkshopSdks            = "user.workshop.sdks"
 	ConfigProjectPathDevice       = "workshop.project"
 	ConfigStateStorageDevice      = "workshop.state-storage"
 )

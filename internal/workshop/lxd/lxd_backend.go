@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -805,10 +804,13 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	sdks := map[string]workshop.SdkInstallation{}
-	buf, exist := inst.Config[workshop.ConfigWorkshopSdks]
-	if exist {
-		if err := json.Unmarshal([]byte(buf), &sdks); err != nil {
+	for key, device := range inst.Devices {
+		s, err := maybeSdkInstallation(key, device)
+		if err != nil {
 			return nil, err
+		}
+		if s != nil {
+			sdks[s.Name] = *s
 		}
 	}
 
@@ -1159,7 +1161,6 @@ runcmd:
 		"user.workshop.name":             file.Name,
 		"user.workshop.file":             string(f),
 		"user.workshop.base-fingerprint": baseFingerprint,
-		"user.workshop.sdks":             "{}",
 		"nvidia.driver.capabilities":     cfgNvidiaDriverCapabilities,
 		"nvidia.runtime":                 cfgNvidiaRuntime,
 		// LXC appears to have a race condition wherein a proxy device mounted in
