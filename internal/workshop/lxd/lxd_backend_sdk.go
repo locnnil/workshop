@@ -465,7 +465,7 @@ func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup
 		return err
 	}
 
-	delete(inst.Devices, sdk.VolumeName(setup.Name, setup.Revision))
+	delete(inst.Devices, workshop.SdkDeviceName(setup.Name))
 
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {

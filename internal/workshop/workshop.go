@@ -46,6 +46,10 @@ type SdkInstallation struct {
 	InstallTime time.Time `json:"install-time"`
 }
 
+func SdkDeviceName(sk string) string {
+	return "sdk." + sk
+}
+
 func (w *Workshop) metaFromVolume(ctx context.Context, setup sdk.Setup) (string, error) {
 	vinfo, err := w.Backend.Sdk(ctx, setup)
 	if err != nil {

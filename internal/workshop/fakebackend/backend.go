@@ -632,7 +632,7 @@ func (s *FakeWorkshopBackend) attachVolume(ctx context.Context, name string, mou
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: name, Name: mount.Name})
+	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: name, Name: mount.What})
 
 	wfs, err := s.WorkshopFs(ctx, name)
 	if err != nil {
@@ -678,11 +678,12 @@ func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, set
 	b.workshopLock.Unlock()
 	delete(wp.Sdks, setup.Name)
 
-	what := sdk.VolumeName(setup.Name, setup.Revision)
 	if setup.IsVolume() {
+		what := sdk.VolumeName(setup.Name, setup.Revision)
 		where := sdk.SdkDir(setup.Name)
 		return b.detachVolume(ctx, name, what, where)
 	}
+	what := workshop.SdkDeviceName(setup.Name)
 	return b.RemoveWorkshopMount(ctx, name, what)
 }
 
