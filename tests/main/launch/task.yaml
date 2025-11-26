@@ -1,4 +1,8 @@
 summary: Test launch for the supported workshop bases
+prepare: |
+  timedatectl set-timezone Pacific/Auckland
+restore: |
+  timedatectl set-timezone Etc/UTC
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -26,6 +30,8 @@ execute: |
       extract_section DHCPv4 < eth0.log | MATCH '^SendRelease=false$'
       extract_section DHCPv6 < eth0.log | MATCH '^SendRelease=false$'
     fi
+    # ensure timezone is inherited from host
+    workshop_exec exec "$1" timedatectl show | MATCH '^Timezone=Pacific/Auckland$'
     workshop_exec remove "$1"
   }
   

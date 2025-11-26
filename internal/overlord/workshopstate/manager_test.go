@@ -68,6 +68,7 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 		"start-workshop",
 		"stop-workshop",
 		"remove-workshop",
+		"configure-timezone",
 		"mount-project",
 		"create-workshop-storage",
 		"remove-workshop-storage",

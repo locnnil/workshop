@@ -148,7 +148,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -183,7 +183,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		_ = s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -309,7 +309,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopDefinitionFound(c *check.
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -333,7 +333,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -430,7 +430,7 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
+		c.Check(s.se.Ensure(), check.IsNil)
 		s.se.Wait()
 	}
 	s.state.Lock()
@@ -440,4 +440,133 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	c.Assert(label, check.Equals, "download finished")
 	c.Assert(done, check.Equals, 100)
 	c.Assert(total, check.Equals, 100)
+}
+
+func (s *workshopHandlers) TestConfigureTimezoneBrokenHost(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	restoreTimezone := osutil.FakeTimezone(func() (string, error) {
+		return "", errors.New("timedatectl: command not found")
+	})
+	defer restoreTimezone()
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("configure-timezone", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	warnings := s.state.AllWarnings()
+	c.Assert(warnings, check.HasLen, 1)
+	c.Check(warnings[0].String(), check.Equals, "cannot determine system time zone: timedatectl: command not found")
+}
+
+func (s *workshopHandlers) TestConfigureTimezoneBrokenWorkshop(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	restoreTimezone := osutil.FakeTimezone(func() (string, error) {
+		return "Antarctica/Troll", nil
+	})
+	defer restoreTimezone()
+
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		return workshop.ExecContext{}, errors.New("timedatectl: command not found")
+	}
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("configure-timezone", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(timedatectl: command not found\)`)
+}
+
+func (s *workshopHandlers) TestConfigureTimezoneBrokenDpkg(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	restoreTimezone := osutil.FakeTimezone(func() (string, error) {
+		return "Antarctica/Troll", nil
+	})
+	defer restoreTimezone()
+
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		if args.Command[0] != "dpkg-reconfigure" {
+			return fakebackend.DoExecDefault(ctx, name, args)
+		}
+		return workshop.ExecContext{}, errors.New("dpkg-reconfigure: read only filesystem")
+	}
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("configure-timezone", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(dpkg-reconfigure: read only filesystem\)`)
+}
+
+func (s *workshopHandlers) TestConfigureTimezoneMissingDpkg(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	restoreTimezone := osutil.FakeTimezone(func() (string, error) {
+		return "Antarctica/Troll", nil
+	})
+	defer restoreTimezone()
+
+	s.backend.ExecCallback = func(ctx context.Context, name string, args *workshop.Execution) (workshop.ExecContext, error) {
+		if args.Command[0] != "dpkg-reconfigure" {
+			return fakebackend.DoExecDefault(ctx, name, args)
+		}
+		exectx := workshop.ExecContext{
+			WaitExecution: func(ctx context.Context) error {
+				return &workshop.ErrExec{Status: osutil.CommandNotFound}
+			},
+		}
+		return exectx, nil
+	}
+
+	chg := s.state.NewChange("sample", "...")
+	t1 := s.state.NewTask("configure-timezone", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
+	c.Check(s.backend.ExecCalls, check.HasLen, 2)
 }

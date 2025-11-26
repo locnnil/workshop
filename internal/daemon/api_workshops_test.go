@@ -1785,9 +1785,14 @@ func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, fil
 func (s *apiSuite) checkHookCalls(c *check.C, name string, sdks []string, hooks []hookstate.WorkshopHookType) {
 	wpCalls := []*fakebackend.ExecCall{}
 	for _, ec := range s.b.ExecCalls {
-		if ec.Name == name {
-			wpCalls = append(wpCalls, ec)
+		if ec.Name != name {
+			continue
 		}
+		if _, isHook := ec.Args.Environment["SDK"]; !isHook {
+			continue
+		}
+
+		wpCalls = append(wpCalls, ec)
 	}
 
 	c.Assert(wpCalls, check.HasLen, len(sdks))

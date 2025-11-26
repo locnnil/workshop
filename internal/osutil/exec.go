@@ -28,6 +28,9 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
+// Well-known exit status.
+const CommandNotFound = 127
+
 var (
 	cmdWaitTimeout = 5 * time.Second
 
