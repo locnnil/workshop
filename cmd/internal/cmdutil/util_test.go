@@ -3,16 +3,19 @@ package cmdutil
 import (
 	"os"
 	"path/filepath"
+	"testing"
 
 	"gopkg.in/check.v1"
 )
 
-type cmdUtils struct {
+type cmdUtil struct {
 }
 
-var _ = check.Suite(&cmdUtils{})
+func Test(t *testing.T) { check.TestingT(t) }
 
-func (m *cmdUtils) TestHomeDirectoryPathContraction(c *check.C) {
+var _ = check.Suite(&cmdUtil{})
+
+func (m *cmdUtil) TestHomeDirectoryPathContraction(c *check.C) {
 	home, _ := os.UserHomeDir()
 	r := ContractHome(filepath.Join(home, "test"))
 	c.Assert(r, check.Equals, "~/test")
