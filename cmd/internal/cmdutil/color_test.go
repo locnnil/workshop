@@ -17,7 +17,7 @@
  *
  */
 
-package main
+package cmdutil
 
 import (
 	"os"
@@ -26,9 +26,7 @@ import (
 	"gopkg.in/check.v1"
 )
 
-type colorSuite struct {
-	BaseWorkshopSuite
-}
+type colorSuite struct{}
 
 var _ = check.Suite(&colorSuite{})
 

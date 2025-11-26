@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/progress"
 )
 
@@ -41,7 +42,7 @@ type waitMixin struct {
 	skipAbort bool
 
 	verbose bool
-	colorMixin
+	cmdutil.ColorMixin
 }
 
 var errNoWait = errors.New("no wait for op")
@@ -206,7 +207,7 @@ func (wmx waitMixin) maybeShowLogs(pb progress.Meter, chg *client.Change) {
 	tasks := slices.Clone(chg.Tasks)
 	slices.SortFunc(tasks, sortByReady)
 
-	esc := wmx.getEscapes()
+	esc := wmx.GetEscapes()
 	for _, t := range tasks {
 		if t.Status == "Doing" || t.Status == "Done" || t.Status == "Error" {
 			cur := seenLines[t.ID]
@@ -221,7 +222,7 @@ func (wmx waitMixin) maybeShowLogs(pb progress.Meter, chg *client.Change) {
 			// We have shown all the task's logs and since it's in Done,
 			// there'll be now new lines.
 			if !summarised && t.Status == "Done" {
-				pb.Notify(esc.green + esc.tick + esc.end + " " + t.Summary)
+				pb.Notify(esc.Green + esc.Tick + esc.End + " " + t.Summary)
 				summarisedIds[t.ID] = true
 			}
 		}
