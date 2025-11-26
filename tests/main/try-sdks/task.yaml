@@ -18,21 +18,21 @@ execute: |
   workshop_exec launch
   workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
   try_area_contracted="~${try_area#*ubuntu}"
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].tracking' | MATCH "^${try_area_contracted}\$"
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH "^${try_area_contracted}\$"
+  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check try and in-project SDKs can share revision numbers"
   sed 's/try-test-sdk-basic/project-test-sdk-basic/' -i .workshop/dev.yaml
   workshop_exec exec -- test ! -f /in-project-marker
   workshop_exec refresh
   workshop_exec exec -- test -f /in-project-marker
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check existing try revisions are reused"
   sed 's/project-test-sdk-basic/try-test-sdk-basic/' -i .workshop/dev.yaml
   workshop_exec refresh
   workshop_exec exec -- test ! -f /in-project-marker
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check SDKs in try area can be updated"
   sudo -u ubuntu cp "$store_area/latest/edge/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
@@ -40,5 +40,5 @@ execute: |
   sudo -u ubuntu cp "$store_area/latest/edge/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
 
   workshop_exec refresh
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
   workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'

@@ -126,6 +126,14 @@ type Escapes struct {
 	Tick, Dash, Ellipsis, UpArrow, Star string
 }
 
+// EmptyDash returns a YAML-safe dash if the string is empty; otherwise returns the string.
+func (e *Escapes) EmptyDash(s string) string {
+	if s == "" {
+		return e.Dash
+	}
+	return s
+}
+
 func (e *Escapes) MakeLink(text, url, fallback string) string {
 	if e.hyperlink == "" {
 		return fallback

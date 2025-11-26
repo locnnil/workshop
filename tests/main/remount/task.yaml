@@ -14,11 +14,11 @@ execute: |
   test -d "$new_source"
 
   echo "Remount: check workshop info output"
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*~/one"
+  workshop_exec info | yq '.sdks["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*~/one"
 
   echo "Remount: plugs remount sources are preserved after refresh"
   workshop_exec refresh
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*~/one"
+  workshop_exec info | yq '.sdks["test-sdk-mount"].mounts["one"]' | MATCH "^host-source:.*~/one"
 
   echo "Remount: the new source is not empty"  
   workshop_exec remount ws-remount/test-sdk-mount:one /home/ubuntu  | MATCH '.*(source "/home/ubuntu" is not empty; workshop must be stopped to remount safely)'
@@ -27,9 +27,9 @@ execute: |
   new_source="/home/ubuntu/two"
   workshop_exec stop
   workshop_exec remount ws-remount/test-sdk-mount:two "$new_source"
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*~/two"
+  workshop_exec info | yq '.sdks["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*~/two"
   workshop_exec start
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*~/two"
+  workshop_exec info | yq '.sdks["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*~/two"
   test -d "$new_source"
 
   echo "Remount: new source is on a different filesystem"
@@ -41,7 +41,7 @@ execute: |
   workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path" | MATCH '.*(sources "/home/ubuntu/two" and "/home/ubuntu/other-fs/new" are not on the same mounted filesystem; workshop must be stopped to remount safely)'
   workshop_exec stop
   workshop_exec remount ws-remount/test-sdk-mount:two "$otherfs_path"
-  workshop_exec info | grep -v notes | yq '.sdks["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*~/other-fs/new"
+  workshop_exec info | yq '.sdks["test-sdk-mount"].mounts["two"]' | MATCH "^host-source:.*~/other-fs/new"
   workshop_exec remount ws-remount/test-sdk-mount:two "$new_source"
   workshop_exec start
 

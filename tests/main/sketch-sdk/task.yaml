@@ -13,16 +13,16 @@ execute: |
   q
   EOF
 
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].tracking' | MATCH '^~/.local/share/workshop/id/.*/ws-sketch/sdk/sketch'
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["sketch"].tracking' | MATCH '^~/.local/share/workshop/id/.*/ws-sketch/sdk/sketch'
+  workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
   echo "Stash current sketch SDK"
   workshop_exec sketch-sdk --stash
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | NOMATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["sketch"].installed' | NOMATCH '\(x1\)$'
 
   echo "Restore sketch SDK"
   workshop_exec sketch-sdk --restore
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
   echo "Add setup-base"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
@@ -33,7 +33,7 @@ execute: |
   wq
   EOF
 
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
+  workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
 
   echo "Check refresh is not run if no updates to the sketch"
   output="$(sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
@@ -41,7 +41,7 @@ execute: |
   EOF
   )"
   [ -z "$output" ]
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
+  workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x2\)$'
 
 
   echo "Add a new mount"
@@ -54,7 +54,7 @@ execute: |
   wq
   EOF
 
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x3\)$'
+  workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x3\)$'
   workshop_exec connections ws-sketch | MATCH "*.ws-sketch/sketch:sketch-plug.*:mount"
   workshop_exec exec -- mountpoint /home/workshop/ws-sketch-test
 

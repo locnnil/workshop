@@ -16,6 +16,7 @@ import (
 )
 
 type CmdInfo struct {
+	cmdutil.ColorMixin
 	root *CmdRoot
 }
 
@@ -57,8 +58,10 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return cmp.Compare(a.ProjectPath, b.ProjectPath)
 	})
 
+	esc := c.GetEscapes()
+
 	fmt.Fprintf(Stdout, "name: %s\n", info.Name)
-	fmt.Fprintf(Stdout, "summary: %s\n", cmdutil.EmptyDash(info.Summary))
+	fmt.Fprintf(Stdout, "summary: %s\n", esc.EmptyDash(info.Summary))
 
 	if info.Description != "" {
 		fmt.Fprintln(Stdout, "description: |")
@@ -68,7 +71,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 			fmt.Fprintf(Stdout, "  %s\n", line)
 		}
 	} else {
-		fmt.Fprintln(Stdout, "description: -")
+		fmt.Fprintf(Stdout, "description: %s", esc.Dash)
 	}
 
 	if len(info.Installed) > 0 {

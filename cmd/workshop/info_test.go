@@ -188,7 +188,7 @@ var mockWorkshopWithMountsOutput = `name:     ws
 base:     ubuntu@22.04
 project:  %s
 status:   ready
-notes:    -
+notes:    --
 sdks:
   go:
     tracking:   latest/edge
@@ -368,7 +368,7 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkTunnels(c *check.C) {
 base:     ubuntu@22.04
 project:  %s
 status:   ready
-notes:    -
+notes:    --
 sdks:
   system:
     installed:  \(1\)

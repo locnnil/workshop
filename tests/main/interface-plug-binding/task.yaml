@@ -20,7 +20,7 @@ execute: |
   check_original_binding
 
   echo "Check bound mount plugs use host directories of the plug they are bound to"
-  workshop_exec info | grep -v notes > mounts.log
+  workshop_exec info > mounts.log
   yq '.sdks["test-sdk-multiple-plugs"].mounts["one"]' < mounts.log | MATCH "^host-source:.*test-sdk-mount/one"
   yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*test-sdk-multiple-plugs/two"
 
@@ -39,7 +39,7 @@ execute: |
   echo "Check remount affects all bound plugs"
   new_source="/home/ubuntu/remount-bound-test"
   workshop_exec remount ws-bind/test-sdk-mount:two "$new_source"
-  workshop_exec info | grep -v notes > mounts.log
+  workshop_exec info > mounts.log
   yq '.sdks["test-sdk-multiple-plugs"].mounts["two"]' < mounts.log | MATCH "^host-source:.*~/remount-bound-test"
   yq '.sdks["test-sdk-mount"].mounts["two"]' < mounts.log | MATCH "^host-source:.*~/remount-bound-test"
 
