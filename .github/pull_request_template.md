@@ -37,6 +37,7 @@ Content:
 
 * [ ] Headings and titles accurately describe the content.
 * [ ] New and updated pages include correct metadata.
+* [ ] Documentation follows the [style guide](../docs/doc-style-guide.md).
 * [ ] If needed, `docs/.coverage.yaml` updated, coverage tags added (`.. artefact`).
 
 ---
