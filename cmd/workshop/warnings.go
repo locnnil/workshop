@@ -37,12 +37,13 @@ import (
 	"golang.org/x/term"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/osutil"
 )
 
 type CmdWarnings struct {
 	timeMixin
-	unicodeMixin
+	cmdutil.UnicodeMixin
 	root    *CmdRoot
 	All     bool
 	Verbose bool
@@ -188,7 +189,7 @@ func (c *CmdWarnings) Run(cmd *cobra.Command, av []string) error {
 		termWidth = 100
 	}
 
-	esc := c.getEscapes()
+	esc := c.GetEscapes()
 	w := tabWriter()
 	for i, warning := range warnings {
 		if i > 0 {
@@ -199,7 +200,7 @@ func (c *CmdWarnings) Run(cmd *cobra.Command, av []string) error {
 		}
 		fmt.Fprintf(w, "last-occurrence:\t%s\n", c.fmtTime(warning.LastAdded))
 		if c.Verbose {
-			lastShown := esc.dash
+			lastShown := esc.Dash
 			if !warning.LastShown.IsZero() {
 				lastShown = c.fmtTime(warning.LastShown)
 			}

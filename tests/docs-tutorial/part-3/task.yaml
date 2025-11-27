@@ -29,7 +29,7 @@ execute: |
   wq
   EOF
 
-  workshop_exec info | grep -v notes | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
   # workshop_exec exec nimble -- "source /var/lib/workshop/sdk/jupyter/venv/bin/activate && jupyter console -h"
 

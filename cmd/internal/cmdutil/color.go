@@ -17,7 +17,7 @@
  *
  */
 
-package main
+package cmdutil
 
 import (
 	"os"
@@ -26,38 +26,38 @@ import (
 	"golang.org/x/term"
 )
 
-var isStdinTTY = term.IsTerminal(0)
-
-type unicodeMixin struct {
+type UnicodeMixin struct {
 	Unicode string
 }
 
-func (ux unicodeMixin) addUnicodeChars(esc *escapes) {
+func (ux UnicodeMixin) addUnicodeChars(esc *Escapes) {
 	if canUnicode(ux.Unicode) {
-		esc.dash = "–" // that's an en dash (so yaml is happy)
-		esc.uparrow = "↑"
-		esc.tick = "✓"
-		esc.star = "✪"
+		esc.Dash = "–" // that's an en dash (so yaml is happy)
+		esc.Ellipsis = "…"
+		esc.UpArrow = "↑"
+		esc.Tick = "✓"
+		esc.Star = "✪"
 	} else {
-		esc.dash = "--" // two dashes keeps yaml happy also
-		esc.uparrow = "^"
-		esc.tick = "**"
-		esc.star = "*"
+		esc.Dash = "--" // two dashes keeps yaml happy also
+		esc.Ellipsis = "..."
+		esc.UpArrow = "^"
+		esc.Tick = "**"
+		esc.Star = "*"
 	}
 }
 
-func (ux unicodeMixin) getEscapes() *escapes {
-	esc := &escapes{}
+func (ux UnicodeMixin) GetEscapes() *Escapes {
+	esc := &Escapes{}
 	ux.addUnicodeChars(esc)
 	return esc
 }
 
-type colorMixin struct {
+type ColorMixin struct {
 	Color string
-	unicodeMixin
+	UnicodeMixin
 }
 
-func (mx colorMixin) getEscapes() *escapes {
+func (mx ColorMixin) GetEscapes() *Escapes {
 	esc := colorTable(mx.Color)
 	mx.addUnicodeChars(&esc)
 	return &esc
@@ -89,7 +89,7 @@ func canUnicode(mode string) bool {
 
 var isStdoutTTY = term.IsTerminal(1)
 
-func colorTable(mode string) escapes {
+func colorTable(mode string) Escapes {
 	switch mode {
 	case "always":
 		return color
@@ -114,29 +114,43 @@ func colorTable(mode string) escapes {
 	return color
 }
 
-type escapes struct {
-	green        string
-	brightYellow string
-	bold         string
-	end          string
+type Escapes struct {
+	Green        string
+	BrightYellow string
+	Bold         string
+	End          string
 
-	tick, dash, uparrow, star string
+	hyperlink  string
+	terminator string
+
+	Tick, Dash, Ellipsis, UpArrow, Star string
+}
+
+func (e *Escapes) MakeLink(text, url, fallback string) string {
+	if e.hyperlink == "" {
+		return fallback
+	}
+	return e.hyperlink + url + e.terminator + text + e.hyperlink + e.terminator
 }
 
 var (
-	color = escapes{
-		green:        "\033[32m",
-		brightYellow: "\033[93m",
-		bold:         "\033[1m",
-		end:          "\033[0m",
+	color = Escapes{
+		Green:        "\033[32m",
+		BrightYellow: "\033[93m",
+		Bold:         "\033[1m",
+		End:          "\033[0m",
+		hyperlink:    "\033]8;;",
+		terminator:   "\033\\",
 	}
 
-	mono = escapes{
-		green:        "\033[1m", // bold
-		brightYellow: "\033[2m", // dim
-		bold:         "\033[1m",
-		end:          "\033[0m",
+	mono = Escapes{
+		Green:        "\033[1m", // bold
+		BrightYellow: "\033[2m", // dim
+		Bold:         "\033[1m",
+		End:          "\033[0m",
+		hyperlink:    "\033]8;;",
+		terminator:   "\033\\",
 	}
 
-	noesc = escapes{}
+	noesc = Escapes{}
 )

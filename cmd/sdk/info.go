@@ -16,6 +16,7 @@ import (
 )
 
 type CmdInfo struct {
+	cmdutil.ColorMixin
 	root *CmdRoot
 }
 
@@ -57,24 +58,34 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return cmp.Compare(a.ProjectPath, b.ProjectPath)
 	})
 
-	fmt.Fprintf(Stdout, "name: %s\n", info.Name)
-	fmt.Fprintf(Stdout, "summary: %s\n", cmdutil.EmptyDash(info.Summary))
+	esc := c.GetEscapes()
+	escape := func(s string) []byte {
+		if s == "" || s == "-" {
+			s = esc.Dash
+		}
+		s = cmdutil.EscapeYAMLScalar(s)
+		e := []byte{tabwriter.Escape}
+		return fmt.Appendf(nil, "%s%s%s", e, s, e)
+	}
+
+	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
+	fmt.Fprintf(w, "name:\t%s\n", info.Name)
+	fmt.Fprintf(w, "summary:\t%s\n", escape(info.Summary))
 
 	if info.Description != "" {
-		fmt.Fprintln(Stdout, "description: |")
+		fmt.Fprintln(w, "description: |")
 		description := strings.TrimSuffix(info.Description, "\n")
 		lines := strings.Split(description, "\n")
 		for _, line := range lines {
-			fmt.Fprintf(Stdout, "  %s\n", line)
+			fmt.Fprintf(w, "  %s\n", line)
 		}
 	} else {
-		fmt.Fprintln(Stdout, "description: -")
+		fmt.Fprintf(w, "description:\t%s", esc.Dash)
 	}
 
 	if len(info.Installed) > 0 {
-		fmt.Fprintln(Stdout, "installed:")
+		fmt.Fprintln(w, "installed:")
 	}
-	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
 	for _, it := range info.Installed {
 		project := cmdutil.ContractHome(it.ProjectPath)
 		channel := cmdutil.EmptyDash(it.Channel)

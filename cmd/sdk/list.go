@@ -58,7 +58,7 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 		return cmp.Compare(a.Name, b.Name)
 	})
 
-	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', 0)
+	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
 	maxSize := 0
 	for _, sdk := range sdks {
 		szl := len(units.GetByteSizeString(int64(sdk.Size), 2))
