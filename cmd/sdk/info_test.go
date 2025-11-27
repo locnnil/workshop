@@ -67,8 +67,8 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 	cmd.SetArgs([]string{"info", "openvino"})
 	c.Assert(cmd.Execute(), check.IsNil)
 
-	want := fmt.Sprintf(`name: openvino
-summary: ROS2 development environment
+	want := fmt.Sprintf(`name:     openvino
+summary:  ROS2 development environment
 description: |
   Longer description
   can be multiline.

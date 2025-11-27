@@ -1,5 +1,5 @@
-name: test-sdk-info
-summary: test-sdk-info summary
+name:     test-sdk-info
+summary:  test-sdk-info summary
 description: |
   test-sdk-info description
 installed:

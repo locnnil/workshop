@@ -322,12 +322,12 @@ var mockWorkshopWithTunnels = `{
             },
             "from": {
               "protocol": "tcp",
-              "host": "0.0.0.0",
+              "host": "::",
               "port": 12345
             },
             "to": {
               "protocol": "unix",
-              "path": "/run/snap-proxy.socket"
+              "path": "@snap-proxy"
             }
           }
         ]
@@ -381,8 +381,8 @@ sdks:
     installed:  1.8.0  2017-02-19  \(1\)
     tunnels:
       snap-cache:
-        from:  0.0.0.0:12345/tcp
-        to:    /run/snap-proxy.socket
+        from:  '\[::\]:12345/tcp'
+        to:    '@snap-proxy'
 `, m.prjDir, user.Uid))
 	c.Check(n, check.Equals, 2)
 }
