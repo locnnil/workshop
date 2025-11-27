@@ -27,9 +27,19 @@
 
 ## Docs
 
+Procedure:
+
 * [ ] I have checked and added or updated relevant documentation.
 * [ ] I have checked and added or updated relevant release notes.
 * [ ] I have included the technical author in the review.
+
+Content:
+
+* [ ] Headings and titles accurately describe the content.
+* [ ] New and updated pages include correct metadata.
+* [ ] If needed, `docs/.coverage.yaml` updated, coverage tags added (`.. artefact`).
+
+---
 
 Or:
 
