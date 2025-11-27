@@ -5,7 +5,7 @@ sdks:
     plugs:
       auto-connect-by-name:
         interface: tunnel
-        endpoint: 9999
+        endpoint: '@workshopacbn'
       conflict:
         interface: tunnel
         endpoint: '0.0.0.0:8000'
