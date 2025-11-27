@@ -1,5 +1,9 @@
 .. _ref_workshop_list:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop list' command
+
 workshop list
 -------------
 

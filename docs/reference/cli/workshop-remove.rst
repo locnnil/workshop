@@ -1,5 +1,9 @@
 .. _ref_workshop_remove:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop remove' command
+
 workshop remove
 ---------------
 

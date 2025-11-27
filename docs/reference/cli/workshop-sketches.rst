@@ -1,5 +1,9 @@
 .. _ref_workshop_sketches:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop sketches' command
+
 workshop sketches
 -----------------
 

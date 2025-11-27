@@ -1,5 +1,9 @@
 .. _ref_workshop_disconnect:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop disconnect' command
+
 workshop disconnect
 -------------------
 

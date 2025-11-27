@@ -1,5 +1,9 @@
 .. _ref_workshop_okay:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop okay' command
+
 workshop okay
 -------------
 

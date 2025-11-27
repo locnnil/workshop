@@ -1,5 +1,9 @@
 .. _ref_workshop_connect:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop connect' command
+
 workshop connect
 ----------------
 

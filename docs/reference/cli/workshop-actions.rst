@@ -1,5 +1,9 @@
 .. _ref_workshop_actions:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop actions' command
+
 workshop actions
 ----------------
 
