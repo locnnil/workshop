@@ -38,7 +38,7 @@ Content:
 * [ ] Headings and titles accurately describe the content.
 * [ ] New and updated pages include correct metadata.
 * [ ] Documentation tests are added or updated where applicable (for `tutorial/` and `how-to/` sections).
-* [ ] Documentation follows the [style guide](../docs/doc-style-guide.md).
+* [ ] Documentation follows the [style guide](https://github.com/canonical/workshop/tree/main/docs/doc-style-guide.md).
 * [ ] If needed, `docs/.coverage.yaml` updated, coverage tags added (`.. artefact`).
 
 ---
