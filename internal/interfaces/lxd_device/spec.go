@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/user"
 	"strconv"
+	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
@@ -199,13 +200,13 @@ func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey stri
 	switch entry.Direction {
 	case workshop.WorkshopToHost:
 		device["bind"] = "instance"
-		if entry.Listen.Protocol == "unix" {
+		if entry.Listen.Protocol == "unix" && !strings.HasPrefix(entry.Listen.Address, "@") {
 			device["uid"] = workshop.User.Uid
 			device["gid"] = workshop.User.Gid
 		}
 	case workshop.HostToWorkshop:
 		device["bind"] = "host"
-		if entry.Listen.Protocol == "unix" {
+		if entry.Listen.Protocol == "unix" && !strings.HasPrefix(entry.Listen.Address, "@") {
 			device["uid"] = s.User.Uid
 			device["gid"] = s.User.Gid
 		}
