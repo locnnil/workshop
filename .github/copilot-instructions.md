@@ -200,11 +200,11 @@ The Workshop project follows a structured documentation approach based on the [C
 
 ### Documentation Style Requirements
 - **Markup**: reStructuredText (reST) is the preferred format
-- **Style Guide**: Follow the [reST style guide](https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/) from the starter pack
+- **Style Guide**: Follow the [Workshop documentation style guide](../docs/doc-style-guide.md) for project-specific conventions, and the [Canonical reST style guide](https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/) for general patterns
 - **Building**: Documentation is built using a custom Workshop in-project SDK located in `.workshop/starter-pack`
 - **Testing**: All documentation changes must pass Sphinx build without warnings
 
-For comprehensive documentation guidelines, refer to the Documentation section (search for "contributing_doc") in the contributing guide.
+For comprehensive documentation guidelines, refer to `docs/doc-style-guide.md` and the Documentation section (search for "contributing_doc") in the contributing guide.
 
 ### 1. Documentation Impact Assessment
 - **Existing Documentation**: Assess whether the PR affects any existing documentation files
@@ -228,11 +228,39 @@ The `.. @artefact` comments should be placed in documentation files to mark impo
 ```
 
 ### 3. Documentation Quality Checklist
+
+Check adherence to the Workshop documentation style guide (`docs/doc-style-guide.md`):
+
+#### File Structure and Naming
+- **File names**: Lowercase with dashes (e.g., `connect-vscode.rst`, not `ConnectVSCode.rst`)
+- **Metadata block**: Every page must have `.. meta::` block with description after anchor label
+- **Anchor labels**: Use prefixes (`tut_`, `how_`, `exp_`, `ref_`) with underscores (e.g., `.. _how_add_actions:`)
+- **Artefact comments**: Include `.. @artefact` markers for key concepts
+
+#### Writing Style
+- **Language**: US English spelling and grammar throughout
+- **Headings**: Sentence case for all headings (capitalize only first word and proper nouns)
+- **Semantic line breaks**: Break lines at natural semantic boundaries (clauses, conjunctions)
+- **Voice**: Direct imperative for instructions (avoid "you can" or "you may")
+- **Links**: Use `:ref:` for internal links (prefer over `:doc:`); link terms only at first mention
+
+#### Content Structure
 - **Consistency**: Ensure new documentation follows existing style and formatting patterns
 - **Completeness**: Verify that new features are adequately documented with examples
 - **Navigation**: Check that new documentation is properly integrated into the table of contents (`toctree`)
-- **Cross-references**: Validate that internal links use proper reST reference format (`:ref:`, `:doc:`, etc.)
-- **Code Examples**: Ensure code blocks use appropriate syntax highlighting and are tested where possible
+- **Cross-references**: Validate that internal links use proper reST reference format (`:ref:` preferred, `:doc:` only for `index.rst` and `release-notes/index.rst`)
+- **Code Examples**: 
+  - Use `console` lexer with `$` prompts (non-selectable)
+  - Include captions for configuration examples
+  - Show `sudo` explicitly when needed
+  - Indent output with two spaces
+
+#### Formatting Conventions
+- **Product names**: Workshop, SDKcraft, LXD (proper capitalization); use `|ws_markup|` and `|sdk_markup|` substitutions
+- **Inline markup**: Use semantic roles (`:program:`, `:command:`, `:file:`, `:envvar:`, `:samp:`)
+- **Placeholders**: Uppercase in angle brackets (e.g., `:samp:`workshop launch {WORKSHOP}`)
+- **Admonitions**: Use `.. note::` and `.. warning::` appropriately
+- **Spacing**: Two-line gaps after major sections, code samples, lists, and tables
 
 ### 4. Specific Documentation Types
 - **CLI Changes**: Verify that command-line interface changes are reflected in the auto-generated CLI reference
