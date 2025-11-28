@@ -1,5 +1,9 @@
 .. _ref_workshop_warnings:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop warnings' command
+
 workshop warnings
 -----------------
 

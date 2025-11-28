@@ -1,5 +1,9 @@
 .. _{{ .Ref }}:
 
+
+.. meta::
+   :description: Reference documentation for the '{{ .CommandName }}' command
+
 {{ .CommandName }}
 {{ repeat "-" .HeadingLen }}
 

@@ -1,5 +1,9 @@
 .. _ref_workshop_launch:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop launch' command
+
 workshop launch
 ---------------
 

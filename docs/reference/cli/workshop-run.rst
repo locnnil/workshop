@@ -1,5 +1,9 @@
 .. _ref_workshop_run:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop run' command
+
 workshop run
 ------------
 

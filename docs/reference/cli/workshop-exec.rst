@@ -1,5 +1,9 @@
 .. _ref_workshop_exec:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop exec' command
+
 workshop exec
 -------------
 

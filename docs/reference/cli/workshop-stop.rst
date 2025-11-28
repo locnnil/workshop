@@ -1,5 +1,9 @@
 .. _ref_workshop_stop:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop stop' command
+
 workshop stop
 -------------
 

@@ -1,5 +1,9 @@
 .. _ref_workshop_sketch-sdk:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop sketch-sdk' command
+
 workshop sketch-sdk
 -------------------
 

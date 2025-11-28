@@ -1,5 +1,9 @@
 .. _ref_workshop_refresh:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop refresh' command
+
 workshop refresh
 ----------------
 

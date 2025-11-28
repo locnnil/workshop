@@ -5,10 +5,6 @@
                  explaining how Workshop's approach to development environments
                  offers improved repeatability, persistence, and layering
                  compared to Docker-based solutions.
-                 Contains an explanation of data persistence and sharing
-                 mechanisms in Workshop that simplify the management of mounted
-                 directories and shared caches compared to traditional container
-                 approaches like Docker.
 
 How SDKs compare to Dockerfiles
 ===============================

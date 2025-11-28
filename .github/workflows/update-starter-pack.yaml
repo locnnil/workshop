@@ -40,6 +40,12 @@ jobs:
           cat docs/requirements.txt starter-pack-temp/docs/requirements.txt | sort -u > docs/requirements.txt.tmp
           mv docs/requirements.txt.tmp docs/requirements.txt
 
+          # Get the latest commit hash from the starter pack
+          cd starter-pack-temp
+          STARTER_PACK_COMMIT=$(git rev-parse --short HEAD)
+          echo "STARTER_PACK_COMMIT=$STARTER_PACK_COMMIT" >> $GITHUB_ENV
+          cd ..
+
           # Clean up the temporary checkout
           rm -rf starter-pack-temp
 
@@ -53,7 +59,7 @@ jobs:
           if git diff --exit-code; then
             echo "No changes detected, skipping commit and PR creation."
           else
-            pr_branch="update/starter-pack-$(date +'%Y%m%d%H%M%S')"
+            pr_branch="docs/update-starter-pack-${STARTER_PACK_COMMIT}-$(date +'%Y%m%d%H%M%S')"
             git checkout -b $pr_branch
 
             git config --global user.name 'github-actions[bot]'

@@ -1,5 +1,9 @@
 .. _ref_workshop_shell:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop shell' command
+
 workshop shell
 --------------
 

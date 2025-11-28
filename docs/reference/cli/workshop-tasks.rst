@@ -1,5 +1,9 @@
 .. _ref_workshop_tasks:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop tasks' command
+
 workshop tasks
 --------------
 

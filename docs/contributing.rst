@@ -501,6 +501,9 @@ with some opinionated style choices evident in the source.
 
 See the relevant documentation before making changes:
 
+- :doc:`Workshop documentation style guide <doc-style-guide>`
+  (project-specific conventions and patterns)
+
 - `Starter pack
   <https://canonical-starter-pack.readthedocs-hosted.com/stable/>`_
 

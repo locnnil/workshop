@@ -1,5 +1,9 @@
 .. _ref_workshop_remount:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop remount' command
+
 workshop remount
 ----------------
 

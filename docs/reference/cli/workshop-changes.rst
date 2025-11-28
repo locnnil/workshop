@@ -1,5 +1,9 @@
 .. _ref_workshop_changes:
 
+
+.. meta::
+   :description: Reference documentation for the 'workshop changes' command
+
 workshop changes
 ----------------
 
