@@ -156,15 +156,15 @@ create a workshop definition named :file:`workshop.yaml`:
    :emphasize-lines: 4,5
 
    name: dev
-   base: ubuntu@24.04
+   base: ubuntu@22.04
    sdks:
      - name: ollama
-       channel: 24.04/edge
+       channel: 22.04/edge
 
 
 Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
-comes from the :samp:`24.04/edge` channel.
+comes from the :samp:`22.04/edge` channel.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
@@ -228,7 +228,7 @@ to see what went into your workshop:
    $ workshop info
 
      name:     dev
-     base:     ubuntu@24.04
+     base:     ubuntu@22.04
      project:  /home/user/ollama-python-project
      status:   ready
      notes:    -
@@ -236,8 +236,8 @@ to see what went into your workshop:
        system:
          installed:  (1)
        ollama:
-         tracking:   24.04/edge
-         installed:  0.9.6  2025-07-21  (516)
+         tracking:   22.04/edge
+         installed:  0.9.6  2025-11-19  (981)
          mounts:
            models:
              host-source:      .../6b79e889/dev/mount/ollama/models
@@ -323,6 +323,9 @@ are updated by their publishers.
 Alternatively,
 you may have changed the definition to switch bases,
 add and remove SDKs, or toggle their channels.
+A good example is when a new Ubuntu LTS version is released and,
+as a result,
+a new base image becomes available.
 In either case,
 you must refresh the workshop to apply the updates.
 
@@ -334,10 +337,10 @@ and refresh the workshop:
    :emphasize-lines: 2,5
 
    name: dev
-   base: ubuntu@22.04
+   base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 22.04/edge
+       channel: 24.04/edge
 
 .. @artefact workshop refresh
 
@@ -434,9 +437,9 @@ who's also named :samp:`workshop`:
 
      ...
      Distributor ID: Ubuntu
-     Description:    Ubuntu 22.04.5 LTS
-     Release:        22.04
-     Codename:       jammy
+     Description:    Ubuntu 24.04.3 LTS
+     Release:        24.04
+     Codename:       noble
 
    workshop@dev-6b79e889:/project$ exit
 
@@ -504,9 +507,9 @@ pass the change ID to the command:
    $ workshop tasks 33
 
      Status   Duration  Summary
-     Done    2m17.389s  Download "ubuntu@22.04" base image
+     Done    2m17.389s  Download "ubuntu@24.04" base image
      Done        113ms  Retrieve "system" SDK
-     Done    2m59.777s  Retrieve "ollama" SDK from channel "22.04/edge"
+     Done    2m59.777s  Retrieve "ollama" SDK from channel "24.04/edge"
      Done        443ms  Create SDK state storage
      Done        581ms  Run hook "save-state" for "system" SDK
      Done        449ms  Run hook "save-state" for "ollama" SDK

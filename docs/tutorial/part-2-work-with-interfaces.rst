@@ -101,7 +101,7 @@ you can remount to a directory in your home:
    $ workshop info
 
      name:     dev
-     base:     ubuntu@22.04
+     base:     ubuntu@24.04
      project:  /home/user/ollama-python-project
      status:   ready
      notes:    -
@@ -109,8 +109,8 @@ you can remount to a directory in your home:
        system:
          installed:  (1)
        ollama:
-         tracking:   22.04/edge
-         installed:  0.9.6  2025-08-12  (690)
+         tracking:   24.04/edge
+         installed:  0.9.6  2025-11-19  (214)
          mounts:
            models:
              host-source:      /home/user/.ollama/models
@@ -143,12 +143,12 @@ to run Jupyter notebooks with the Ollama models:
    :emphasize-lines: 6,7
 
    name: dev
-   base: ubuntu@22.04
+   base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 22.04/edge
+       channel: 24.04/edge
      - name: jupyter
-       channel: 22.04/edge
+       channel: 24.04/edge
 
 
 .. code-block:: console
@@ -170,12 +170,12 @@ to the host system at a port of your choice (here, :samp:`8989`):
    :emphasize-lines: 8-12
 
    name: dev
-   base: ubuntu@22.04
+   base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 22.04/edge
+       channel: 24.04/edge
      - name: jupyter
-       channel: 22.04/edge
+       channel: 24.04/edge
      - name: system
        plugs:
          jupyter:
