@@ -323,9 +323,9 @@ are updated by their publishers.
 Alternatively,
 you may have changed the definition to switch bases,
 add and remove SDKs, or toggle their channels.
-A good example is:
-when a new Ubuntu LTS is available and by consequence,
-a new base image is published;
+A good example is when a new Ubuntu LTS version is released and,
+as a result,
+a new base image becomes available.
 In either case,
 you must refresh the workshop to apply the updates.
 
