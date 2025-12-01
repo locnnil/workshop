@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -74,7 +75,7 @@ func shortenDefaultPath(source, xdg string, esc *cmdutil.Escapes) string {
 	if after, ok := strings.CutPrefix(source, defaultPathPrefix); ok {
 		return esc.Ellipsis + after
 	}
-	return cmdutil.ContractHome(source)
+	return source
 }
 
 func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
@@ -187,12 +188,15 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				fmt.Fprintf(w, "    mounts:\n")
 				slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
 				for _, mount := range sk.Mounts {
-					text := shortenDefaultPath(mount.HostSource, xdg, esc)
-					link := "file://" + hostname + mount.HostSource
-					fallback := string(escape(cmdutil.ContractHome(mount.HostSource)))
+					hostSource := string(escape(cmdutil.ContractHome(mount.HostSource)))
+					shortened := shortenDefaultPath(mount.HostSource, xdg, esc)
+					if shortened != mount.HostSource {
+						link := &url.URL{Scheme: "file", Host: hostname, Path: mount.HostSource}
+						hostSource = esc.MakeLink(shortened, link, hostSource)
+					}
 					if mount.HostSource != "" {
 						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-						fmt.Fprintf(w, "        host-source:\t%s\n", esc.MakeLink(text, link, fallback))
+						fmt.Fprintf(w, "        host-source:\t%s\n", hostSource)
 						fmt.Fprintf(w, "        workshop-target:\t%s\n", escape(mount.WorkshopTarget))
 						continue
 					}
