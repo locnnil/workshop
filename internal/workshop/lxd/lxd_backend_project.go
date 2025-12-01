@@ -72,7 +72,7 @@ func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 
 	rev := revert.New()
 	defer rev.Fail()
-	rev.Add(func() { _ = conn.DeleteProject(project) })
+	rev.Add(func() { _ = conn.DeleteProject(project, false) })
 
 	layers, err := lxdLayersProjectName(username)
 	if err != nil {

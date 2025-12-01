@@ -209,21 +209,24 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	if err != nil {
 		return err
 	}
-
 	if err = op.WaitContext(ctx); err != nil {
 		return err
 	}
 
-	volPut := api.StorageVolumePut{
-		Config: map[string]string{
-			"user.kind":         "sdk",
-			"user.sdk.name":     meta.Name,
-			"user.sdk.revision": meta.Revision.String(),
-			"user.sha3-384":     meta.Sha3_384,
-			"user.sdk.meta":     meta.SdkYAML,
-		},
+	volume, etag, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
+	if err != nil {
+		return err
 	}
-	return conn.UpdateStoragePoolVolume(storagePool, "custom", name, volPut, "")
+	volume.Config["user.kind"] = "sdk"
+	volume.Config["user.sdk.name"] = meta.Name
+	volume.Config["user.sdk.revision"] = meta.Revision.String()
+	volume.Config["user.sha3-384"] = meta.Sha3_384
+	volume.Config["user.sdk.meta"] = meta.SdkYAML
+	op, err = conn.UpdateStoragePoolVolume(storagePool, "custom", name, volume.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.Wait()
 }
 
 func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
@@ -234,7 +237,8 @@ func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
 	defer conn.Disconnect()
 
 	name := sdk.VolumeName(setup.Name, setup.Revision)
-	if err = conn.DeleteStoragePoolVolume(storagePool, "custom", name); err != nil {
+	op, err := conn.DeleteStoragePoolVolume(storagePool, "custom", name)
+	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
 		}
@@ -244,7 +248,7 @@ func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
 		return err
 	}
 
-	return nil
+	return op.Wait()
 }
 
 func (s *Backend) Sdks(ctx context.Context) ([]workshop.SdkVolume, error) {
