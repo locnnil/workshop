@@ -86,20 +86,20 @@ func (w *Workshop) metaFromFile(ctx context.Context, setup sdk.Setup) (string, e
 	return string(meta), err
 }
 
-func ValidateSdkInfo(projectId string, file *File, name, sdkYaml string) error {
-	info, err := sdk.ReadSdkInfo([]byte(sdkYaml), projectId, file.Name)
+func ValidateSdkInfo(pid, w, base, sk, sdkYaml string) error {
+	info, err := sdk.ReadSdkInfo([]byte(sdkYaml), pid, w)
 	if err != nil {
-		return fmt.Errorf("invalid %q SDK definition: %w", name, err)
+		return fmt.Errorf("invalid %q SDK definition: %w", sk, err)
 	}
 
-	if info.Name != name {
-		return fmt.Errorf("SDK must be named %q (now: %q)", name, info.Name)
+	if info.Name != sk {
+		return fmt.Errorf("SDK must be named %q (now: %q)", sk, info.Name)
 	}
-	if !slices.Contains([]string{"", file.Base}, info.Base) {
-		return fmt.Errorf("%q SDK has %q base; required: %q", name, info.Base, file.Base)
+	if !slices.Contains([]string{"", base}, info.Base) {
+		return fmt.Errorf("%q SDK has %q base; required: %q", sk, info.Base, base)
 	}
 	if !slices.Contains([]string{"", "all", arch.DpkgArchitecture()}, info.Arch) {
-		return fmt.Errorf(`%q SDK has %q architecture; required: %q or "all"`, name, info.Arch, arch.DpkgArchitecture())
+		return fmt.Errorf(`%q SDK has %q architecture; required: %q or "all"`, sk, info.Arch, arch.DpkgArchitecture())
 	}
 
 	return nil

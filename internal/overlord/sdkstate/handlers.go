@@ -160,7 +160,7 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 	if sdkYaml != "" {
-		if err := workshop.ValidateSdkInfo(project.ProjectId, wp.File, sdkSetup.Name, sdkYaml); err != nil {
+		if err := workshop.ValidateSdkInfo(project.ProjectId, wp.File.Name, wp.File.Base, sdkSetup.Name, sdkYaml); err != nil {
 			return err
 		}
 	}
