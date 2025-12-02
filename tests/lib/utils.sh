@@ -60,6 +60,7 @@ EOF
     setup_lxd
 
     snap install --classic --channel=1.25/stable go
+    go env -w GOPROXY="https://proxy.golang.org,direct"
     snap install yq
 }
 
