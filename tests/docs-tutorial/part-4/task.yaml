@@ -15,6 +15,9 @@ execute: |
   mv ../{sdk.yaml,ollama.service} .
   mkdir hooks
   mv ../{setup-base,save-state,restore-state,check-health,setup-project} hooks/
-  run_sdkcraft clean
+  # TODO: remove when fixed: https://github.com/canonical/craft-providers/issues/856
+  if lxc project info sdkcraft &>/dev/null; then
+    run_sdkcraft clean
+  fi
   run_sdkcraft pack
   run_sdkcraft try

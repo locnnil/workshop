@@ -682,6 +682,27 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 			return err
 		}
 		revert.Copy(rev, r)
+	} else {
+		rev.Add(func() {
+			// By design, LXD does not roll back profile changes if the update failed,
+			// so we have to do it ourselves.
+			_, revEtag, reverr := conn.GetProfile(name)
+			if reverr != nil {
+				logger.Noticef("cannot get updated profile: %v", reverr)
+				return
+			}
+			if revEtag == etag {
+				return
+			}
+
+			revOp, reverr := conn.UpdateProfile(name, lxdp.Writable(), revEtag)
+			if reverr == nil {
+				reverr = revOp.Wait()
+			}
+			if reverr != nil {
+				logger.Noticef("cannot restore original profile: %v", reverr)
+			}
+		})
 	}
 
 	prof := api.ProfilePut{
@@ -689,25 +710,11 @@ func (b *Backend) Setup(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Re
 		Config:      spec.config,
 		Devices:     spec.devices,
 	}
-	if err := conn.UpdateProfile(name, prof, etag); err != nil {
-		if lxdp == nil {
-			return err
-		}
-
-		// By design, LXD does not roll back profile changes if the update failed,
-		// so we have to do it ourselves.
-		_, etag2, err2 := conn.GetProfile(name)
-		if err2 != nil {
-			logger.Noticef("cannot get updated profile: %v", err2)
-			return err
-		}
-		if etag2 == etag {
-			return err
-		}
-
-		if err2 := conn.UpdateProfile(name, lxdp.Writable(), etag2); err2 != nil {
-			logger.Noticef("cannot restore original profile: %v", err2)
-		}
+	op, err := conn.UpdateProfile(name, prof, etag)
+	if err != nil {
+		return err
+	}
+	if err := op.Wait(); err != nil {
 		return err
 	}
 

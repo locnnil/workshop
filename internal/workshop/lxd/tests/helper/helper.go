@@ -75,7 +75,7 @@ func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 		c.Check(err, check.IsNil)
 	}
 
-	err = cli.DeleteProject(project)
+	err = cli.DeleteProject(project, false)
 	c.Check(err, check.IsNil)
 }
 
