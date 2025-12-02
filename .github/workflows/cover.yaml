@@ -41,6 +41,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          go env -w GOPROXY="https://proxy.golang.org,direct"
+
           go install github.com/axw/gocov/gocov@v1.1.0
           go install github.com/AlekSi/gocov-xml@v1.1.0
           go install honnef.co/go/tools/cmd/staticcheck@latest
