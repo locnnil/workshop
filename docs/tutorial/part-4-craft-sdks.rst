@@ -80,7 +80,7 @@ To refresh an existing installation:
    and your distribution's manuals for guidance.
 
 
-.. _how_sdkcraft_init:
+.. _tut_sdkcraft_init:
 
 Initialize the SDK
 ------------------
@@ -115,7 +115,7 @@ Next, browse to the SDK directory and initialize it:
 This command creates a template definition file
 named :file:`sdk.yaml`;
 although it's almost empty,
-it can already be :ref:`built <how_sdkcraft_build_sdk>`.
+it can already be :ref:`built <tut_sdkcraft_try>`.
 
 However, let's take a few extra steps
 to explore what goes into an SDK.
@@ -148,7 +148,7 @@ and build SDKs for several platforms:
        plugin: nil
 
 
-.. _how_sdkcraft_parts:
+.. _tut_sdkcraft_parts:
 
 Define parts
 ------------
@@ -227,7 +227,7 @@ This defines how the Ollama daemon should run:
 - :samp:`After` makes it depend on network connectivity
 
 
-.. _how_sdkcraft_mount_interface:
+.. _tut_sdkcraft_mount_interface:
 
 Add plugs and slots
 -------------------
@@ -456,50 +456,7 @@ the health is eventually set to :samp:`error` automatically.
    and can be easier than adjusting permissions afterwards.
 
 
-.. _how_sdkcraft_build_sdk:
-
-Package the SDK
----------------
-
-Under :file:`ollama/`, run:
-
-.. code-block:: console
-
-   $ sdkcraft pack
-
-
-.. @artefact SDK part
-
-This builds all :ref:`SDK parts <exp_sdk_parts>`
-defined in the :file:`sdk.yaml` file,
-e.g., pulling source code, applying patches, configuring and compiling it
-according to the part definition.
-
-.. note::
-
-   For a detailed explanation of the build process,
-   see the respective Craft Parts
-   `documentation section
-   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/lifecycle/>`_.
-
-
-Optionally, you can clean the build cache before a build attempt:
-
-.. code-block:: console
-
-   $ sdkcraft clean && sdkcraft pack
-
-
-.. @artefact SDK metadata
-
-When run without arguments,
-:command:`sdkcraft` builds and packs the SDK into files
-such as :file:`ollama_amd64_ubuntu@24.04.sdk`,
-which contains the build artifacts from the previous step
-along with SDK metadata, hooks, and other components.
-
-
-.. _how_sdkcraft_try:
+.. _tut_sdkcraft_try:
 
 Try the SDK
 -----------
@@ -507,8 +464,10 @@ Try the SDK
 .. @artefact sdkcraft (CLI)
 .. @artefact try SDK
 
-When you're confident the SDK builds properly,
-you can test it in-place before uploading it to the Store:
+When you're confident the SDK is ready to be built,
+test it in-place before uploading it to the Store.
+
+Under :file:`ollama/`, run:
 
 .. code-block:: console
 
@@ -516,10 +475,35 @@ you can test it in-place before uploading it to the Store:
 
      Packed ollama_amd64_ubuntu@22.04.sdk
      Packed ollama_amd64_ubuntu@24.04.sdk
+     ...
 
 
-The command copies the SDK to a special *try area*.
-To use it in a workshop, add a prefix: :samp:`try-<NAME>`:
+Optionally, you can clean the build cache before trying:
+
+.. code-block:: console
+
+   $ sdkcraft clean && sdkcraft try
+
+
+.. @artefact SDK part
+.. @artefact SDK metadata
+
+The command builds and packs the SDK into files
+such as :file:`ollama_amd64_ubuntu@24.04.sdk`,
+which contain the build artifacts
+along with SDK metadata, hooks, and other components.
+This is repeated for all supported :samp:`platforms`
+defined in the :file:`sdk.yaml` metadata.
+
+In particular, the command builds all :ref:`SDK parts <exp_sdk_parts>`
+defined in the :file:`sdk.yaml` file,
+e.g., pulling source code, applying patches, configuring and compiling it
+according to the part definition.
+
+After a successful build,
+the :command:`sdkcraft try` command also copies the SDKs to a special *try area*
+(usually :file:`$XDG_DATA_HOME/workshop/try/`).
+To use them in a workshop, add a prefix: :samp:`try-<NAME>`:
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -538,15 +522,23 @@ the SDK is installed from the try area when you launch the workshop:
    $ workshop launch
 
 
-.. _how_sdkcraft_publish:
+.. note::
+
+   For a detailed explanation of the build process,
+   see the respective Craft Parts
+   `documentation section
+   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/lifecycle/>`_.
+
+
+.. _tut_sdkcraft_publish:
 
 Publish the SDK
 ---------------
 
 .. @artefact SDK Store
 
-When an SDK is ready, packed, and tried,
-the only thing left is to publish it to the SDK Store
+When an SDK is ready, built, and tried,
+publish it to the SDK Store
 for use with |ws_markup|:
 
 .. code-block:: console
@@ -561,7 +553,7 @@ under the :samp:`24.04/beta` channel in the SDK Store.
 Use the SDK
 -----------
 
-The resulting SDK can be accessed by |ws_markup| as follows:
+The resulting SDK can be used with |ws_markup| as follows:
 
 .. code-block:: yaml
    :caption: workshop.yaml

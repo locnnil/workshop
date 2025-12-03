@@ -19,5 +19,4 @@ execute: |
   if lxc project info sdkcraft &>/dev/null; then
     run_sdkcraft clean
   fi
-  run_sdkcraft pack
   run_sdkcraft try
