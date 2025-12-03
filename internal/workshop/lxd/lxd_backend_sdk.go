@@ -349,7 +349,7 @@ func sdkVolume(volume *api.StorageVolume, lxdProject string, size uint64) (works
 			continue
 		}
 		if projectName != lxdProject {
-			// Ignore SDK layers, and workshops owned by other users.
+			// Ignore SDK snapshots, and workshops owned by other users.
 			continue
 		}
 		wp, pid := workshopProjectId(pathArgs[0])

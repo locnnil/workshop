@@ -258,12 +258,12 @@ func (f *wsOps) listSnapshots(c *check.C, name string, stash bool) []string {
 		"config.user.workshop.name=" + name,
 		"config.user.workshop.snapshot-type=" + snapshotType,
 	}
-	layers, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 	c.Assert(err, check.IsNil)
 
-	names := make([]string, 0, len(layers))
-	for _, layer := range layers {
-		names = append(names, layer.Config["user.workshop.sdk"])
+	names := make([]string, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		names = append(names, snapshot.Config["user.workshop.sdk"])
 	}
 	return names
 }

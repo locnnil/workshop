@@ -50,7 +50,7 @@ func lxdSnapshotsProjectName(user string) (string, error) {
 	return projectName("workshop-snapshots.", user)
 }
 
-// Create LXD projects (storing workshops and layers) for the user if they don't exist.
+// Create LXD projects (storing workshops and snapshots) for the user if they don't exist.
 func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 	names, err := conn.GetProjectNames()
 	if err != nil {
@@ -74,17 +74,17 @@ func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 	defer rev.Fail()
 	rev.Add(func() { _ = conn.DeleteProject(project, false) })
 
-	layers, err := lxdSnapshotsProjectName(username)
+	snapshots, err := lxdSnapshotsProjectName(username)
 	if err != nil {
 		return err
 	}
-	if !slices.Contains(names, layers) {
+	if !slices.Contains(names, snapshots) {
 		err = conn.CreateProject(api.ProjectsPost{
 			ProjectPut: api.ProjectPut{
 				Config:      lxdProjectConfig(username),
-				Description: fmt.Sprintf(`Workshop layers project for "%s" user`, username),
+				Description: fmt.Sprintf(`Workshop snapshots project for "%s" user`, username),
 			},
-			Name: layers,
+			Name: snapshots,
 		})
 		if err != nil {
 			return err

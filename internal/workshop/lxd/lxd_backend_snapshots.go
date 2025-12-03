@@ -59,7 +59,7 @@ func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn, layerConn, err := s.layerClients(ctx)
+	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -97,12 +97,12 @@ func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
 		Profiles:     []string{},
 	})
 
-	snapshot, err := sdkLayerName(sk)
+	snapshot, err := sdkSnapshotName(sk)
 	if err != nil {
 		return err
 	}
 	args := lxd.InstanceCopyArgs{Name: snapshot, InstanceOnly: true}
-	rop, err := layerConn.CopyInstance(conn, *inst, &args)
+	rop, err := snapshotConn.CopyInstance(conn, *inst, &args)
 	if err != nil {
 		return err
 	}
@@ -150,10 +150,10 @@ func deviceOverrides(devices map[string]map[string]string) (map[string]map[strin
 	return overrides, nil
 }
 
-// Generates a random suffix for the SDK, to avoid clashing with SDK layers
-// from other projects and workshops, while remaining withing the 63 characters
+// Generates a random suffix for the SDK, to avoid clashing with SDK snapshots
+// from other projects and workshops, while remaining within the 63 characters
 // allowed for LXD instance names.
-func sdkLayerName(sk string) (string, error) {
+func sdkSnapshotName(sk string) (string, error) {
 	bytes := make([]byte, 8)
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -162,23 +162,23 @@ func sdkLayerName(sk string) (string, error) {
 	return sk + "-" + hex.EncodeToString(bytes), nil
 }
 
-func (s *Backend) launchOrRebuildFromLayer(conn, layerConn lxd.InstanceServer, req api.InstancesPost, sdks []sdk.Id) error {
+func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost, sdks []sdk.Id) error {
 	projectId := req.Config[workshop.ConfigProjectId]
 	name := req.Config[workshop.ConfigWorkshopName]
 
 	// Find snapshots to keep and remove.
 	lastSdk := sdks[len(sdks)-1].Name
-	layerName, obstacles, err := s.layerNamesAfter(layerConn, projectId, name, lastSdk)
+	snapshotName, obstacles, err := s.snapshotNamesAfter(snapshotConn, projectId, name, lastSdk)
 	if err != nil {
 		return err
 	}
 
-	layer, _, err := layerConn.GetInstance(layerName)
+	snapshot, _, err := snapshotConn.GetInstance(snapshotName)
 	if err != nil {
 		return err
 	}
 	// Snapshots should only contain the requested devices and SDK mounts.
-	for key, device := range layer.Devices {
+	for key, device := range snapshot.Devices {
 		installOrder, s, err := maybeSdkId(key, device)
 		if err != nil {
 			return err
@@ -188,9 +188,9 @@ func (s *Backend) launchOrRebuildFromLayer(conn, layerConn lxd.InstanceServer, r
 				// SDK will be reinstalled as a separate task.
 				continue
 			}
-			return fmt.Errorf("internal error: snapshot %q has unexpected %q SDK", layer.Name, s.Name)
+			return fmt.Errorf("internal error: snapshot %q has unexpected %q SDK", snapshot.Name, s.Name)
 		} else if _, ok := req.Devices[key]; !ok {
-			return fmt.Errorf("internal error: snapshot %q has unexpected device %q", layer.Name, key)
+			return fmt.Errorf("internal error: snapshot %q has unexpected device %q", snapshot.Name, key)
 		}
 	}
 
@@ -199,18 +199,18 @@ func (s *Backend) launchOrRebuildFromLayer(conn, layerConn lxd.InstanceServer, r
 	// but we want to avoid having two snapshots for the same SDK and
 	// workshop until we introduce a way to distinguish them.
 	for _, obstacle := range obstacles {
-		if err := s.deleteLayer(layerConn, obstacle); err != nil {
+		if err := s.deleteSnapshot(snapshotConn, obstacle); err != nil {
 			return err
 		}
 	}
 
-	overrides := overrideLayer(*layer, req.InstancePut)
+	overrides := overrideSnapshot(*snapshot, req.InstancePut)
 	args := lxd.InstanceCopyArgs{
 		Name:         req.Name,
 		InstanceOnly: true,
 		Refresh:      true,
 	}
-	rop, err := conn.CopyInstance(layerConn, overrides, &args)
+	rop, err := conn.CopyInstance(snapshotConn, overrides, &args)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func (s *Backend) launchOrRebuildFromLayer(conn, layerConn lxd.InstanceServer, r
 	if err != nil {
 		return err
 	}
-	req.Config = mergeOptions(req.Config, layer.Config, inst.Config)
+	req.Config = mergeOptions(req.Config, snapshot.Config, inst.Config)
 	req.Architecture = inst.Architecture
 	op, err := conn.UpdateInstance(req.Name, req.InstancePut, etag)
 	if err != nil {
@@ -234,11 +234,11 @@ func (s *Backend) launchOrRebuildFromLayer(conn, layerConn lxd.InstanceServer, r
 	return op.Wait()
 }
 
-func overrideLayer(layer api.Instance, req api.InstancePut) api.Instance {
+func overrideSnapshot(snapshot api.Instance, req api.InstancePut) api.Instance {
 	// Set all requested options and remove snapshot options that aren't
 	// managed by LXD.
 	req.Config = maps.Clone(req.Config)
-	for k := range layer.Config {
+	for k := range snapshot.Config {
 		if _, ok := req.Config[k]; !ok && optionDomain(k) == customOption {
 			req.Config[k] = ""
 		}
@@ -247,9 +247,9 @@ func overrideLayer(layer api.Instance, req api.InstancePut) api.Instance {
 	if req.Profiles == nil {
 		req.Profiles = []string{}
 	}
-	req.Architecture = layer.Architecture
-	layer.SetWritable(req)
-	return layer
+	req.Architecture = snapshot.Architecture
+	snapshot.SetWritable(req)
+	return snapshot
 }
 
 func mergeOptions(req, source, target map[string]string) map[string]string {
@@ -281,7 +281,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn, layerConn, err := s.layerClients(ctx)
+	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -297,22 +297,22 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		}
 	})
 
-	layers, err := s.layerNames(layerConn, projectId, name, "sdk")
+	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
 	if err != nil {
 		return err
 	}
 
-	// Backup the workshop's SDK layers, modifying the instance name and
-	// layer type to distinguish the backups from the originals.
-	for _, layer := range layers {
-		newname := "stash-" + layer
+	// Backup the workshop's SDK snapshots, modifying the instance name and
+	// snapshot type to distinguish the backups from the originals.
+	for _, snapshot := range snapshots {
+		newname := "stash-" + snapshot
 		config := map[string]string{workshop.ConfigWorkshopSnapshotType: "stash-sdk"}
-		if err := s.copyInstance(layerConn, layerConn, layer, newname, false, config); err != nil {
+		if err := s.copyInstance(snapshotConn, snapshotConn, snapshot, newname, false, config); err != nil {
 			return err
 		}
 		rev.Add(func() {
-			if rerr := s.deleteLayer(layerConn, newname); rerr != nil {
-				logger.Noticef("On StashWorkshop: Cannot remove layer %q after failed stash operation: %v", newname, rerr)
+			if rerr := s.deleteSnapshot(snapshotConn, newname); rerr != nil {
+				logger.Noticef("On StashWorkshop: Cannot remove snapshot %q after failed stash operation: %v", newname, rerr)
 			}
 		})
 	}
@@ -320,9 +320,9 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	// Backup the workshop itself.
 	instance := InstanceName(name, projectId)
 	stashed := instanceStashName(name, projectId)
-	// Mark the copy as a stash to avoid confusing it with an SDK layer.
+	// Mark the copy as a stash to avoid confusing it with an SDK snapshot.
 	config := map[string]string{workshop.ConfigWorkshopSnapshotType: "stash"}
-	if err := s.copyInstance(conn, layerConn, instance, stashed, false, config); err != nil {
+	if err := s.copyInstance(conn, snapshotConn, instance, stashed, false, config); err != nil {
 		return err
 	}
 
@@ -336,42 +336,42 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn, layerConn, err := s.layerClients(ctx)
+	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	layers, err := s.layerNames(layerConn, projectId, name, "sdk")
+	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
 	if err != nil {
 		return err
 	}
-	stashLayers, err := s.layerNames(layerConn, projectId, name, "stash-sdk")
+	stashSnapshots, err := s.snapshotNames(snapshotConn, projectId, name, "stash-sdk")
 	if err != nil {
 		return err
 	}
 
-	// Remove the layers that were created after stashing. These are the
+	// Remove the snapshots that were created after stashing. These are the
 	// ones which don't have backups.
-	for _, layer := range layers {
-		if slices.Contains(stashLayers, "stash-"+layer) {
+	for _, snapshot := range snapshots {
+		if slices.Contains(stashSnapshots, "stash-"+snapshot) {
 			continue
 		}
-		if err := s.deleteLayer(layerConn, layer); err != nil {
+		if err := s.deleteSnapshot(snapshotConn, snapshot); err != nil {
 			return err
 		}
 	}
 
-	// Restore the layers that were deleted when restoring an SDK snapshot.
-	// These come from the backups whose source no longer exists.
-	for _, layer := range stashLayers {
-		name := strings.TrimPrefix(layer, "stash-")
-		if slices.Contains(layers, name) {
+	// Restore the snapshots that were deleted when restoring an SDK
+	// snapshot. These come from the backups whose source no longer exists.
+	for _, snapshot := range stashSnapshots {
+		name := strings.TrimPrefix(snapshot, "stash-")
+		if slices.Contains(snapshots, name) {
 			continue
 		}
-		// Restore the original layer type (stash-sdk -> sdk).
+		// Restore the original snapshot type (stash-sdk -> sdk).
 		config := map[string]string{workshop.ConfigWorkshopSnapshotType: "sdk"}
-		if err := s.copyInstance(layerConn, layerConn, layer, name, false, config); err != nil {
+		if err := s.copyInstance(snapshotConn, snapshotConn, snapshot, name, false, config); err != nil {
 			return err
 		}
 	}
@@ -381,62 +381,62 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	stash := instanceStashName(name, projectId)
 	// Avoid restoring the option which we added when stashing.
 	config := map[string]string{workshop.ConfigWorkshopSnapshotType: ""}
-	if err := s.copyInstance(layerConn, conn, stash, instance, true, config); err != nil {
+	if err := s.copyInstance(snapshotConn, conn, stash, instance, true, config); err != nil {
 		return err
 	}
 
 	return s.startWorkshop(conn, ctx, name)
 }
 
-// Find layer names for all SDKs in the given workshop or stash.
-func (s *Backend) layerNames(layerConn lxd.InstanceServer, pid, w string, kind string) ([]string, error) {
+// Find snapshot names for all SDKs in the given workshop or stash.
+func (s *Backend) snapshotNames(snapshotConn lxd.InstanceServer, pid, w string, kind string) ([]string, error) {
 	filters := []string{
 		"config.user.workshop.project-id=" + pid,
 		"config.user.workshop.name=" + w,
-		"config.user.workshop.layer-type=" + kind,
+		"config.user.workshop.snapshot-type=" + kind,
 	}
-	layers, err := layerConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := snapshotConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 	if err != nil {
 		return nil, err
 	}
 
-	names := make([]string, 0, len(layers))
-	for _, layer := range layers {
-		names = append(names, layer.Name)
+	names := make([]string, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		names = append(names, snapshot.Name)
 	}
 	return names, nil
 }
 
-// Find layer name for the given SDK and any subsequent SDKs.
-func (s *Backend) layerNamesAfter(layerConn lxd.InstanceServer, pid, w, sk string) (string, []string, error) {
+// Find snapshot name for the given SDK and any subsequent SDKs.
+func (s *Backend) snapshotNamesAfter(snapshotConn lxd.InstanceServer, pid, w, sk string) (string, []string, error) {
 	filters := []string{
 		"config.user.workshop.project-id=" + pid,
 		"config.user.workshop.name=" + w,
-		"config.user.workshop.layer-type=sdk",
+		"config.user.workshop.snapshot-type=sdk",
 	}
-	layers, err := layerConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := snapshotConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 	if err != nil {
 		return "", nil, err
 	}
 
-	idx := slices.IndexFunc(layers, func(inst api.Instance) bool {
+	idx := slices.IndexFunc(snapshots, func(inst api.Instance) bool {
 		return inst.Config[workshop.ConfigWorkshopSdk] == sk
 	})
 	if idx < 0 {
 		return "", nil, fmt.Errorf("%q SDK snapshot not found in %q workshop", sk, w)
 	}
-	devices := layers[idx].Devices
+	devices := snapshots[idx].Devices
 
 	// Any SDK which wasn't installed must have been added later.
-	obstacles := make([]string, 0, len(layers))
-	for _, layer := range layers {
-		device := workshop.SdkDeviceName(layer.Config[workshop.ConfigWorkshopSdk])
+	obstacles := make([]string, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		device := workshop.SdkDeviceName(snapshot.Config[workshop.ConfigWorkshopSdk])
 		if _, ok := devices[device]; !ok {
-			obstacles = append(obstacles, layer.Name)
+			obstacles = append(obstacles, snapshot.Name)
 		}
 	}
 
-	return layers[idx].Name, obstacles, nil
+	return snapshots[idx].Name, obstacles, nil
 }
 
 // Copies an instance from the src server to the dst server. The servers can be
@@ -535,26 +535,26 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	_, conn, err := s.layerClients(ctx)
+	_, conn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	layers, err := s.layerNames(conn, projectId, name, "stash-sdk")
+	snapshots, err := s.snapshotNames(conn, projectId, name, "stash-sdk")
 	if err == nil {
-		for _, layer := range layers {
-			err1 := s.deleteLayer(conn, layer)
+		for _, snapshot := range snapshots {
+			err1 := s.deleteSnapshot(conn, snapshot)
 			err = cmp.Or(err, err1)
 		}
 	}
 
-	err1 := s.deleteLayer(conn, instanceStashName(name, projectId))
+	err1 := s.deleteSnapshot(conn, instanceStashName(name, projectId))
 	return cmp.Or(err, err1)
 }
 
-func (s *Backend) deleteLayer(layerConn lxd.InstanceServer, layer string) error {
-	op, err := layerConn.DeleteInstance(layer)
+func (s *Backend) deleteSnapshot(snapshotConn lxd.InstanceServer, snapshot string) error {
+	op, err := snapshotConn.DeleteInstance(snapshot)
 	if err == nil {
 		err = op.Wait()
 	}
@@ -564,7 +564,7 @@ func (s *Backend) deleteLayer(layerConn lxd.InstanceServer, layer string) error 
 	return err
 }
 
-func (s *Backend) layerClients(ctx context.Context) (lxd.InstanceServer, lxd.InstanceServer, error) {
+func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.InstanceServer, error) {
 	user, ok := ctx.Value(workshop.ContextUser).(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
