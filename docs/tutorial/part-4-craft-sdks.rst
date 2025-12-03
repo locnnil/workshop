@@ -348,7 +348,7 @@ and configure the environment.
 
    Also, when invoked from any hooks,
    :command:`apt` is configured to exclude recommended or suggested packages
-   and answer 'yes' to all confirmation prompts.
+   and answer "yes" to all confirmation prompts.
 
 
 In the same directory,

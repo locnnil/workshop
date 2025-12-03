@@ -103,7 +103,7 @@ Recent versions:
 
 - `SDKcraft 0.1.12 <https://github.com/canonical/sdkcraft/releases/tag/0.1.12>`_
 - `SDKcraft 0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/0.1.11>`_
-- SDKcraft v0.1.10 didn't go public; also, version naming scheme dropped the 'v'
+- SDKcraft v0.1.10 didn't go public; also, version naming scheme dropped the "v"
 - `SDKcraft v0.1.9 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.9>`_
 - `SDKcraft v0.1.8 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.8>`_
 - `SDKcraft v0.1.7 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.7>`_
