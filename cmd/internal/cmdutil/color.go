@@ -20,6 +20,7 @@
 package cmdutil
 
 import (
+	"net/url"
 	"os"
 	"strings"
 
@@ -126,11 +127,11 @@ type Escapes struct {
 	Tick, Dash, Ellipsis, UpArrow, Star string
 }
 
-func (e *Escapes) MakeLink(text, url, fallback string) string {
+func (e *Escapes) MakeLink(text string, url *url.URL, fallback string) string {
 	if e.hyperlink == "" {
 		return fallback
 	}
-	return e.hyperlink + url + e.terminator + text + e.hyperlink + e.terminator
+	return e.hyperlink + url.String() + e.terminator + text + e.hyperlink + e.terminator
 }
 
 var (

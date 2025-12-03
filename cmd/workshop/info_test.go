@@ -188,14 +188,14 @@ var mockWorkshopWithMountsOutput = `name:     ws
 base:     ubuntu@22.04
 project:  %s
 status:   ready
-notes:    --
+notes:    %s
 sdks:
   go:
     tracking:   latest/edge
     installed:  1.8.0  2017-02-19  \(1\)
     mounts:
       plug-default:
-        host-source:      %s/workshop/id/17942561/ws/mount/go/mod-cache
+        host-source:      %s
         workshop-target:  /home/workshop/target
       plug-name:
         host-source:      /home/user/src
@@ -233,7 +233,8 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgUnset(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "~/.local/share"))
+	hostSource := "~/.local/share/workshop/id/17942561/ws/mount/go/mod-cache"
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "--", hostSource))
 	c.Check(n, check.Equals, 2)
 }
 
@@ -251,12 +252,12 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgSet(c *check.C) {
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1:
+		case 1, 3:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
 			fmt.Fprintln(w, r)
-		case 2:
+		case 2, 4:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops/%s", m.prjId, workshop))
 			w.WriteHeader(200)
@@ -268,8 +269,19 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgSet(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "~/xdghomedir"))
+	hostSource := "~/xdghomedir/workshop/id/17942561/ws/mount/go/mod-cache"
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "--", hostSource))
 	c.Check(n, check.Equals, 2)
+
+	cmd.Color = "always"
+	cmd.Unicode = "always"
+	m.stdout.Reset()
+
+	err = cmd.Run(cmd.Command(), []string{workshop})
+	c.Assert(err, check.IsNil)
+	hostSource = "\033]8;;file://.*/home/testuser/xdghomedir/workshop/id/17942561/ws/mount/go/mod-cache\033\\\\…/17942561/ws/mount/go/mod-cache\033]8;;\033\\\\"
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(mockWorkshopWithMountsOutput, m.prjDir, "–", hostSource))
+	c.Check(n, check.Equals, 4)
 }
 
 var mockWorkshopWithTunnels = `{
