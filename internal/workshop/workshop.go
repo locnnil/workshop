@@ -22,7 +22,7 @@ var (
 	ConfigWorkshopBase            = "user.workshop.base"
 	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
 	ConfigWorkshopSdk             = "user.workshop.sdk"
-	ConfigWorkshopLayerType       = "user.workshop.layer-type"
+	ConfigWorkshopSnapshotType    = "user.workshop.snapshot-type"
 	ConfigProjectPathDevice       = "workshop.project"
 	ConfigStateStorageDevice      = "workshop.state-storage"
 )

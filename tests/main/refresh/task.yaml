@@ -59,12 +59,12 @@ execute: |
     pid=$(cat .workshop.lock)
 
     lxc list \
-      --project workshop-layers.ubuntu \
+      --project workshop-snapshots.ubuntu \
       --format csv \
       --columns user.workshop.sdk \
       user.workshop.project-id="$pid" \
       user.workshop.name=ws-refresh-snapshots \
-      user.workshop.layer-type=sdk
+      user.workshop.snapshot-type=sdk
   }
 
   validate_snapshots() {

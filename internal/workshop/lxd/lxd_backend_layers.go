@@ -119,7 +119,7 @@ func configOverrides(pid, name, sk string, image workshop.BaseImage, config map[
 		workshop.ConfigWorkshopName:            name,
 		workshop.ConfigWorkshopBase:            image.Name,
 		workshop.ConfigWorkshopBaseFingerprint: image.Fingerprint,
-		workshop.ConfigWorkshopLayerType:       "sdk",
+		workshop.ConfigWorkshopSnapshotType:    "sdk",
 		workshop.ConfigWorkshopSdk:             sk,
 	}
 	for k := range config {
@@ -306,7 +306,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	// layer type to distinguish the backups from the originals.
 	for _, layer := range layers {
 		newname := "stash-" + layer
-		config := map[string]string{workshop.ConfigWorkshopLayerType: "stash-sdk"}
+		config := map[string]string{workshop.ConfigWorkshopSnapshotType: "stash-sdk"}
 		if err := s.copyInstance(layerConn, layerConn, layer, newname, false, config); err != nil {
 			return err
 		}
@@ -321,7 +321,7 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	instance := InstanceName(name, projectId)
 	stashed := instanceStashName(name, projectId)
 	// Mark the copy as a stash to avoid confusing it with an SDK layer.
-	config := map[string]string{workshop.ConfigWorkshopLayerType: "stash"}
+	config := map[string]string{workshop.ConfigWorkshopSnapshotType: "stash"}
 	if err := s.copyInstance(conn, layerConn, instance, stashed, false, config); err != nil {
 		return err
 	}
@@ -370,7 +370,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 			continue
 		}
 		// Restore the original layer type (stash-sdk -> sdk).
-		config := map[string]string{workshop.ConfigWorkshopLayerType: "sdk"}
+		config := map[string]string{workshop.ConfigWorkshopSnapshotType: "sdk"}
 		if err := s.copyInstance(layerConn, layerConn, layer, name, false, config); err != nil {
 			return err
 		}
@@ -380,7 +380,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	instance := InstanceName(name, projectId)
 	stash := instanceStashName(name, projectId)
 	// Avoid restoring the option which we added when stashing.
-	config := map[string]string{workshop.ConfigWorkshopLayerType: ""}
+	config := map[string]string{workshop.ConfigWorkshopSnapshotType: ""}
 	if err := s.copyInstance(layerConn, conn, stash, instance, true, config); err != nil {
 		return err
 	}
@@ -570,7 +570,7 @@ func (s *Backend) layerClients(ctx context.Context) (lxd.InstanceServer, lxd.Ins
 		return nil, nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
 	}
 
-	project, err := lxdLayersProjectName(user)
+	project, err := lxdSnapshotsProjectName(user)
 	if err != nil {
 		return nil, nil, err
 	}

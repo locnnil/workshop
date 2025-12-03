@@ -46,8 +46,8 @@ func lxdProjectName(user string) (string, error) {
 	return projectName("workshop.", user)
 }
 
-func lxdLayersProjectName(user string) (string, error) {
-	return projectName("workshop-layers.", user)
+func lxdSnapshotsProjectName(user string) (string, error) {
+	return projectName("workshop-snapshots.", user)
 }
 
 // Create LXD projects (storing workshops and layers) for the user if they don't exist.
@@ -74,7 +74,7 @@ func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 	defer rev.Fail()
 	rev.Add(func() { _ = conn.DeleteProject(project, false) })
 
-	layers, err := lxdLayersProjectName(username)
+	layers, err := lxdSnapshotsProjectName(username)
 	if err != nil {
 		return err
 	}
