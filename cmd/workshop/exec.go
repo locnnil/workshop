@@ -70,10 +70,10 @@ type ExecArgs struct {
 
 var shortExecHelp = "Run a command and wait for it to complete"
 var longExecHelp = `
-The 'exec' subcommand runs an arbitrary command in the specified workshop,
+The "exec" subcommand runs an arbitrary command in the specified workshop,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To accept an 'exec' command, the workshop must be 'Ready' or 'Waiting'.
+To accept an "exec" command, the workshop must be "Ready" or "Waiting".
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)
@@ -81,21 +81,21 @@ A command can run in two modes that determine how it handles standard streams:
 - Non-interactively (for scripts)
 
 
-To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
-'exec' deduces the mode based on the nature of its own streams:
+To set the mode explicitly, use "-i" or "-I". If neither is supplied,
+"exec" deduces the mode based on the nature of its own streams:
 
 - If stdin and stdout are terminals, the mode is interactive
 
 - Otherwise, it's non-interactive
 
 
-To separate the 'exec' subcommand from the command itself,
+To separate the "exec" subcommand from the command itself,
 use shell syntax such as *--*.
 This syntax is required if the workshop name is omitted.
 
 Notes:
 
-- To start a workshop before running commands in it, use 'workshop start'.
+- To start a workshop before running commands in it, use "workshop start".
 
 - You can set the working directory, environment variables, user and group ID
   for running the command in the workshop; reasonable defaults are provided.
@@ -103,27 +103,27 @@ Notes:
 
 var shortShellHelp = "Start an interactive terminal session for the workshop"
 var longShellHelp = `
-The 'shell' subcommand runs an interactive terminal session
+The "shell" subcommand runs an interactive terminal session
 in the specified workshop.
 
-To accept a 'shell' command, the workshop must be 'Ready' or 'Waiting'.
+To accept a "shell" command, the workshop must be "Ready" or "Waiting".
 
 
 Notes:
 
-- To start a workshop before running a terminal session, use 'workshop start'.
+- To start a workshop before running a terminal session, use "workshop start".
 
-- The subcommand is a shorthand for 'workshop exec';
-  it launches the login shell for 'workshop',
+- The subcommand is a shorthand for "workshop exec";
+  it launches the login shell for "workshop",
   the default non-privileged user in a workshop.
 `
 
 var shortRunHelp = "Run a workshop action and wait for it to complete"
 var longRunHelp = `
-The 'run' subcommand runs an action specified in the workshop definition file,
+The "run" subcommand runs an action specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
 
-To accept a 'run' command, the workshop must be 'Ready' or 'Waiting'.
+To accept a "run" command, the workshop must be "Ready" or "Waiting".
 A command can run in two modes that determine how it handles standard streams:
 
 - Interactively (for shell sessions)
@@ -131,22 +131,22 @@ A command can run in two modes that determine how it handles standard streams:
 - Non-interactively (for scripts)
 
 
-To set the mode explicitly, use '-i' or '-I'. If neither is supplied,
-'run' deduces the mode based on the nature of its own streams:
+To set the mode explicitly, use "-i" or "-I". If neither is supplied,
+"run" deduces the mode based on the nature of its own streams:
 
 - If stdin and stdout are terminals, the mode is interactive
 
 - Otherwise, it's non-interactive
 
 
-To separate the 'run' subcommand from the action and its arguments,
+To separate the "run" subcommand from the action and its arguments,
 use shell syntax such as *--*.
 This syntax is required if the workshop name is omitted
 and the action takes one or more arguments.
 
 Notes:
 
-- To start a workshop before running actions in it, use 'workshop start'.
+- To start a workshop before running actions in it, use "workshop start".
 
 - You can set the working directory, environment variables, user and group ID
   for running the action in the workshop; reasonable defaults are provided.
@@ -164,7 +164,7 @@ func (c *CmdExec) Command() *cobra.Command {
 		Short: shortExecHelp,
 		Long:  longExecHelp,
 		Example: `
-Run the 'go build main.go' command under the 'nimble' workshop
+Run the "go build main.go" command under the "nimble" workshop
 in the current project directory:
 $ workshop exec nimble go build main.go
 
@@ -178,7 +178,7 @@ The name is optional if the project has only one workshop
 and a separator is provided:
 $ workshop exec -I -- sh
 
-Run a command as root (the default is 'workshop'):
+Run a command as root (the default is "workshop"):
 $ workshop exec --uid 0 nimble id`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
@@ -237,7 +237,7 @@ func (c *CmdShell) Command() *cobra.Command {
 		Short: shortShellHelp,
 		Long:  longShellHelp,
 		Example: `
-Open the default login shell of the 'workshop' user into the 'nimble' workshop
+Open the default login shell of the "workshop" user into the "nimble" workshop
 in the current project directory:
 $ workshop shell nimble
 
@@ -275,7 +275,7 @@ func (c *CmdRun) Command() *cobra.Command {
 		Short: shortRunHelp,
 		Long:  longRunHelp,
 		Example: `
-Run the 'build' action under the 'nimble' workshop
+Run the "build" action under the "nimble" workshop
 in the current project directory:
 $ workshop run nimble build
 
@@ -408,7 +408,7 @@ func commonVars(f *pflag.FlagSet, flags *ExecFlags) {
 
 func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	if flags.Interactive && flags.NonInteractive {
-		return errors.New("'-i' incompatible with '-I'")
+		return errors.New("\"-i\" incompatible with \"-I\"")
 	}
 
 	cli, err := root.client()
@@ -602,10 +602,10 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 		switch sig {
 		case unix.SIGWINCH:
 			if !terminal {
-				logger.Debugf("Received 'SIGWINCH' signal in non-terminal mode, ignoring")
+				logger.Debugf("Received \"SIGWINCH\" signal in non-terminal mode, ignoring")
 				break
 			}
-			logger.Debugf("Received '%s' signal, updating window geometry", sig)
+			logger.Debugf("Received \"%s\" signal, updating window geometry", sig)
 			width, height, err := ptyutil.GetSize(unix.Stdout)
 			if err != nil {
 				logger.Debugf("Cannot get terminal size: %v", err)
@@ -618,20 +618,20 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 				break //nolint:staticcheck // SA4011 Keep "ineffective" break for consistency
 			}
 		case unix.SIGHUP:
-			logger.Debugf("Received 'SIGHUP' signal, forwarding and exiting")
+			logger.Debugf("Received \"SIGHUP\" signal, forwarding and exiting")
 			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
-				logger.Debugf("Cannot forward signal '%s': %v", sig, err)
+				logger.Debugf("Cannot forward signal \"%s\": %v", sig, err)
 				break
 			}
 			close(sighup)
 		case unix.SIGTERM, unix.SIGINT, unix.SIGQUIT, unix.SIGABRT,
 			unix.SIGTSTP, unix.SIGTTIN, unix.SIGTTOU, unix.SIGUSR1,
 			unix.SIGUSR2, unix.SIGSEGV, unix.SIGCONT:
-			logger.Debugf("Received '%s' signal, forwarding to running process", sig)
+			logger.Debugf("Received \"%s\" signal, forwarding to running process", sig)
 			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
-				logger.Debugf("Cannot forward signal '%s': %v", sig, err)
+				logger.Debugf("Cannot forward signal \"%s\": %v", sig, err)
 				break //nolint:staticcheck // SA4011 Keep "ineffective" break for consistency
 			}
 		}
@@ -649,7 +649,7 @@ func (c *CmdActions) Command() *cobra.Command {
 		Short: shortActionsHelp,
 		Long:  longActionsHelp,
 		Example: `
-List actions for the 'nimble' workshop in the current project directory:
+List actions for the "nimble" workshop in the current project directory:
 $ workshop actions nimble
 
 The name is optional if the project has only one workshop:

@@ -467,9 +467,9 @@ hooks:
 
 	err := cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.ErrorMatches, "cannot complete sketch refresh for \"ws\", execution is paused\n\n"+
-		"To proceed, resolve the issue and run 'workshop refresh --continue ws'\n"+
-		"To cancel and undo: 'workshop refresh --abort ws'\n"+
-		"To view more information: 'workshop tasks 43'")
+		"To proceed, resolve the issue and run \"workshop refresh --continue ws\"\n"+
+		"To cancel and undo: \"workshop refresh --abort ws\"\n"+
+		"To view more information: \"workshop tasks 43\"")
 
 	err = cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)
@@ -615,7 +615,7 @@ plugs:
 	m.mockMinimalSketchSdk(c, "ws", false, []byte(stored))
 
 	err := cmd.Run(cmdRestore, []string{"ws"})
-	c.Assert(err, check.ErrorMatches, `cannot restore: "sketch" SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
+	c.Assert(err, check.ErrorMatches, `cannot restore: "sketch" SDK exists; run "workshop sketch-sdk --remove" to remove it from the workshop`)
 }
 
 func (m *workshopSketch) TestSketchSdkEjectOK(c *check.C) {
@@ -672,7 +672,7 @@ slots:
 	c.Check(filepath.Join(notsketch, "hooks", "check-health"), testutil.FileEquals, `workshopctl set-health okay
 `)
 	c.Check(m.stdout.String(), check.Equals, `"ws" sketch ejected to ".workshop/notsketch"
-To use it, add "project-notsketch" to the SDK list and run 'workshop refresh ws'
+To use it, add "project-notsketch" to the SDK list and run "workshop refresh ws"
 `)
 }
 

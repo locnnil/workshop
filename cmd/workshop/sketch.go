@@ -37,28 +37,28 @@ func (c *CmdSketch) Command() *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Edit the sketch SDK and graft it onto the workshop",
 		Long: `
-This opens the 'sketch' SDK definition in the default text editor,
+This opens the "sketch" SDK definition in the default text editor,
 enabling rapid experiments and tweaks at the SDK level.
 
 Saving the definition and exiting the editor causes a refresh,
-which installs the configured 'sketch' SDK in the workshop.
+which installs the configured "sketch" SDK in the workshop.
 
-The '--stash' and '--restore' options respectively stash the SDK,
+The "--stash" and "--restore" options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
-The '--eject' option moves the SDK definition into the project directory,
+The "--eject" option moves the SDK definition into the project directory,
 so it can be added to multiple workshops or shared with others.
-The '--remove' option removes the SDK permanently.
+The "--remove" option removes the SDK permanently.
 
 Notes:
 
-- The 'sketch' SDK doesn't appear in the workshop definition
+- The "sketch" SDK doesn't appear in the workshop definition
   and cannot include build-time data such as parts.
 
-- In addition to hooks, the 'sketch' SDK can use interfaces
+- In addition to hooks, the "sketch" SDK can use interfaces
   by defining plugs and slots.
 `,
 		Example: `
-Edit the sketch SDK definition for the 'nimble' workshop
+Edit the sketch SDK definition for the "nimble" workshop
 and apply it after saving by automatically refreshing the workshop:
 $ workshop sketch-sdk nimble
 
@@ -106,7 +106,7 @@ hooks:
   # setup-project: |
     # go mod download
     # uv sync
-  # EXAMPLE: check-health runs after entire SDK setup completes; run 'workshopctl set-health okay' if OK.
+  # EXAMPLE: check-health runs after entire SDK setup completes; run "workshopctl set-health okay" if OK.
   # check-health: |
     # if CHECK_HEALTH_COMMAND ; then
     #   workshopctl set-health okay
@@ -114,7 +114,7 @@ hooks:
     #   workshopctl set-health --code=installation-failed error "Installation failed"
     # fi
 plugs:
-  # EXAMPLE: forward your SSH agent into the workshop, enabling 'git push' inside the workshop.
+  # EXAMPLE: forward your SSH agent into the workshop, enabling "git push" inside the workshop.
   # ssh-agent:
   #   interface: ssh-agent
   # EXAMPLE: expose well-known config file locations to the workshop
@@ -194,7 +194,7 @@ func restoreSketch(sketchdir, stashdir string) error {
 	// We don't overwrite current sketch SDK as opposed to overwriting stashed
 	// sketch SDK.
 	if _, err = os.Stat(sketchdir); err == nil {
-		return errors.New(`"sketch" SDK exists; run 'workshop sketch-sdk --remove' to remove it from the workshop`)
+		return errors.New(`"sketch" SDK exists; run "workshop sketch-sdk --remove" to remove it from the workshop`)
 	}
 
 	return osutil.Rename(stashdir, sketchdir)
@@ -367,9 +367,9 @@ func handleSketchRefreshErrors(wp string, chg *client.Change, err error) error {
 	case errors.Is(err, errWaitOnError):
 		return fmt.Errorf(`cannot complete sketch refresh for %q, execution is paused
 
-To proceed, resolve the issue and run 'workshop refresh --continue %s'
-To cancel and undo: 'workshop refresh --abort %s'
-To view more information: 'workshop tasks %s'`, wp, wp, wp, chg.ID)
+To proceed, resolve the issue and run "workshop refresh --continue %s"
+To cancel and undo: "workshop refresh --abort %s"
+To view more information: "workshop tasks %s"`, wp, wp, wp, chg.ID)
 	default:
 		return fmt.Errorf("%v\n%s sketch refresh aborted", err, wp)
 	}
@@ -508,7 +508,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 			fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
 		} else {
 			fmt.Fprintf(Stdout, "%q sketch ejected to %q\n", wp.Name, workshop.ProjectSdkPath("", c.name))
-			fmt.Fprintf(Stdout, "To use it, add %q to the SDK list and run 'workshop refresh %s'\n", "project-"+c.name, wp.Name)
+			fmt.Fprintf(Stdout, "To use it, add %q to the SDK list and run \"workshop refresh %s\"\n", "project-"+c.name, wp.Name)
 		}
 
 		return nil

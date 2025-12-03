@@ -29,35 +29,35 @@ This command updates the workshops listed as arguments. For each workshop,
 it checks the workshop definition and applies any required updates 
 to the base image, SDKs and interface connections.
 
-The '--wait-on-error' option pauses the refresh if an error occurs.
+The "--wait-on-error" option pauses the refresh if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.
 This option can only be used with a single workshop.
 If multiple workshops are listed and an error occurs,
 the operation is aborted and reverted for all of them.
 
-The '--restore' option restores the workshop from the snapshot that was 
+The "--restore" option restores the workshop from the snapshot that was 
 created after the last successful launch or refresh. Any changes made 
 to the workshop will be discarded.
 
 Notes:
 
-- The workshop must be 'Ready' to be refreshed. Throughout 
+- The workshop must be "Ready" to be refreshed. Throughout
   the refresh, all affected workshops remain unavailable for other changes.
 
 - Updated and newly added SDKs are installed in the order
   they are listed in the workshop definition.
- 
-- To construct a newly defined workshop, use 'workshop launch' instead.
+
+- To construct a newly defined workshop, use "workshop launch" instead.
 
 `,
 		Example: `
-Refresh the 'nimble' and 'jazzy' workshops in the current project directory:
+Refresh the "nimble" and "jazzy" workshops in the current project directory:
 $ workshop refresh nimble jazzy
 
 The name is optional if the project has only one workshop:
 $ workshop refresh
 
-Refresh workshop, but pause on any errors (won’t accept multiple workshops):
+Refresh workshop, but pause on any errors (won't accept multiple workshops):
 $ workshop refresh --wait-on-error
 
 After refresh paused on error, abort the operation:
@@ -72,7 +72,7 @@ $ workshop refresh --continue`,
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
 		false,
-		"Pause the operation on error; to resume, use '--continue' or '--abort'.")
+		"Pause the operation on error; to resume, use \"--continue\" or \"--abort\".")
 	cmd.PersistentFlags().BoolVar(&c.Continue, "continue",
 		false,
 		"Continue the previously paused operation.")
@@ -166,9 +166,9 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		w := workshopName(av[0])
 		return fmt.Errorf(`cannot complete refresh for %q, execution is paused
 
-To proceed, resolve the issue and run 'workshop refresh --continue %s'
-To cancel and undo: 'workshop refresh --abort %s'
-To view more information: 'workshop tasks %s'`, w, w, w, chg.ID)
+To proceed, resolve the issue and run "workshop refresh --continue %s"
+To cancel and undo: "workshop refresh --abort %s"
+To view more information: "workshop tasks %s"`, w, w, w, chg.ID)
 	default:
 		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
 	}

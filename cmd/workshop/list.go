@@ -31,18 +31,18 @@ This command enumerates all workshops in the project, printing a compact list:
 
 - Workshop: Workshop name, as set by its definition
 
-- Status:   Workshop status, such as 'Off', 'Ready', 'Pending' and so on
+- Status:   Workshop status, such as "Off", "Ready", "Pending" and so on
 
 - Notes:    Internal remarks on the overall state of the workshop
 
 
-The '--global' option lists all workshops from all projects in the system;
-however, it doesn't include any that are 'Off'.
+The "--global" option lists all workshops from all projects in the system;
+however, it doesn't include any that are "Off".
 
 
 Notes:
 
-- For details of a single workshop, use 'workshop info' instead.
+- For details of a single workshop, use "workshop info" instead.
 `,
 		Example: `
 List the workshops in the current project directory:
@@ -61,7 +61,7 @@ $ workshop list --global`,
 func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 	// check if both --project and --global were provided
 	if cmd.Parent().Flag("project").Changed && cmd.Flag("global").Changed {
-		return fmt.Errorf("cannot list: '--project' incompatible with '--global'")
+		return fmt.Errorf("cannot list: \"--project\" incompatible with \"--global\"")
 	}
 	return c.runList()
 }

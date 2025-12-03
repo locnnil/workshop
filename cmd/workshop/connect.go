@@ -46,14 +46,14 @@ that is specified as the second argument or deduced from the context.
 
 - Multiple plugs can be connected to the same slot, but not vice versa.
 
-- The 'workshop connections' output will list the connection as 'manual'.
+- The "workshop connections" output will list the connection as "manual".
 `,
 		Example: `
-Connect the 'mod-cache' mount interface plug of the 'go' SDK
-under the 'nimble' workshop in the current project directory:
+Connect the "mod-cache" mount interface plug of the "go" SDK
+under the "nimble" workshop in the current project directory:
 $ workshop connect nimble/go:mod-cache :mount
 
-A full version of the command that also lists the target SDK ('system'):
+A full version of the command that also lists the target SDK ("system"):
 $ workshop connect nimble/go:mod-cache nimble/system:mount`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.complete,
