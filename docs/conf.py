@@ -150,7 +150,7 @@ else:
 # Template and asset locations
 
 html_static_path = ["_static"]
-#templates_path = ["_templates"]
+templates_path = ["_templates"]
 
 
 #############
@@ -259,6 +259,7 @@ exclude_patterns = ["readme.rst", "reference/cli/workshop-*.rst", "coverage.md"]
 html_css_files = [
     "workshop.css",
     "flat-toctree.css",
+    "cookie-banner.css",
 ]
 
 
@@ -266,6 +267,7 @@ html_css_files = [
 
 html_js_files = [
     "flat-toctree.js",
+    "js/bundle.js",
 ]
 
 
