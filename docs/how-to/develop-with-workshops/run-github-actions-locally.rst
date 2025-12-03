@@ -260,7 +260,7 @@ For example:
      test:
        runs-on: ["${{ inputs.runner || 'ubuntu-latest' }}"]
        steps:
-         - uses: actions/checkout@v4
+         - uses: actions/checkout@v6
          - run: make test
 
 
@@ -342,7 +342,7 @@ the runner can be made conditional on the branch name:
        runs-on: ["${{ startsWith(github.ref_name, 'workshop-runner/') && 'workshop' || 'ubuntu-latest' }}"]
 
        steps:
-         - uses: actions/checkout@v4
+         - uses: actions/checkout@v6
          - run: make test
 
 
