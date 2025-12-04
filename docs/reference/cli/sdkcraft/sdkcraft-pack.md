@@ -12,7 +12,7 @@ Process parts and create the final artifact.
 
 ## Options:
 
-| | |
+| Option | Description |
 |-|-|
 | `--destructive-mode` | Build in the current host |
 | `--use-lxd` | Build in a LXD container. |
