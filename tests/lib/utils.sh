@@ -26,6 +26,15 @@ function prepare_environment() {
     systemctl disable apt-daily.timer || true
     systemctl disable apt-daily-upgrade.timer || true
 
+    # Configure apt to retry operations to handle flaky network issues
+    # This helps with mirror sync errors and transient network failures
+    cat <<EOF >/etc/apt/apt.conf.d/80-retries
+Acquire::Retries "10";
+Acquire::http::Timeout "30";
+Acquire::http::Pipeline-Depth "0";
+Acquire::CompressionTypes::Order { "gz"; "xz"; };
+EOF
+
     while pgrep -f "apt|dpkg" >/dev/null; do
         echo "Waiting for any apt-related process to release the lock..."
         sleep 5
@@ -60,7 +69,6 @@ EOF
     setup_lxd
 
     snap install --classic --channel=1.25/stable go
-    go env -w GOPROXY="https://proxy.golang.org,direct"
     snap install yq
 }
 

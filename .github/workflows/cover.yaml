@@ -41,11 +41,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          go env -w GOPROXY="https://proxy.golang.org,direct"
+          . "$GITHUB_WORKSPACE/tests/lib/retry.sh"
 
-          go install github.com/axw/gocov/gocov@v1.1.0
-          go install github.com/AlekSi/gocov-xml@v1.1.0
-          go install honnef.co/go/tools/cmd/staticcheck@latest
+          retry 5 go install github.com/axw/gocov/gocov@v1.1.0
+          retry 5 go install github.com/AlekSi/gocov-xml@v1.1.0
+          retry 5 go install honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Merge Coverage
         run: |

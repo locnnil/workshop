@@ -75,11 +75,11 @@ jobs:
           path: ${{ github.workspace }}/tests/
       - name: Install spread
         run: |
-          go env -w GOPROXY="https://proxy.golang.org,direct"
           # go install is not supported for forks...
           git clone https://github.com/dmitry-lyfar/spread
           pushd spread
-          go install ./...
+          . "$GITHUB_WORKSPACE/tests/lib/retry.sh"
+          retry 5 go install ./...
           popd
       - name: Set LXD storage size
         run: |
