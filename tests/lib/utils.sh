@@ -31,7 +31,6 @@ function prepare_environment() {
     cat <<EOF >/etc/apt/apt.conf.d/80-retries
 Acquire::Retries "10";
 Acquire::http::Timeout "30";
-Acquire::https::Timeout "30";
 Acquire::http::Pipeline-Depth "0";
 Acquire::CompressionTypes::Order { "gz"; "xz"; };
 EOF
@@ -70,7 +69,6 @@ EOF
     setup_lxd
 
     snap install --classic --channel=1.25/stable go
-    go env -w GOPROXY="https://proxy.golang.org,direct"
     snap install yq
 }
 
