@@ -13,7 +13,7 @@ execute: |
   echo "\"Fix\" the SDK error by creating an expected file"
   workshop_exec exec -- touch /home/workshop/setup-base-pass
 
-  echo "Check the 'workshop launch --continue' command reverts to the previous state"
+  echo "Check the \"workshop launch --continue\" command reverts to the previous state"
   workshop_exec launch --continue | MATCH "\"ws-launch-cont\" launched"
 
   echo "Check the workshop is in Ready state"

@@ -16,7 +16,7 @@ execute: |
   workshop_exec disconnect ws-disconn/test-sdk-mount:two :mount  
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:two.+-.+\-$"
 
-  echo "Check 'workshop remove' does not leave the undesired connections for the workshop (the automatic connections will exist after remove-launch)"
+  echo "Check \"workshop remove\" does not leave the undesired connections for the workshop (the automatic connections will exist after remove-launch)"
   workshop_exec remove
   workshop_exec launch
   workshop_exec connections ws-disconn | MATCH "^mount.+ws-disconn/test-sdk-mount:one.+:mount.+\-$"

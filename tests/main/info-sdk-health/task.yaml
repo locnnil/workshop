@@ -1,5 +1,5 @@
 summary: |
-  Check 'workshop info' SDK health reporting
+  Check "workshop info" SDK health reporting
 prepare: |
   apt-add-repository -y universe
   apt install expect -y --no-install-recommends
