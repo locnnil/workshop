@@ -103,6 +103,9 @@ def _flatten_bullet_list(bullet_list):
 
 def collect_flat_toctree_paths(app, env):
     """Pre-collect all flat-toctree paths before any pages are written."""
+    if app.builder.format != 'html':
+        return
+    
     paths = getattr(env, 'flat_toctree_paths', None)
     if paths is None:
         env.flat_toctree_paths = set()
@@ -129,6 +132,9 @@ def collect_flat_toctree_paths(app, env):
 
 def flatten_toctree(app, doctree, fromdocname):
     """Find toctrees with :class: flat-toctree and flatten them."""
+    if app.builder.format != 'html':
+        return
+    
     toctree_adapter = TocTree(app.env)
 
     for compound, toctree_node in _find_flat_toctrees(doctree):
