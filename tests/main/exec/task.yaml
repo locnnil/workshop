@@ -8,13 +8,16 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Check that one -- prevents further argument parsing"
+  echo "Check exec argument parsing"
+  workshop_exec exec ws-exec -- echo -e '\x66oo' | MATCH foo
   workshop_exec exec ws-exec echo -e '\x66oo' | MATCH foo
   workshop_exec exec -- echo -e '\x66oo' | MATCH foo
-  workshop_exec exec ws-exec -- echo -e '\x66oo' | MATCH foo
-  workshop_exec exec ws-exec echo -- -e '\x66oo' | MATCH foo
-  workshop_exec exec -- echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
+  workshop_exec exec -i echo -e '\x66oo' | MATCH foo
+  ! workshop_exec exec -I echo -e '\x66oo'
   workshop_exec exec ws-exec -- echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
+  workshop_exec exec ws-exec echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
+  workshop_exec exec -- echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
+  ! workshop_exec exec echo -- -e '\x66oo'
 
   echo "Check an environment variable can be set"
   workshop_exec exec --env 'Foo=bar' ws-exec bash -c '[ "$Foo" = bar ]'
@@ -60,24 +63,24 @@ execute: |
   [ "$exitcode" -eq 125 ]
 
   echo "Check actions"
-  workshop_exec run oneline | MATCH '^one line$'
+  workshop_exec run -- oneline | MATCH '^one line$'
   workshop_exec run ws-exec multiline > multiline.log
   MATCH '^multi$' < multiline.log
   MATCH '^line$' < multiline.log
   ! workshop_exec run ws-exec fail
   workshop_exec run -- file | MATCH '^script$'
-  workshop_exec run env | MATCH 'FOO=BAR' 
+  workshop_exec run -- env | MATCH 'FOO=BAR' 
 
   echo "Check actions can be updated without refreshing"
   sed -i 's/one line/1 LINE/g' workshop.yaml
-  workshop_exec run oneline | MATCH '^1 LINE$'
+  workshop_exec run ws-exec oneline | MATCH '^1 LINE$'
   sed -i 's/oneline/line1/' workshop.yaml
-  workshop_exec run line1 | MATCH '^1 LINE$'
+  workshop_exec run -- line1 | MATCH '^1 LINE$'
 
   echo "Check install-action error message"
   workshop_exec exec --uid 0 --gid 0 -- rm -f /var/lib/workshop/run/actions/line1
   workshop_exec exec --uid 0 --gid 0 -- mkdir /var/lib/workshop/run/actions/line1
-  ! workshop_exec run line1 > line1.log
+  ! workshop_exec run ws-exec line1 > line1.log
   MATCH '^error: cannot perform the following tasks:$' < line1.log
   MATCH '^- Install action "line1" \(.*\)$' < line1.log
 

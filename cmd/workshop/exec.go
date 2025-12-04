@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/canonical/x-go/strutil/shlex"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
@@ -62,10 +63,9 @@ type ExecFlags struct {
 }
 
 type ExecArgs struct {
-	workshop string
-	implicit bool
-	command  []string
-	action   bool
+	av            []string
+	argsLenAtDash int
+	action        bool
 }
 
 var shortExecHelp = "Run a command and wait for it to complete"
@@ -90,8 +90,13 @@ To set the mode explicitly, use "-i" or "-I". If neither is supplied,
 
 
 To separate the "exec" subcommand from the command itself,
-use shell syntax such as *--*.
-This syntax is required if the workshop name is omitted.
+use a separator (*--*).
+
+If you omit the separator,
+"exec" treats its first argument as the workshop name.
+If the project has no such workshop
+and the shell is interactive,
+the argument is treated as a command to run in the default workshop.
 
 Notes:
 
@@ -140,9 +145,13 @@ To set the mode explicitly, use "-i" or "-I". If neither is supplied,
 
 
 To separate the "run" subcommand from the action and its arguments,
-use shell syntax such as *--*.
-This syntax is required if the workshop name is omitted
-and the action takes one or more arguments.
+use a separator (*--*).
+
+If you omit the separator,
+"run" treats its first argument as the workshop name.
+If the project has no such workshop
+and the shell is interactive,
+the argument is treated as an action to run in the default workshop.
 
 Notes:
 
@@ -160,26 +169,30 @@ This command enumerates all actions in the workshop, printing a YAML map.
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "exec [flags] [<WORKSHOP>] [--] <COMMAND>...",
-		Args:  maybeNameAndCommand,
+		Args:  cobra.MinimumNArgs(1),
 		Short: shortExecHelp,
 		Long:  longExecHelp,
 		Example: `
 Run the "go build main.go" command under the "nimble" workshop
 in the current project directory:
-$ workshop exec nimble go build main.go
+$ workshop exec nimble -- go build main.go
 
 A similar command that sets an environment variable and the working directory:
-$ workshop exec --env GO111MODULE=off -w /project nimble go build -x
+$ workshop exec --env GO111MODULE=off -w /project nimble -- go build -x
+
+Run a command as root (the default is "workshop"):
+$ workshop exec --uid 0 nimble id
 
 Run a custom interactive shell:
 $ workshop exec -I nimble sh
 
-The name is optional if the project has only one workshop
-and a separator is provided:
-$ workshop exec -I -- sh
+If the project has only one workshop, the workshop name is optional:
+$ workshop exec -- sh
 
-Run a command as root (the default is "workshop"):
-$ workshop exec --uid 0 nimble id`,
+If the command doesn't overlap with a workshop name
+and the shell is interactive,
+the separator is also optional:
+$ workshop exec sh`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
 	}
@@ -191,43 +204,23 @@ $ workshop exec --uid 0 nimble id`,
 	return cmd
 }
 
-func maybeNameAndCommand(cmd *cobra.Command, av []string) error {
-	if cmd.ArgsLenAtDash() == 0 {
-		// Workshop name is implicit if -- precedes all positional arguments
-		return cobra.MinimumNArgs(1)(cmd, av)
-	}
-
-	argCount := len(av)
-	if cmd.ArgsLenAtDash() < 0 && slices.Contains(av, "--") {
-		argCount--
-	}
-
-	if argCount < 2 {
-		return fmt.Errorf("requires at least 2 arg(s), only received %d", argCount)
-	}
-	return nil
+func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
+	args := execArgs(av, cmd.ArgsLenAtDash())
+	return exec(c.root, &c.flags, args)
 }
 
-func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
-	args := &ExecArgs{}
-
-	// Infer workshop name if first positional argument is --
-	if cmd.ArgsLenAtDash() == 0 {
-		args.implicit = true
-		args.command = av
-	} else {
-		// Remove first -- if cobra didn't see it
-		if cmd.ArgsLenAtDash() < 0 {
-			if i := slices.Index(av, "--"); i >= 0 {
-				av = slices.Delete(slices.Clone(av), i, i+1)
-			}
-		}
-
-		args.workshop = av[0]
-		args.command = av[1:]
+func execArgs(av []string, argsLenAtDash int) *ExecArgs {
+	args := &ExecArgs{av: av, argsLenAtDash: argsLenAtDash}
+	// With SetInterspersed(false), cobra ignores all but the first
+	// positional argument, so we need to remove `--` manually. We leave
+	// it in if it's part of the command. To summarise:
+	// - workshop exec -- sh: cmd.ArgsLenAtDash() == 0, av == [sh]
+	// - workshop exec ws -- sh: cmd.ArgsLenAtDash() < 0, av == [ws -- sh]
+	if args.argsLenAtDash < 0 && 1 < len(av) && av[1] == "--" {
+		args.av = slices.Delete(slices.Clone(av), 1, 2)
+		args.argsLenAtDash = 1
 	}
-
-	return exec(c.root, &c.flags, args)
+	return args
 }
 
 func (c *CmdShell) Command() *cobra.Command {
@@ -251,27 +244,24 @@ $ workshop shell`,
 }
 
 func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
-	args := &ExecArgs{command: []string{"bash"}}
-
-	if len(av) > 0 {
-		args.workshop = av[0]
-	} else {
-		args.implicit = true
-	}
-
 	flags := &ExecFlags{
 		WorkingDir: "/project",
 		UserId:     workshop.Uid,
 		GroupId:    workshop.Gid,
 	}
-
+	// With no arguments, we call `exec -- bash`. With one argument, we
+	// call `exec av[0] -- bash`.
+	args := &ExecArgs{
+		av:            append(slices.Clone(av), "bash"),
+		argsLenAtDash: len(av),
+	}
 	return exec(c.root, flags, args)
 }
 
 func (c *CmdRun) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "run [flags] [<WORKSHOP>] [--] <ACTION> <ARGUMENTS>...",
-		Args:  maybeNameAndAction,
+		Args:  cobra.MinimumNArgs(1),
 		Short: shortRunHelp,
 		Long:  longRunHelp,
 		Example: `
@@ -280,15 +270,15 @@ in the current project directory:
 $ workshop run nimble build
 
 A similar command that sets an environment variable and the working directory:
-$ workshop run --env GO111MODULE=off -w /project nimble build
+$ workshop run --env GO111MODULE=off -w /project nimble -- build
 
-The workshop name is optional if the project only has one workshop:
-$ workshop run build
+If the project has only one workshop, the workshop name is optional:
+$ workshop run -- build
 
-Actions can accept arguments,
-if a separator or a workshop name is provided:
-$ workshop run -- build --debug
-`,
+If the action doesn't overlap with a workshop name
+and the shell is interactive,
+the separator is also optional:
+$ workshop run build`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.complete,
 	}
@@ -300,89 +290,77 @@ $ workshop run -- build --debug
 	return cmd
 }
 
-func maybeNameAndAction(cmd *cobra.Command, av []string) error {
-	if cmd.ArgsLenAtDash() == 0 {
-		// Workshop name is implicit if -- precedes all positional arguments
-		return cobra.MinimumNArgs(1)(cmd, av)
-	}
-
-	argCount := len(av)
-	if cmd.ArgsLenAtDash() < 0 && slices.Contains(av, "--") {
-		argCount--
-	}
-
-	if argCount < 1 {
-		return fmt.Errorf("requires at least 1 arg(s), only received %d", argCount)
-	}
-	return nil
-}
-
 func (c *CmdRun) Run(cmd *cobra.Command, av []string) error {
-	args := &ExecArgs{action: true}
-
-	// Infer workshop name if first positional argument is --
-	if cmd.ArgsLenAtDash() == 0 {
-		args.implicit = true
-		args.command = av
-	} else {
-		// Remove first -- if cobra didn't see it
-		if cmd.ArgsLenAtDash() < 0 {
-			if i := slices.Index(av, "--"); i >= 0 {
-				av = slices.Delete(slices.Clone(av), i, i+1)
-			}
-		}
-
-		// Allow `workshop run action`. Passing arguments requires -- though.
-		if len(av) <= 1 {
-			args.implicit = true
-			args.command = av
-		} else {
-			args.workshop = av[0]
-			args.command = av[1:]
-		}
-	}
-
+	args := execArgs(av, cmd.ArgsLenAtDash())
+	args.action = true
 	return exec(c.root, &c.flags, args)
 }
 
-func (c *CmdRun) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	actionIdx := 1
-	dashIdx := len(os.Args) - 2 - len(args)
-	// TODO: Replace with cmd.ArgsLenAtDash() == 0.
+func (c *CmdRun) complete(cmd *cobra.Command, av []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	// TODO: Replace argsLenAtDash with cmd.ArgsLenAtDash().
 	// See https://github.com/spf13/cobra/issues/1877.
-	if dashIdx >= 0 && os.Args[dashIdx] == "--" {
-		actionIdx = 0
-	} else if actionIdx < len(args) && args[actionIdx] == "--" {
-		actionIdx++
+	argsLenAtDash := -1
+	argsIdx := len(os.Args) - 1 - len(av)
+	if argsIdx > 0 && os.Args[argsIdx-1] == "--" {
+		argsLenAtDash = 0
 	}
+	args := execArgs(av, argsLenAtDash)
 
-	if actionIdx > len(args) {
-		names, directive := c.root.doCompleteWorkshopNames(args, []string{"Ready", "Waiting"})
-
-		// Try action names if no workshop names match partial argument.
-		partialMatch := func(name string) bool {
-			return strings.HasPrefix(name, toComplete)
-		}
-		if directive != cobra.ShellCompDirectiveError && !slices.ContainsFunc(names, partialMatch) {
-			names, directive := completeActions(c.root, args)
-			if directive != cobra.ShellCompDirectiveError {
-				return names, directive
-			}
-
-		}
-
-		return names, directive
-	}
-	if actionIdx < len(args) {
+	// We only complete workshop names and actions. Anything beyond that
+	// must be an argument to the action. The case len(args.av) == 1 and
+	// args.argsLenAtDash < 0 is ambiguous, we check later on.
+	if len(args.av) > 1 || (args.argsLenAtDash == 0 && len(args.av) > 0) {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	return completeActions(c.root, args)
+	cli, err := c.root.client()
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	project, err := cli.Project(c.root.project())
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	// Argument after a separator must be an action.
+	if args.argsLenAtDash >= 0 {
+		return completeActions(cli, project, args.av)
+	}
+
+	workshop, err := cli.SingleWorkshopName(project)
+	if len(args.av) >= 1 {
+		// If there's a single workshop and the first argument isn't
+		// the workshop name, it must be an action and we don't know
+		// how to complete the second argument.
+		if err == nil && args.av[0] != workshop {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		// Otherwise the second argument is an action.
+		return completeActions(cli, project, args.av)
+	}
+	// If there are multiple workshops, first argument must be a workshop name.
+	if err != nil {
+		return completeWorkshopNames(cli, project, args.av, []string{"Ready", "Waiting"})
+	}
+
+	// With a single workshop, complete actions first.
+	actions, directive := completeActions(cli, project, []string{workshop})
+	if directive == cobra.ShellCompDirectiveError {
+		return actions, directive
+	}
+	// If no actions match, but the workshop name does, complete it instead.
+	partialMatch := func(name string) bool { return strings.HasPrefix(name, toComplete) }
+	if !slices.ContainsFunc(actions, partialMatch) && strings.HasPrefix(workshop, toComplete) {
+		return []string{workshop}, cobra.ShellCompDirectiveNoFileComp
+	}
+	return actions, directive
 }
 
-func completeActions(root *CmdRoot, args []string) ([]string, cobra.ShellCompDirective) {
-	actionsCmd := CmdActions{root: root}
-	actions, err := actionsCmd.actions(args)
+func completeActions(cli *client.Client, p *client.Project, args []string) ([]string, cobra.ShellCompDirective) {
+	actions, err := listActions(cli, p, args)
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveError
@@ -421,16 +399,25 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		return err
 	}
 
-	workshop := args.workshop
-	if args.implicit {
-		workshop, err = cli.SingleWorkshopName(project)
-		if err != nil {
-			return err
-		}
+	// Specify Interactive=true if -i is given, or if stdin and stdout are TTYs.
+	stdinIsTerminal := ptyutil.IsTerminal(unix.Stdin)
+	stdoutIsTerminal := ptyutil.IsTerminal(unix.Stdout)
+	var interactive bool
+	if flags.Interactive {
+		interactive = true
+	} else if flags.NonInteractive {
+		interactive = false
+	} else {
+		interactive = stdinIsTerminal && stdoutIsTerminal
+	}
+
+	workshop, av, err := splitExecArgs(cli, project, interactive, args)
+	if err != nil {
+		return err
 	}
 
 	if args.action {
-		logger.Debugf("Running action %q", args.command)
+		logger.Debugf("Running action %q", av)
 	} else {
 		// Obtain an exec session as close to a real login shell as possible.
 		// This is required as an lxd exec call is a simple namespace exec, and LXD
@@ -449,8 +436,8 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 			"-c",
 			`exec -- "$0" "$@"`,
 		}
-		args.command = append(command, args.command...)
-		logger.Debugf("Running %q", args.command)
+		av = append(command, av...)
+		logger.Debugf("Running %q", av)
 	}
 
 	// Set up environment variables.
@@ -491,19 +478,6 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		env[key] = value
 	}
 
-	stdoutIsTerminal := ptyutil.IsTerminal(unix.Stdout)
-
-	// Specify Interactive=true if -i is given, or if stdin and stdout are TTYs.
-	stdinIsTerminal := ptyutil.IsTerminal(unix.Stdin)
-	var interactive bool
-	if flags.Interactive {
-		interactive = true
-	} else if flags.NonInteractive {
-		interactive = false
-	} else {
-		interactive = stdinIsTerminal && stdoutIsTerminal
-	}
-
 	// Record terminal state (and restore it before we exit).
 	if interactive && stdinIsTerminal {
 		oldState, err := ptyutil.MakeRaw(unix.Stdin)
@@ -530,7 +504,7 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	// ls produces access errors, those will not be filtered out to null as LXD
 	// combines stderr and stdout in the interactive mode.
 	opts := &client.ExecOptions{
-		Command:     args.command,
+		Command:     av,
 		Environment: env,
 		Action:      args.action,
 		WorkingDir:  flags.WorkingDir,
@@ -581,6 +555,62 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		// Exit with exit code 0 in this case (same behaviour as ssh).
 		return nil
 	}
+}
+
+// Extract a workshop and the command from the arguments.
+func splitExecArgs(cli *client.Client, project *client.Project, interactive bool, args *ExecArgs) (string, []string, error) {
+	// The first argument is a workshop name if followed by a separator,
+	// but there might not be enough arguments after that.
+	if args.argsLenAtDash == 1 {
+		return splitWorkshopAndCommand(args)
+	}
+
+	workshop, err := cli.SingleWorkshopName(project)
+	// When a separator is the first argument, we always infer the name.
+	if args.argsLenAtDash == 0 {
+		return workshop, args.av, err
+	}
+	// If there's no separator and the first argument doesn't match the
+	// inferred name, it can only be a command. Allowed in interactive mode
+	// since the user likely intended this interpretation. In scripts,
+	// the author may have named a workshop that no longer exists, so we
+	// suggest a more robust approach for non-interactive sessions.
+	if err == nil && workshop != args.av[0] {
+		if interactive {
+			return workshop, args.av, err
+		}
+		action, subject := actionSubject(args.action)
+		suggest := shlex.Join([]string{"workshop", action, "--", args.av[0]})
+		return "", nil, fmt.Errorf(`unclear if %q names a workshop or %s: try "%s"`, args.av[0], subject, suggest)
+	}
+	if err != nil {
+		// Return the error unless there are multiple workshops and the
+		// first argument names one of them.
+		var singleErr *client.SingleWorkshopError
+		if !errors.As(err, &singleErr) || !slices.Contains(singleErr.Names, args.av[0]) {
+			return "", nil, err
+		}
+	}
+
+	// The first argument is a workshop name, but there might not
+	// be enough arguments following it.
+	return splitWorkshopAndCommand(args)
+}
+
+func splitWorkshopAndCommand(args *ExecArgs) (string, []string, error) {
+	if len(args.av) > 1 {
+		return args.av[0], args.av[1:], nil
+	}
+
+	action, subject := actionSubject(args.action)
+	return "", nil, fmt.Errorf("cannot %s %s in %q: must specify %s", action, subject, args.av[0], subject)
+}
+
+func actionSubject(action bool) (string, string) {
+	if action {
+		return "run", "action"
+	}
+	return "exec", "command"
 }
 
 func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan struct{}, sighup chan<- struct{}) {
@@ -662,7 +692,17 @@ $ workshop actions`,
 }
 
 func (c *CmdActions) Run(cmd *cobra.Command, av []string) error {
-	actions, err := c.actions(av)
+	cli, err := c.root.client()
+	if err != nil {
+		return err
+	}
+
+	p, err := cli.Project(c.root.project())
+	if err != nil {
+		return err
+	}
+
+	actions, err := listActions(cli, p, av)
 	if err != nil || len(actions) == 0 {
 		return err
 	}
@@ -672,17 +712,7 @@ func (c *CmdActions) Run(cmd *cobra.Command, av []string) error {
 	return encoder.Encode(actions)
 }
 
-func (c *CmdActions) actions(av []string) (map[string]client.Action, error) {
-	cli, err := c.root.client()
-	if err != nil {
-		return nil, err
-	}
-
-	p, err := cli.Project(c.root.project())
-	if err != nil {
-		return nil, err
-	}
-
+func listActions(cli *client.Client, p *client.Project, av []string) (map[string]client.Action, error) {
 	if len(av) == 0 {
 		name, err := cli.SingleWorkshopName(p)
 		if err != nil {

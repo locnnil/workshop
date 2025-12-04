@@ -232,6 +232,10 @@ func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]str
 		return nil, cobra.ShellCompDirectiveError
 	}
 
+	return completeWorkshopNames(cli, project, args, status)
+}
+
+func completeWorkshopNames(cli *client.Client, project *client.Project, args []string, status []string) ([]string, cobra.ShellCompDirective) {
 	workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)

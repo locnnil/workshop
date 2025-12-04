@@ -90,6 +90,18 @@ type Remount struct {
 	HostSource string   `json:"host-source"`
 }
 
+type SingleWorkshopError struct {
+	Project string
+	Names   []string
+}
+
+func (e *SingleWorkshopError) Error() string {
+	if len(e.Names) == 0 {
+		return fmt.Sprintf("no workshops found in %q", e.Project)
+	}
+	return fmt.Sprintf("multiple workshops found: %s", strutil.Quoted(e.Names))
+}
+
 func (client *Client) List(opts *ListOptions) ([]*WorkshopInfo, []*WorkshopFile, error) {
 	query := url.Values{}
 	query.Set("state", "available")
@@ -158,11 +170,8 @@ func (client *Client) singleWorkshopOrFile(project *Project) (*WorkshopInfo, *Wo
 		}
 	}
 
-	if len(names) < 1 {
-		return nil, nil, fmt.Errorf("no workshops found in %q", project.Path)
-	}
-	if len(names) > 1 {
-		return nil, nil, fmt.Errorf("multiple workshops found: %s", strutil.Quoted(names))
+	if len(names) != 1 {
+		return nil, nil, &SingleWorkshopError{project.Path, names}
 	}
 
 	var workshop *WorkshopInfo
