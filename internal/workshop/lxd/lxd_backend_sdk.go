@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -401,7 +402,23 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	if _, exist := inst.Devices[mount.Name]; exist {
 		return fmt.Errorf("%q SDK is already installed", setup.Name)
 	}
-	installation := workshop.SdkInstallation{Setup: setup, InstallTime: workshop.InstallTimeNow()}
+
+	maxInstallOrder := 0
+	for key, device := range inst.Devices {
+		s, err := maybeSdkInstallation(key, device)
+		if err != nil {
+			return err
+		}
+		if s != nil {
+			maxInstallOrder = max(maxInstallOrder, s.InstallOrder)
+		}
+	}
+
+	installation := workshop.SdkInstallation{
+		Setup:        setup,
+		InstallOrder: maxInstallOrder + 1,
+		InstallTime:  workshop.InstallTimeNow(),
+	}
 	device, err := sdkToLxdDisk(installation, mount)
 	if err != nil {
 		return err
@@ -431,6 +448,7 @@ func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string
 	device["user.sdk.channel"] = sk.Channel
 	device["user.sdk.revision"] = sk.Revision.String()
 	device["user.sdk.sha3-384"] = sk.Sha3_384
+	device["user.sdk.install-order"] = strconv.FormatInt(int64(sk.InstallOrder), 10)
 
 	source, err := sk.Source.MarshalText()
 	if err != nil {
@@ -453,12 +471,17 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 		return nil, nil
 	}
 
+	installOrder, err := strconv.ParseInt(device["user.sdk.install-order"], 10, 0)
+	if err != nil {
+		return nil, err
+	}
 	s := &workshop.SdkInstallation{
 		Setup: sdk.Setup{
 			Name:     name,
 			Channel:  device["user.sdk.channel"],
 			Sha3_384: device["user.sdk.sha3-384"],
 		},
+		InstallOrder: int(installOrder),
 	}
 	if err := s.Source.UnmarshalText([]byte(device["user.sdk.source"])); err != nil {
 		return nil, err

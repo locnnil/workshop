@@ -613,7 +613,11 @@ func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup
 		return fmt.Errorf("%q SDK is already installed", setup.Name)
 	}
 
-	wp.Sdks[setup.Name] = workshop.SdkInstallation{Setup: setup, InstallTime: workshop.InstallTimeNow()}
+	wp.Sdks[setup.Name] = workshop.SdkInstallation{
+		Setup:        setup,
+		InstallOrder: len(wp.Sdks) + 1,
+		InstallTime:  workshop.InstallTimeNow(),
+	}
 
 	userDataDir := filepath.Join(b.BaseDir, "share")
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)

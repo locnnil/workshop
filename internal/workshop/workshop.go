@@ -1,13 +1,13 @@
 package workshop
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/canonical/workshop/internal/arch"
@@ -42,7 +42,9 @@ type Workshop struct {
 
 type SdkInstallation struct {
 	sdk.Setup
-	InstallTime time.Time `json:"install-time"`
+	// 1-based index of SDK installation (0 is reserved for the base).
+	InstallOrder int       `json:"install-order"`
+	InstallTime  time.Time `json:"install-time"`
 }
 
 func SdkDeviceName(sk string) string {
@@ -173,49 +175,21 @@ func (w *Workshop) SdkInfo(ctx context.Context, sdkName string) (*sdk.Info, erro
 // parsed from its sdk.yaml, such as base, plugs, slots, etc.
 func (w *Workshop) SdkInfosByInstallOrder(ctx context.Context) ([]*sdk.Info, error) {
 	var infos = make([]*sdk.Info, 0, len(w.Sdks))
-	for _, sdk := range w.Sdks {
+	for _, sdk := range w.SdksByInstallOrder() {
 		info, err := w.SdkInfo(ctx, sdk.Name)
 		if err != nil {
 			return nil, err
 		}
 		infos = append(infos, info)
 	}
-
-	orderMap := make(map[string]int)
-	for i, v := range w.File.Sdks {
-		orderMap[v.Name] = i
-	}
-
-	// The workshop definition which defines the install order may or may not
-	// contain the system SDK declared in an arbitrary place. Therefore, we have
-	// to make sure that the system SDK goes first and the sketch SDK goes last.
-	orderMap[sdk.System.String()] = -1
-	orderMap[sdk.Sketch] = len(w.File.Sdks)
-	sort.Slice(infos, func(i, j int) bool {
-		return orderMap[infos[i].Name] < orderMap[infos[j].Name]
-	})
-
 	return infos, nil
 }
 
 // Returns the list of SDKs of the workshop sorted by installation order.
 func (w *Workshop) SdksByInstallOrder() []SdkInstallation {
-	// Sort the SDKs in installation order.
-	orderMap := make(map[string]int)
-	for i, v := range w.File.Sdks {
-		orderMap[v.Name] = i
-	}
-	// The workshop definition which defines the install order may or may not
-	// contain the system SDK declared in an arbitrary place. Therefore, we have
-	// to make sure that the system SDK goes first and the sketch SDK goes last.
-	orderMap[sdk.System.String()] = -1
-	orderMap[sdk.Sketch] = len(w.File.Sdks)
-	sdks := slices.Collect(maps.Values(w.Sdks))
-	sort.Slice(sdks, func(i, j int) bool {
-		return orderMap[sdks[i].Name] < orderMap[sdks[j].Name]
+	return slices.SortedFunc(maps.Values(w.Sdks), func(a, b SdkInstallation) int {
+		return cmp.Compare(a.InstallOrder, b.InstallOrder)
 	})
-
-	return sdks
 }
 
 // Mounts returns a map of active SDK mounts for the workshop.
