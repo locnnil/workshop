@@ -12,8 +12,7 @@ Show the application version and exit
 
 ## Options:
 
-| | |
-|-|-|
+None.
 
 ## See also:
 

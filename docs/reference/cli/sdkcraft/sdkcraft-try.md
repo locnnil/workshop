@@ -12,13 +12,13 @@ Pack the SDK and copy it to the Workshop try area.
 
 ## Positional arguments:
 
-| | |
+| Argument | Description |
 |-|-|
 | `sdks` | Skip packing and try out specific SDK files. |
 
 ## Options:
 
-| | |
+| Option | Description |
 |-|-|
 | `--destructive-mode` | Build in the current host |
 | `--use-lxd` | Build in a LXD container. |

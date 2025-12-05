@@ -12,13 +12,13 @@ Download or retrieve artifacts defined for a part. If part names are specified o
 
 ## Positional arguments:
 
-| | |
+| Argument | Description |
 |-|-|
 | `parts` | Optional list of parts to process |
 
 ## Options:
 
-| | |
+| Option | Description |
 |-|-|
 | `--destructive-mode` | Build in the current host |
 | `--use-lxd` | Build in a LXD container. |

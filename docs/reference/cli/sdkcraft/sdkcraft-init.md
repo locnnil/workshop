@@ -12,8 +12,7 @@ Initialize an SDKcraft project by creating a minimalist, yet functional, sdk.yam
 
 ## Options:
 
-| | |
-|-|-|
+None.
 
 ## See also:
 

@@ -12,13 +12,13 @@ Stage built artifacts into a common staging area. If part names are specified on
 
 ## Positional arguments:
 
-| | |
+| Argument | Description |
 |-|-|
 | `parts` | Optional list of parts to process |
 
 ## Options:
 
-| | |
+| Option | Description |
 |-|-|
 | `--destructive-mode` | Build in the current host |
 | `--use-lxd` | Build in a LXD container. |
