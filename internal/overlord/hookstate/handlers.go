@@ -45,7 +45,6 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
-	stateDir := filepath.Join(dirs.WorkshopStateDir, "sdk", hook.Sdk)
 
 	execArgs := &workshop.ExecArgs{
 		UserId:  0,
@@ -64,12 +63,26 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	if hook.HookType == SaveState || hook.HookType == RestoreState {
-		execArgs.Environment["SDK_STATE_DIR"] = stateDir
+		what := workshop.StateStorageDir(prj.ProjectId, w)
+		where := dirs.WorkshopStateDir
+
+		usr, err := osutil.UserLookup(user)
+		if err != nil {
+			return err
+		}
+		uid, gid, err := osutil.UidGid(usr)
+		if err != nil {
+			return err
+		}
+		sdkStateDir := filepath.Join(what, "sdk", hook.Sdk)
+		if err := osutil.MkdirAllChown(sdkStateDir, 0755, uid, gid); err != nil {
+			return err
+		}
 
 		mount := workshop.Mount{
 			Name:  workshop.ConfigStateStorageDevice,
 			Type:  workshop.HostWorkshop,
-			What:  workshop.StateStorageDir(prj.ProjectId, w),
+			What:  what,
 			Where: dirs.WorkshopStateDir,
 		}
 		if err := h.backend.AddWorkshopMount(ctx, w, mount); err != nil {
@@ -80,37 +93,11 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 				logger.Noticef("RunHook on Do: Cannot unmount state storage %q: %v", mount.What, err1)
 			}
 		}()
+
+		execArgs.Environment["SDK_STATE_DIR"] = filepath.Join(where, "sdk", hook.Sdk)
 	}
 
 	switch hook.HookType {
-	case SaveState:
-		fs, err := h.backend.WorkshopFs(ctx, w)
-		if err != nil {
-			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
-		}
-		err = fs.MkdirAll(stateDir, 0755)
-		fs.Close()
-		if err != nil {
-			return fmt.Errorf("cannot run hook \"save-state\" for %q SDK: %v", hook.Sdk, err)
-		}
-
-		return h.executeHook(ctx, task, w, &hook, execArgs)
-	case RestoreState:
-		fs, err := h.backend.WorkshopFs(ctx, w)
-		if err != nil {
-			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
-		}
-		info, err := fs.Stat(stateDir)
-		fs.Close()
-		if err != nil {
-			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: %v", hook.Sdk, err)
-		}
-
-		if !info.IsDir() {
-			return fmt.Errorf("cannot run hook \"restore-state\" for %q SDK: state storage path is not a directory", hook.Sdk)
-		}
-
-		return h.executeHook(ctx, task, w, &hook, execArgs)
 	case SetupProject:
 		execArgs.Command = []string{
 			"sudo",
