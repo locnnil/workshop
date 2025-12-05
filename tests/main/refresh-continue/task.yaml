@@ -19,7 +19,7 @@ execute: |
   echo "\"Fix\" the SDK error by creating an expected file"
   workshop_exec exec -- touch /home/workshop/setup-base-pass
 
-  echo "Check the 'workshop refresh --continue' command reverts to the previous state"
+  echo "Check the \"workshop refresh --continue\" command reverts to the previous state"
   workshop_exec refresh --continue | MATCH "\"ws-refresh-cont\" refreshed"
 
   echo "Check the workshop is in Ready state"

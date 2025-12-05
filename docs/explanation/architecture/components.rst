@@ -211,7 +211,7 @@ providing snapshot and restore capabilities for efficient workshop updates.
 
 .. note::
 
-   The term 'project' in relation to |ws_markup|
+   The term "project" in relation to |ws_markup|
    can be used in two unrelated senses:
 
    - LXD projects, identified by their names

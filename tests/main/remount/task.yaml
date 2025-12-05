@@ -48,11 +48,11 @@ execute: |
   echo "Remount: old source removed"
   workshop_exec remount ws-remount/test-sdk-mount:two "${new_source}.1"
   rmdir "${new_source}.1"
-  workshop_exec remount ws-remount/test-sdk-mount:two "${new_source}.2" | MATCH "^WARNING: There is 1 new warning. See 'workshop warnings'.$"
+  workshop_exec remount ws-remount/test-sdk-mount:two "${new_source}.2" | MATCH "^WARNING: There is 1 new warning. See \"workshop warnings\".$"
   rmdir "${new_source}.2"
   mkdir "$new_source"
-  workshop_exec remount ws-remount/test-sdk-mount:two "$new_source" | MATCH "^WARNING: There are 2 new warnings. See 'workshop warnings'.$"
-  workshop_exec list | MATCH "^WARNING: There are 2 new warnings. See 'workshop warnings'.$"
+  workshop_exec remount ws-remount/test-sdk-mount:two "$new_source" | MATCH "^WARNING: There are 2 new warnings. See \"workshop warnings\".$"
+  workshop_exec list | MATCH "^WARNING: There are 2 new warnings. See \"workshop warnings\".$"
   workshop_exec warnings |
     tr -d '\n' | # remove newlines
     sed -e 's,\s\+, ,g' | # rename any extra spaces

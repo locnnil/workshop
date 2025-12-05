@@ -36,7 +36,7 @@ definitions and installing their components. For each workshop, it:
 - On success, ties the workshop to the project and starts it
 
 
-The '--wait-on-error' option pauses the launch if an error occurs.
+The "--wait-on-error" option pauses the launch if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.
 This option can only be used with a single workshop.
 If multiple workshops are listed and an error occurs,
@@ -45,14 +45,14 @@ the operation is aborted and no workshops are constructed.
 
 Notes:
 
-- Names listed as arguments must match respective 'name:' values in definitions.
+- Names listed as arguments must match respective "name:" values in definitions.
 
-- To update an existing workshop, use 'workshop refresh' instead.
+- To update an existing workshop, use "workshop refresh" instead.
 
 - SDKs are installed in the order they are listed in the definition.
 `,
 		Example: `
-Launch the 'nimble' and 'jazzy' workshops in the current project directory:
+Launch the "nimble" and "jazzy" workshops in the current project directory:
 $ workshop launch nimble jazzy
 
 The name is optional if the project has only one workshop:
@@ -63,7 +63,7 @@ $ workshop launch`,
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
 		false,
-		"Pause the operation on error; to resume, use '--continue' or '--abort'.")
+		"Pause the operation on error; to resume, use \"--continue\" or \"--abort\".")
 	cmd.PersistentFlags().BoolVar(&c.Continue, "continue",
 		false,
 		"Continue the previously paused operation.")
@@ -131,9 +131,9 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		w := workshopName(av[0])
 		return fmt.Errorf(`cannot complete launch for %q, execution is paused
 
-To proceed, resolve the issue and run 'workshop launch --continue %s'
-To cancel and undo: 'workshop launch --abort %s'
-To view more information: 'workshop tasks %s'`, w, w, w, changeId)
+To proceed, resolve the issue and run "workshop launch --continue %s"
+To cancel and undo: "workshop launch --abort %s"
+To view more information: "workshop tasks %s"`, w, w, w, changeId)
 	default:
 		return fmt.Errorf("%v\n%s launch aborted", err, strutil.Quoted(av))
 	}

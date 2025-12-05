@@ -7,7 +7,7 @@ execute: |
   echo "Check the workshop is in Waiting state"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Waiting[[:space:]]+wait-on-error$"
 
-  echo "Check the 'workshop launch --abort' command reverts to the previous state"
+  echo "Check the \"workshop launch --abort\" command reverts to the previous state"
   workshop_exec launch --abort | MATCH "\"ws-launch-abort\" launch aborted"
   workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Off[[:space:]]+-$"
 

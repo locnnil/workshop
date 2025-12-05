@@ -28,7 +28,7 @@ Only volumes are reported, not the workshops that use them.
 
 Notes:
 
-- For per-workshop information, use 'workshop info'.
+- For per-workshop information, use "workshop info".
 - Multiple entries may appear for a single SDK
   if several revisions are present simultaneously.
 `,

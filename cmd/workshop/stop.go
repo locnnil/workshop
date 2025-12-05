@@ -34,10 +34,10 @@ Notes:
 
 - When interrupted, the command attempts to gracefully revert its actions.
 
-- To start a stopped workshop, use 'workshop start'.
+- To start a stopped workshop, use "workshop start".
 `,
 		Example: `
-Stop the nimble and jazzy workshops in the current project directory:
+Stop the "nimble" and "jazzy" workshops in the current project directory:
 $ workshop stop nimble jazzy
 
 The name is optional if the project has only one workshop:

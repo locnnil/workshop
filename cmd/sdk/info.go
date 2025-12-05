@@ -31,8 +31,8 @@ and lists workshops where the SDK is installed.
 Notes:
 
 - The output shows the SDK's build date.
-- For an overview of SDK volumes, use 'sdk list'.
-- For per-workshop information, use 'workshop info'.
+- For an overview of SDK volumes, use "sdk list".
+- For per-workshop information, use "workshop info".
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: c.Run,
