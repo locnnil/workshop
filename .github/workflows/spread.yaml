@@ -1,8 +1,8 @@
-name: Spread
+name: Workshop end-to-end tests
 on: [workflow_dispatch, workflow_call]
 
 jobs:
-  build-snap:
+  build-workshop:
     runs-on: ubuntu-latest
     outputs:
       snap_workshop: ${{ steps.snapcraft_workshop.outputs.snap }}
@@ -10,14 +10,6 @@ jobs:
       - name: Checkout Workshop
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-      - name: Checkout Sdkcraft
-        uses: actions/checkout@v6
-        with:
-          repository: canonical/sdkcraft
-          show-progress: true
-          token: ${{ secrets.GH_SDKCRAFT }}
-          path: sdkcraft
           fetch-depth: 0
       - name: Build Workshop
         uses: canonical/action-build@v1
@@ -27,6 +19,18 @@ jobs:
         with:
           name: snap_workshop
           path: ${{ steps.snapcraft_workshop.outputs.snap }}
+
+  build-sdkcraft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Sdkcraft
+        uses: actions/checkout@v6
+        with:
+          repository: canonical/sdkcraft
+          show-progress: true
+          token: ${{ secrets.GH_SDKCRAFT }}
+          path: sdkcraft
+          fetch-depth: 0
       - name: Build Sdkcraft
         uses: canonical/action-build@v1
         id: snapcraft_sdkcraft
@@ -37,8 +41,34 @@ jobs:
         with:
           name: snap_sdkcraft
           path: ${{ steps.snapcraft_sdkcraft.outputs.snap }}
+
+  build-spread:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Workshop
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      - name: Build spread
+        run: |
+          # go install is not supported for forks...
+          git clone https://github.com/dmitry-lyfar/spread
+          pushd spread
+          . "$GITHUB_WORKSPACE/tests/lib/retry.sh"
+          retry 5 go build -o spread ./cmd/spread
+          popd
+      - name: Upload spread binary
+        uses: actions/upload-artifact@master
+        with:
+          name: spread_binary
+          path: spread/spread
   snap-tests:
-    needs: build-snap
+    needs: [build-workshop, build-sdkcraft, build-spread]
     strategy:
       fail-fast: false
       matrix:
@@ -73,14 +103,13 @@ jobs:
         with:
           name: snap_sdkcraft
           path: ${{ github.workspace }}/tests/
+      - name: Download spread binary
+        uses: actions/download-artifact@master
+        with:
+          name: spread_binary
+          path: /usr/local/bin
       - name: Install spread
-        run: |
-          # go install is not supported for forks...
-          git clone https://github.com/dmitry-lyfar/spread
-          pushd spread
-          . "$GITHUB_WORKSPACE/tests/lib/retry.sh"
-          retry 5 go install ./...
-          popd
+        run: sudo chmod +x /usr/local/bin/spread
       - name: Set LXD storage size
         run: |
           lxc storage set default volume.size=32GB
@@ -100,7 +129,7 @@ jobs:
           path: ${{ github.workspace }}.cover/lxd:ubuntu-24.04:tests/
           if-no-files-found: ignore
   publish:
-    needs: [build-snap, snap-tests]
+    needs: [build-workshop, build-sdkcraft, build-spread, snap-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Download snap artifact
@@ -112,5 +141,5 @@ jobs:
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_CREDENTIALS }}
         with:
-          snap: ${{ needs.build-snap.outputs.snap_workshop }}
+          snap: ${{ needs.build-workshop.outputs.snap_workshop }}
           release: edge

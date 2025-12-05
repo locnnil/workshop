@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# shellcheck source=tests/lib/retry.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/retry.sh"
+
 function setup_lxd() {
     if snap list lxd >/dev/null; then
         snap refresh --channel=6/stable lxd
@@ -49,7 +53,7 @@ EOF
         zfsutils-linux
         zsh
     )
-    apt-get update
+    retry 5 apt-get update
     apt-get install -y --no-install-recommends "${pkgs[@]}"
 
     mkdir -p /etc/systemd/system/snapd.service.d
