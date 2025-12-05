@@ -1,5 +1,8 @@
-name: Workshop end-to-end tests
-on: [workflow_dispatch, workflow_call]
+name: LXD Candidate Check
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
 
 jobs:
   build-deps:
@@ -10,14 +13,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04-64]
-        suite: [main/, docs-how-to/, docs-tutorial/part-1, docs-tutorial/part-2, docs-tutorial/part-3, docs-tutorial/part-4, integration/]
+        suite: [main/, integration/]
     runs-on: [self-hosted, linux, jammy, x64, xlarge]
     steps:
       - name: Install LXD
         uses: canonical/setup-lxd@main
         with:
-          channel: 6/stable
+          channel: 6/candidate
       - name: Cleanup job workspace
         run: |
           rm -rf "${{ github.workspace }}"
@@ -55,29 +57,3 @@ jobs:
         run: |
           mkdir ${{ github.workspace }}.cover
           spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}
-      - name: Trim trailing slash from matrix.suite
-        id: sanitize
-        run: |
-          suite_name="${{ matrix.suite }}"
-          sanitized_name="${suite_name%/}"
-      - name: Upload Coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: code-coverage-${{ steps.sanitize.outputs.sanitized_name }}
-          path: ${{ github.workspace }}.cover/lxd:ubuntu-24.04:tests/
-          if-no-files-found: ignore
-  publish:
-    needs: [build-deps, snap-tests]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download snap artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: snap_workshop
-      - uses: canonical/action-publish@v1
-        if: github.event_name == 'push'
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_CREDENTIALS }}
-        with:
-          snap: ${{ needs.build-deps.outputs.snap_workshop }}
-          release: edge

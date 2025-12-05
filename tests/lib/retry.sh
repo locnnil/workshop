@@ -1,7 +1,7 @@
 retry() {
     max="$1"
     shift
-    delay=1
+    delay=5
 
     i=1
     while [ "$i" -le "$max" ]; do
