@@ -13,12 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
@@ -112,7 +111,7 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 		}
 		sdks := ordered(req.installOrder, req.storeSdks, localSetups)
 
-		tasks := launch(w.state, req.file, req.fileText, req.image, sdks, project)
+		tasks := launch(w.state, req.file, req.image, sdks, project)
 		taskset = append(taskset, tasks)
 	}
 	return taskset, nil
@@ -121,8 +120,6 @@ func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projec
 type workshopReq struct {
 	// Up to date workshop definitions from the project directory.
 	file *workshop.File
-	// Marshalled file (to prevent data loss when passing through the state).
-	fileText string
 	// Up to date base image.
 	image workshop.BaseImage
 	// All possible SDKs (including sketch) in installation order.
@@ -146,11 +143,6 @@ func (w *WorkshopManager) findRemoteArtifacts(ctx context.Context, project works
 		file, err := project.Workshop(name)
 		if err != nil {
 			return nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
-		}
-
-		fileBlob, err := yaml.Marshal(file)
-		if err != nil {
-			return nil, fmt.Errorf("cannot %s %q: invalid workshop file: %w", action, name, err)
 		}
 
 		image, err := w.backend.GetBase(ctx, file.Base)
@@ -177,7 +169,6 @@ func (w *WorkshopManager) findRemoteArtifacts(ctx context.Context, project works
 		}
 		req := workshopReq{
 			file:         file,
-			fileText:     string(fileBlob),
 			image:        image,
 			installOrder: installOrder,
 			storeSdks:    setups,
@@ -549,24 +540,24 @@ func reinstallSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]s
 	return all
 }
 
-func launchWorkshop(st *state.State, name string, fileText string, snapshot workshop.Snapshot) *state.TaskSet {
-	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", name))
-	create.Set("workshop-file", fileText)
+func launchWorkshop(st *state.State, file *workshop.File, snapshot workshop.Snapshot) *state.TaskSet {
+	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
+	handlersetup.SetWorkshopFile(create, file)
 	create.Set("snapshot", snapshot)
 	return state.NewTaskSet(create)
 }
 
-func rebuildWorkshop(st *state.State, name string, fileText string, snapshot workshop.Snapshot) *state.TaskSet {
+func rebuildWorkshop(st *state.State, file *workshop.File, snapshot workshop.Snapshot) *state.TaskSet {
 	var summary string
 	if snapshot.IsBase() {
-		summary = fmt.Sprintf("Rebuild %q workshop", name)
+		summary = fmt.Sprintf("Rebuild %q workshop", file.Name)
 	} else {
 		last := snapshot.Sdks[len(snapshot.Sdks)-1].Name
-		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", name, last)
+		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", file.Name, last)
 	}
 
 	create := st.NewTask("rebuild-workshop", summary)
-	create.Set("workshop-file", fileText)
+	handlersetup.SetWorkshopFile(create, file)
 	create.Set("snapshot", snapshot)
 	return state.NewTaskSet(create)
 }
@@ -576,7 +567,7 @@ func startWorkshop(st *state.State, name string) *state.TaskSet {
 	return state.NewTaskSet(start)
 }
 
-func launch(st *state.State, file *workshop.File, fileText string, image workshop.BaseImage, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
+func launch(st *state.State, file *workshop.File, image workshop.BaseImage, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
 
@@ -602,7 +593,7 @@ func launch(st *state.State, file *workshop.File, fileText string, image worksho
 	addTaskSet(state.NewTaskSet(createDirs))
 
 	snapshot := workshop.Snapshot{Image: image}
-	create := launchWorkshop(st, file.Name, fileText, snapshot)
+	create := launchWorkshop(st, file, snapshot)
 	addTaskSet(create)
 
 	start := startWorkshop(st, file.Name)
@@ -693,7 +684,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 
 			plan := resolveRefresh(wp, req.file, req.image, sdks)
 			if plan.HasUpdates() {
-				tasks := refresh(w.state, plan, wp, req.file, req.fileText)
+				tasks := refresh(w.state, plan, wp, req.file)
 				taskset = append(taskset, tasks)
 			}
 		}
@@ -708,11 +699,6 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
 			}
 
-			fileBlob, err := yaml.Marshal(wp.File)
-			if err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: invalid workshop file: %w", name, err)
-			}
-
 			installed := wp.SdksByInstallOrder()
 			sdks := make([]sdk.Setup, 0, len(installed))
 			for _, sk := range installed {
@@ -720,7 +706,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 			}
 
 			plan := resolveRefresh(wp, wp.File, wp.Image, sdks)
-			tasks := refresh(w.state, plan, wp, wp.File, string(fileBlob))
+			tasks := refresh(w.state, plan, wp, wp.File)
 			taskset = append(taskset, tasks)
 		}
 	}
@@ -866,7 +852,7 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop
 	return plan
 }
 
-func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *workshop.File, fileText string) *state.TaskSet {
+func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *workshop.File) *state.TaskSet {
 	refresh := state.NewTaskSet()
 	prev := (*state.TaskSet)(nil)
 	addTaskSet := func(ts *state.TaskSet) {
@@ -915,7 +901,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file.Name, fileText, snapshot)
+	rebuild := rebuildWorkshop(st, file, snapshot)
 	addTaskSet(rebuild)
 
 	// Reinstall intact SDKs. The workshop definition can change plugs and

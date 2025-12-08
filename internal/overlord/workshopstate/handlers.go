@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"gopkg.in/tomb.v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
@@ -67,17 +66,11 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	var fileText string
 	st.Lock()
-	err = task.Get("workshop-file", &fileText)
+	wf, err := WorkshopFile(task, w)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop definition not found (task ID: %s)", w, task.ID())
-	}
-
-	var wf workshop.File
-	if err := yaml.Unmarshal([]byte(fileText), &wf); err != nil {
-		return fmt.Errorf("invalid workshop file: %w", err)
+		return err
 	}
 
 	var snapshot workshop.Snapshot
@@ -105,7 +98,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		})
 	}
 
-	if err := m.backend.LaunchOrRebuildWorkshop(ctx, &wf, snapshot); err != nil {
+	if err := m.backend.LaunchOrRebuildWorkshop(ctx, wf, snapshot); err != nil {
 		return err
 	}
 

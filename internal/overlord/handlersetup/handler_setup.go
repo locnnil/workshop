@@ -2,10 +2,12 @@ package handlersetup
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"gopkg.in/tomb.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -97,6 +99,45 @@ func Sdk(task *state.Task) (string, error) {
 	var s string
 	err := task.Get("sdk", &s)
 	return s, err
+}
+
+// SetWorkshopFile stores a workshop file in a Task as a YAML string, to avoid
+// converting ints -> JSON numbers -> floats. This can happen on unmarshalling
+// plug and slot attributes which are weakly typed.
+func SetWorkshopFile(task *state.Task, file *workshop.File) {
+	task.Set("workshop-file", (*fileText)(file))
+}
+
+// WorkshopFile reads a workshop file set by SetWorkshopFile.
+func WorkshopFile(task *state.Task, w string) (*workshop.File, error) {
+	var file workshop.File
+	if err := task.Get("workshop-file", (*fileText)(&file)); err != nil {
+		return nil, fmt.Errorf("internal error: %q workshop definition not found (task ID: %s)", w, task.ID())
+	}
+	return &file, nil
+}
+
+// fileText is a shim which (un)marshals a workshop file as a YAML string. It
+// folds YAML marshalling errors into JSON marshalling errors, to avoid having
+// to handle them in SetWorkshopFile.
+type fileText workshop.File
+
+func (f *fileText) MarshalJSON() ([]byte, error) {
+	text, err := yaml.Marshal(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(string(text))
+}
+
+func (f *fileText) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal([]byte(text), f)
 }
 
 func UserProjectWorkshop(task *state.Task) (string, *workshop.Project, string, error) {
