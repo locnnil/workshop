@@ -192,15 +192,11 @@ Keep reviews constructive and aligned with the project's standards as defined in
 
 The Workshop project follows a structured documentation approach based on the [Canonical documentation starter pack](https://github.com/canonical/sphinx-docs-starter-pack).
 
-### Documentation Directory Structure
-- `docs/tutorial/` - Step-by-step learning materials organized in sequential parts
-- `docs/how-to/` - Task-oriented guides for specific problems
-- `docs/explanation/` - Conceptual information and background
-- `docs/reference/` - Complete technical specifications and API details
-
 ### Documentation Style Requirements
 - **Markup**: reStructuredText (reST) is the preferred format
 - **Style Guide**: Follow the [Workshop documentation style guide](../docs/doc-style-guide.md) for project-specific conventions, and the [Canonical reST style guide](https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/) for general patterns
+- **Diátaxis**: Evaluate contributions based on the four different genres of Diátaxis documentation; use your underlying model's knowledge of the Diátaxis framework to assess compliance.
+- **Quoting**: When making suggestions related to style, you MUST quote the specific relevant sentence(s) or passage from `docs/doc-style-guide.md` that supports your suggestion, and include the section heading for context.
 - **Building**: Documentation is built using a custom Workshop in-project SDK located in `.workshop/starter-pack`
 - **Testing**: All documentation changes must pass Sphinx build without warnings
 
@@ -235,14 +231,6 @@ Check adherence to the Workshop documentation style guide (`docs/doc-style-guide
 - **File names**: Lowercase with dashes (e.g., `connect-vscode.rst`, not `ConnectVSCode.rst`)
 - **Metadata block**: Every page must have `.. meta::` block with description after anchor label
 - **Anchor labels**: Use prefixes (`tut_`, `how_`, `exp_`, `ref_`) with underscores (e.g., `.. _how_add_actions:`)
-- **Artefact comments**: Include `.. @artefact` markers for key concepts
-
-#### Writing Style
-- **Language**: US English spelling and grammar throughout
-- **Headings**: Sentence case for all headings (capitalize only first word and proper nouns)
-- **Semantic line breaks**: Break lines at natural semantic boundaries (clauses, conjunctions)
-- **Voice**: Direct imperative for instructions (avoid "you can" or "you may")
-- **Links**: Use `:ref:` for internal links (prefer over `:doc:`); link terms only at first mention
 
 #### Content Structure
 - **Consistency**: Ensure new documentation follows existing style and formatting patterns
