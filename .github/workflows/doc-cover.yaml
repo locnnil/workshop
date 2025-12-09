@@ -38,10 +38,10 @@ jobs:
             git config --global user.email 'github-actions[bot]@users.noreply.github.com'
             
             git add .
-            git commit -m "Update doc coverage map"
+            git commit -m "Doc: Update doc coverage map"
             git push --set-upstream origin $pr_branch
 
-            gh pr create --title "Update doc coverage map" --body "This PR updates the documentation coverage map." --base main
+            gh pr create --title "Doc: Update doc coverage map" --body "This PR updates the documentation coverage map." --base main
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
