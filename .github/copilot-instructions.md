@@ -196,7 +196,7 @@ The Workshop project follows a structured documentation approach based on the [C
 - **Markup**: reStructuredText (reST) is the preferred format
 - **Style Guide**: Follow the [Workshop documentation style guide](../docs/doc-style-guide.md) for project-specific conventions, and the [Canonical reST style guide](https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/) for general patterns
 - **Diátaxis**: Evaluate contributions based on the four different genres of Diátaxis documentation; use your underlying model's knowledge of the Diátaxis framework to assess compliance.
-- **Quoting**: When making suggestions related to style, you MUST quote the specific section from `docs/doc-style-guide.md` that supports your suggestion.
+- **Quoting**: When making suggestions related to style, you MUST quote the specific relevant sentence(s) or passage from `docs/doc-style-guide.md` that supports your suggestion, and include the section heading for context.
 - **Building**: Documentation is built using a custom Workshop in-project SDK located in `.workshop/starter-pack`
 - **Testing**: All documentation changes must pass Sphinx build without warnings
 
