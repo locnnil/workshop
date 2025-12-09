@@ -493,8 +493,8 @@ func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
 	<-change.Ready()
 
 	st.Lock()
+	defer st.Unlock()
 	c.Assert(change.Err(), check.IsNil)
-	st.Unlock()
 }
 
 func (s *apiSuite) TestGetWorkshops(c *check.C) {
@@ -1747,6 +1747,35 @@ func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
 	}
 }
 
+type launchOrRebuild struct {
+	file string
+	sdks []string
+}
+
+func (s *apiSuite) checkLaunchOrRebuildCalls(c *check.C, name string, args []launchOrRebuild) {
+	wpCalls := []fakebackend.LaunchOrRebuildCall{}
+	for _, sc := range s.b.LaunchOrRebuildCalls {
+		if sc.Workshop == name {
+			wpCalls = append(wpCalls, sc)
+		}
+	}
+
+	c.Assert(wpCalls, check.HasLen, len(args))
+
+	for i, arg := range args {
+		cached := wpCalls[i].Snapshot.Sdks
+		c.Assert(cached, check.HasLen, len(arg.sdks))
+		for j, sk := range arg.sdks {
+			c.Check(cached[j].Name, check.Equals, sk)
+		}
+
+		var f workshop.File
+		err := yaml.Unmarshal([]byte(arg.file), &f)
+		c.Assert(err, check.IsNil)
+		c.Assert(wpCalls[i].File, check.DeepEquals, &f)
+	}
+}
+
 func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
 	wpCalls := []fakebackend.SnapshotCall{}
 	for _, sc := range s.b.SnapshotCalls {
@@ -1759,26 +1788,6 @@ func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
 
 	for i, sk := range sdks {
 		c.Assert(wpCalls[i].Sdk, check.Equals, sk)
-	}
-}
-
-func (s *apiSuite) checkRestoreCalls(c *check.C, name string, sdks []string, files []string) {
-	wpCalls := []fakebackend.RestoreCall{}
-	for _, sc := range s.b.RestoreCalls {
-		if sc.Workshop == name {
-			wpCalls = append(wpCalls, sc)
-		}
-	}
-
-	c.Assert(wpCalls, check.HasLen, len(sdks))
-
-	for i, sk := range sdks {
-		c.Assert(wpCalls[i].Sdk, check.Equals, sk)
-
-		var f workshop.File
-		err := yaml.Unmarshal([]byte(files[i]), &f)
-		c.Assert(err, check.IsNil)
-		c.Assert(wpCalls[i].File, check.DeepEquals, &f)
 	}
 }
 
@@ -1915,9 +1924,17 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		"mount-conflict",
 	})
 
-	s.checkRestoreCalls(c, "basic", nil, nil)
-	s.checkRestoreCalls(c, "somebound", nil, nil)
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_allremoved})
+	s.checkLaunchOrRebuildCalls(c, "basic", []launchOrRebuild{
+		{basic, nil},
+	})
+
+	s.checkLaunchOrRebuildCalls(c, "somebound", []launchOrRebuild{
+		{somebound, nil},
+	})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_allremoved, []string{"system"}},
+	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "mount-conflict-1"})
 }
@@ -1999,7 +2016,10 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic_refreshed})
+	s.checkLaunchOrRebuildCalls(c, "basic", []launchOrRebuild{
+		{basic, nil},
+		{basic_refreshed, []string{"system"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
@@ -2079,7 +2099,10 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 		"test-sdk",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_extended})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_extended, []string{"system"}},
+	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1", "test-sdk-3-1"})
 }
@@ -2152,7 +2175,10 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_minusone})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_minusone, []string{"system", "test-sdk"}},
+	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", "system-1"})
 }
@@ -2231,7 +2257,10 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_newchan})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_newchan, []string{"system"}},
+	})
 }
 
 func updateSdkStoreRev(name string, rev int, meta string) func() {
@@ -2321,7 +2350,10 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks, []string{"system"}},
+	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{
 		"system-1",
@@ -2574,7 +2606,10 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_try})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks_try, nil},
+		{manysdks_try, []string{"system"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
@@ -2683,7 +2718,10 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"system"}, []string{manysdks_project})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks_project, nil},
+		{manysdks_project, []string{"system"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
@@ -2759,7 +2797,10 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_connsadded})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_connsadded, []string{"system", "test-sdk", "test-sdk-2"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
@@ -2837,7 +2878,10 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_plugadded})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_plugadded, []string{"system", "test-sdk", "test-sdk-2"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
@@ -2908,7 +2952,10 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk"}, []string{manysdks_system_extended})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_system_extended, []string{"system", "test-sdk"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
@@ -2984,7 +3031,10 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks_plugadded, nil},
+		{manysdks, []string{"system", "test-sdk", "test-sdk-2"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
@@ -3058,7 +3108,9 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", nil, nil)
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
 }
@@ -3134,7 +3186,10 @@ func (s *apiSuite) TestRefreshRestore(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks, []string{"system", "test-sdk", "test-sdk-2"}},
+	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
 }
@@ -3215,7 +3270,10 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_newbase, nil},
+	})
 }
 
 func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
@@ -3310,7 +3368,10 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks, nil},
+	})
 }
 
 func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
@@ -3381,7 +3442,10 @@ func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
 		"test-sdk",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{}, []string{})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks_system, nil},
+		{manysdks_minusone, nil},
+	})
 }
 
 func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
@@ -3445,7 +3509,10 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "basic", []string{"system"}, []string{basic})
+	s.checkLaunchOrRebuildCalls(c, "basic", []launchOrRebuild{
+		{basic_refreshed, nil},
+		{basic, []string{"system"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
@@ -3522,7 +3589,10 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 		"test-sdk-2",
 	})
 
-	s.checkRestoreCalls(c, "manysdks", []string{"test-sdk-2"}, []string{manysdks_broken})
+	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
+		{manysdks, nil},
+		{manysdks_broken, []string{"system", "test-sdk", "test-sdk-2"}},
+	})
 }
 
 func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {

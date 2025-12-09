@@ -98,7 +98,7 @@ func SdkSourcePath(userDataDir string, project Project, w, sk string, source sdk
 
 func SdkMount(userDataDir, pid, w string, setup sdk.Setup) Mount {
 	mount := Mount{
-		Name:      sdk.VolumeName(setup.Name, setup.Revision),
+		Name:      SdkDeviceName(setup.Name),
 		Where:     sdk.SdkDir(setup.Name),
 		MakeWhere: true,
 		ReadOnly:  true,

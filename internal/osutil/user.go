@@ -33,7 +33,6 @@ var (
 	UserLookup        = user.Lookup
 	UserLookupGroup   = user.LookupGroup
 	UserEnv           = userEnvironment
-	UserAndEnv        = userAndEnv
 	CurrentUserAndEnv = currentUserAndEnv
 	Timezone          = timezone
 )
@@ -174,7 +173,7 @@ func UserMaybeSudoUser() (*user.User, error) {
 	return real, nil
 }
 
-func userAndEnv(name string) (*user.User, map[string]string, error) {
+func UserAndEnv(name string) (*user.User, map[string]string, error) {
 	usr, err := UserLookup(name)
 	if err != nil {
 		return nil, nil, err
@@ -253,13 +252,6 @@ func FakeUserEnvironment(f func(user *user.User) (map[string]string, error)) fun
 	UserEnv = f
 	return func() {
 		UserEnv = userEnvironment
-	}
-}
-
-func FakeUserAndEnv(f func(name string) (*user.User, map[string]string, error)) func() {
-	UserAndEnv = f
-	return func() {
-		UserAndEnv = userAndEnv
 	}
 }
 

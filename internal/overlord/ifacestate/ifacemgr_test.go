@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"os/user"
 	"path/filepath"
 	"slices"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -34,7 +36,9 @@ type interfaceManagerSuite struct {
 	prj        workshop.Project
 	secBackend *ifacetest.TestSecurityBackend
 
-	restoreProjectId func()
+	restoreProjectId  func()
+	restoreUserLookup func()
+	restoreUserEnv    func()
 }
 
 var _ = check.Suite(&interfaceManagerSuite{})
@@ -42,6 +46,13 @@ var _ = check.Suite(&interfaceManagerSuite{})
 func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
 	var err error
+
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return nil, user.UnknownUserError("not found")
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
 
 	s.o = overlord.Fake()
 	s.state = s.o.State()
@@ -67,6 +78,8 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 
 func (s *interfaceManagerSuite) TearDownTest(c *check.C) {
 	s.restoreProjectId()
+	s.restoreUserEnv()
+	s.restoreUserLookup()
 	s.BaseTest.TearDownTest(c)
 }
 
@@ -111,8 +124,8 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []sdk
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	wsfs, err := s.wsbackend.WorkshopFs(ctx, ws)

@@ -523,62 +523,57 @@ func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]str
 	return all
 }
 
-func launchWorkshop(st *state.State, name string, fileText string, image workshop.BaseImage) *state.TaskSet {
-	construct := state.NewTaskSet()
+// Like installSdks but we skip setup-base and snapshot-sdk after restoring
+// from a snapshot which already contains the setup-base modifications.
+func reinstallSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
+	all := state.NewTaskSet()
 
 	var prev *state.Task
 	addTask := func(t *state.Task) {
-		construct.AddTask(t)
+		all.AddTask(t)
 		if prev != nil {
 			t.WaitFor(prev)
 		}
 		prev = t
 	}
 
-	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", name))
-	addTask(create)
-	create.Set("workshop-file", fileText)
-	create.Set("workshop-base", image)
+	for _, setup := range sdks {
+		retrieveTask := retrieveTasks[setup.Name]
 
-	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
-	addTask(start)
+		install := sdkstate.Install(st, setup.Name, retrieveTask)
+		addTask(install)
 
-	return construct
+		register := sdkstate.Register(st, setup.Name, retrieveTask)
+		addTask(register)
+	}
+	return all
 }
 
-func rebuildWorkshop(st *state.State, name string, fileText string, sdkSnapshot string, image workshop.BaseImage) *state.TaskSet {
-	construct := state.NewTaskSet()
+func launchWorkshop(st *state.State, name string, fileText string, snapshot workshop.Snapshot) *state.TaskSet {
+	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", name))
+	create.Set("workshop-file", fileText)
+	create.Set("snapshot", snapshot)
+	return state.NewTaskSet(create)
+}
 
-	var prev *state.Task
-	addTask := func(t *state.Task) {
-		construct.AddTask(t)
-		if prev != nil {
-			t.WaitFor(prev)
-		}
-		prev = t
-	}
-
+func rebuildWorkshop(st *state.State, name string, fileText string, snapshot workshop.Snapshot) *state.TaskSet {
 	var summary string
-	if sdkSnapshot == "" {
+	if snapshot.IsBase() {
 		summary = fmt.Sprintf("Rebuild %q workshop", name)
 	} else {
-		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", name, sdkSnapshot)
+		last := snapshot.Sdks[len(snapshot.Sdks)-1].Name
+		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", name, last)
 	}
 
 	create := st.NewTask("rebuild-workshop", summary)
-	addTask(create)
 	create.Set("workshop-file", fileText)
+	create.Set("snapshot", snapshot)
+	return state.NewTaskSet(create)
+}
 
-	if sdkSnapshot != "" {
-		create.Set("sdk-snapshot", sdkSnapshot)
-	} else {
-		create.Set("workshop-base", image)
-	}
-
+func startWorkshop(st *state.State, name string) *state.TaskSet {
 	start := st.NewTask("start-workshop", fmt.Sprintf("Start %q workshop", name))
-	addTask(start)
-
-	return construct
+	return state.NewTaskSet(start)
 }
 
 func launch(st *state.State, file *workshop.File, fileText string, image workshop.BaseImage, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
@@ -606,8 +601,12 @@ func launch(st *state.State, file *workshop.File, fileText string, image worksho
 	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", file.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	create := launchWorkshop(st, file.Name, fileText, image)
+	snapshot := workshop.Snapshot{Image: image}
+	create := launchWorkshop(st, file.Name, fileText, snapshot)
 	addTaskSet(create)
+
+	start := startWorkshop(st, file.Name)
+	addTaskSet(start)
 
 	install := installSdks(st, sdks, rmap)
 	addTaskSet(install)
@@ -766,7 +765,6 @@ type refreshPlan struct {
 	refresh []sdk.Setup
 	remove  []sdk.Setup
 
-	sdkSnapshot    string
 	installOrder   []string
 	installedOrder []string
 
@@ -828,9 +826,8 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop
 				break
 			}
 
-			plan.intact = append(plan.intact, s)
 			// No updates to the SDK - reuse its snapshot and keep looking.
-			plan.sdkSnapshot = s.Name
+			plan.intact = append(plan.intact, s)
 		}
 	}
 
@@ -884,10 +881,12 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 		prev = ts
 	}
 
+	snapshot := workshop.SdkSnapshot(plan.image, plan.Intact())
+
 	var base *state.Task
-	if plan.sdkSnapshot == "" {
+	if snapshot.IsBase() {
 		// Create download-base first so the task IDs are in a nice order.
-		base = retrieveBase(st, plan.image)
+		base = retrieveBase(st, snapshot.Image)
 	}
 	retrieve, rmap := retrieveSdks(st, plan.InstallOrRefresh())
 	if base != nil {
@@ -916,12 +915,16 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file.Name, fileText, plan.sdkSnapshot, plan.image)
+	rebuild := rebuildWorkshop(st, file.Name, fileText, snapshot)
 	addTaskSet(rebuild)
 
-	// Re-register intact SDKs (the workshop definition can change plugs and slots).
-	register := registerSdks(st, plan.Intact(), umap)
-	addTaskSet(register)
+	// Reinstall intact SDKs. The workshop definition can change plugs and
+	// slots, and SDKs need to be mounted after restoring a snapshot.
+	reinstall := reinstallSdks(st, plan.Intact(), umap)
+	addTaskSet(reinstall)
+
+	start := startWorkshop(st, file.Name)
+	addTaskSet(start)
 
 	// Install updated SDKs to the rebuilt workshop.
 	install := installSdks(st, plan.InstallOrRefresh(), rmap)
@@ -1005,21 +1008,6 @@ func autoconnectSdks(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet
 		prev = autoconnect
 	}
 	return autoconnectSet
-}
-
-func registerSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
-	prev := (*state.Task)(nil)
-	registerSet := state.NewTaskSet()
-	for _, s := range sdks {
-		register := sdkstate.Register(st, s.Name, retrieveTasks[s.Name])
-		registerSet.AddTask(register)
-
-		if prev != nil {
-			register.WaitFor(prev)
-		}
-		prev = register
-	}
-	return registerSet
 }
 
 func unregisterSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {

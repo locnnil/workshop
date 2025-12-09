@@ -14,9 +14,11 @@ import (
 )
 
 type sshAgentSuite struct {
-	iface          interfaces.Interface
-	projectId      string
-	restoreUserEnv func()
+	iface     interfaces.Interface
+	projectId string
+
+	restoreUserLookup func()
+	restoreUserEnv    func()
 }
 
 var _ = check.Suite(&sshAgentSuite{
@@ -26,13 +28,17 @@ var _ = check.Suite(&sshAgentSuite{
 func (s *sshAgentSuite) SetUpTest(c *check.C) {
 	s.projectId = "42424242"
 	testuser.HomeDir = c.MkDir()
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, map[string]string{"SSH_AUTH_SOCK": "/tmp/dir/ssh"}, nil
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return &testuser, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return map[string]string{"SSH_AUTH_SOCK": "/tmp/dir/ssh"}, nil
 	})
 }
 
 func (s *sshAgentSuite) TearDownTest(c *check.C) {
 	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 func (s *sshAgentSuite) TestName(c *check.C) {

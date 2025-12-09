@@ -2,7 +2,6 @@ package lxdbackend
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	lxd "github.com/canonical/lxd/client"
@@ -399,11 +399,31 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 		return err
 	}
 
-	inst.Devices[mount.Name] = mountToLxdDisk(mount)
+	if _, exist := inst.Devices[mount.Name]; exist {
+		return fmt.Errorf("%q SDK is already installed", setup.Name)
+	}
 
-	if err := addSdk(inst.Config, setup); err != nil {
+	maxInstallOrder := 0
+	for key, device := range inst.Devices {
+		s, err := maybeSdkInstallation(key, device)
+		if err != nil {
+			return err
+		}
+		if s != nil {
+			maxInstallOrder = max(maxInstallOrder, s.InstallOrder)
+		}
+	}
+
+	installation := workshop.SdkInstallation{
+		Setup:        setup,
+		InstallOrder: maxInstallOrder + 1,
+		InstallTime:  workshop.InstallTimeNow(),
+	}
+	device, err := sdkToLxdDisk(installation, mount)
+	if err != nil {
 		return err
 	}
+	inst.Devices[mount.Name] = device
 
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
@@ -422,26 +442,91 @@ func (s *Backend) mkdir(ctx context.Context, name string, path string) error {
 	return fs.MkdirAll(path, 0755)
 }
 
-func addSdk(config map[string]string, setup sdk.Setup) error {
-	var sdks map[string]workshop.SdkInstallation
-	value, exist := config[workshop.ConfigWorkshopSdks]
-	if !exist {
-		sdks = map[string]workshop.SdkInstallation{}
-	} else if err := json.Unmarshal([]byte(value), &sdks); err != nil {
-		return err
-	} else if _, exist := sdks[setup.Name]; exist {
-		return fmt.Errorf("%q SDK is already installed", setup.Name)
-	}
+func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string]string, error) {
+	device := mountToLxdDisk(mount)
 
-	sdks[setup.Name] = workshop.SdkInstallation{Setup: setup, InstallTime: workshop.InstallTimeNow()}
+	device["user.sdk.channel"] = sk.Channel
+	device["user.sdk.revision"] = sk.Revision.String()
+	device["user.sdk.sha3-384"] = sk.Sha3_384
+	device["user.sdk.install-order"] = strconv.FormatInt(int64(sk.InstallOrder), 10)
 
-	buf, err := json.Marshal(sdks)
+	source, err := sk.Source.MarshalText()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	config[workshop.ConfigWorkshopSdks] = string(buf)
+	device["user.sdk.source"] = string(source)
 
-	return nil
+	installTime, err := sk.InstallTime.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	device["user.sdk.install-time"] = string(installTime)
+
+	return device, nil
+}
+
+func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkInstallation, error) {
+	name, found := strings.CutPrefix(key, workshop.SdkDeviceName(""))
+	if !found {
+		return nil, nil
+	}
+
+	installOrder, err := strconv.ParseInt(device["user.sdk.install-order"], 10, 0)
+	if err != nil {
+		return nil, err
+	}
+	s := &workshop.SdkInstallation{
+		Setup: sdk.Setup{
+			Name:     name,
+			Channel:  device["user.sdk.channel"],
+			Sha3_384: device["user.sdk.sha3-384"],
+		},
+		InstallOrder: int(installOrder),
+	}
+	if err := s.Source.UnmarshalText([]byte(device["user.sdk.source"])); err != nil {
+		return nil, err
+	}
+	if err := s.Revision.UnmarshalText([]byte(device["user.sdk.revision"])); err != nil {
+		return nil, err
+	}
+	if err := s.InstallTime.UnmarshalText([]byte(device["user.sdk.install-time"])); err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func sdkToSnapshotDevice(installOrder int, sk sdk.Id) map[string]string {
+	return map[string]string{
+		"type":                   "none",
+		"user.sdk.sha3-384":      sk.Sha3_384,
+		"user.sdk.is-volume":     strconv.FormatBool(sk.IsVolume),
+		"user.sdk.install-order": strconv.FormatInt(int64(installOrder), 10),
+	}
+}
+
+func maybeSdkId(key string, device map[string]string) (int, *sdk.Id, error) {
+	name, found := strings.CutPrefix(key, workshop.SdkDeviceName(""))
+	if !found {
+		return 0, nil, nil
+	}
+
+	isVolume, err := strconv.ParseBool(device["user.sdk.is-volume"])
+	if err != nil {
+		return 0, nil, err
+	}
+	s := &sdk.Id{
+		Name:     name,
+		Sha3_384: device["user.sdk.sha3-384"],
+		IsVolume: isVolume,
+	}
+
+	installOrder, err := strconv.ParseInt(device["user.sdk.install-order"], 10, 0)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return int(installOrder), s, nil
 }
 
 func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
@@ -461,37 +546,11 @@ func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup
 		return err
 	}
 
-	if err := removeSdk(inst.Config, setup.Name); err != nil {
-		return err
-	}
-
-	delete(inst.Devices, sdk.VolumeName(setup.Name, setup.Revision))
+	delete(inst.Devices, workshop.SdkDeviceName(setup.Name))
 
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {
 		return err
 	}
 	return op.WaitContext(ctx)
-}
-
-func removeSdk(config map[string]string, sk string) error {
-	var sdks map[string]workshop.SdkInstallation
-	value, exist := config[workshop.ConfigWorkshopSdks]
-	if !exist {
-		return nil
-	}
-
-	if err := json.Unmarshal([]byte(value), &sdks); err != nil {
-		return err
-	}
-
-	delete(sdks, sk)
-
-	buf, err := json.Marshal(sdks)
-	if err != nil {
-		return err
-	}
-	config[workshop.ConfigWorkshopSdks] = string(buf)
-
-	return nil
 }

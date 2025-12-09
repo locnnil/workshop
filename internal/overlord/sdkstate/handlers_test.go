@@ -148,8 +148,8 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test-broken", Channel: "latest/stable"},
 	}}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 }
 

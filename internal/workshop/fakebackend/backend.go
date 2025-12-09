@@ -9,9 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/x-go/strutil"
 
 	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/progress"
@@ -65,10 +67,10 @@ type SnapshotCall struct {
 	Sdk      string
 }
 
-type RestoreCall struct {
+type LaunchOrRebuildCall struct {
 	Workshop string
-	Sdk      string
 	File     *workshop.File
+	Snapshot workshop.Snapshot
 }
 
 type WorkshopFsCallback func(ctx context.Context, name string) (fsutil.Fs, error)
@@ -101,11 +103,10 @@ type FakeWorkshopBackend struct {
 
 	AttachVolumeCalls []AttachVolumeCall
 
-	snapshotLock     sync.Mutex
-	SnapshotCalls    []SnapshotCall
-	SnapshotCallback func(ctx context.Context, workshop string, snapid string) error
-	RestoreCalls     []RestoreCall
-	RestoreCallback  func(ctx context.Context, workshop string, snapid string, File *workshop.File) error
+	snapshotLock         sync.Mutex
+	LaunchOrRebuildCalls []LaunchOrRebuildCall
+	SnapshotCalls        []SnapshotCall
+	SnapshotCallback     func(ctx context.Context, workshop string, snapid string) error
 
 	BaseDir string
 }
@@ -163,7 +164,7 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
-func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, image workshop.BaseImage) error {
+func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
 	user, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
@@ -177,45 +178,88 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	}
 	ws, ok := f.Workshops[projectId][file.Name]
 	if !ok {
-		ws = &FakeWorkshop{}
+		ws = &FakeWorkshop{Devices: map[string]map[string]string{}}
 		f.Workshops[projectId][file.Name] = ws
 	}
 	f.workshopLock.Unlock()
 
 	if ok {
-		// Remove SDKs.
-		sdks := ws.SdksByInstallOrder()
-		slices.Reverse(sdks)
-		for _, setup := range sdks {
-			if err := f.UninstallSdk(ctx, file.Name, setup.Setup); err != nil {
-				return err
-			}
+		if err := f.rebuildWorkshop(ctx, file, snapshot, ws); err != nil {
+			return err
 		}
-
-		// rebuild the workshop
-		ws.File = file
-		ws.Image = image
+	} else if !snapshot.IsBase() {
+		return fmt.Errorf("%q SDK is intact but workshop not launched", snapshot.Sdks[0].Name)
 	} else {
 		ws.Workshop = &workshop.Workshop{Backend: f,
-			Name:    file.Name,
-			Running: false,
-			Project: *prj,
-			Image:   image,
-			File:    file,
+			Name:     file.Name,
+			Running:  false,
+			Project:  *prj,
+			Image:    snapshot.Image,
+			File:     file,
+			Sdks:     map[string]workshop.SdkInstallation{},
+			Profiles: map[string]workshop.SdkProfile{},
 		}
 	}
 
-	wfspath, err := os.MkdirTemp(f.BaseDir, "*")
-	if err != nil {
-		return err
+	if snapshot.IsBase() {
+		wfspath, err := os.MkdirTemp(f.BaseDir, "*")
+		if err != nil {
+			return err
+		}
+		ws.WorkshopFilesystem = fsutil.NewBasePathFs(wfspath)
 	}
-	ws.WorkshopFilesystem = fsutil.NewBasePathFs(wfspath)
 
-	ws.Devices = make(map[string]map[string]string)
+	f.snapshotLock.Lock()
+	defer f.snapshotLock.Unlock()
 
-	ws.Sdks = make(map[string]workshop.SdkInstallation)
-	ws.Profiles = make(map[string]workshop.SdkProfile, 0)
+	call := LaunchOrRebuildCall{Workshop: ws.Name, File: file, Snapshot: snapshot}
+	f.LaunchOrRebuildCalls = append(f.LaunchOrRebuildCalls, call)
+	return nil
+}
 
+func (f *FakeWorkshopBackend) rebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot, ws *FakeWorkshop) error {
+	// Remove project mount
+	if _, ok := ws.Devices[workshop.ConfigProjectPathDevice]; ok {
+		if err := f.RemoveWorkshopMount(ctx, ws.Name, workshop.ConfigProjectPathDevice); err != nil {
+			return err
+		}
+	}
+
+	// Sanity check for devices and profiles
+	if len(ws.Profiles) > 0 {
+		names := strutil.Quoted(slices.Collect(maps.Keys(ws.Profiles)))
+		return fmt.Errorf("interfaces must be disconnected before building workshop: %s", names)
+	}
+	devices := slices.Collect(maps.Keys(ws.Devices))
+	devices = slices.DeleteFunc(devices, func(name string) bool {
+		return strings.HasPrefix(name, "sdk.")
+	})
+	if len(devices) > 0 {
+		names := strutil.Quoted(devices)
+		return fmt.Errorf("devices must be detached before rebuilding workshop: %s", names)
+	}
+
+	// Sanity check for intact SDKs.
+	if !snapshot.IsBase() && ws.Image != snapshot.Image {
+		return fmt.Errorf("%q SDK is intact but base image has changed", snapshot.Sdks[0].Name)
+	}
+	sdks := ws.SdksByInstallOrder()
+	for i, sk := range snapshot.Sdks {
+		if i >= len(sdks) || sk != sdk.SetupId(sdks[i].Setup) {
+			return fmt.Errorf("%q SDK is intact but doesn't match installed version", sk.Name)
+		}
+	}
+
+	// Remove SDKs.
+	slices.Reverse(sdks)
+	for _, setup := range sdks {
+		if err := f.UninstallSdk(ctx, ws.Name, setup.Setup); err != nil {
+			return err
+		}
+	}
+
+	ws.File = file
+	ws.Image = snapshot.Image
 	return nil
 }
 
@@ -486,6 +530,8 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	stashed := *wp
 	stashed.Workshop = &wcpy
 	stashed.Name = "stash-" + name
+	wcpy.Sdks = maps.Clone(wcpy.Sdks)
+	wcpy.Profiles = maps.Clone(wcpy.Profiles)
 
 	s.StashedWorkshops[projectId][stashed.Name] = &stashed
 	return nil
@@ -613,7 +659,11 @@ func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup
 		return fmt.Errorf("%q SDK is already installed", setup.Name)
 	}
 
-	wp.Sdks[setup.Name] = workshop.SdkInstallation{Setup: setup, InstallTime: workshop.InstallTimeNow()}
+	wp.Sdks[setup.Name] = workshop.SdkInstallation{
+		Setup:        setup,
+		InstallOrder: len(wp.Sdks) + 1,
+		InstallTime:  workshop.InstallTimeNow(),
+	}
 
 	userDataDir := filepath.Join(b.BaseDir, "share")
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
@@ -632,7 +682,7 @@ func (s *FakeWorkshopBackend) attachVolume(ctx context.Context, name string, mou
 	s.volumeLock.Lock()
 	defer s.volumeLock.Unlock()
 
-	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: name, Name: mount.Name})
+	s.AttachVolumeCalls = append(s.AttachVolumeCalls, AttachVolumeCall{Workshop: name, Name: mount.What})
 
 	wfs, err := s.WorkshopFs(ctx, name)
 	if err != nil {
@@ -678,11 +728,12 @@ func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, set
 	b.workshopLock.Unlock()
 	delete(wp.Sdks, setup.Name)
 
-	what := sdk.VolumeName(setup.Name, setup.Revision)
 	if setup.IsVolume() {
+		what := sdk.VolumeName(setup.Name, setup.Revision)
 		where := sdk.SdkDir(setup.Name)
 		return b.detachVolume(ctx, name, what, where)
 	}
+	what := workshop.SdkDeviceName(setup.Name)
 	return b.RemoveWorkshopMount(ctx, name, what)
 }
 
@@ -729,50 +780,6 @@ func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, sk string) err
 	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Sdk: sk})
 	if s.SnapshotCallback != nil {
 		return s.SnapshotCallback(ctx, name, sk)
-	}
-	return nil
-}
-
-func (s *FakeWorkshopBackend) Restore(ctx context.Context, name, sk string, file *workshop.File) error {
-	wp, err := s.Workshop(ctx, name)
-	if err != nil {
-		return err
-	}
-
-	sdks := wp.SdksByInstallOrder()
-	lastIntact := slices.IndexFunc(sdks, func(s workshop.SdkInstallation) bool { return s.Name == sk })
-	if lastIntact < 0 {
-		return fmt.Errorf("invalid snapshot %q", sk)
-	}
-	unwantedSdks := sdks[lastIntact+1:]
-	slices.Reverse(unwantedSdks)
-
-	fs, err := s.WorkshopFs(ctx, name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// Remove project mount
-	if err := fs.RemoveIfExists(workshop.WorkshopProjectPath); err != nil {
-		return err
-	}
-
-	// Remove SDKs from after the snapshot.
-	for _, u := range unwantedSdks {
-		if err := s.UninstallSdk(ctx, name, u.Setup); err != nil {
-			return err
-		}
-	}
-
-	wp.File = file
-
-	s.snapshotLock.Lock()
-	defer s.snapshotLock.Unlock()
-
-	s.RestoreCalls = append(s.RestoreCalls, RestoreCall{Workshop: name, Sdk: sk, File: file})
-	if s.RestoreCallback != nil {
-		return s.RestoreCallback(ctx, name, sk, file)
 	}
 	return nil
 }

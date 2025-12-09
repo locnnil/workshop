@@ -14,9 +14,10 @@ import (
 )
 
 type cameraSuite struct {
-	iface          interfaces.Interface
-	projectId      string
-	restoreUserEnv func()
+	iface             interfaces.Interface
+	projectId         string
+	restoreUserLookup func()
+	restoreUserEnv    func()
 }
 
 var _ = check.Suite(&cameraSuite{
@@ -25,13 +26,17 @@ var _ = check.Suite(&cameraSuite{
 
 func (s *cameraSuite) SetUpSuite(c *check.C) {
 	s.projectId = "42424242"
-	s.restoreUserEnv = osutil.FakeUserAndEnv(func(name string) (*user.User, map[string]string, error) {
-		return &testuser, nil, nil
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return &testuser, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
 	})
 }
 
 func (s *cameraSuite) TearDownSuite(c *check.C) {
 	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 func (s *cameraSuite) TestName(c *check.C) {

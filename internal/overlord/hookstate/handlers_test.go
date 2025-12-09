@@ -101,8 +101,8 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 
 	// Launch a workshop provinding no hooks
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 
 	s.state.Unlock()
@@ -522,8 +522,8 @@ func (s *hookSuite) TestHookWithMultipleHandlersIsError(c *check.C) {
 
 func (s *hookSuite) launchWorkshop(c *check.C, newsdk string) {
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{{Name: "one", Channel: "latest/stable"}}}
-	image := workshop.BaseImage{Name: wf.Base, Fingerprint: "fakeimage123"}
-	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, image)
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)

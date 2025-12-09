@@ -115,7 +115,8 @@ printf '%s\n' "$@"
 	_, _, err = bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
 
-	err = bd.LaunchOrRebuildWorkshop(ctx, wf, image)
+	snapshot := workshop.Snapshot{Image: image}
+	err = bd.LaunchOrRebuildWorkshop(ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
 	err = bd.StartWorkshop(ctx, "test")

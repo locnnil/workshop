@@ -93,6 +93,34 @@ type BaseImageManager interface {
 	DownloadBase(ctx context.Context, image BaseImage, report *progress.Reporter) error
 }
 
+// Snapshot identifies a workshop snapshot without depending on
+// backend-specific details. For example snapshot names in LXD are subject to
+// length limits and a restricted character set.
+type Snapshot struct {
+	Image BaseImage
+	Sdks  []sdk.Id
+}
+
+// BaseOnly identifies a "snapshot" which consists of a base image only.
+func BaseOnly(name, fingerprint string) Snapshot {
+	return Snapshot{Image: BaseImage{Name: name, Fingerprint: fingerprint}}
+}
+
+// SdkSnapshot identifies a snapshot consisting of a base image and a sequence
+// of installed SDKs.
+func SdkSnapshot(image BaseImage, sdks []sdk.Setup) Snapshot {
+	snapshot := Snapshot{Image: image, Sdks: make([]sdk.Id, 0, len(sdks))}
+	for _, s := range sdks {
+		snapshot.Sdks = append(snapshot.Sdks, sdk.SetupId(s))
+	}
+	return snapshot
+}
+
+// IsBase returns whether the snapshot is just a base image.
+func (s Snapshot) IsBase() bool {
+	return len(s.Sdks) == 0
+}
+
 type SdkManager interface {
 	// Import an SDK tarball as a new volume.
 	ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File) error
@@ -143,7 +171,6 @@ type Backend interface {
 	Stash
 	BaseImageManager
 	SdkManager
-	Snapshot
 
 	// The backend will attempt to load a project for the given path
 	// using its mapping between the path and a project id. If the project
@@ -165,12 +192,15 @@ type Backend interface {
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
 
-	// Launch a barebone workshop instance. If the workshop exists, wipe out its
-	// rootfs and rebuild it from the workshop file's base image. The
-	// configuration and devices of the rebuilt workshop will be reset to the
-	// default one. The given base fingerprint is combined with `file.Base` to
-	// determine the exact base image to use.
-	LaunchOrRebuildWorkshop(ctx context.Context, file *File, image BaseImage) error
+	// Launch a clean workshop instance. If the workshop exists, wipe out
+	// its rootfs and rebuild it from the given snapshot (which may be just
+	// a base image). Configuration and devices of the rebuilt workshop
+	// will be reset to the default one.
+	LaunchOrRebuildWorkshop(ctx context.Context, file *File, snapshot Snapshot) error
+
+	// Create a snapshot of the workshop's rootfs. Should be called after
+	// installing the given SDK.
+	Snapshot(ctx context.Context, workshop, sk string) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error
@@ -204,11 +234,6 @@ type Backend interface {
 	// and redirect its IO using args.ExecControls. ExecContext.Environment will
 	// contain full (actual)
 	Exec(ctx context.Context, name string, args *Execution) (ExecContext, error)
-}
-
-type Snapshot interface {
-	Snapshot(ctx context.Context, workshop, sk string) error
-	Restore(ctx context.Context, workshop, sk string, file *File) error
 }
 
 type cachedBackendKey struct{}

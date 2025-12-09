@@ -115,6 +115,7 @@ func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
 				Revision: sdk.R(1),
 				Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			},
+			InstallOrder: 2,
 		},
 		"test-sdk-2": {
 			Setup: sdk.Setup{
@@ -123,6 +124,7 @@ func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
 				Revision: sdk.R(1),
 				Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 			},
+			InstallOrder: 3,
 		},
 		"system": {
 			Setup: sdk.Setup{
@@ -131,6 +133,7 @@ func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
 				Revision: sdk.R(1),
 				Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
 			},
+			InstallOrder: 1,
 		},
 		"sketch": {
 			Setup: sdk.Setup{
@@ -139,6 +142,7 @@ func (f *workshopSuite) TestSdkSetupsByInstallOrder(c *check.C) {
 				Revision: sdk.R(-3),
 				Sha3_384: "dd4b5a4cba8539e858e5fdcc318e46d9a2940439b0d8e7bd9c6bfc8b474f410d91aee43f5d4e18cb2c1b7dbaaba06fc3",
 			},
+			InstallOrder: 4,
 		},
 	}
 
