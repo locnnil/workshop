@@ -766,32 +766,49 @@ Markdown is used for:
 - Auto-generated CLI reference (`reference/cli/sdkcraft/*.md`)
 - Special files (`security.md`, `coverage.md`)
 
-**Markdown release notes structure**
+**Release notes**
+
+Release notes are written in Markdown and stored in the `docs/release-notes/` directory.
+
+**File naming**
+
+Use the version number as the filename: `vX.Y.Z.md`.
+
+**Template**
+
+Use the following template for new release notes, ensuring all links and version numbers are updated:
 
 ````markdown
 ```{eval-rst}
 .. meta::
-   :description: Release notes for Workshop v0.1.28, highlighting key changes.
+   :description: Release notes for Workshop vX.Y.Z, highlighting [key features].
 ```
 
-# Workshop v0.1.28 release notes
+# Workshop vX.Y.Z release notes
 
-## 8 November 2025
+## [Day] [Month] [Year]
 
-These release notes cover new features and changes in Workshop v0.1.28.
+These release notes cover new features and changes in Workshop vX.Y.Z.
 
 ## Requirements and compatibility
 
 Workshop relies on Snap and LXD:
 
-- See the [Tutorial](https://...) for setup instructions.
-- Refer to the [Contribution Guide](https://...) for development prerequisites.
+- See the [Tutorial](https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/) for setup instructions.
+- Refer to the [Contribution Guide](https://canonical-workshop.readthedocs-hosted.com/stable/contributing/) for development prerequisites.
 
-## What's new in Workshop v0.1.28
+## What's new in Workshop vX.Y.Z
 
-**Feature name**
+[Brief summary of the release].
 
-Description of the feature...
+### [Feature Name]
+
+[Description of the feature and its benefit].
+
+----
+
+**Full Changelog**:
+https://github.com/canonical/workshop/compare/vX.Y.Z-1...vX.Y.Z
 ````
 
 **Metadata in Markdown files**
