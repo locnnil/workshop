@@ -52,19 +52,21 @@ Running actions
 ---------------
 
 To execute an action,
-use the :command:`workshop run` command followed by the action name:
+use the :command:`workshop run` command.
+Specify the workshop and its action,
+with an optional separator (:samp:`--`):
 
 .. @artefact workshop run
 
 .. code-block:: console
 
-   $ workshop run lint
+   $ workshop run dev -- lint
 
      main.go:1:
      ./main.go:5:2: "os" imported and not used (typecheck)
      package main
 
-   $ workshop run shellcheck
+   $ workshop run dev shellcheck
    
      In 1.sh line 10:
      cat /etc/passwd | grep root
@@ -73,7 +75,18 @@ use the :command:`workshop run` command followed by the action name:
 
 When you run an action using :command:`workshop run`,
 any additional arguments provided after the action name
-are passed directly to the action itself.
+are passed directly to the action itself:
+
+.. code-block:: console
+
+   $ workshop run dev -- lint --verbose
+
+
+In projects with a single workshop, the workshop name is optional:
+
+.. code-block:: console
+
+   $ workshop run -- lint
 
 
 Conclusion

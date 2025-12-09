@@ -307,7 +307,7 @@ To run these actions, you use the :command:`workshop run` command:
 
 .. code-block:: console
 
-   $ workshop run lint
+   $ workshop run dev -- lint
 
 
 When you thus invoke an action, it's injected into the workshop
@@ -321,7 +321,7 @@ run :command:`workshop actions`:
 
 .. code-block:: console
 
-   $ workshop actions
+   $ workshop actions dev
 
 
 This mechanism avoids the need to maintain helper scripts manually,
