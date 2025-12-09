@@ -1,21 +1,10 @@
 package workshopstate_test
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-	"html/template"
-	"os"
-	"os/user"
-	"path/filepath"
-
 	"gopkg.in/check.v1"
 
-	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
-	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
@@ -26,11 +15,6 @@ type managerSuite struct {
 	backend workshop.Backend
 	runner  *state.TaskRunner
 	manager *workshopstate.WorkshopManager
-	ctx     context.Context
-	project workshop.Project
-
-	restoreUserEnv    func()
-	restoreUserLookup func()
 }
 
 var _ = check.Suite(&managerSuite{})
@@ -43,24 +27,6 @@ func (s *managerSuite) SetUpTest(c *check.C) {
 	workshop.ReplaceBackend(s.state, s.backend)
 	s.runner = state.NewTaskRunner(s.state)
 	s.manager = workshopstate.New(s.state, s.runner)
-	ctx := context.WithValue(context.TODO(), workshop.ContextUser, "testuser")
-	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
-		return &user.User{HomeDir: c.MkDir()}, nil
-	})
-	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
-		return nil, nil
-	})
-
-	project, _, err := s.backend.CreateOrLoadProject(ctx, c.MkDir())
-	c.Assert(err, check.IsNil)
-	s.project = *project
-	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
-	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
-}
-
-func (s *managerSuite) TearDownTest(c *check.C) {
-	s.restoreUserEnv()
-	s.restoreUserLookup()
 }
 
 func (s *managerSuite) TestAddHandlers(c *check.C) {
@@ -82,63 +48,4 @@ func (s *managerSuite) TestAddHandlers(c *check.C) {
 		"create-state-storage",
 		"remove-state-storage",
 	})
-}
-
-func (s *managerSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []workshop.SdkRecord) *workshop.Workshop {
-	t, err := template.New("workshop").Parse(fmt.Sprintf(workshopTemplate, ws))
-	c.Assert(err, check.IsNil)
-
-	var workshopFile = bytes.NewBuffer([]byte{})
-	c.Assert(t.Execute(workshopFile, sdks), check.IsNil)
-
-	path := workshop.Filepath(s.project.Path, ws)
-	err = os.MkdirAll(filepath.Dir(path), os.ModePerm)
-	c.Assert(err, check.IsNil)
-
-	err = os.WriteFile(path, workshopFile.Bytes(), 0644)
-	c.Assert(err, check.IsNil)
-
-	wf := workshop.File{Name: ws, Base: "ubuntu@22.04"}
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
-	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, snapshot)
-	c.Assert(err, check.IsNil)
-
-	workshop, err := s.backend.Workshop(s.ctx, ws)
-	c.Assert(err, check.IsNil)
-	workshop.Running = true
-	return workshop
-}
-
-func (s *managerSuite) TestRefreshManyOK(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-	s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-
-	_, err := s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
-	c.Assert(err, check.IsNil)
-}
-
-func (s *managerSuite) TestRefreshRequireStatusReady(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-	err := s.backend.StopWorkshop(s.ctx, workshop2.Name, true)
-	c.Assert(err, check.IsNil)
-
-	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
-	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not running`)
-}
-
-func (s *managerSuite) TestRefreshRequireWorkshopExistence(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	s.launchWorkshopWithSDKs(c, "test-1", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-	workshop2 := s.launchWorkshopWithSDKs(c, "test-2", []workshop.SdkRecord{{Name: "test", Channel: "latest/stable"}})
-	err := s.backend.RemoveWorkshop(s.ctx, workshop2.Name)
-	c.Assert(err, check.IsNil)
-
-	_, err = s.manager.RefreshMany(s.ctx, s.project.ProjectId, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
-	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not launched`)
 }

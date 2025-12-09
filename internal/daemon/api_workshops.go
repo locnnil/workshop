@@ -409,6 +409,20 @@ func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 	return mode, nil
 }
 
+func launch(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]*state.TaskSet, error) {
+	project, err := mgr.Project(ctx, pid)
+	if err != nil {
+		return nil, err
+	}
+
+	manifests, err := mgr.LaunchManifests(ctx, project, reqData.Names)
+	if err != nil {
+		return nil, err
+	}
+
+	return mgr.LaunchMany(project, manifests), nil
+}
+
 func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
 	if reqData.Options.RefreshOption == "" {
 		reqData.Options.RefreshOption = "update"
@@ -417,16 +431,23 @@ func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
 	return conflict.ParseRefreshSetting(reqData.Options.RefreshOption)
 }
 
-func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+func refresh(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]*state.TaskSet, error) {
 	refreshOption, err := refreshOption(reqData)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	change := newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
-	taskset, err := mgr.RefreshMany(ctx, pid, reqData.Names, refreshOption)
+	project, err := mgr.Project(ctx, pid)
+	if err != nil {
+		return nil, err
+	}
 
-	return change, taskset, err
+	current, latest, err := mgr.RefreshManifests(ctx, project, reqData.Names, refreshOption)
+	if err != nil {
+		return nil, err
+	}
+
+	return mgr.RefreshMany(project, current, latest, refreshOption)
 }
 
 var validActions = []string{
@@ -488,11 +509,12 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		switch reqData.Action {
 		case "launch":
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+			taskset, err = launch(r.Context(), wsmgr, &reqData, projectId)
 		case "refresh":
-			change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
+			change = newWorkshopChange(st, "refresh", user, projectId, reqData.Action, reqData.Names)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+			taskset, err = refresh(r.Context(), wsmgr, &reqData, projectId)
 		case "start":
 			change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
 			taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId)

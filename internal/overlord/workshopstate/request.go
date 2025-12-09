@@ -2,14 +2,12 @@ package workshopstate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
 	"slices"
 	"time"
 
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
@@ -34,81 +32,13 @@ const (
 
 var checkHealthTimeout = 5 * time.Second
 
-func (w *WorkshopManager) loadProject(ctx context.Context, id string) (workshop.Project, error) {
-	username, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return workshop.Project{}, fmt.Errorf("context key user not found")
+func (w *WorkshopManager) LaunchMany(project workshop.Project, manifests []Manifest) []*state.TaskSet {
+	tasksets := make([]*state.TaskSet, 0, len(manifests))
+	for _, manifest := range manifests {
+		tasks := launch(w.state, project, manifest)
+		tasksets = append(tasksets, tasks)
 	}
-
-	projects, err := w.backend.Projects(ctx)
-	if err != nil {
-		return workshop.Project{}, err
-	}
-
-	idx := slices.IndexFunc(projects[username], func(p workshop.Project) bool { return p.ProjectId == id })
-	if idx == -1 {
-		return workshop.Project{}, fmt.Errorf("no project found with \"id\" %v", id)
-	}
-	return projects[username][idx], nil
-}
-
-func (w *WorkshopManager) LaunchMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
-	username, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key user not found")
-	}
-
-	usr, env, err := osutil.UserAndEnv(username)
-	if err != nil {
-		return nil, err
-	}
-	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-
-	project, err := w.loadProject(ctx, projectId)
-	if err != nil {
-		return nil, err
-	}
-	finder := localSdkFinder{
-		backend:     w.backend,
-		user:        usr,
-		userDataDir: userDataDir,
-		project:     project,
-	}
-
-	reqs, err := w.findRemoteArtifacts(ctx, project, names, "launch")
-	if err != nil {
-		return nil, err
-	}
-
-	taskset := make([]*state.TaskSet, 0, len(names))
-	for _, req := range reqs {
-		name := req.file.Name
-		// Make sure the workshop doesn't exist.
-		// Has to happen after calling findRemoteArtifacts (because it unlocks the state).
-		_, err := w.Workshop(ctx, name, projectId)
-		if err == nil {
-			return nil, fmt.Errorf("cannot launch %q: workshop exists", name)
-		} else if !errors.Is(err, workshop.ErrWorkshopNotLaunched) {
-			return nil, fmt.Errorf("cannot launch %q, failed to check whether the workshop exists: %w", name, err)
-		}
-		if err := conflict.CheckChangeConflict(w.state, projectId, name, nil); err != nil {
-			return nil, fmt.Errorf("cannot launch %q, other changes in progress: %w", name, err)
-		}
-
-		localSdks, err := finder.findLocalSdks(ctx, nil, req.file)
-		if err != nil {
-			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
-		}
-		localSetups, err := validateSdkMeta(projectId, req.file, localSdks)
-		if err != nil {
-			return nil, fmt.Errorf("cannot launch %q: %w", name, err)
-		}
-		sdks := ordered(req.installOrder, req.storeSdks, localSetups)
-
-		tasks := launch(w.state, req.file, req.image, sdks, project)
-		taskset = append(taskset, tasks)
-	}
-	return taskset, nil
+	return tasksets
 }
 
 func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
@@ -241,7 +171,7 @@ func startWorkshop(st *state.State, name string) *state.TaskSet {
 	return state.NewTaskSet(start)
 }
 
-func launch(st *state.State, file *workshop.File, image workshop.BaseImage, sdks []sdk.Setup, project workshop.Project) *state.TaskSet {
+func launch(st *state.State, project workshop.Project, manifest Manifest) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
 
@@ -258,134 +188,59 @@ func launch(st *state.State, file *workshop.File, image workshop.BaseImage, sdks
 		all.AddAll(ts)
 	}
 
-	base := retrieveBase(st, image)
-	retrieve, rmap := retrieveSdks(st, sdks)
+	base := retrieveBase(st, manifest.Image)
+	retrieve, rmap := retrieveSdks(st, manifest.Sdks)
 	retrieve.AddTask(base)
 	addTaskSet(retrieve)
 
-	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", file.Name))
+	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	snapshot := workshop.Snapshot{Image: image}
-	create := launchWorkshop(st, file, snapshot)
+	snapshot := workshop.Snapshot{Image: manifest.Image}
+	create := launchWorkshop(st, manifest.File, snapshot)
 	addTaskSet(create)
 
-	start := startWorkshop(st, file.Name)
+	start := startWorkshop(st, manifest.File.Name)
 	addTaskSet(start)
 
-	install := installSdks(st, sdks, rmap)
+	install := installSdks(st, manifest.Sdks, rmap)
 	addTaskSet(install)
 
-	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", file.Name))
+	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(configureTimezone))
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))
 
-	connect := autoconnectSdks(st, file.Name, sdks)
+	connect := autoconnectSdks(st, manifest.File.Name, manifest.Sdks)
 	addTaskSet(connect)
 
-	setupProject := runHooks(st, sdks, 0, hookstate.SetupProject)
+	setupProject := runHooks(st, manifest.Sdks, 0, hookstate.SetupProject)
 	addTaskSet(setupProject)
 
-	checkHealth := runHooks(st, sdks, checkHealthTimeout, hookstate.CheckHealth)
+	checkHealth := runHooks(st, manifest.Sdks, checkHealthTimeout, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	for _, task := range all.Tasks() {
-		task.Set("workshop", file.Name)
+		task.Set("workshop", manifest.File.Name)
 		task.Set("project", project)
 	}
 
 	return all
 }
 
-func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, names []string, option conflict.RefreshOption) ([]*state.TaskSet, error) {
-	username, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key user not found")
-	}
+func (w *WorkshopManager) RefreshMany(project workshop.Project, current, latest []Manifest, option conflict.RefreshOption) ([]*state.TaskSet, error) {
+	tasksets := make([]*state.TaskSet, 0, len(latest))
 
-	usr, env, err := osutil.UserAndEnv(username)
-	if err != nil {
-		return nil, err
-	}
-	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
-
-	project, err := w.loadProject(ctx, projectId)
-	if err != nil {
-		return nil, err
-	}
-
-	taskset := make([]*state.TaskSet, 0, len(names))
-	allowed := []healthstate.Status{healthstate.ReadyStatus}
-
-	switch option {
-	case conflict.RefreshUpdate:
-		reqs, err := w.findRemoteArtifacts(ctx, project, names, "refresh")
-		if err != nil {
-			return nil, err
-		}
-
-		finder := localSdkFinder{
-			backend:     w.backend,
-			user:        usr,
-			userDataDir: userDataDir,
-			project:     project,
-		}
-
-		for _, req := range reqs {
-			name := req.file.Name
-			wp, err := w.Workshop(ctx, name, projectId)
-			if err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-			}
-
-			// Check for conflicting changes. Has to happen after calling
-			// findRemoteArtifacts (because it unlocks the state).
-			if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-			}
-
-			localSdks, err := finder.findLocalSdks(ctx, wp, req.file)
-			if err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-			}
-			localSetups, err := validateSdkMeta(projectId, req.file, localSdks)
-			if err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-			}
-			sdks := ordered(req.installOrder, req.storeSdks, localSetups)
-
-			plan := resolveRefresh(wp, req.file, req.image, sdks)
-			if plan.HasUpdates() {
-				tasks := refresh(w.state, plan, wp, req.file)
-				taskset = append(taskset, tasks)
-			}
-		}
-	case conflict.RefreshRestore:
-		for _, name := range names {
-			wp, err := w.Workshop(ctx, name, projectId)
-			if err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-			}
-
-			if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-				return nil, fmt.Errorf("cannot refresh %q: %w", name, err)
-			}
-
-			installed := wp.SdksByInstallOrder()
-			sdks := make([]sdk.Setup, 0, len(installed))
-			for _, sk := range installed {
-				sdks = append(sdks, sk.Setup)
-			}
-
-			plan := resolveRefresh(wp, wp.File, wp.Image, sdks)
-			tasks := refresh(w.state, plan, wp, wp.File)
-			taskset = append(taskset, tasks)
+	for i, manifest := range latest {
+		plan := resolveRefresh(current[i], manifest)
+		if option == conflict.RefreshRestore || plan.HasUpdates() {
+			tasks := refresh(w.state, project, plan, manifest.File)
+			tasksets = append(tasksets, tasks)
 		}
 	}
 
-	for _, ts := range taskset {
+	for _, ts := range tasksets {
 		cleanup := ts.MaybeEdge(EdgeRefreshFirstCleanupTask)
 		if cleanup == nil {
 			continue
@@ -399,7 +254,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 		// workshop is already up and running). Thus, every CleanupEdge will
 		// wait for ALL the LastBeforeRefreshIrreversibleEdge tasks of all the
 		// other changes before execution.
-		for _, otherts := range taskset {
+		for _, otherts := range tasksets {
 			if ts != otherts {
 				last, err := otherts.Edge(EdgeRefreshLastTaskBeforeCleanup)
 				if err != nil {
@@ -410,7 +265,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, projectId string, nam
 		}
 	}
 
-	return taskset, nil
+	return tasksets, nil
 }
 
 func maybeRefresh(installed, candidate sdk.Setup) bool {
@@ -460,9 +315,9 @@ func (p refreshPlan) HasUpdates() bool {
 	return len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 || p.workshopDefinitionUpdated
 }
 
-func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop.BaseImage, candidates []sdk.Setup) *refreshPlan {
+func resolveRefresh(current, latest Manifest) *refreshPlan {
 	plan := &refreshPlan{
-		image:          image,
+		image:          latest.Image,
 		install:        make([]sdk.Setup, 0),
 		intact:         make([]sdk.Setup, 0),
 		refresh:        make([]sdk.Setup, 0),
@@ -471,18 +326,15 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop
 		installedOrder: make([]string, 0),
 	}
 
-	// Restore the order of SDKs installed in the running workshop.
-	installed := w.SdksByInstallOrder()
-
-	if w.Image == image {
-		for ci, s := range candidates {
+	if current.Image == latest.Image {
+		for ci, s := range latest.Sdks {
 			// Do we have this SDK in the same order as in the running workshop?
-			if ci >= len(installed) || installed[ci].Name != s.Name {
+			if ci >= len(current.Sdks) || current.Sdks[ci].Name != s.Name {
 				break
 			}
 			// Has this SDK had any updates?
 			// If so, break the loop as the rest require to be reinstalled.
-			if maybeRefresh(w.Sdks[s.Name].Setup, s) {
+			if maybeRefresh(current.Sdks[ci], s) {
 				break
 			}
 
@@ -491,42 +343,44 @@ func resolveRefresh(w *workshop.Workshop, newfile *workshop.File, image workshop
 		}
 	}
 
-	for _, s := range candidates[len(plan.intact):] {
-		installed, exist := w.Sdks[s.Name]
-		if exist {
-			plan.refresh = append(plan.refresh, s)
-			plan.remove = append(plan.remove, installed.Setup)
+	for _, candidate := range latest.Sdks[len(plan.intact):] {
+		idx := slices.IndexFunc(current.Sdks, func(s sdk.Setup) bool {
+			return s.Name == candidate.Name
+		})
+		if idx >= 0 {
+			plan.refresh = append(plan.refresh, candidate)
+			plan.remove = append(plan.remove, current.Sdks[idx])
 		} else {
-			plan.install = append(plan.install, s)
+			plan.install = append(plan.install, candidate)
 		}
 	}
 
 	// SDKs that only exist in the previous workshop are to be removed.
-	for _, s := range w.Sdks {
-		if !slices.ContainsFunc(candidates, func(c sdk.Setup) bool {
-			return c.Name == s.Name
+	for _, installed := range current.Sdks {
+		if !slices.ContainsFunc(latest.Sdks, func(s sdk.Setup) bool {
+			return s.Name == installed.Name
 		}) {
-			plan.remove = append(plan.remove, s.Setup)
+			plan.remove = append(plan.remove, installed)
 		}
 	}
 
 	// Establish SDK order for the installed SDKs.
-	for _, s := range installed {
+	for _, s := range current.Sdks {
 		plan.installedOrder = append(plan.installedOrder, s.Name)
 	}
 
 	// Establish SDK installation order.
-	for _, s := range candidates {
+	for _, s := range latest.Sdks {
 		plan.installOrder = append(plan.installOrder, s.Name)
 	}
 
-	plan.workshopDefinitionUpdated = !reflect.DeepEqual(w.File.Sdks, newfile.Sdks) ||
-		!reflect.DeepEqual(w.File.Connections, newfile.Connections)
+	plan.workshopDefinitionUpdated = !reflect.DeepEqual(current.File.Sdks, latest.File.Sdks) ||
+		!reflect.DeepEqual(current.File.Connections, latest.File.Connections)
 
 	return plan
 }
 
-func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *workshop.File) *state.TaskSet {
+func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file *workshop.File) *state.TaskSet {
 	refresh := state.NewTaskSet()
 	prev := (*state.TaskSet)(nil)
 	addTaskSet := func(ts *state.TaskSet) {
@@ -593,7 +447,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", file.Name))
 	addTaskSet(state.NewTaskSet(configureTimezone))
 
-	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", w.Project.Path))
+	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))
 
 	connect := autoconnectSdks(st, file.Name, plan.InstallIntactOrRefresh())
@@ -642,7 +496,7 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 
 	for _, task := range refresh.Tasks() {
 		task.Set("workshop", file.Name)
-		task.Set("project", w.Project)
+		task.Set("project", project)
 	}
 
 	return refresh
@@ -725,18 +579,15 @@ func (w *WorkshopManager) StartMany(ctx context.Context, names []string, project
 		}
 	}
 
-	project, err := w.loadProject(ctx, projectId)
+	project, err := w.Project(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
-	taskset, err := startMany(w.state, names, project)
-	if err != nil {
-		return nil, err
-	}
-	return taskset, nil
+
+	return startMany(w.state, names, project), nil
 }
 
-func startMany(st *state.State, names []string, project workshop.Project) ([]*state.TaskSet, error) {
+func startMany(st *state.State, names []string, project workshop.Project) []*state.TaskSet {
 	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
@@ -747,7 +598,7 @@ func startMany(st *state.State, names []string, project workshop.Project) ([]*st
 		taskset = append(taskset, state.NewTaskSet(start))
 	}
 
-	return taskset, nil
+	return taskset
 }
 
 func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
@@ -762,18 +613,15 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		}
 	}
 
-	project, err := w.loadProject(ctx, projectId)
+	project, err := w.Project(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
-	taskset, err := stopMany(w.state, names, project)
-	if err != nil {
-		return nil, err
-	}
-	return taskset, nil
+
+	return stopMany(w.state, names, project), nil
 }
 
-func stopMany(st *state.State, names []string, project workshop.Project) ([]*state.TaskSet, error) {
+func stopMany(st *state.State, names []string, project workshop.Project) []*state.TaskSet {
 	taskset := []*state.TaskSet{}
 
 	for _, name := range names {
@@ -785,11 +633,11 @@ func stopMany(st *state.State, names []string, project workshop.Project) ([]*sta
 		taskset = append(taskset, state.NewTaskSet(stop))
 	}
 
-	return taskset, nil
+	return taskset
 }
 
 func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args *workshop.ExecArgs, action bool) (*state.TaskSet, error) {
-	project, err := w.loadProject(ctx, projectId)
+	project, err := w.Project(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
@@ -846,7 +694,7 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 }
 
 func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
-	project, err := w.loadProject(ctx, projectId)
+	project, err := w.Project(ctx, projectId)
 	if err != nil {
 		return nil, err
 	}
@@ -942,7 +790,7 @@ func (w *WorkshopManager) Remount(ctx context.Context, st *state.State, plug sdk
 
 	source = filepath.Clean(source)
 
-	project, err := w.loadProject(ctx, plug.ProjectId)
+	project, err := w.Project(ctx, plug.ProjectId)
 	if err != nil {
 		return nil, err
 	}

@@ -50,6 +50,25 @@ func (w *WorkshopManager) Ensure() error {
 	return nil
 }
 
+// Project finds an existing project with the given ID.
+func (w *WorkshopManager) Project(ctx context.Context, pId string) (workshop.Project, error) {
+	user, ok := ctx.Value(workshop.ContextUser).(string)
+	if !ok {
+		return workshop.Project{}, fmt.Errorf("context key %s not found", workshop.ContextUser)
+	}
+
+	projects, err := w.backend.Projects(ctx)
+	if err != nil {
+		return workshop.Project{}, err
+	}
+
+	idx := slices.IndexFunc(projects[user], func(p workshop.Project) bool { return p.ProjectId == pId })
+	if idx == -1 {
+		return workshop.Project{}, fmt.Errorf("project %q not found", pId)
+	}
+	return projects[user][idx], nil
+}
+
 // Loads a workshop, the state must be locked as it is used to find out the
 // workshop state
 func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*workshop.Workshop, error) {
@@ -67,21 +86,10 @@ func (w *WorkshopManager) Workshop(ctx context.Context, name, pId string) (*work
 // Returns latest file for a workshop. The state must be locked, as listing
 // projects can update project metadata.
 func (w *WorkshopManager) WorkshopFile(ctx context.Context, name, pId string) (*workshop.File, error) {
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
-	}
-
-	projects, err := w.backend.Projects(ctx)
+	p, err := w.Project(ctx, pId)
 	if err != nil {
 		return nil, err
 	}
-
-	idx := slices.IndexFunc(projects[user], func(p workshop.Project) bool { return p.ProjectId == pId })
-	if idx == -1 {
-		return nil, fmt.Errorf("project %q not found", pId)
-	}
-	p := projects[user][idx]
 
 	return p.Workshop(name)
 }
@@ -89,21 +97,10 @@ func (w *WorkshopManager) WorkshopFile(ctx context.Context, name, pId string) (*
 // Returns all workshop files for a project. The state must be locked, as
 // listing projects can update project metadata.
 func (w *WorkshopManager) WorkshopFiles(ctx context.Context, pId string) (map[string]string, error) {
-	user, ok := ctx.Value(workshop.ContextUser).(string)
-	if !ok {
-		return nil, fmt.Errorf("context key %s not found", workshop.ContextUser)
-	}
-
-	projects, err := w.backend.Projects(ctx)
+	p, err := w.Project(ctx, pId)
 	if err != nil {
 		return nil, err
 	}
-
-	idx := slices.IndexFunc(projects[user], func(p workshop.Project) bool { return p.ProjectId == pId })
-	if idx == -1 {
-		return nil, fmt.Errorf("project %q not found", pId)
-	}
-	p := projects[user][idx]
 
 	files, err := p.ReadWorkshops()
 	if err != nil {

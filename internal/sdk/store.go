@@ -62,7 +62,7 @@ type Store interface {
 	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)
 }
 
-func NewFakeStore() Store {
+func NewFakeStore() *FakeStore {
 	return &FakeStore{
 		ActionCalls: make([]TestActionCall, 0),
 	}
