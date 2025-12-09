@@ -695,7 +695,65 @@ Example with options:
 
 **Spacing and formatting**
 
-Section gaps: Include a non-cumulative two-line gap after major sections, code samples, lists, large list-table rows, and tables for visual clarity.
+Section gaps: Include a non-cumulative two-line gap (two blank lines) after code samples, lists, tables, and before headings for visual clarity.
+
+Examples from the documentation:
+
+After code blocks:
+
+```restructuredtext
+.. code-block:: console
+
+   $ sudo snap login
+   $ sudo snap install --classic workshop
+
+
+Prerequisites
+~~~~~~~~~~~~~
+```
+
+After lists:
+
+```restructuredtext
+- :command:`workshop stop` doesn't destroy the workshop,
+  unlike :ref:`remove <tut_remove>`
+
+- :command:`workshop start` doesn't build it from scratch,
+  unlike :ref:`launch <tut_launch>` or :ref:`refresh <tut_refresh>`
+
+
+In the next step, you'll refresh an existing workshop.
+```
+
+After tables:
+
+```restructuredtext
+.. list-table::
+  :header-rows: 1
+  :widths: 25 75
+
+  * - Component Type
+    - Description
+
+  * - Runtime components
+    - Core binaries and libraries that change infrequently
+
+
+However, parts are not mandatory:
+```
+
+Before headings:
+
+```restructuredtext
+The actions you're about to perform
+cover most of your daily needs with |ws_markup|.
+
+
+.. _tut_install:
+
+Install |ws_markup|
+-------------------
+```
 
 ---
 
