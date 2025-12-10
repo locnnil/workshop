@@ -228,8 +228,8 @@ providing snapshot and restore capabilities for efficient workshop updates.
 |ws_markup| implements user isolation through LXD's project system,
 automatically creating dedicated projects for each user
 following the naming pattern :samp:`workshop.<USERNAME>`.
-Each user project includes a corresponding layers project
-(:samp:`workshop-layers.<USERNAME>`)
+Each user project includes a corresponding snapshots project
+(:samp:`workshop-snapshots.<USERNAME>`)
 used for temporary storage during workshop rebuild operations.
 
 

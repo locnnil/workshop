@@ -275,7 +275,7 @@ func New() (*Backend, error) {
 }
 
 func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
-	conn, layerConn, err := s.layerClients(ctx)
+	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -314,16 +314,16 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			Type:        api.SourceTypeImage,
 			Fingerprint: snapshot.Image.Fingerprint,
 		}
-		if err := s.launchOrRebuildFromImage(conn, layerConn, req); err != nil {
+		if err := s.launchOrRebuildFromImage(conn, snapshotConn, req); err != nil {
 			return err
 		}
 		return s.patchInstance(ctx, file.Name, file.Base)
 	}
 
-	return s.launchOrRebuildFromLayer(conn, layerConn, req, snapshot.Sdks)
+	return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
 }
 
-func (s *Backend) launchOrRebuildFromImage(conn, layerConn lxd.InstanceServer, req api.InstancesPost) error {
+func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost) error {
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		// Create a new workshop.
@@ -341,12 +341,12 @@ func (s *Backend) launchOrRebuildFromImage(conn, layerConn lxd.InstanceServer, r
 	projectId := inst.Config[workshop.ConfigProjectId]
 	name := inst.Config[workshop.ConfigWorkshopName]
 
-	snapshots, err := s.layerNames(layerConn, projectId, name, "sdk")
+	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
 	if err != nil {
 		return err
 	}
 	for _, snapshot := range snapshots {
-		if err := s.deleteLayer(layerConn, snapshot); err != nil {
+		if err := s.deleteSnapshot(snapshotConn, snapshot); err != nil {
 			return err
 		}
 	}
@@ -892,7 +892,7 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn, layerConn, err := s.layerClients(ctx)
+	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -903,12 +903,12 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
 	}
 
-	snapshots, err := s.layerNames(layerConn, projectId, name, "sdk")
+	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
 	if err != nil {
 		logger.Noticef("On RemoveWorkshop: failed to find SDK snapshots for %q workshop: %v", name, err)
 	} else {
 		for _, snapshot := range snapshots {
-			if err := s.deleteLayer(layerConn, snapshot); err != nil {
+			if err := s.deleteSnapshot(snapshotConn, snapshot); err != nil {
 				logger.Noticef("On RemoveWorkshop: failed to delete %q SDK snapshot for %q workshop: %v", snapshot, name, err)
 			}
 		}

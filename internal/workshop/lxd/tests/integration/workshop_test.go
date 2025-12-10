@@ -81,7 +81,7 @@ func (f *wsOps) TearDownSuite(c *check.C) {
 	defer lxdclient.Disconnect()
 
 	helper.CleanupLxdProject(c, lxdclient, "workshop."+f.usr.Username)
-	helper.CleanupLxdProject(c, lxdclient, "workshop-layers."+f.usr.Username)
+	helper.CleanupLxdProject(c, lxdclient, "workshop-snapshots."+f.usr.Username)
 	f.restoreUserEnv()
 	f.restoreUserLookup()
 	f.restoreNewId()
@@ -128,8 +128,8 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 	stash := f.stashMetadata(c, "test")
 	config = maps.Clone(postStash.config)
-	c.Check(config["user.workshop.layer-type"], check.Equals, "")
-	config["user.workshop.layer-type"] = "stash"
+	c.Check(config["user.workshop.snapshot-type"], check.Equals, "")
+	config["user.workshop.snapshot-type"] = "stash"
 	c.Check(stash.config, check.DeepEquals, config)
 	c.Check(stash.devices, check.DeepEquals, postStash.devices)
 
@@ -207,7 +207,7 @@ func (f *wsOps) stashMetadata(c *check.C, name string) metadata {
 	c.Assert(err, check.IsNil)
 	defer conn.Disconnect()
 
-	conn = conn.UseProject("workshop-layers." + f.usr.Username)
+	conn = conn.UseProject("workshop-snapshots." + f.usr.Username)
 
 	return instanceMetadata(c, conn, "stash-"+lxdbackend.InstanceName(name, f.project.ProjectId))
 }
@@ -246,24 +246,24 @@ func (f *wsOps) listSnapshots(c *check.C, name string, stash bool) []string {
 	c.Assert(err, check.IsNil)
 	defer conn.Disconnect()
 
-	conn = conn.UseProject("workshop-layers." + f.usr.Username)
+	conn = conn.UseProject("workshop-snapshots." + f.usr.Username)
 
-	layerType := "sdk"
+	snapshotType := "sdk"
 	if stash {
-		layerType = "stash-sdk"
+		snapshotType = "stash-sdk"
 	}
 
 	filters := []string{
 		"config.user.workshop.project-id=" + f.project.ProjectId,
 		"config.user.workshop.name=" + name,
-		"config.user.workshop.layer-type=" + layerType,
+		"config.user.workshop.snapshot-type=" + snapshotType,
 	}
-	layers, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 	c.Assert(err, check.IsNil)
 
-	names := make([]string, 0, len(layers))
-	for _, layer := range layers {
-		names = append(names, layer.Config["user.workshop.sdk"])
+	names := make([]string, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		names = append(names, snapshot.Config["user.workshop.sdk"])
 	}
 	return names
 }
