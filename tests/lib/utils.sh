@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 function setup_lxd() {
     if snap list lxd >/dev/null; then
-        snap refresh --channel=6/stable lxd
+        retry 5 snap refresh --channel=6/stable lxd
     else
-        snap install --channel=6/stable lxd
+        retry 5 snap install --channel=6/stable lxd
     fi
     lxd waitready --timeout=180
 
@@ -72,8 +72,8 @@ EOF
 
     setup_lxd
 
-    snap install --classic --channel=1.25/stable go
-    snap install yq
+    retry 5 snap install --classic --channel=1.25/stable go
+    retry 5 snap install yq
 }
 
 function setup_workshop() {

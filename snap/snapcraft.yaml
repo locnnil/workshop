@@ -41,6 +41,8 @@ apps:
     environment:
       WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
     command: bin/sdk
+    aliases:
+      - sdk
 parts:
   workshop:
     plugin: go
