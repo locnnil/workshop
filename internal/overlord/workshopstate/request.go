@@ -956,11 +956,9 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 
 	if len(plan.IntactOrRefresh()) > 0 {
 		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
-		removeStateStorage.WaitFor(last)
+		addTaskSet(state.NewTaskSet(removeStateStorage))
 		removeStateStorage.JoinLane(cleanupLane)
 		refresh.MarkEdge(removeStateStorage, EdgeRefreshFirstCleanupTask)
-
-		refresh.AddTask(removeStateStorage)
 	}
 
 	// remove the workshop from stash after the state storage was detached
@@ -976,14 +974,11 @@ func refresh(st *state.State, plan *refreshPlan, w *workshop.Workshop, file *wor
 	// all the cleanup tasks are extracted into a separate lane. If
 	// any problem happens, the workshops that had finished their
 	// refresh will not be affected.
+	addTaskSet(state.NewTaskSet(removeStash))
 	removeStash.JoinLane(cleanupLane)
-	removeStash.WaitFor(last)
-
 	if refresh.MaybeEdge(EdgeRefreshFirstCleanupTask) == nil {
 		refresh.MarkEdge(removeStash, EdgeRefreshFirstCleanupTask)
 	}
-
-	refresh.AddTask(removeStash)
 
 	for _, task := range refresh.Tasks() {
 		task.Set("workshop", file.Name)
