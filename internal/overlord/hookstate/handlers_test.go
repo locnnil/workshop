@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate/hooktest"
@@ -28,9 +30,13 @@ type hookSuite struct {
 	runner      *state.TaskRunner
 	se          *overlord.StateEngine
 	hookmgr     *hookstate.HookManager
+	user        *user.User
 	ctx         context.Context
 	project     workshop.Project
 	mockHandler *hooktest.MockHandler
+
+	restoreUserEnv    func()
+	restoreUserLookup func()
 }
 
 var _ = check.Suite(&hookSuite{})
@@ -63,6 +69,18 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
+	// Real UID and GID are required to create SDK state storage directories.
+	// TODO: make filesystem operations more secure (e.g. drop privileges if possible) and easy to test.
+	actual, err := user.Current()
+	c.Assert(err, check.IsNil)
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir(), Uid: actual.Uid, Gid: actual.Gid}
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
+
 	s.state = state.New(nil)
 	s.runner = state.NewTaskRunner(s.state)
 	workshop.ReplaceBackend(s.state, s.backend)
@@ -86,6 +104,11 @@ func (s *hookSuite) SetUpTest(c *check.C) {
 	s.se.AddManager(s.runner)
 	err = s.se.StartUp()
 	c.Check(err, check.IsNil)
+}
+
+func (s *hookSuite) TearDownTest(c *check.C) {
+	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {

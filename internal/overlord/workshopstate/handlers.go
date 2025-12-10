@@ -167,11 +167,25 @@ func (m *WorkshopManager) doRemoveWorkshopStorage(task *state.Task, tomb *tomb.T
 		return err
 	}
 
-	return errors.Join(
-		m.cleanupWorkshopUserData(user, prj.ProjectId, w),
-		m.cleanupWorkshopCache(prj.ProjectId, w),
-		m.cleanupWorkshopData(prj.ProjectId, w),
-	)
+	if err := m.cleanupWorkshopUserData(user, prj.ProjectId, w); err != nil {
+		task.State().Lock()
+		task.Logf("cannot remove %q workshop user data: %v", w, err)
+		task.State().Unlock()
+	}
+
+	if err := m.cleanupWorkshopCache(prj.ProjectId, w); err != nil {
+		task.State().Lock()
+		task.Logf("cannot remove %q workshop cache: %v", w, err)
+		task.State().Unlock()
+	}
+
+	if err := m.cleanupWorkshopData(prj.ProjectId, w); err != nil {
+		task.State().Lock()
+		task.Logf("cannot remove %q workshop data: %v", w, err)
+		task.State().Unlock()
+	}
+
+	return nil
 }
 
 func (m *WorkshopManager) cleanupWorkshopUserData(user, projectId, w string) error {
@@ -381,7 +395,13 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
-	return m.backend.RemoveWorkshopStash(ctx, w)
+	if err := m.backend.RemoveWorkshopStash(ctx, w); err != nil {
+		task.State().Lock()
+		task.Logf("cannot remove %q workshop stash: %v", w, err)
+		task.State().Unlock()
+	}
+
+	return nil
 }
 
 func (m *WorkshopManager) doStashWorkshop(task *state.Task, tomb *tomb.Tomb) error {
@@ -452,5 +472,11 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	}
 
 	storage := workshop.StateStorageDir(prj.ProjectId, w)
-	return os.RemoveAll(storage)
+	if err := os.RemoveAll(storage); err != nil {
+		task.State().Lock()
+		task.Logf("cannot remove %q workshop state storage: %v", w, err)
+		task.State().Unlock()
+	}
+
+	return nil
 }
