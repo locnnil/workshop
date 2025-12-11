@@ -117,6 +117,15 @@ if err != nil {
 - Follow the style guide in `docs/contributing.rst`
 - Common template: `what was attempted: why it went wrong`
 
+#### CLI Output Messages
+- **Single-sentence messages**: No trailing punctuation (e.g., `"%q started\n"`).
+- **Multi-sentence messages**: Use periods to separate sentences, but no period at the end of the final sentence.
+  - Example:
+    ```go
+    fmt.Fprintf(Stdout, "First sentence.\n")
+    fmt.Fprintf(Stdout, "Second sentence\n")
+    ```
+
 ### 4. Architecture and Design
 
 #### Client-Server Pattern

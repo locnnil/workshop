@@ -507,7 +507,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		if c.remove {
 			fmt.Fprintf(Stdout, "%q sketch removed\n", wp.Name)
 		} else {
-			fmt.Fprintf(Stdout, "%q sketch ejected to %q\n", wp.Name, workshop.ProjectSdkPath("", c.name))
+			fmt.Fprintf(Stdout, "Ejected %q sketch to %q.\n", wp.Name, workshop.ProjectSdkPath("", c.name))
 			fmt.Fprintf(Stdout, "To use it, add %q to the SDK list and run \"workshop refresh %s\"\n", "project-"+c.name, wp.Name)
 		}
 
