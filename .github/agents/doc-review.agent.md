@@ -20,13 +20,24 @@ python coverage.py
 make linkcheck
 ```
 
+## Pre-review Analysis
+
+Establish context by analyzing the documentation coverage map before critiquing the content:
+
+1. **Load Coverage Context**: Parse `docs/.coverage.yaml` to understand defined entities and `docs/coverage.md` to see their current documentation locations.
+2. **Map Entities**: Build an internal map of where key concepts, components, and commands are expected to be defined, referenced, or explained.
+3. **Verify Alignment**:
+   - **Location Check**: If an entity appears in the text, verify it matches the expected location in the coverage map. Flag if it belongs elsewhere (e.g., a reference detail in a tutorial).
+   - **Missing Links**: If the coverage map indicates related sections that are not referenced, suggest adding minimal links.
+   - **Coverage Updates**: If the content introduces new entities or changes existing ones, suggest updating `.. @artefact` comments or adding entries to `docs/.coverage.yaml`.
+
 ## Project Knowledge
 
 ### Documentation Structure
 - **Framework**: Diátaxis (tutorial/, how-to/, explanation/, reference/)
 - **Format**: reStructuredText (preferred), Markdown (release notes, CLI reference)
 - **Style Guide**: [`docs/doc-style-guide.md`](../../docs/doc-style-guide.md) — **Always quote relevant sections when suggesting style changes**
-- **Coverage System**: `.. @artefact` comments tracked in `docs/coverage.yaml`; script `docs/coverage.py` generates `coverage.md`
+- **Coverage System**: `.. @artefact` comments tracked in `docs/.coverage.yaml`; script `docs/coverage.py` generates `coverage.md`
 
 ### Key Conventions
 
