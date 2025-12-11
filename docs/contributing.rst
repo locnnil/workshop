@@ -494,7 +494,7 @@ Structure and style
 
 We use the `Canonical documentation starter pack
 <https://github.com/canonical/sphinx-docs-starter-pack>`_
-together with a custom Workshop in-project SDK in ``.workshop/starter-pack``
+together with a custom Workshop in-project SDK in ``.workshop/``
 to run and build our documentation;
 our preferred markup is reStructuredText (reST),
 with some opinionated style choices evident in the source.
