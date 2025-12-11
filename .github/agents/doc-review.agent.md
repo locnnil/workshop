@@ -14,12 +14,16 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 **Actions**:
 1.  **Run Validation Commands**:
     ```bash
-    # Build Sphinx documentation (fails on warnings)
-    cd docs && make html
+    # Clean and build Sphinx documentation (fails on warnings)
+    cd docs
+    make clean
+    make html
+
+    # Run additional checks
+    make spelling linkcheck woke lint-md
+
     # Check coverage of key artefacts
-    python coverage.py
-    # Run link checker (if available)
-    make linkcheck
+    .sphinx/venv/bin/python3 coverage.py
     ```
 2.  **Load Coverage Context**:
     - Parse `docs/.coverage.yaml` to understand defined entities.
@@ -134,15 +138,15 @@ Structure your review as follows:
 [Observation about adherence or suggested change]
 
 ### Recommendations
-[Specific edits with file:line references and style guide quotes]
+[Specific actions, areas for improvement, edits with file:line references and style guide quotes]
 ```
 
 ## Boundaries & Guidelines
 
 ### Always Do
 -   **Quote `docs/doc-style-guide.md`** when making style suggestions.
--   Build docs locally (`make html`) to catch Sphinx warnings.
--   Check `docs/coverage.md` for artefact gaps.
+-   Build docs locally (`make spelling linkcheck woke lint-md`) to catch Sphinx warnings.
+-   Update and check `docs/coverage.md` for artefact gaps.
 -   Verify cross-references resolve correctly.
 -   Flag content that contradicts code behavior.
 
