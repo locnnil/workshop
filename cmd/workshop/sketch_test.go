@@ -671,7 +671,7 @@ slots:
 `)
 	c.Check(filepath.Join(notsketch, "hooks", "check-health"), testutil.FileEquals, `workshopctl set-health okay
 `)
-	c.Check(m.stdout.String(), check.Equals, `"ws" sketch ejected to ".workshop/notsketch"
+	c.Check(m.stdout.String(), check.Equals, `Ejected "ws" sketch to ".workshop/notsketch".
 To use it, add "project-notsketch" to the SDK list and run "workshop refresh ws"
 `)
 }
