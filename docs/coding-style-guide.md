@@ -17,7 +17,7 @@ The guide is evidence-based, derived from actual PR discussions between maintain
 
 ## Error handling
 
-### Error message format
+**Error message format**
 
 **Pattern**: Error messages start lowercase, contain no trailing punctuation, and follow the template: "what was attempted: why it went wrong".
 
@@ -45,11 +45,10 @@ return fmt.Errorf("Cannot connect plugs.") // Starts with capital, has punctuati
 return fmt.Errorf("Error") // Not descriptive enough
 ```
 
-**Reference**: PR #257, `docs/contributing.rst` Error Messages section
 
 ---
 
-### Error specificity
+**Error specificity**
 
 **Pattern**: Return specific errors where possible to allow callers to handle them appropriately.
 
@@ -75,11 +74,10 @@ if _, err := os.Stat(path); err != nil {
 
 **Rationale**: Specific errors enable proper error handling and debugging. Avoid generic "internal error" wrappers unless implementation details must be hidden.
 
-**Reference**: PR #231, PR #221
 
 ---
 
-### Consistent error handling pattern
+**Consistent error handling pattern**
 
 **Pattern**: Use one of two standard patterns consistently throughout the codebase.
 
@@ -117,11 +115,10 @@ if err := cmd.Execute(); err != nil {
 
 **Rationale**: Consistent error handling improves code readability and maintainability.
 
-**Reference**: `docs/contributing.rst` Coding Standards, PR #262 (errcheck linter)
 
 ---
 
-### Explicit error checking
+**Explicit error checking**
 
 **Pattern**: Always check and handle errors. Use `_ = someFunc()` to explicitly ignore intentionally.
 
@@ -145,13 +142,12 @@ file.Close() // Unchecked error
 
 **Rationale**: The errcheck linter is enabled for new code to catch unhandled errors. Explicit `_` assignment shows intentional discard.
 
-**Reference**: PR #262
 
 ---
 
 ## Naming conventions
 
-### Function names reflect behavior accurately
+**Function names reflect behavior accurately**
 
 **Pattern**: Function names should accurately describe what the function does. Use the "maybe" prefix for operations that are conditional or may not occur.
 
@@ -188,11 +184,10 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 
 **Rationale**: The "maybe" prefix is an established pattern in the codebase indicating conditional behavior, optional operations, or operations that may not apply in all cases.
 
-**Reference**: Multiple functions throughout codebase
 
 ---
 
-### Descriptive variable names
+**Descriptive variable names**
 
 **Pattern**: Use names that reflect purpose or filtering intent, not generic permission terms.
 
@@ -216,11 +211,10 @@ allowed := []string{"Ready", "Error"} // Too generic
 
 **Rationale**: Improves code clarity and communicates intent.
 
-**Reference**: PR #275 review discussion
 
 ---
 
-### Test constant naming
+**Test constant naming**
 
 **Pattern**: Test constants should have sensible, descriptive names that reflect their purpose.
 
@@ -245,13 +239,12 @@ const (
 
 **Rationale**: Improves test readability and maintainability.
 
-**Reference**: PR #273
 
 ---
 
 ## Code structure and organization
 
-### Complete related operations before moving to next attribute
+**Complete related operations before moving to next attribute**
 
 **Pattern**: When processing multiple attributes, finish all operations related to one attribute before moving to the next.
 
@@ -287,11 +280,10 @@ if err := validatePath(target); err != nil {
 
 **Rationale**: Improves code clarity by maintaining logical grouping of operations. Related code stays together.
 
-**Reference**: PR #257 review on `mount.go`
 
 ---
 
-### Extract common logic into reusable functions
+**Extract common logic into reusable functions**
 
 **Pattern**: Extract duplicated completion logic into reusable functions rather than duplicating inline.
 
@@ -323,11 +315,10 @@ cmd := &cobra.Command{
 
 **Rationale**: Reduces duplication, avoids adding long inline functions into Cobra Command structure initialization, improves maintainability.
 
-**Reference**: PR #275, PR #302
 
 ---
 
-### Prefer existing attributes over re-iterating
+**Prefer existing attributes over re-iterating**
 
 **Pattern**: Use existing object attributes instead of re-iterating collections when the information is already available.
 
@@ -357,11 +348,10 @@ for _, plug := range plugs {
 
 **Rationale**: Improves readability and reduces unnecessary iterations when data is already present in objects.
 
-**Reference**: PR #275
 
 ---
 
-### Code should reflect logical flow clearly
+**Code should reflect logical flow clearly**
 
 **Pattern**: Structure code to match its logical intent — filter first, then transform.
 
@@ -395,11 +385,10 @@ for _, plug := range allPlugs {
 
 **Rationale**: Makes intention explicit and improves readability for simple logic.
 
-**Reference**: PR #275 discussion on filtering connected plugs
 
 ---
 
-### Use reference comparison over endpoint comparison
+**Use reference comparison over endpoint comparison**
 
 **Pattern**: Use `Ref()` comparison when project IDs matter, not endpoint strings.
 
@@ -423,13 +412,12 @@ if plugEndpoint == connEndpoint {
 
 **Rationale**: Endpoints don't include project IDs, which can cause incorrect matching when the same endpoint exists in different projects.
 
-**Reference**: PR #275
 
 ---
 
 ## Comments and documentation
 
-### Comment format
+**Comment format**
 
 **Pattern**: Comments should be complete sentences starting with a capital letter and ending with a period.
 
@@ -464,11 +452,10 @@ func validateName(name string) error { ... }
 
 **Rationale**: Proper comment formatting improves readability and maintains professional documentation standards.
 
-**Reference**: `docs/contributing.rst` Code Structure
 
 ---
 
-### Godoc conventions
+**Godoc conventions**
 
 **Pattern**: Exported functions and types must have Godoc comments. The comment should start with the name of the element.
 
@@ -494,13 +481,12 @@ func Launch(cfg *Config) (*Workshop, error) { ... }
 
 **Rationale**: Following Godoc conventions ensures documentation is generated correctly and consistently.
 
-**Reference**: Go documentation standards
 
 ---
 
 ## Type handling
 
-### Use type switches for multiple possible types
+**Use type switches for multiple possible types**
 
 **Pattern**: When handling multiple possible input types, use type switches with explicit error messages for each case.
 
@@ -549,11 +535,10 @@ default:
 }
 ```
 
-**Reference**: PR #257, internal/asserts patterns
 
 ---
 
-### Avoid generics when concrete types are consistent
+**Avoid generics when concrete types are consistent**
 
 **Pattern**: Don't use generics when type variation doesn't actually exist.
 
@@ -577,13 +562,12 @@ func filterByStatus[T any](items []T, status string) []T {
 
 **Rationale**: Simplifies code when type variation doesn't exist in practice.
 
-**Reference**: PR #275
 
 ---
 
 ## Testing patterns
 
-### Test with JSON response mocking, not ad-hoc interfaces
+**Test with JSON response mocking, not ad-hoc interfaces**
 
 **Pattern**: In command packages, test API interactions by mocking JSON HTTP responses, not by creating ad-hoc client interfaces.
 
@@ -618,11 +602,10 @@ func (c *CmdConnect) SetClient(cli Client) {
 
 **Rationale**: Keeps interface definitions in appropriate packages (client library) and maintains architectural boundaries. Command packages should focus on CLI logic, not define their own client interfaces.
 
-**Reference**: PR #275 review comments
 
 ---
 
-### Use real test data, not faked data
+**Use real test data, not faked data**
 
 **Pattern**: Tests should use realistic data structures that match actual API responses.
 
@@ -650,11 +633,10 @@ testWorkshop := Workshop{
 
 **Rationale**: Real data catches edge cases and integration issues that simplified fakes miss.
 
-**Reference**: PR #254
 
 ---
 
-### Minimize duplication in test setup
+**Minimize duplication in test setup**
 
 **Pattern**: Extract common test setup into helper functions or shared constants, but allow some duplication for clarity when needed.
 
@@ -680,13 +662,12 @@ const sharedStatus = "Ready" // Used for both success and error cases
 
 **Rationale**: Balance between DRY and test clarity. Some duplication is acceptable in tests to keep them self-contained and understandable.
 
-**Reference**: PR #289 review on test constants
 
 ---
 
 ## Architecture and separation of concerns
 
-### Sorting belongs in representation layer, not client library
+**Sorting belongs in representation layer, not client library**
 
 **Pattern**: Client libraries should focus on data retrieval. Sorting and presentation logic belongs in the command/UI layer. Use the `slices` package for sorting.
 
@@ -727,11 +708,10 @@ func (c *Client) Changes() ([]Change, error) {
 
 **Rationale**: Separates data access from presentation concerns, making the client library reusable for different presentation needs.
 
-**Reference**: PR #275 discussion on sorting in client vs command layer
 
 ---
 
-### CLI command patterns
+**CLI command patterns**
 
 **Pattern**: CLI commands should be transactional where possible and maintain consistent output formatting.
 
@@ -829,13 +809,12 @@ func (c *CmdList) Run(cmd *cobra.Command, args []string) error {
 
 **Rationale**: Transactional commands prevent partial failures from leaving the system in an inconsistent state. Consistent formatting and output improves user experience.
 
-**Reference**: PR #225, PR #109, PR #52, `docs/contributing.rst`
 
 ---
 
 ## Nil handling patterns
 
-### Use nil checks for "accept all" semantics
+**Use nil checks for "accept all" semantics**
 
 **Pattern**: Use nil to represent "accept all" filtering, and extract into named functions for clarity.
 
@@ -869,13 +848,12 @@ for _, workshop := range workshops {
 
 **Rationale**: Makes the "accept all" intent explicit and improves readability.
 
-**Reference**: PR #275
 
 ---
 
 ## Code quality principles
 
-### Blank lines for logical separation
+**Blank lines for logical separation**
 
 **Pattern**: Insert blank lines between logically different sections of code.
 
@@ -906,11 +884,10 @@ func process() error {
 
 **Rationale**: Improves code structure and makes it easier to understand different logical sections.
 
-**Reference**: `docs/contributing.rst` Coding Standards
 
 ---
 
-### Avoid nested conditions
+**Avoid nested conditions**
 
 **Pattern**: Use early returns to reduce nesting levels.
 
@@ -954,13 +931,12 @@ func validate(workshop *Workshop) error {
 }
 ```
 
-**Rationale**: Reduces cognitive load, improves readability, and makes the happy path clearer.
+**Rationale**: Reduces cognitive load, improves readability, and makes the happy path clearer. Use early returns or guard clauses to keep code flat and readable.
 
-**Reference**: `docs/contributing.rst` Coding Standards
 
 ---
 
-### Delete dead code and redundant comments
+**Delete dead code and redundant comments**
 
 **Pattern**: Remove unused code and comments that don't add value.
 
@@ -1000,11 +976,10 @@ func process() error {
 
 **Rationale**: Keeps codebase clean and maintainable. Redundant comments add noise without value.
 
-**Reference**: `docs/contributing.rst` Self-Review Quick Check
 
 ---
 
-### Normalize symmetries
+**Normalize symmetries**
 
 **Pattern**: Handle identical operations identically throughout the codebase.
 
@@ -1043,15 +1018,14 @@ if validateSDKs(sdks) != nil {
 }
 ```
 
-**Rationale**: Consistency improves maintainability and reduces cognitive load when reading code.
+**Rationale**: Consistency improves maintainability and reduces cognitive load when reading code. When the same operation appears in multiple places, it should be handled identically.
 
-**Reference**: `docs/contributing.rst` Coding Standards
 
 ---
 
 ## Project-specific patterns
 
-### Cobra command structure
+**Cobra command structure**
 
 **Pattern**: Don't inline long functions in cobra.Command initialization. Extract ValidArgsFunction and RunE implementations.
 
@@ -1097,15 +1071,14 @@ func newCmdConnect() *cobra.Command {
 }
 ```
 
-**Rationale**: Keeps command initialization clean and functions testable. Matches the pattern established in PR #275 and PR #302.
+**Rationale**: Keeps command initialization clean and functions testable.
 
-**Reference**: PR #275, PR #302, PR #261, PR #263
 
 ---
 
 ## Testing best practices
 
-### Integration test patterns
+**Integration test patterns**
 
 **Pattern**: Integration tests should test behavior, not internal implementation details.
 
@@ -1147,11 +1120,10 @@ func (s *IntegrationSuite) TestLaunchWorkshop(c *check.C) {
 
 **Rationale**: Tests focused on behavior are more maintainable and less brittle when implementation changes.
 
-**Reference**: PR #170, PR #76, `docs/contributing.rst` Testing section
 
 ---
 
-### Unit test patterns
+**Unit test patterns**
 
 **Pattern**: Use gocheck for unit tests, parameterize for edge cases, and avoid unnecessary mocks.
 
@@ -1189,13 +1161,12 @@ func (s *ValidatorSuite) TestValidateName(c *check.C) {
 
 **Rationale**: Parameterized tests improve coverage, real data catches edge cases, and minimal mocking keeps tests maintainable.
 
-**Reference**: PR #229, PR #254, `docs/contributing.rst` Testing section
 
 ---
 
 ## Internal package guidelines
 
-### Visibility control
+**Visibility control**
 
 **Pattern**: Keep types and functions unexported in `internal/` packages unless explicitly required by other packages.
 
@@ -1233,11 +1204,10 @@ func ValidateState(s *WorkshopState) error { ... }
 
 **Rationale**: Reduces API surface area, makes refactoring easier, and prevents unintended coupling between packages.
 
-**Reference**: PR #221
 
 ---
 
-### State management
+**State management**
 
 **Pattern**: The state package provides two distinct mechanisms: `state.Get()`/`state.Set()` for persistent data, and `state.Cache()` for transient caching.
 
@@ -1300,13 +1270,12 @@ func saveState(path string, data interface{}) error {
 
 **Rationale**: State management APIs provide proper locking, change tracking, and persistence. Using them correctly avoids race conditions and ensures data consistency.
 
-**Reference**: `internal/overlord/state/state.go`, PR #236, PR #231
 
 ---
 
 ## Security considerations
 
-### Script injection prevention
+**Script injection prevention**
 
 **Pattern**: When generating scripts or templates, validate user input and use proper escaping mechanisms.
 
@@ -1352,11 +1321,10 @@ func generateSetupScript(userInput string) string {
 
 **Rationale**: Prevents script injection attacks when generating executable content from user input. Always validate and escape.
 
-**Reference**: PR #240, `internal/osutil/mountentry_linux.go`
 
 ---
 
-### File permissions
+**File permissions**
 
 **Pattern**: Be explicit about file permissions using appropriate constants or octal values.
 
@@ -1405,13 +1373,12 @@ if err := os.WriteFile(path, data, 420); err != nil { // Decimal for 0644
 
 **Rationale**: Explicit permissions ensure proper security boundaries and make intent clear.
 
-**Reference**: General security best practices
 
 ---
 
 ## Common pitfalls and edge cases
 
-### Map initialization
+**Map initialization**
 
 **Pattern**: Always initialize maps before use. Writing to a nil map causes a panic.
 
@@ -1443,11 +1410,10 @@ func addWorkshop(r *Registry, w *Workshop) {
 
 **Rationale**: Prevents runtime panics from nil map writes.
 
-**Reference**: PR #231, common Go pitfall
 
 ---
 
-### Loop variables in closures
+**Loop variables in closures**
 
 **Pattern**: Be careful with loop variables in closures, especially in goroutines.
 
@@ -1487,11 +1453,10 @@ for _, workshop := range workshops {
 
 **Rationale**: Go 1.22+ fixed this issue, but being aware helps when reading older code or maintaining compatibility.
 
-**Reference**: Go 1.22 release notes, common Go pitfall
 
 ---
 
-### Defer in loops
+**Defer in loops**
 
 **Pattern**: Be careful when using `defer` inside loops. Defers execute at function exit, not loop iteration exit.
 
@@ -1539,38 +1504,18 @@ func processFiles(files []string) error {
 
 **Rationale**: Defers in loops can cause resource leaks. Extract loop body into a function for proper cleanup.
 
-**Reference**: Common Go pitfall
 
 ---
 
-## References
+## Contributing
 
-This guide was derived from:
+When contributing code:
 
-- **PR discussions**: #257, #262, #269, #275, #289, #302, #240, #236, #231, #229, #225, #221, #170, #109, #76, #52 (primary sources)
-- **Contributing guide**: `docs/contributing.rst`
-- **Codebase patterns**: Observed in `cmd/`, `internal/`, `client/` packages
-- **Initial style extraction**: Consolidated from comprehensive PR review analysis
+1. Follow the patterns documented in this guide
+2. Run `golangci-lint run` before submitting code
+3. Write tests for new functionality
+4. Use `go test ./...` to verify tests pass
+5. Keep changes focused and atomic
+6. Write clear commit messages
 
-### Key contributors to these patterns
-
-- @dmitry-lyfar (primary reviewer)
-- @jonathan-conder (contributor and reviewer)
-- @akcano (documentation and style refinement)
-- @lachypjones (contributor)
-
-### Related documentation
-
-- [Contributing Guide](contributing.rst) — Setup, workflow, and general standards
-- [Documentation Style Guide](doc-style-guide.md) — Documentation-specific conventions
-
----
-
-## Evolution note
-
-These guidelines evolve with the project. When reviewing code:
-
-1. Reference this guide in code reviews
-2. Propose updates when new patterns emerge
-3. Keep guidelines evidence-based from actual PR discussions
-4. Update with links to specific PRs that establish new patterns
+For detailed contribution guidelines, see the [Contributing Guide](contributing.rst) in the documentation.

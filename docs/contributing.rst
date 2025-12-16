@@ -130,79 +130,16 @@ This helps to understand the reasoning and collaborate better.
 Coding standards
 ~~~~~~~~~~~~~~~~
 
-- **Avoid nested conditions**:
-  Refrain from nesting conditions to enhance readability and maintainability.
+See the :doc:`Workshop coding style guide <coding-style-guide>`
+for detailed Go coding conventions, including:
 
-- **Eliminate dead code and redundant comments**:
-  Remove unused or obsolete code and comments.
-  This promotes a cleaner code base and reduces confusion.
-
-- **Normalize symmetries**:
-  Handle identical operations consistently, using a uniform approach.
-  This also improves consistency and readability.
-
-
-Error handling
-~~~~~~~~~~~~~~
-
-When handling errors or multiple returns,
-follow a consistent pattern:
-
-.. code-block:: go
-
-   // one way to handle errors
-   if err := f(); err != nil {
-      ...
-   }
-
-   // one way to handle multiple returns
-   val, err := f()
-   if err != nil {
-      ...
-   }
-
-
-Error messages
-~~~~~~~~~~~~~~
-
-- **Be consistent**:
-  Try to match the style of existing error messages.
-  Most of these can be found by searching for ``fmt.Errorf`` and ``errors.New``.
-  Paths and other identifiers should be double-quoted if possible.
-
-- **Consider the user experience**:
-  Error messages should be clear and actionable.
-
-- **Be specific**:
-  For example, if a file was not found, the error message should include its path.
-
-- **Mind the nesting**:
-  Start in lowercase and avoid trailing punctuation.
-  Avoid excessively long or repetitive error chains.
-  A common template is: ``what was attempted: why it went wrong``.
-
-
-Code structure
-~~~~~~~~~~~~~~
-
-- **Check coupled code elements**:
-  Verify that coupled code elements, files and directories are adjacent.
-  For instance, store test data close to the corresponding test code.
-
-- **Group variable declaration and initialization**:
-  Declare and initialize variables together
-  to improve code organization and readability.
-
-- **Divide large expressions**:
-  Break down large expressions
-  into smaller self-explanatory parts.
-  Use multiple variables if necessary
-  to make the code more understandable
-  and choose names to reflect their purpose.
-
-- **Use blank lines for logical separation**:
-  Insert a blank line between two logically distinct sections of code.
-  This improves its structure and makes it easier to comprehend.
+- Error handling patterns and message formatting
+- Naming conventions for functions, variables, and tests
+- Code structure and organization principles
+- Testing patterns and best practices
+- Architecture and separation of concerns
+- Type handling and nil patterns
+- Security considerations
 
 
 Linting
