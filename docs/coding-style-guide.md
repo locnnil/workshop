@@ -21,6 +21,8 @@ The guide is evidence-based, derived from actual PR discussions between maintain
 
 **Pattern**: Error messages start lowercase, contain no trailing punctuation, and follow the template: "what was attempted: why it went wrong".
 
+**Exception**: Proper nouns (like "SDK", "LXD") may start with a capital letter.
+
 **Rationale**: Maintains consistency with existing error handling patterns and provides clear, actionable user guidance.
 
 **Good**:
@@ -44,6 +46,36 @@ return fmt.Errorf("Error") // Not descriptive enough
 ```
 
 **Reference**: PR #257, `docs/contributing.rst` Error Messages section
+
+---
+
+### Error specificity
+
+**Pattern**: Return specific errors where possible to allow callers to handle them appropriately.
+
+**Good**:
+
+```go
+if _, err := os.Stat(path); err != nil {
+    if os.IsNotExist(err) {
+        // Handle file not found specifically
+        return fmt.Errorf("configuration file %q not found", path)
+    }
+    return fmt.Errorf("cannot access configuration file %q: %w", path, err)
+}
+```
+
+**Avoid**:
+
+```go
+if _, err := os.Stat(path); err != nil {
+    return fmt.Errorf("internal error") // Too generic, loses context
+}
+```
+
+**Rationale**: Specific errors enable proper error handling and debugging. Avoid generic "internal error" wrappers unless implementation details must be hidden.
+
+**Reference**: PR #231, PR #221
 
 ---
 
@@ -121,31 +153,42 @@ file.Close() // Unchecked error
 
 ### Function names reflect behavior accurately
 
-**Pattern**: Function names must accurately describe what the function does. Avoid ambiguous prefixes like "maybe" when the action is mandatory.
+**Pattern**: Function names should accurately describe what the function does. Use the "maybe" prefix for operations that are conditional or may not occur.
 
 **Good**:
 
 ```go
-func reloadSystemd() error {
-    // Reload is mandatory
+// Returns a value if conversion is possible, otherwise returns false
+func maybeFloatToInt(v float64) (int64, bool) {
+    if _, frac := math.Modf(v); frac != 0 {
+        return 0, false
+    }
+    return int64(v), true
 }
 
-func connectIfAvailable() error {
-    // "IfAvailable" indicates conditional behavior
+// Conditionally presents warnings based on count and timestamp
+func maybePresentWarnings(count int, timestamp time.Time) {
+    if count == 0 {
+        return
+    }
+    // ... present warnings
+}
+
+// Returns SDK installation if the device represents one, otherwise nil
+func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkInstallation, error) {
+    // Returns nil if device is not an SDK installation
 }
 ```
 
-**Avoid**:
+**Examples from codebase**:
 
-```go
-func maybeReloadSystemd() error {
-    // Confusing - reload is actually mandatory
-}
-```
+- `maybeRefresh()` - checks if refresh is needed
+- `maybeBound()` - returns binding if one exists
+- `maybePathError()` - wraps error as path error if applicable
 
-**Rationale**: Prevents confusion about function behavior and side effects. The "maybe" prefix should only be used for truly optional operations.
+**Rationale**: The "maybe" prefix is an established pattern in the codebase indicating conditional behavior, optional operations, or operations that may not apply in all cases.
 
-**Reference**: PR #257 review comment on `maybeReloadSystemd`
+**Reference**: Multiple functions throughout codebase
 
 ---
 
@@ -384,6 +427,77 @@ if plugEndpoint == connEndpoint {
 
 ---
 
+## Comments and documentation
+
+### Comment format
+
+**Pattern**: Comments should be complete sentences starting with a capital letter and ending with a period.
+
+**Good**:
+
+```go
+// Workshop represents a development environment running in a container.
+type Workshop struct {
+    Name string
+    Base string
+}
+
+// validateName checks that the workshop name is valid.
+func validateName(name string) error {
+    // Empty names are not allowed.
+    if name == "" {
+        return fmt.Errorf("name cannot be empty")
+    }
+    return nil
+}
+```
+
+**Avoid**:
+
+```go
+// workshop struct
+type Workshop struct { ... }
+
+// check name
+func validateName(name string) error { ... }
+```
+
+**Rationale**: Proper comment formatting improves readability and maintains professional documentation standards.
+
+**Reference**: `docs/contributing.rst` Code Structure
+
+---
+
+### Godoc conventions
+
+**Pattern**: Exported functions and types must have Godoc comments. The comment should start with the name of the element.
+
+**Good**:
+
+```go
+// Workshop represents a development environment.
+type Workshop struct { ... }
+
+// Launch creates and starts a new workshop with the given configuration.
+func Launch(cfg *Config) (*Workshop, error) { ... }
+```
+
+**Avoid**:
+
+```go
+// Represents a development environment.
+type Workshop struct { ... }
+
+// Creates and starts a workshop.
+func Launch(cfg *Config) (*Workshop, error) { ... }
+```
+
+**Rationale**: Following Godoc conventions ensures documentation is generated correctly and consistently.
+
+**Reference**: Go documentation standards
+
+---
+
 ## Type handling
 
 ### Use type switches for multiple possible types
@@ -442,6 +556,8 @@ default:
 ### Avoid generics when concrete types are consistent
 
 **Pattern**: Don't use generics when type variation doesn't actually exist.
+
+**Exception**: Test helpers and mock utilities may use generics to reduce code duplication across types.
 
 **Good**:
 
@@ -572,7 +688,7 @@ const sharedStatus = "Ready" // Used for both success and error cases
 
 ### Sorting belongs in representation layer, not client library
 
-**Pattern**: Client libraries should focus on data retrieval. Sorting and presentation logic belongs in the command/UI layer.
+**Pattern**: Client libraries should focus on data retrieval. Sorting and presentation logic belongs in the command/UI layer. Use the `slices` package for sorting.
 
 **Good**:
 
@@ -590,8 +706,8 @@ func (c *CmdChanges) Run(cmd *cobra.Command, args []string) error {
     }
     
     // Sort for presentation
-    sort.Slice(changes, func(i, j int) bool {
-        return changes[i].ID > changes[j].ID
+    slices.SortFunc(changes, func(a, b Change) int {
+        return cmp.Compare(b.ID, a.ID)
     })
 }
 ```
@@ -612,6 +728,108 @@ func (c *Client) Changes() ([]Change, error) {
 **Rationale**: Separates data access from presentation concerns, making the client library reusable for different presentation needs.
 
 **Reference**: PR #275 discussion on sorting in client vs command layer
+
+---
+
+### CLI command patterns
+
+**Pattern**: CLI commands should be transactional where possible and maintain consistent output formatting.
+
+**Transactionality**:
+
+```go
+// Good: Use revert package for transactional operations
+import "github.com/canonical/workshop/internal/revert"
+
+func setupWorkshop(name string) error {
+    r := revert.New()
+    defer r.Fail()
+    
+    // Create container
+    if err := createContainer(name); err != nil {
+        return err
+    }
+    r.Add(func() { removeContainer(name) })
+    
+    // Install SDKs
+    if err := installSDKs(name); err != nil {
+        return err // Automatically reverts container creation
+    }
+    r.Add(func() { uninstallSDKs(name) })
+    
+    // Start workshop
+    if err := startWorkshop(name); err != nil {
+        return err // Automatically reverts everything
+    }
+    
+    r.Success() // Mark as successful, skip revert
+    return nil
+}
+```
+
+**Alternative: Manual defer cleanup**:
+
+```go
+func setupMount(path string) (err error) {
+    defer func() {
+        if err != nil {
+            // Clean up on error
+            unmount(path)
+        }
+    }()
+    
+    if err := mount(path); err != nil {
+        return err
+    }
+    
+    if err := configure(path); err != nil {
+        return err // defer will unmount
+    }
+    
+    return nil
+}
+```
+
+**Help strings**:
+
+```go
+// Good: Single spaces, concise
+Short: "Launch a new workshop",
+Long: `Launch creates and starts a workshop. The workshop will be based on the configuration in workshop.yaml.`,
+
+// Avoid: Multiple spaces or verbose explanations
+Short: "Launch  a  new  workshop",
+Long: `This command will launch a new workshop. It will create the workshop based on the configuration...`,
+```
+
+**Output formatting**:
+
+```go
+// Good: Use tabwriter for consistent table formatting
+import "text/tabwriter"
+
+func tabWriter() *tabwriter.Writer {
+    return tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
+}
+
+func (c *CmdList) Run(cmd *cobra.Command, args []string) error {
+    workshops, err := c.client.List()
+    if err != nil {
+        return err
+    }
+    
+    w := tabWriter()
+    fmt.Fprintf(w, "Name\tStatus\tBase\n")
+    for _, ws := range workshops {
+        fmt.Fprintf(w, "%s\t%s\t%s\n", ws.Name, ws.Status, ws.Base)
+    }
+    return w.Flush()
+}
+```
+
+**Rationale**: Transactional commands prevent partial failures from leaving the system in an inconsistent state. Consistent formatting and output improves user experience.
+
+**Reference**: PR #225, PR #109, PR #52, `docs/contributing.rst`
 
 ---
 
@@ -885,13 +1103,454 @@ func newCmdConnect() *cobra.Command {
 
 ---
 
+## Testing best practices
+
+### Integration test patterns
+
+**Pattern**: Integration tests should test behavior, not internal implementation details.
+
+**Good**:
+
+```go
+func (s *IntegrationSuite) TestLaunchWorkshop(c *check.C) {
+    // Use c.Mkdir for automatic cleanup
+    tmpDir := c.Mkdir()
+    
+    // Test the behavior
+    err := s.cli.Launch("dev")
+    c.Assert(err, check.IsNil)
+    
+    // Verify observable outcome
+    workshops, err := s.cli.List()
+    c.Assert(err, check.IsNil)
+    c.Assert(workshops, check.HasLen, 1)
+    c.Assert(workshops[0].Name, check.Equals, "dev")
+}
+```
+
+**Avoid**:
+
+```go
+func (s *IntegrationSuite) TestLaunchWorkshop(c *check.C) {
+    // Accessing internal state
+    err := s.cli.Launch("dev")
+    c.Assert(s.cli.internal.state.workshops["dev"].created, check.Equals, true)
+}
+```
+
+**Best practices**:
+
+- Use `c.Mkdir` from gocheck to create temporary directories that are automatically cleaned up
+- Avoid relying on internal implementation details
+- Test the behavior and observable outcomes
+- Source documentation examples in tests to ensure documentation stays in sync with code
+
+**Rationale**: Tests focused on behavior are more maintainable and less brittle when implementation changes.
+
+**Reference**: PR #170, PR #76, `docs/contributing.rst` Testing section
+
+---
+
+### Unit test patterns
+
+**Pattern**: Use gocheck for unit tests, parameterize for edge cases, and avoid unnecessary mocks.
+
+**Good**:
+
+```go
+func (s *ValidatorSuite) TestValidateName(c *check.C) {
+    tests := []struct {
+        name        string
+        input       string
+        expectedErr string
+    }{
+        {"valid name", "dev-workshop", ""},
+        {"empty name", "", "name cannot be empty"},
+        {"invalid chars", "dev@workshop", "invalid character"},
+    }
+    
+    for _, tt := range tests {
+        c.Logf("Testing: %s", tt.name)
+        err := validateName(tt.input)
+        if tt.expectedErr == "" {
+            c.Assert(err, check.IsNil)
+        } else {
+            c.Assert(err, check.ErrorMatches, tt.expectedErr)
+        }
+    }
+}
+```
+
+**Best practices**:
+- Use gocheck for unit tests
+- Parameterize tests to cover edge cases (different URL formats, empty inputs, boundary conditions)
+- Avoid unnecessary mocks; prefer real lightweight implementations or fakes where feasible
+- Use real test data that matches actual API responses
+
+**Rationale**: Parameterized tests improve coverage, real data catches edge cases, and minimal mocking keeps tests maintainable.
+
+**Reference**: PR #229, PR #254, `docs/contributing.rst` Testing section
+
+---
+
+## Internal package guidelines
+
+### Visibility control
+
+**Pattern**: Keep types and functions unexported in `internal/` packages unless explicitly required by other packages.
+
+**Good**:
+
+```go
+// internal/workshop/state.go
+
+// workshopState is internal to this package
+type workshopState struct {
+    name   string
+    status string
+}
+
+// Workshop is exported for use by other packages
+type Workshop struct {
+    Name   string
+    Status string
+}
+
+// internal helper
+func validateState(s *workshopState) error { ... }
+
+// Exported API
+func NewWorkshop(name string) (*Workshop, error) { ... }
+```
+
+**Avoid**:
+
+```go
+// Everything exported unnecessarily
+type WorkshopState struct { ... }
+func ValidateState(s *WorkshopState) error { ... }
+```
+
+**Rationale**: Reduces API surface area, makes refactoring easier, and prevents unintended coupling between packages.
+
+**Reference**: PR #221
+
+---
+
+### State management
+
+**Pattern**: The state package provides two distinct mechanisms: `state.Get()`/`state.Set()` for persistent data, and `state.Cache()` for transient caching.
+
+**Persistent state with Get/Set**:
+
+```go
+import "github.com/canonical/workshop/internal/overlord/state"
+
+// Store persistent data that survives restarts
+func saveConnectionState(st *state.State) error {
+    conns := map[string]interface{}{
+        "workshop/sdk:plug": "workshop/system:slot",
+    }
+    st.Set("conns", conns)
+    return nil
+}
+
+// Retrieve persistent data
+func loadConnectionState(st *state.State) (map[string]interface{}, error) {
+    var conns map[string]interface{}
+    err := st.Get("conns", &conns)
+    if err != nil && err != state.ErrNoState {
+        return nil, err
+    }
+    return conns, nil
+}
+```
+
+**Transient caching with Cache**:
+
+```go
+// Cache objects for quick access within a session (not persisted)
+func getStore(st *state.State) (*Store, error) {
+    cached := st.Cached(cachedStoreKey{})
+    if cached != nil {
+        return cached.(*Store), nil
+    }
+    
+    store := newStore()
+    st.Cache(cachedStoreKey{}, store)
+    return store, nil
+}
+```
+
+**Avoid**:
+
+```go
+// Don't do manual JSON serialization for state
+func saveState(path string, data interface{}) error {
+    json, _ := json.Marshal(data)
+    return os.WriteFile(path, json, 0644)
+}
+```
+
+**Important considerations**:
+- `Get()`/`Set()` persist across restarts, serialized to JSON
+- `Cache()` is for session-only data, cleared on restart
+- Maps retrieved from state are references; modifications affect the original
+- Always lock state before Get/Set/Cache operations
+
+**Rationale**: State management APIs provide proper locking, change tracking, and persistence. Using them correctly avoids race conditions and ensures data consistency.
+
+**Reference**: `internal/overlord/state/state.go`, PR #236, PR #231
+
+---
+
+## Security considerations
+
+### Script injection prevention
+
+**Pattern**: When generating scripts or templates, validate user input and use proper escaping mechanisms.
+
+**Good**:
+
+```go
+import "github.com/canonical/workshop/internal/osutil"
+
+func generateSetupScript(userInput string) (string, error) {
+    // Validate input first using whitelist approach
+    if err := validateScriptInput(userInput); err != nil {
+        return "", err
+    }
+    
+    // Use proper escaping for mount paths
+    escaped := osutil.Escape(userInput)
+    script := fmt.Sprintf("#!/bin/bash\nmount %s\n", escaped)
+    return script, nil
+}
+
+func validateScriptInput(input string) error {
+    // Whitelist approach for allowed characters
+    if !regexp.MustCompile(`^[a-zA-Z0-9_/-]+$`).MatchString(input) {
+        return fmt.Errorf("invalid characters in input")
+    }
+    return nil
+}
+```
+
+**Available escaping utilities**:
+- `osutil.Escape()` - Escapes paths for mount entries
+- `osutil.Unescape()` - Unescapes mount entry paths
+- Input validation before any script generation
+
+**Avoid**:
+
+```go
+func generateSetupScript(userInput string) string {
+    // Direct interpolation without validation or escaping
+    return fmt.Sprintf("#!/bin/bash\nmount %s\n", userInput)
+}
+```
+
+**Rationale**: Prevents script injection attacks when generating executable content from user input. Always validate and escape.
+
+**Reference**: PR #240, `internal/osutil/mountentry_linux.go`
+
+---
+
+### File permissions
+
+**Pattern**: Be explicit about file permissions using appropriate constants or octal values.
+
+**Good**:
+
+```go
+// Private file (owner read/write only)
+if err := os.WriteFile(path, data, 0600); err != nil {
+    return err
+}
+
+// Public read, owner write
+if err := os.WriteFile(path, data, 0644); err != nil {
+    return err
+}
+
+// Executable script
+if err := os.WriteFile(scriptPath, data, 0755); err != nil {
+    return err
+}
+
+// Using constant for standard permissions
+if err := os.MkdirAll(dir, os.ModePerm); err != nil { // 0777
+    return err
+}
+
+// Standard file creation (rw-rw-rw-), relying on umask
+if err := os.WriteFile(path, data, 0666); err != nil {
+    return err
+}
+```
+
+**Avoid**:
+
+```go
+// Unclear permissions
+if err := os.WriteFile(path, data, 0777); err != nil {
+    return err
+}
+
+// Magic numbers without context
+if err := os.WriteFile(path, data, 420); err != nil { // Decimal for 0644
+    return err
+}
+```
+
+**Rationale**: Explicit permissions ensure proper security boundaries and make intent clear.
+
+**Reference**: General security best practices
+
+---
+
+## Common pitfalls and edge cases
+
+### Map initialization
+
+**Pattern**: Always initialize maps before use. Writing to a nil map causes a panic.
+
+**Good**:
+
+```go
+func newRegistry() *Registry {
+    return &Registry{
+        workshops: make(map[string]*Workshop),
+        sdks:      make(map[string]*SDK),
+    }
+}
+
+func addWorkshop(r *Registry, w *Workshop) {
+    if r.workshops == nil {
+        r.workshops = make(map[string]*Workshop)
+    }
+    r.workshops[w.Name] = w
+}
+```
+
+**Avoid**:
+
+```go
+func addWorkshop(r *Registry, w *Workshop) {
+    r.workshops[w.Name] = w // Panic if workshops is nil
+}
+```
+
+**Rationale**: Prevents runtime panics from nil map writes.
+
+**Reference**: PR #231, common Go pitfall
+
+---
+
+### Loop variables in closures
+
+**Pattern**: Be careful with loop variables in closures, especially in goroutines.
+
+**Good (Go 1.22+)**:
+
+```go
+for _, workshop := range workshops {
+    go func() {
+        // Safe in Go 1.22+: each iteration has its own workshop variable
+        process(workshop)
+    }()
+}
+```
+
+**Good (Pre-Go 1.22 or explicit)**:
+
+```go
+for _, workshop := range workshops {
+    workshop := workshop // Create loop-local copy
+    go func() {
+        process(workshop)
+    }()
+}
+```
+
+**Avoid**:
+
+```go
+for _, workshop := range workshops {
+    go func() {
+        // In older Go versions, this captures the loop variable
+        // All goroutines may process the same (last) workshop
+        process(workshop)
+    }()
+}
+```
+
+**Rationale**: Go 1.22+ fixed this issue, but being aware helps when reading older code or maintaining compatibility.
+
+**Reference**: Go 1.22 release notes, common Go pitfall
+
+---
+
+### Defer in loops
+
+**Pattern**: Be careful when using `defer` inside loops. Defers execute at function exit, not loop iteration exit.
+
+**Good**:
+
+```go
+func processFiles(files []string) error {
+    for _, filename := range files {
+        if err := processFile(filename); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
+func processFile(filename string) error {
+    f, err := os.Open(filename)
+    if err != nil {
+        return err
+    }
+    defer f.Close() // Executes when processFile returns
+    
+    // Process file...
+    return nil
+}
+```
+
+**Avoid**:
+
+```go
+func processFiles(files []string) error {
+    for _, filename := range files {
+        f, err := os.Open(filename)
+        if err != nil {
+            return err
+        }
+        defer f.Close() // Won't execute until processFiles returns!
+                        // May accumulate many open files
+        
+        // Process file...
+    }
+    return nil
+}
+```
+
+**Rationale**: Defers in loops can cause resource leaks. Extract loop body into a function for proper cleanup.
+
+**Reference**: Common Go pitfall
+
+---
+
 ## References
 
 This guide was derived from:
 
-- **PR discussions**: #257, #262, #269, #275, #289, #302 (primary sources)
+- **PR discussions**: #257, #262, #269, #275, #289, #302, #240, #236, #231, #229, #225, #221, #170, #109, #76, #52 (primary sources)
 - **Contributing guide**: `docs/contributing.rst`
 - **Codebase patterns**: Observed in `cmd/`, `internal/`, `client/` packages
+- **Initial style extraction**: Consolidated from comprehensive PR review analysis
 
 ### Key contributors to these patterns
 
