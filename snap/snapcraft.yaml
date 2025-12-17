@@ -74,13 +74,20 @@ parts:
         VERSION="${VERSION}-dev"
       fi
       craftctl set version="${VERSION}"
-    stage-packages:
-      - zstd
     prime:
       - bin/workshop
       - bin/workshopd
       - bin/workshopctl
       - bin/sdk
+  zstd:
+    plugin: nil
+    stage-packages:
+      - zstd
+    organize:
+      usr/bin/: bin/
+    prime:
+      - bin/pzstd
+      - bin/zstd
   wrappers:
     plugin: dump
     source: snap/local/
