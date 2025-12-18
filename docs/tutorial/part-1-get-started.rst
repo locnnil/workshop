@@ -486,8 +486,9 @@ with :command:`workshop changes`:
    $ workshop changes
 
      ID  Status  Spawn               Ready               Summary
-     33  Done    today at 11:20 GMT  today at 11:20 GMT  Refresh "dev" workshop
-     34  Done    today at 11:32 GMT  today at 11:32 GMT  Execute command "sudo"
+     1   Done    today at 09:26 CET  today at 09:27 CET  Launch "dev" workshop
+     ...
+     4   Done    today at 09:32 CET  today at 09:34 CET  Refresh "dev" workshop
 
 
 Changes are enacted atomically to ensure workshops stay operational.
@@ -503,7 +504,7 @@ pass the change ID to the command:
 
 .. code-block:: console
 
-   $ workshop tasks 33
+   $ workshop tasks 4
 
      Status   Duration  Summary
      Done    2m17.389s  Download "ubuntu@24.04" base image
