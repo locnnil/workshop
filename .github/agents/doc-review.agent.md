@@ -86,6 +86,223 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 **Outcome**: Identification of content gaps, missing artefacts, or broken navigation.
 
+### Stage 4.5: Code Backing Verification for Doc Changes (Docs ⇄ Code Consistency)
+**Intent**: Validate that documentation changes accurately reflect the actual codebase behavior, ensuring docs-to-code consistency. This stage mirrors the code review agent's "Documentation Completeness" stage (Stage 6) but operates in reverse: code is the authoritative source, and documentation must be verified against it. This mandatory verification prevents false claims and ensures documentation correctness.
+
+**Design Note**: This stage implements the reverse counterpart to the code review agent's Stage 6 (Documentation Completeness). While Stage 6 verifies "code changes → docs support", this stage verifies "doc changes → code backing". Both use three-substage patterns (Discovery → Verification → Refined Report) with explicit false-positive prevention.
+
+**Inputs**: Changed documentation files (from git diff), full codebase in `cmd/`, `internal/`, `client/`, test files, configuration schemas, coverage map (from Stage 1).
+
+**Sub-stage A: Discovery Scan (Initial Hypothesis Formation)**
+
+**Actions**:
+1.  **Identify Changed Documentation Claims**:
+    -   Run `git diff` to list changed documentation files.
+    -   For each changed file, categorize changes:
+        -   **Behavior Claims**: Assertions about how Workshop, SDKcraft, commands, or features behave
+        -   **Options/Defaults/Constraints**: Documented flags, configuration keys, default values, allowed values, validation rules
+        -   **Examples**: Code samples, command invocations, YAML/JSON configurations, expected outputs
+        -   **CLI Surface**: Command names, subcommands, flags, help text, output formats
+        -   **API Surface**: REST endpoints, request/response formats, client method signatures
+        -   **Error Messages**: Documented error text, exit codes, diagnostic output
+        -   **Terminology/Renames/Deprecations**: Changed names, deprecated features, migration paths
+        -   **Interface/SDK Behavior**: Connection types, plug/slot mechanics, confinement rules
+2.  **Form Initial Hypotheses for Each Claim**:
+    -   **Supported**: Claim appears to match code structure (preliminary)
+    -   **Unsupported**: Claim appears inconsistent with code (preliminary)
+    -   **Speculative**: Claim describes future/intended behavior without code backing
+    -   **Ambiguous**: Unclear whether claim matches code (needs deeper investigation)
+    -   **Outdated**: Claim may describe previous code behavior
+
+**Outcome**: A preliminary list of documentation claims requiring code verification.
+
+---
+
+**Sub-stage B: Verification Pass (MANDATORY - No False Positives)**
+
+**Intent**: Validate each documentation claim against the actual codebase. Convert "unsupported" hypotheses into evidence-based findings or retractions. **Code is the source of truth**.
+
+**Actions** (must complete for EVERY initial hypothesis):
+
+1.  **Locate Code Evidence with Multiple Strategies**:
+    
+    For each claim, perform **at least 2 distinct searches** to find supporting code:
+    
+    - **Direct identifier search**: Search for exact names, keys, constants, struct fields
+      - Example: Search for `--create-dirs`, `LaunchOptions`, `MountInterface`, config key `"name"`
+      - Tools: `grep -r`, `git grep`, ripgrep (`rg`)
+    - **Entrypoint tracing**: Follow from CLI/config/API entrypoint to implementation
+      - Example: For `workshop launch` docs, trace `cmd/workshop/launch.go` → `client/workshop.go` → `internal/daemon/api.go` → `internal/overlord/workshopstate/`
+      - Tools: Code reading, symbol navigation
+    - **Test evidence search**: Locate tests that exercise the claimed behavior
+      - Example: Search `*_test.go` files for test names, assertions, mock responses
+      - Tools: grep for test function names, table-driven test cases
+    - **Schema/validation search**: Find parsers, validators, schema generators
+      - Example: Struct tags (`yaml:"fieldname"`), validation functions, error messages
+      - Tools: grep for struct definitions, validation error strings
+
+2.  **Verification Checklist by Claim Type**:
+    
+    Apply type-specific verification procedures:
+    
+    - **Behavior Claims**:
+      - [ ] Locate implementation code path
+      - [ ] Verify behavior matches documented description
+      - [ ] Check for conditional behavior (flags, modes, edge cases)
+      - [ ] Confirm error handling matches docs
+    
+    - **Options/Defaults/Constraints**:
+      - [ ] Find struct field or config key definition
+      - [ ] Extract actual default value from code (constants, struct tags, `Default:` assignments)
+      - [ ] Find allowed values (enums, validation switch/if statements, regex patterns)
+      - [ ] Verify constraint enforcement (validation functions, error returns)
+    
+    - **Examples**:
+      - [ ] Parse example syntax matches actual parser expectations
+      - [ ] If example shows command output, verify against golden test files or actual execution
+      - [ ] Confirm field names, indentation, and structure match code expectations
+      - [ ] Check that referenced flags/options exist in code
+    
+    - **CLI Surface**:
+      - [ ] Locate Cobra command definition in `cmd/*/`
+      - [ ] Verify command name, aliases, subcommands match
+      - [ ] Check flag definitions (name, shorthand, type, default, help text)
+      - [ ] Confirm help text matches `Use:` and `Short:` fields
+      - [ ] Verify output formatting (tabwriter usage, column headers, sorting)
+    
+    - **API Surface**:
+      - [ ] Find route definition in `internal/daemon/api.go`
+      - [ ] Verify HTTP method, path, versioning (`/v1/...`)
+      - [ ] Check request/response struct definitions
+      - [ ] Confirm client method signature in `client/` package
+      - [ ] Verify backward compatibility (deprecated fields, migrations)
+    
+    - **Error Messages**:
+      - [ ] Search codebase for exact error text or pattern
+      - [ ] Verify error is returned in documented scenario
+      - [ ] Check error message format follows style guide (lowercase, no trailing punctuation)
+    
+    - **Terminology/Renames/Deprecations**:
+      - [ ] Search for old name to confirm it's truly deprecated/removed
+      - [ ] Find deprecation markers, aliases, or migration helpers
+      - [ ] Check changelog, release notes, or version gating logic
+      - [ ] Verify new name exists and is used consistently
+
+3.  **Document Evidence for Each Finding** (internal validation only):
+    
+    For **claim supported by code**:
+    - Note file path + function/struct + line range
+    - Assessment: `Supported (verified at [file:line])`
+    
+    For **claim not supported by code**:
+    - Document search performed (≥2 strategies + specific search terms)
+    - Note what was expected vs. what was found
+    - Assessment: `Unsupported (expected [X], found [Y] at [file:line])`
+    
+    For **claim inconclusive**:
+    - Document search attempts
+    - Note what evidence is missing or ambiguous
+    - Assessment: `Inconclusive (needs human review: [specific check])`
+
+4.  **Reclassify Each Hypothesis**:
+    
+    Based on verification evidence, reclassify each initial hypothesis:
+    
+    | Original Hypothesis | Verification Outcome | Final Classification |
+    |---------------------|----------------------|---------------------|
+    | "Unsupported" | Found matching code implementation | **Retract claim** (docs are correct) |
+    | "Unsupported" | Found code but with different default value | **Docs outdated** (needs value update) |
+    | "Unsupported" | No code evidence found despite thorough search | **Confirmed unsupported** (docs ahead of code) |
+    | "Supported" | Code contradicts doc claim | **Docs incorrect** (needs correction) |
+    | "Ambiguous" | Tests confirm behavior | **Supported** (test-backed) |
+    | "Ambiguous" | Cannot locate relevant code | **Inconclusive** (flag for human review) |
+
+5.  **Apply False-Positive Prevention Rules**:
+    
+    - **Rule 1**: Do NOT claim "unsupported" without documented code search evidence (≥2 strategies + explicit search terms)
+    - **Rule 2**: Prefer "inconclusive" over "unsupported" when code is complex or evidence is indirect
+    - **Rule 3**: Prefer "outdated" over "unsupported" when code exists but with different behavior/values
+    - **Rule 4**: Prefer "imprecise" over "incorrect" when docs are vague but not technically wrong
+    - **Rule 5**: Retract claim entirely if verification confirms docs are accurate
+
+6.  **Cross-Check Documentation Coverage to Avoid Duplication Confusion**:
+    
+    Before claiming "unsupported", verify the entity isn't documented elsewhere:
+    
+    - Search `docs/` for related terms, alternative phrasings, synonyms
+    - Consult `docs/coverage.md` to find canonical documentation locations
+    - If claim is supported elsewhere, classify as "Present but undiscoverable" instead of "unsupported"
+
+**Outcome**: A refined, evidence-based list of verified code-to-docs consistency issues with supporting search logs and code references.
+
+---
+
+**Sub-stage C: Refined Final Report**
+
+**Intent**: Produce the final code backing section using ONLY verified findings with evidence.
+
+**Actions**:
+
+1.  **Structure Report by Classification**:
+    
+    Group findings into categories:
+    - **Confirmed Unsupported**: Docs describe behavior/options not present in code
+    - **Docs Outdated**: Code exists but with different values/behavior than documented
+    - **Docs Incorrect**: Code contradicts doc claim
+    - **Docs Imprecise**: Code behavior more nuanced than docs suggest
+    - **Docs Speculative**: Describes intended future behavior (not yet implemented)
+    - **Inconclusive**: Cannot verify (requires human review)
+    - **No Issues Found**: All doc claims backed by code (explicitly state this)
+
+2.  **Format Each Verified Finding** (concise, actionable format with Mini-Checklist):
+    
+    For each issue, include:
+    
+    ```markdown
+    **Doc Claim**: [File path:line] "[Quoted claim from docs]"
+    
+    **Verification Checklist**:
+    - [ ] Search strategies used: [list ≥2 strategies]
+    - [ ] Code location(s) checked: [file paths]
+    - [ ] Test evidence: [test file/function or "Not found"]
+    - [ ] Schema/validation: [struct/parser location or "Not found"]
+    
+    **Code Evidence**:
+    - **Expected**: [What docs claim should exist]
+    - **Found**: [What code actually shows, with file:line references]
+    - **Assessment**: [Supported | Unsupported | Outdated | Incorrect | Imprecise | Inconclusive]
+    
+    **Issue**: [Classification from list above]
+    - [Brief description of mismatch]
+    
+    **Recommended Action**:
+    - [File path]: [Specific minimal edit to restore correctness]
+    - Rationale: [Why this edit aligns docs with code]
+    - Alternative: [If docs are "ahead of code", suggest: "Open issue for future feature" OR "Revert speculative claim"]
+    ```
+
+3.  **Conservative Change Suggestions** (Minimal Doc Edits):
+    
+    When proposing updates, minimize disruption and align docs to code:
+    
+    - For "Docs Outdated": Update specific values/behavior descriptions to match current code
+    - For "Docs Incorrect": Correct the claim with precise wording from code
+    - For "Docs Imprecise": Add qualifiers, conditions, or edge-case notes
+    - For "Confirmed Unsupported": 
+      - **Primary**: Revert or remove unsupported claim
+      - **Alternative**: If claim represents intended behavior, change to future tense and add note: "(Planned for vX.Y.Z)" or "(Not yet implemented)"
+    - For "Docs Speculative": Mark as future/intended, not current behavior
+    - For "Inconclusive": Provide specific human review action: "Manually verify [X] by running [Y]"
+
+4.  **Link to Code Artefacts**:
+    
+    - Reference specific files, functions, structs, constants (with line numbers)
+    - Reference test files that verify behavior
+    - Reference schema definitions, parsers, validators
+    - Include git grep / ripgrep search commands used for verification
+
+**Outcome**: A final, evidence-based code backing report containing ONLY verified issues with supporting code references and conservative, minimal documentation edits.
+
 ### Stage 5: Style & Formatting Review
 **Intent**: Enforce style guides, formatting conventions, and reST syntax.
 **Inputs**: File content, [`docs/doc-style-guide.md`](../../docs/doc-style-guide.md).
@@ -95,9 +312,19 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 **Outcome**: A list of style violations with supporting quotes.
 
-### Stage 6: Final Output Generation
+### Stage 6: Code Backing Verification Report Integration
+**Intent**: Integrate code backing verification findings into the overall review.
+**Inputs**: Findings from Stage 4.5.
+**Actions**:
+-   Ensure code backing findings are prioritized appropriately (blocking issues for incorrect/unsupported claims).
+-   Cross-reference with Diátaxis compliance findings (Stage 2) to identify if inaccuracies stem from category misalignment.
+-   Prepare evidence-based recommendations with code references.
+
+**Outcome**: Integrated findings ready for final output generation.
+
+### Stage 7: Final Output Generation
 **Intent**: Synthesize findings into a structured, actionable review comment.
-**Inputs**: Findings from Stages 1-5.
+**Inputs**: Findings from Stages 1-6.
 **Actions**:
 -   Construct the review using the **Output Template** below.
 -   Ensure all style suggestions include a quote from the style guide.
@@ -131,6 +358,39 @@ Structure your review as follows:
 ### Content Quality
 [Clarity, accuracy, cross-references]
 
+### Code Backing Verification (Stage 4.5)
+#### Changed Documentation Claims
+[List of claims from git diff: behavior assertions, options/defaults, examples, CLI/API surface, error messages, terminology]
+
+#### Findings
+[Only include findings verified through Sub-stage B verification process with code evidence]
+
+**Doc Claim**: [File path:line] "[Quoted claim from docs]"
+
+**Verification Checklist**:
+- [ ] Search strategies used: [list ≥2 strategies]
+- [ ] Code location(s) checked: [file paths]
+- [ ] Test evidence: [test file/function or "Not found"]
+- [ ] Schema/validation: [struct/parser location or "Not found"]
+
+**Code Evidence**:
+- **Expected**: [What docs claim should exist]
+- **Found**: [What code actually shows, with file:line references]
+- **Assessment**: [Supported | Unsupported | Outdated | Incorrect | Imprecise | Inconclusive]
+
+**Issue**: [Confirmed Unsupported | Docs Outdated | Docs Incorrect | Docs Imprecise | Docs Speculative | Inconclusive]
+- [Brief description of mismatch]
+
+**Recommended Action**:
+- [File path]: [Specific minimal edit]
+- Rationale: [Why this aligns docs with code]
+
+[Repeat for each verified finding]
+
+**OR, if no issues:**
+
+All documentation claims are backed by code evidence. No corrections required.
+
 ### Style Adherence
 **Quote from `docs/doc-style-guide.md`, [Section Name]:**
 > [Exact relevant passage]
@@ -138,7 +398,7 @@ Structure your review as follows:
 [Observation about adherence or suggested change]
 
 ### Recommendations
-[Specific actions, areas for improvement, edits with file:line references and style guide quotes]
+[Prioritized list of specific actions with file:line references, code evidence references, and style guide quotes. Prioritize: 1) Code backing issues, 2) Build failures, 3) Diátaxis misalignments, 4) Style violations]
 ```
 
 ## Boundaries & Guidelines
@@ -148,7 +408,9 @@ Structure your review as follows:
 -   Build docs locally (`make spelling linkcheck woke lint-md`) to catch Sphinx warnings.
 -   Update and check `docs/coverage.md` for artefact gaps.
 -   Verify cross-references resolve correctly.
--   Flag content that contradicts code behavior.
+-   **Complete code backing verification (Stage 4.5, Sub-stage B)** before reporting documentation claims — search actual codebase with ≥2 verification strategies.
+-   **Provide code evidence for all documentation consistency claims**: Include search strategies, file paths, line numbers, test references, or explicit "no code found" statements.
+-   **Code is the source of truth**: Flag documentation that contradicts code behavior, not vice versa.
 
 ### Ask First
 -   Before restructuring large documentation sections (e.g., moving files between tutorial/how-to).
@@ -161,3 +423,7 @@ Structure your review as follows:
 -   Approve docs that fail Sphinx build.
 -   Suggest style changes without quoting the style guide.
 -   Ignore the Diátaxis framework (don't put tutorials in how-to, etc.).
+-   **Claim documentation is "unsupported by code" without verification evidence** (≥2 search strategies + explicit code search + no-match confirmation).
+-   **Report false positives**: Always complete Sub-stage B (Verification Pass) before finalizing code backing findings.
+-   **Prefer "unsupported" when docs are vague or imprecise**: Use accurate classifications (outdated, incorrect, imprecise, inconclusive) based on verification.
+-   **Recommend changing code to match docs** as the primary action; only documentation should be adjusted to match code reality.

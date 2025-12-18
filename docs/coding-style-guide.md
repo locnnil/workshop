@@ -140,7 +140,7 @@ if err := file.Close(); err != nil {
 file.Close() // Unchecked error
 ```
 
-**Rationale**: The errcheck linter is enabled for new code to catch unhandled errors. Explicit `_` assignment shows intentional discard.
+**Rationale**: The errcheck linter is enabled for new code to catch unhandled errors. Note that errcheck ignores certain common cases like `file.Close()` and a few others. Explicit `_` assignment shows intentional discard for other cases.
 
 
 ---
@@ -194,22 +194,24 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 **Good**:
 
 ```go
-statusFilter := []string{"Ready", "Error"}
-matchesStatus := func(s string) bool {
-    if statusFilter == nil {
-        return true
-    }
-    return slices.Contains(statusFilter, s)
+filters := []string{
+    "config.user.workshop.project-id=" + pid,
+    "config.user.workshop.name=" + w,
+    "config.user.workshop.snapshot-type=" + kind,
 }
+snapshots, err := snapshotConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
 ```
+
+Here, `filters` clearly indicates these are filter conditions for querying snapshots via `GetInstancesWithFilter()`.
 
 **Avoid**:
 
 ```go
-allowed := []string{"Ready", "Error"} // Too generic
+conditions := []string{...}  // Not aligned with the method name
+criteria := []string{...}    // Too generic; criteria for what?
 ```
 
-**Rationale**: Improves code clarity and communicates intent.
+**Rationale**: Improves code clarity and communicates intent. Use names that describe what the variable represents, not what it enables.
 
 
 ---
@@ -237,7 +239,7 @@ const (
 )
 ```
 
-**Rationale**: Improves test readability and maintainability.
+**Rationale**: Improves test readability and maintainability. In tests, variable names can be more relaxed, but global, reusable test constants should still be descriptive.
 
 
 ---
@@ -384,34 +386,6 @@ for _, plug := range allPlugs {
 ```
 
 **Rationale**: Makes intention explicit and improves readability for simple logic.
-
-
----
-
-**Use reference comparison over endpoint comparison**
-
-**Pattern**: Use `Ref()` comparison when project IDs matter, not endpoint strings.
-
-**Good**:
-
-```go
-if plug.Ref() == conn.Plug.Ref() {
-    // Correct comparison including project ID
-}
-```
-
-**Avoid**:
-
-```go
-plugEndpoint := endpoint(plug.Workshop, plug.SDK, plug.Name)
-connEndpoint := endpoint(conn.Plug.Workshop, conn.Plug.SDK, conn.Plug.Name)
-if plugEndpoint == connEndpoint {
-    // Misses project ID differences
-}
-```
-
-**Rationale**: Endpoints don't include project IDs, which can cause incorrect matching when the same endpoint exists in different projects.
-
 
 ---
 
@@ -1438,23 +1412,6 @@ for _, workshop := range workshops {
     }()
 }
 ```
-
-**Avoid**:
-
-```go
-for _, workshop := range workshops {
-    go func() {
-        // In older Go versions, this captures the loop variable
-        // All goroutines may process the same (last) workshop
-        process(workshop)
-    }()
-}
-```
-
-**Rationale**: Go 1.22+ fixed this issue, but being aware helps when reading older code or maintaining compatibility.
-
-
----
 
 **Defer in loops**
 
