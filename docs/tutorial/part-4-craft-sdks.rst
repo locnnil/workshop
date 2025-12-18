@@ -182,18 +182,6 @@ to download and extract the official Ollama binary from GitHub releases.
 The :samp:`user-service` part includes a :program:`systemd` service file
 that will be used to manage the Ollama daemon.
 
-.. note::
-
-   The service file is specific to Ollama and how it runs as a daemon.
-   This is just one way to manage a long-running process in an SDK,
-   and other SDKs may use different part layouts depending on their needs.
-
-   For in-depth details,
-   refer to the `Parts
-   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts/>`_
-   section in Craft Parts documentation.
-
-
 The first :samp:`dump` downloads the file automatically.
 However, we need to create the :program:`systemd` service file
 that was referenced in the :samp:`user-service` part.
@@ -225,6 +213,18 @@ This defines how the Ollama daemon should run:
 - :samp:`Restart` ensures the service is restarted on failure
 
 - :samp:`After` makes it depend on network connectivity
+
+
+.. note::
+
+   The service file is specific to Ollama and how it runs as a daemon.
+   This is just one way to manage a long-running process in an SDK,
+   and other SDKs may use different part layouts depending on their needs.
+
+   For in-depth details,
+   refer to the `Parts
+   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts/>`_
+   section in Craft Parts documentation.
 
 
 .. _tut_sdkcraft_mount_interface:
@@ -338,19 +338,6 @@ It runs when the workshop is launched or refreshed,
 and is typically used to install system packages
 and configure the environment.
 
-.. note::
-
-   |ws_markup| tweaks this hook's environment a bit.
-
-   First, note the :envvar:`$SDK` variable,
-   which points to the root of the SDK installation.
-   This allows you to reference files installed by the SDK.
-
-   Also, when invoked from any hooks,
-   :command:`apt` is configured to exclude recommended or suggested packages
-   and answer "yes" to all confirmation prompts.
-
-
 In the same directory,
 create a file named :file:`setup-project`
 for Ollama-specific setup:
@@ -369,6 +356,18 @@ once the project directory is mounted
 and interfaces are connected.
 This hook installs and starts the Ollama service as a user service,
 ensuring the AI model server is running and ready to use.
+
+.. note::
+
+   |ws_markup| tweaks this hook's environment a bit.
+
+   First, note the :envvar:`$SDK` variable,
+   which points to the root of the SDK installation.
+   This allows you to reference files installed by the SDK.
+
+   Also, when invoked from any hooks,
+   :command:`apt` is configured to exclude recommended or suggested packages
+   and answer "yes" to all confirmation prompts.
 
 
 Persist: save and restore

@@ -197,6 +197,11 @@ both the interface connections and the default host directories
 (if any have been created, for example, to accommodate mount interface slots)
 are removed.
 
+Also, you can manually enable or disable connections
+with :command:`workshop connect` and :command:`workshop disconnect`,
+whereas :command:`workshop connections` can list all connections
+that have been established by any |ws_markup| projects.
+
 .. note::
 
    We remove content stored in our default locations
@@ -204,12 +209,6 @@ are removed.
    Thus, at least some commands will delete this data
    to prevent it from piling up in hidden places
    where it's unlikely to be used again.
-
-
-Also, you can manually enable or disable connections
-with :command:`workshop connect` and :command:`workshop disconnect`,
-whereas :command:`workshop connections` can list all connections
-that have been established by any |ws_markup| projects.
 
 
 See also

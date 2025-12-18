@@ -68,12 +68,6 @@ conversely, the :command:`workshop stop` command unmounts it.
 
 .. @artefact workshop --project
 
-.. note::
-
-   There are more workshop CLI commands;
-   some have a :option:`!--project` option
-   that accepts a pathname to use as the project directory.
-
 External changes to the project are tracked by the |ws_markup| daemon.
 Thus, if the project is moved or copied,
 all workshops that reference it are updated,
@@ -84,6 +78,12 @@ without first removing its workshops,
 any workshops that reference it
 enter the *Error* state;
 the only command applicable to them is :command:`workshop remove`.
+
+.. note::
+
+   There are more workshop CLI commands;
+   some have a :option:`!--project` option
+   that accepts a pathname to use as the project directory.
 
 
 See also

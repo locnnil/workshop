@@ -41,10 +41,6 @@ and a matching plug to the :samp:`system` SDK:
            endpoint: localhost:8080        # port on the host
 
 
-.. note::
-
-   |ws_markup| doesn't resolve hostnames, but supports the aliases
-   :samp:`localhost`, :samp:`ip6-localhost`, and :samp:`ip6-loopback`.
 
 
 Refresh the workshop and start the service,
@@ -59,6 +55,11 @@ Note that port numbers can be different from each other,
 subject to the regular low-port limitations.
 Ensure the plug port is free before refreshing,
 or the tunnel will fail to activate.
+
+.. note::
+
+   |ws_markup| doesn't resolve hostnames, but supports the aliases
+   :samp:`localhost`, :samp:`ip6-localhost`, and :samp:`ip6-loopback`.
 
 
 Sharing host services
@@ -187,12 +188,6 @@ Now let's invert the flow.
 Share a host abstract socket (which exists only in the kernel, not on disk)
 with code inside the workshop on TCP port :samp:`9000`.
 
-.. note::
-
-   Abstract sockets avoid filesystem permissions and name collisions.
-   They are written as :samp:`@name` (note the leading "@").
-
-
 .. code-block:: yaml
    :caption: workshop.yaml
 
@@ -213,6 +208,11 @@ with code inside the workshop on TCP port :samp:`9000`.
 After :command:`workshop refresh` and :command:`workshop connect`,
 the code in the workshop can connect to :samp:`localhost:9000`,
 and |ws_markup| forwards the traffic to the host's abstract socket :samp:`@bus`.
+
+.. note::
+
+   Abstract sockets avoid filesystem permissions and name collisions.
+   They are written as :samp:`@name` (note the leading "@").
 
 
 Troubleshooting

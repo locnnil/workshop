@@ -164,13 +164,6 @@ the most aggressive cleanup method is to completely purge the |ws_markup| snap.
 This executes the snap's :samp:`remove` hook,
 which is designed to clean up all associated data and resources.
 
-.. warning::
-
-   This is a highly destructive operation that removes all workshops
-   for all users on the system. It should only be used as a last resort.
-   You will need to reinstall |ws_markup| to use it again.
-
-
 To purge the snap and all its data, run the following command:
 
 .. code-block:: console
@@ -182,6 +175,12 @@ This will remove all workshop configurations, containers, LXD profiles,
 and storage pools managed by |ws_markup|.
 
 After the command completes, you can reinstall the snap.
+
+.. warning::
+
+   This is a highly destructive operation that removes all workshops
+   for all users on the system. It should only be used as a last resort.
+   You will need to reinstall |ws_markup| to use it again.
 
 
 Final checks
