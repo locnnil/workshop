@@ -28,16 +28,16 @@ additional notes, including specific plug bindings, are provided as needed.
 
 Notes:
 
-- The output lists connections created with 'workshop connect' as 'manual'.
+- The output lists connections created with "workshop connect" as "manual".
 
-- The '--all' option needn't be used with an argument;
+- The "--all" option needn't be used with an argument;
   if a workshop is supplied, disconnected plugs are also listed.
 
 
 .. rubric:: Examples
 
 
-List connections for the workshop 'nimble' in the current project directory:
+List connections for the workshop "nimble" in the current project directory:
 
 .. code-block:: console
 

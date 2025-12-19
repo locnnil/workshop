@@ -37,13 +37,13 @@ Notes:
 
 - When interrupted, the command attempts to gracefully revert its actions.
 
-- To stop a started workshop, use 'workshop stop'.
+- To stop a started workshop, use "workshop stop".
 
 
 .. rubric:: Examples
 
 
-Start the 'nimble' and 'jazzy' workshops in the current project directory:
+Start the "nimble" and "jazzy" workshops in the current project directory:
 
 .. code-block:: console
 

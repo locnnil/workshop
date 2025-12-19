@@ -20,31 +20,31 @@ Edit the sketch SDK and graft it onto the workshop.
 .. rubric:: Description
 
 
-This opens the 'sketch' SDK definition in the default text editor,
+This opens the "sketch" SDK definition in the default text editor,
 enabling rapid experiments and tweaks at the SDK level.
 
 Saving the definition and exiting the editor causes a refresh,
-which installs the configured 'sketch' SDK in the workshop.
+which installs the configured "sketch" SDK in the workshop.
 
-The '--stash' and '--restore' options respectively stash the SDK,
+The "--stash" and "--restore" options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
-The '--eject' option moves the SDK definition into the project directory,
+The "--eject" option moves the SDK definition into the project directory,
 so it can be added to multiple workshops or shared with others.
-The '--remove' option removes the SDK permanently.
+The "--remove" option removes the SDK permanently.
 
 Notes:
 
-- The 'sketch' SDK doesn't appear in the workshop definition
+- The "sketch" SDK doesn't appear in the workshop definition
   and cannot include build-time data such as parts.
 
-- In addition to hooks, the 'sketch' SDK can use interfaces
+- In addition to hooks, the "sketch" SDK can use interfaces
   by defining plugs and slots.
 
 
 .. rubric:: Examples
 
 
-Edit the sketch SDK definition for the 'nimble' workshop
+Edit the sketch SDK definition for the "nimble" workshop
 and apply it after saving by automatically refreshing the workshop:
 
 .. code-block:: console
