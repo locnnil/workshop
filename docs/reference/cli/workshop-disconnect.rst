@@ -36,15 +36,15 @@ This command disconnects a plug from its slot, or a slot from all its plugs.
   Notes:
 
 - After an auto-connected plug is thus disconnected,
-  it is reconnected during 'workshop refresh'
-  only if the '--forget' option was used with 'workshop disconnect'.
+  it is reconnected during "workshop refresh"
+  only if the "--forget" option was used with "workshop disconnect".
 
 
 .. rubric:: Examples
 
 
-Disconnect the 'mod-cache' mount interface plug of the 'go' SDK
-under the 'nimble' workshop in the current project directory:
+Disconnect the "mod-cache" mount interface plug of the "go" SDK
+under the "nimble" workshop in the current project directory:
 
 .. code-block:: console
 
@@ -52,15 +52,15 @@ under the 'nimble' workshop in the current project directory:
 
 
 A full version of the same command
-that lists the target SDK ('system') and slot ('mount'):
+that lists the target SDK ("system") and slot ("mount"):
 
 .. code-block:: console
 
    $ workshop disconnect nimble/go:mod-cache nimble/system:mount
 
 
-Disconnect all plugs connected to the 'mount' slot of the 'system' SDK
-under the 'nimble' workshop in the current project directory:
+Disconnect all plugs connected to the "mount" slot of the "system" SDK
+under the "nimble" workshop in the current project directory:
 
 .. code-block:: console
 
@@ -73,7 +73,7 @@ under the 'nimble' workshop in the current project directory:
 
 --forget
 
-   Reconnect the plugs at 'workshop refresh' if auto-connected initially.
+   Reconnect the plugs at "workshop refresh" if auto-connected initially.
 
 
 --no-wait

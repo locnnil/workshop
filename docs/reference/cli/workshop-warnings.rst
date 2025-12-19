@@ -22,11 +22,11 @@ List warnings.
 
 This command lists the warnings that were reported to the system.
 
-All warnings listed by 'workshop warnings'
-can be acknowledged with the 'workshop okay' command.
-Acknowledged warnings aren't listed by 'workshop warnings'
+All warnings listed by "workshop warnings"
+can be acknowledged with the "workshop okay" command.
+Acknowledged warnings aren't listed by "workshop warnings"
 unless they occur again after their cooldown period has elapsed
-or the '--all' option is used.
+or the "--all" option is used.
 
 Also, warnings expire automatically; expired warnings are not listed.
 

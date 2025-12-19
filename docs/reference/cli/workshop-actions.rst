@@ -26,7 +26,7 @@ This command enumerates all actions in the workshop, printing a YAML map.
 .. rubric:: Examples
 
 
-List actions for the 'nimble' workshop in the current project directory:
+List actions for the "nimble" workshop in the current project directory:
 
 .. code-block:: console
 
