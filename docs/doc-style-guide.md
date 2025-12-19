@@ -451,6 +451,8 @@ Warning:
    This will permanently delete all workshop data.
 ```
 
+**Placement:** Place admonitions at the end of the subsection they relate to, rather than interrupting the flow of text in the middle of a section.
+
 **Inline markup**
 
 Semantic markup preference: Use semantic markup roles (`:samp:`, `:envvar:`, `:file:`, etc.) instead of generic ones (\`, \*, etc.). Choose the most specific role that suits the purpose and use it consistently.

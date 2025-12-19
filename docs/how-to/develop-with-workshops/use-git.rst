@@ -96,15 +96,6 @@ They stay there even if you remove the workshop:
      hello, Workshop
 
 
-.. note::
-
-   If you do remove the workshop at this step of the guide,
-   relaunch it before proceeding further:
-
-   .. code-block:: console
-
-      $ workshop launch
-
 From here, you can do whatever you like with your repo,
 because |ws_markup| handles
 :ref:`moving projects around <how_move_projects>` quite well.
@@ -133,6 +124,15 @@ A common solution is to clone the repo several times
 to manually synchronize the copies when needed,
 but this approach is prone to errors and overhead.
 Let's build something better and...
+
+.. note::
+
+   If you did remove the workshop at this step of the guide,
+   relaunch it before proceeding further:
+
+   .. code-block:: console
+
+      $ workshop launch
 
 
 Use worktrees

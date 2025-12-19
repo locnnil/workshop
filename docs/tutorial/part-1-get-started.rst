@@ -126,13 +126,6 @@ For demonstration purposes, assume we want to work with AI models using the
 To do this, let's use the :samp:`ollama` SDK,
 which provides a local AI model server.
 
-.. note::
-
-   The tutorial uses Ollama for demonstration purposes only.
-   This doesn't imply that |ws_markup| is intended solely for AI;
-   quite the contrary, it's envisioned as language-neutral and framework-agnostic.
-
-
 .. @artefact project
 
 For the project directory, create a new Python repository:
@@ -193,6 +186,13 @@ so it needs to be launched.
    see the :ref:`exp_workshop_status` section.
 
 
+.. note::
+
+   The tutorial uses Ollama for demonstration purposes only.
+   This doesn't imply that |ws_markup| is intended solely for AI;
+   quite the contrary, it's envisioned as language-neutral and framework-agnostic.
+
+
 .. _tut_launch:
 
 Launch, start, and stop
@@ -211,13 +211,6 @@ To get a workshop ready for use, you launch it:
 
 Once the workshop is launched,
 you can start using it to build, debug, and run your code.
-
-.. note::
-
-   If issues arise now or later, see these guides:
-   :ref:`how_troubleshoot` and
-   :ref:`how_debug_issues_workshops`.
-
 
 After launching, check the run-time information
 to see what went into your workshop:
@@ -255,23 +248,6 @@ After launch, |ws_markup| starts tracking the project directory.
 The workshop stays operational with no extra steps on your part
 by using a hidden :file:`.lock` file that must remain in the project directory
 and not be copied or stored externally, e.g., in a repository.
-
-.. note::
-
-   Consider adding the :file:`.lock` file
-   to your :file:`.gitignore` or similar ignore files:
-
-   .. code-block:: console
-
-      $ echo ".workshop.lock" >> .gitignore
-
-
-   In contrast, the definition and the :file:`.workshop/` directory
-   are *meant* to be stored in a repository;
-   if your :file:`.gitignore` file uses rules
-   such as "ignore everything except these files and directories,"
-   add them to the list of explicitly tracked items.
-
 
 You only need to launch a workshop once after defining it;
 after any substantial changes to it,
@@ -311,6 +287,29 @@ waiting for the workshop to comply:
 
 
 In the next step, you'll refresh an existing workshop.
+
+.. note::
+
+   If issues arise now or later, see these guides:
+   :ref:`how_troubleshoot` and
+   :ref:`how_debug_issues_workshops`.
+
+
+.. note::
+
+   Consider adding the :file:`.lock` file
+   to your :file:`.gitignore` or similar ignore files:
+
+   .. code-block:: console
+
+      $ echo ".workshop.lock" >> .gitignore
+
+
+   In contrast, the definition and the :file:`.workshop/` directory
+   are *meant* to be stored in a repository;
+   if your :file:`.gitignore` file uses rules
+   such as "ignore everything except these files and directories,"
+   add them to the list of explicitly tracked items.
 
 
 .. _tut_refresh:
@@ -370,13 +369,6 @@ In this tutorial, we're working with Ollama AI models,
 and we've already created a Python project directory
 to serve as our workspace.
 
-.. note::
-
-   |ws_markup| also integrates with modern IDEs.
-   For instance, see these guides:
-   :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
-
-
 First, let's put our example workshop to practical use;
 download a simple AI model *inside the workshop*
 using the :command:`workshop exec` command.
@@ -411,6 +403,12 @@ This enables you to focus on your project,
 switching when needed between language and framework versions or base images.
 
 Next, we'll explore the remaining aspects of your daily workshop usage.
+
+.. note::
+
+   |ws_markup| also integrates with modern IDEs.
+   For instance, see these guides:
+   :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
 
 
 .. _tut_shell:
@@ -488,8 +486,9 @@ with :command:`workshop changes`:
    $ workshop changes
 
      ID  Status  Spawn               Ready               Summary
-     33  Done    today at 11:20 GMT  today at 11:20 GMT  Refresh "dev" workshop
-     34  Done    today at 11:32 GMT  today at 11:32 GMT  Execute command "sudo"
+     1   Done    today at 09:26 CET  today at 09:27 CET  Launch "dev" workshop
+     ...
+     4   Done    today at 09:32 CET  today at 09:34 CET  Refresh "dev" workshop
 
 
 Changes are enacted atomically to ensure workshops stay operational.
@@ -505,7 +504,7 @@ pass the change ID to the command:
 
 .. code-block:: console
 
-   $ workshop tasks 33
+   $ workshop tasks 4
 
      Status   Duration  Summary
      Done    2m17.389s  Download "ubuntu@24.04" base image

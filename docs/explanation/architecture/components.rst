@@ -209,6 +209,14 @@ and device pass-through.
 Its responsibilities also include base image management and caching,
 providing snapshot and restore capabilities for efficient workshop updates.
 
+|ws_markup| implements user isolation through LXD's project system,
+automatically creating dedicated projects for each user
+following the naming pattern :samp:`workshop.<USERNAME>`.
+Each user project includes a corresponding snapshots project
+(:samp:`workshop-snapshots.<USERNAME>`)
+used for temporary storage during workshop rebuild operations.
+
+
 .. note::
 
    The term "project" in relation to |ws_markup|
@@ -223,14 +231,6 @@ providing snapshot and restore capabilities for efficient workshop updates.
      These are user-defined directories (e.g., :samp:`my-workshop`)
      used to organize and manage workshops (e.g., :samp:`my-workshop`).
      They are referenced in CLI commands and API endpoints.
-
-
-|ws_markup| implements user isolation through LXD's project system,
-automatically creating dedicated projects for each user
-following the naming pattern :samp:`workshop.<USERNAME>`.
-Each user project includes a corresponding snapshots project
-(:samp:`workshop-snapshots.<USERNAME>`)
-used for temporary storage during workshop rebuild operations.
 
 
 .. _exp_arch_zfs_storage:
@@ -289,14 +289,6 @@ and also manages the lifecycle of resource connections.
 First of all, the interface system validates connections between plugs and slots.
 Built-in interface declarations enforcement handles auto- and manual connections.
 
-.. note::
-
-   See
-   `mount.go
-   <https://github.com/canonical/workshop/blob/main/internal/interfaces/builtin/mount.go#L40>`_
-   in |ws_markup| source code for an elaborate example.
-
-
 Key components include the interface repository
 serving as a registry of available interface types,
 policy validator for enforcing connection rules and security constraints,
@@ -305,6 +297,13 @@ and security backends responsible for creating LXD profiles of established inter
 
 For further details,
 see :ref:`exp_interface_concepts`.
+
+.. note::
+
+   See
+   `mount.go
+   <https://github.com/canonical/workshop/blob/main/internal/interfaces/builtin/mount.go#L40>`_
+   in |ws_markup| source code for an elaborate example.
 
 
 Network

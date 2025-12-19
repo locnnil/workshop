@@ -92,19 +92,6 @@ This defines all SDK components in a single file named :file:`sdk.yaml`:
    $ workshop sketch-sdk
 
 
-.. note::
-
-   The :command:`workshop sketch-sdk` command opens the SDK definition
-   in your default text editor.
-   To use a specific editor,
-   set the :envvar:`EDITOR` environment variable, e.g.:
-
-   .. code-block:: console
-
-      $ export EDITOR=vim
-      $ workshop sketch-sdk
-
-
 The editor presents a minimal setup
 with empty :samp:`hooks`, :samp:`plugs`, and :samp:`slots`:
 
@@ -119,14 +106,6 @@ with empty :samp:`hooks`, :samp:`plugs`, and :samp:`slots`:
     # ...
    slots:
     # ...
-
-
-.. note::
-
-   For more details on these components,
-   see the :ref:`explanation <exp_index>` section.
-   You may want to start with :ref:`exp_sdks` and :ref:`exp_interfaces`.
-
 
 
 Under :samp:`hooks`, you'll find a commented :samp:`setup-project` section.
@@ -270,6 +249,25 @@ If you need to make more changes or experiment,
 just run :command:`workshop sketch-sdk` again to update your sketch SDK.
 Repeat this as often as needed until it works the way you want.
 
+.. note::
+
+   The :command:`workshop sketch-sdk` command opens the SDK definition
+   in your default text editor.
+   To use a specific editor,
+   set the :envvar:`EDITOR` environment variable, e.g.:
+
+   .. code-block:: console
+
+      $ export EDITOR=vim
+      $ workshop sketch-sdk
+
+
+.. note::
+
+   For more details on SDK definition components,
+   see the :ref:`explanation <exp_index>` section.
+   You may want to start with :ref:`exp_sdks` and :ref:`exp_interfaces`.
+
 
 Stash and restore
 -----------------
@@ -282,6 +280,14 @@ to revert your workshop to its pre-sketching state:
    $ workshop sketch-sdk --stash
    $ workshop info
 
+
+To restore the stashed SDK:
+
+.. code-block:: console
+
+   $ workshop sketch-sdk --restore
+
+
 .. warning::
 
    Stashing does not delete the SDK,
@@ -291,13 +297,6 @@ to revert your workshop to its pre-sketching state:
    Running :command:`workshop sketch-sdk --stash` overwrites the existing stash,
    if any.
    Be cautious to avoid losing your changes.
-
-
-To restore the stashed SDK:
-
-.. code-block:: console
-
-   $ workshop sketch-sdk --restore
 
 
 Explore sketches
@@ -340,16 +339,6 @@ into the :file:`.workshop/` subdirectory of your project.
 The original sketch SDK is removed from the workshop.
 |ws_markup| can then pull the SDK directly from this directory,
 bypassing the SDK Store.
-
-.. note::
-
-   For a detailed comparison of in-project SDKs with other SDK types,
-   see the :ref:`exp_in_project_sdk` explanation section.
-
-   If you intend to publish a regular SDK,
-   proceed to the next part of the tutorial,
-   :ref:`tut_craft_sdks`.
-
 
 By default, the new SDK is named after the project directory;
 to change this, use the :option:`!--name` option:
@@ -401,6 +390,15 @@ add its contents to version control:
 This ensures your in-project SDK is tracked
 and can be shared with collaborators or CI systems.
 
+.. note::
+
+   For a detailed comparison of in-project SDKs with other SDK types,
+   see the :ref:`exp_in_project_sdk` explanation section.
+
+   If you intend to publish a regular SDK,
+   proceed to the next part of the tutorial,
+   :ref:`tut_craft_sdks`.
+
 
 Clean up
 --------
@@ -444,18 +442,17 @@ or any other content that was stored outside the workshop
 with a custom :command:`workshop remount` location;
 however, the content in *default* mount locations will be deleted).
 
-.. warning::
-
-   Don't delete the project directory without first removing the workshop.
-   Otherwise, you'll need to manually delete the orphaned workshops;
-   for help, see this how-to guide section: :ref:`how_troubleshoot_lxc`.
-
-
 Even if you remove the workshop completely,
 you can rebuild it with :command:`workshop launch`;
 this may come in handy if you have removed your workshop
 using the command above
 before proceeding to the other parts of the tutorial.
+
+.. warning::
+
+   Don't delete the project directory without first removing the workshop.
+   Otherwise, you'll need to manually delete the orphaned workshops;
+   for help, see this how-to guide section: :ref:`how_troubleshoot_lxc`.
 
 
 Next steps

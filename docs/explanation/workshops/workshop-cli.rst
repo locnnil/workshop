@@ -19,12 +19,6 @@ it is the daily go-to instrument for regular users,
 with a set of commands that govern the entire lifecycle of a
 :ref:`workshop <exp_workshop>`.
 
-.. note::
-
-   The utility talks to the |ws_markup| daemon,
-   :program:`workshopd`, via a REST API,
-   so alternatives are possible and, in fact, encouraged.
-
 There are several categories of commands that vary by their purpose:
 
 .. list-table::
@@ -73,6 +67,12 @@ There are several categories of commands that vary by their purpose:
 
 For an end-to-end example of putting these commands to use,
 refer to the :ref:`tutorial <tut_index>`.
+
+.. note::
+
+   The utility talks to the |ws_markup| daemon,
+   :program:`workshopd`, via a REST API,
+   so alternatives are possible and, in fact, encouraged.
 
 
 See also
