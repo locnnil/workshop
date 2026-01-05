@@ -38,7 +38,7 @@ The easiest way to define a platform
 is to name it after the CPU architecture:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    # ...
    base: ubuntu@24.04
@@ -53,7 +53,7 @@ and installed in :samp:`ubuntu@24.04` workshops with the same architecture.
 The :samp:`base` can also be moved into the platform names:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    # ...
    platforms:
@@ -99,7 +99,7 @@ More complex scenarios can be described using the following attributes:
 Architecture-independent SDKs require the complex format:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    # ...
    platforms:
@@ -117,7 +117,7 @@ SDK parts
 .. @artefact SDK part
 
 Parts can be thought of as the building blocks of |ws_markup| and |sdk_markup|.
-Each part in the :file:`sdk.yaml` :ref:`definition <ref_sdk_definition>`
+Each part in the :file:`sdkcraft.yaml` :ref:`definition <ref_sdk_definition>`
 describes a specific component or piece of the SDK being packaged,
 providing a way to modularize the package and manage its dependencies.
 

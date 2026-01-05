@@ -113,6 +113,63 @@
       "title": "MountSlot",
       "type": "object"
     },
+    "Platform": {
+      "additionalProperties": false,
+      "description": "A single platform entry in the platforms dictionary.\n\nThis model defines how a single value under the ``platforms`` key works for a project.",
+      "properties": {
+        "build-on": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "examples": [
+            "amd64",
+            [
+              "arm64",
+              "riscv64"
+            ]
+          ],
+          "minLength": 1,
+          "title": "Build-On"
+        },
+        "build-for": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 1,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "examples": [
+            "amd64",
+            [
+              "riscv64"
+            ]
+          ],
+          "title": "Build-For"
+        }
+      },
+      "required": [
+        "build-on",
+        "build-for"
+      ],
+      "title": "Platform",
+      "type": "object"
+    },
     "SSHPlug": {
       "additionalProperties": false,
       "description": "SDKcraft project SSH plug definition.",
@@ -172,8 +229,8 @@
       "type": "object"
     }
   },
-  "additionalProperties": true,
-  "description": "Structure to hold output metadata.",
+  "additionalProperties": false,
+  "description": "SDKcraft project definition.",
   "properties": {
     "name": {
       "description": "The name of the project. This is used when uploading, publishing, or installing.\n\nThe project name must consist only of lower-case ASCII letters (``a``-``z``), numerals\n(``0``-``9``), and hyphens (``-``). It must contain at least one letter, not start or\nend with a hyphen, and not contain two consecutive hyphens. The maximum length is 40\ncharacters.\n",
@@ -269,6 +326,7 @@
         }
       ],
       "default": null,
+      "description": "The full description of the project.",
       "title": "Description"
     },
     "base": {
@@ -283,9 +341,73 @@
       "default": null,
       "title": "Base"
     },
-    "architecture": {
-      "title": "Architecture",
-      "type": "string"
+    "build-base": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Build-Base"
+    },
+    "platforms": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Platform"
+      },
+      "description": "Determines which architectures the project builds and runs on.",
+      "examples": [
+        "{amd64: {build-on: [amd64], build-for: [amd64]}, arm64: {build-on: [amd64, arm64], build-for: [arm64]}}"
+      ],
+      "patternProperties": {
+        "(amd64|arm64|armhf|i386|ppc64el|riscv64|s390x)": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "properties": {
+                "build-on": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Build-On"
+                },
+                "build-for": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  ],
+                  "title": "Build-For"
+                }
+              },
+              "required": [
+                "build-on"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "title": "Platforms",
+      "type": "object"
     },
     "contact": {
       "anyOf": [
@@ -304,6 +426,10 @@
         }
       ],
       "default": null,
+      "description": "The author's contact links and email addresses.",
+      "examples": [
+        "[contact@example.com, https://example.com/contact]"
+      ],
       "title": "Contact"
     },
     "issues": {
@@ -323,6 +449,10 @@
         }
       ],
       "default": null,
+      "description": "The links and email addresses for submitting issues, bugs, and feature requests.",
+      "examples": [
+        "[issues@example.com, https://example.com/issues]"
+      ],
       "title": "Issues"
     },
     "source-code": {
@@ -337,6 +467,10 @@
         }
       ],
       "default": null,
+      "description": "The links to the source code of the project.",
+      "examples": [
+        "[https://github.com/canonical/craft-application]"
+      ],
       "title": "Source-Code"
     },
     "license": {
@@ -349,7 +483,61 @@
         }
       ],
       "default": null,
+      "description": "The project's license as an SPDX expression",
+      "examples": [
+        "GPL-3.0+",
+        "Apache-2.0"
+      ],
       "title": "License"
+    },
+    "adopt-info": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Selects a part to inherit metadata from.",
+      "examples": [
+        "foo-part"
+      ],
+      "title": "Adopt-Info"
+    },
+    "parts": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "default": {
+        "default-part": {
+          "plugin": "nil"
+        }
+      },
+      "title": "Parts",
+      "type": "object"
+    },
+    "package-repositories": {
+      "anyOf": [
+        {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The package repositories to use for build and stage packages.",
+      "examples": [
+        "[{type: apt,                components: [main],                suites: [xenial],                key-id: 78E1918602959B9C59103100F1831DDAFC42E99D,                url: http://ppa.launchpad.net/snappy-dev/snapcraft-daily/ubuntu}]"
+      ],
+      "title": "Package-Repositories"
     },
     "plugs": {
       "default": {},
@@ -430,17 +618,12 @@
       },
       "title": "Slots",
       "type": "object"
-    },
-    "sdkcraft-started-at": {
-      "title": "Sdkcraft-Started-At",
-      "type": "string"
     }
   },
   "required": [
     "name",
-    "architecture",
-    "sdkcraft-started-at"
+    "platforms"
   ],
-  "title": "Metadata",
+  "title": "Project",
   "type": "object"
 }
