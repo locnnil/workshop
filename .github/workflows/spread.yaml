@@ -15,7 +15,7 @@ jobs:
     runs-on: [self-hosted, linux, jammy, x64, xlarge]
     steps:
       - name: Install LXD
-        uses: canonical/setup-lxd@main
+        uses: canonical/setup-lxd@v1
         with:
           channel: 6/stable
       - name: Cleanup job workspace
