@@ -529,7 +529,7 @@ func maybeSdkId(key string, device map[string]string) (int, *sdk.Id, error) {
 	return int(installOrder), s, nil
 }
 
-func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+func (s *Backend) UninstallSdk(ctx context.Context, name, sk string) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -546,7 +546,7 @@ func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup
 		return err
 	}
 
-	delete(inst.Devices, workshop.SdkDeviceName(setup.Name))
+	delete(inst.Devices, workshop.SdkDeviceName(sk))
 
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {

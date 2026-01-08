@@ -6,7 +6,6 @@ import (
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
-	"github.com/canonical/workshop/internal/workshop"
 )
 
 type SdkStateTasks struct {
@@ -19,42 +18,41 @@ func (i *SdkStateTasks) SetUpTest(c *check.C) {
 
 var _ = check.Suite(&SdkStateTasks{})
 
-func (i *SdkStateTasks) TestInstall(c *check.C) {
-	i.state.Lock()
-	defer i.state.Unlock()
-
-	sdk := workshop.SdkRecord{Name: "sdk"}
-
-	task := sdkstate.Install(i.state, sdk.Name, "retrieve")
-
-	var id string
-	c.Assert(task.Get("sdk-retrieve-task", &id), check.IsNil)
-	c.Check(id, check.Equals, "retrieve")
-	c.Check(task.Kind(), check.Equals, "install-sdk")
-	c.Check(task.Summary(), check.Equals, `Install "sdk" SDK`)
-}
-
 func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	i.state.Lock()
-	defer i.state.Unlock()
 
-	rec := sdk.Setup{
-		Name:     "sdk",
-		Channel:  "latest/stable",
+	trySdk := sdk.Setup{
+		Name:     "test-sdk",
 		Source:   sdk.TrySource,
-		Revision: sdk.R(42),
-		Sha3_384: "e1cfa86c92b87afc44a68c2f8f7c3b62b8dc926aa99234ab8ac2e94e242736c05c80a431041a686f3f2bcb5c648676ea",
+		Revision: sdk.R(-42),
+		Sha3_384: "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
 	}
 
-	task := sdkstate.Retrieve(i.state, rec)
+	storeSdk := sdk.Setup{
+		Name:     "test-sdk-2",
+		Channel:  "latest/stable",
+		Revision: sdk.R(42),
+		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+	}
 
-	var s sdk.Setup
-	c.Assert(task.Get("sdk-setup", &s), check.IsNil)
-	c.Check(s, check.DeepEquals, rec)
-	c.Check(task.Kind(), check.Equals, "retrieve-sdk")
-	c.Check(task.Summary(), check.Equals, `Retrieve "sdk" SDK`)
+	change := i.state.NewChange("sample", "...")
+	change.Set("ws_sdks", []sdk.Setup{trySdk, storeSdk})
 
-	rec.Source = sdk.StoreSource
-	task = sdkstate.Retrieve(i.state, rec)
-	c.Check(task.Summary(), check.Equals, `Retrieve "sdk" SDK from channel "latest/stable"`)
+	t1 := sdkstate.Retrieve(i.state, trySdk)
+	t2 := sdkstate.Retrieve(i.state, storeSdk)
+	change.AddAll(state.NewTaskSet(t1, t2))
+
+	i.state.Unlock()
+
+	s, err := sdkstate.SdkSetup(t1, "ws")
+	c.Assert(err, check.IsNil)
+	c.Check(s, check.Equals, trySdk)
+	c.Check(t1.Kind(), check.Equals, "retrieve-sdk")
+	c.Check(t1.Summary(), check.Equals, `Retrieve "test-sdk" SDK`)
+
+	s, err = sdkstate.SdkSetup(t2, "ws")
+	c.Assert(err, check.IsNil)
+	c.Check(s, check.Equals, storeSdk)
+	c.Check(t2.Kind(), check.Equals, "retrieve-sdk")
+	c.Check(t2.Summary(), check.Equals, `Retrieve "test-sdk-2" SDK from channel "latest/stable"`)
 }

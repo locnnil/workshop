@@ -18,6 +18,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
@@ -300,9 +301,10 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopDefinitionFound(c *check.
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
-	t1.Set("snapshot", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -324,9 +326,10 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	t1.Set("snapshot", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -352,9 +355,10 @@ func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("create-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	t1.Set("snapshot", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -383,10 +387,11 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("rebuild-workshop", "...")
 	t1.Set("workshop-file", wsJammy)
-	snapshot := workshop.BaseOnly("ubuntu@22.04", "fakeimage123")
-	t1.Set("snapshot", snapshot)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"}
+	chg.Set("ws_base", image)
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -400,7 +405,7 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
 	ws, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
-	c.Check(ws.Image, check.Equals, snapshot.Image)
+	c.Check(ws.Image, check.Equals, image)
 }
 
 func (s *workshopHandlers) TestDownloadBase(c *check.C) {
@@ -421,9 +426,9 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 
 	chg := s.state.NewChange("sample", "...")
 	t1 := s.state.NewTask("download-base", "...")
-	t1.Set("workshop-base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage1234"})
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage1234"})
 	chg.AddTask(t1)
 
 	s.state.Unlock()

@@ -195,15 +195,13 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	}
 	s.mockSdk(c, newSdk)
 
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk.Setup)
-	t1 := s.state.NewTask("install-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t := s.state.NewTask("install-sdk", "test")
+	t.Set("sdk", newSdk.Name)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1)
+	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
-	chg.AddTask(t1)
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -247,25 +245,20 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 	s.mockSdk(c, newSdk)
 
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk.Setup)
-
-	t1 := s.state.NewTask("install-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
-	t1.WaitFor(t)
+	t := s.state.NewTask("install-sdk", "test")
+	t.Set("sdk", newSdk.Name)
 
 	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(t1)
+	terr.WaitFor(t)
 
 	chg := s.state.NewChange("sample", "...")
-	chg.Set("workshop", "ws")
 	chg.Set("project-id", s.project.ProjectId)
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(t)
-	chg.AddTask(t1)
 	chg.AddTask(terr)
 
-	setWorkshopProject("ws", s.project, t, t1, terr)
+	setWorkshopProject("ws", s.project, t, terr)
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -274,7 +267,7 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	}
 	s.state.Lock()
 
-	c.Check(t1.Status(), check.Equals, state.UndoneStatus)
+	c.Check(t.Status(), check.Equals, state.UndoneStatus)
 
 	c.Check(s.backend.Volumes, check.HasLen, 1)
 	volume := s.backend.Volumes[sdk.VolumeName(newSdk.Name, newSdk.Revision)]
@@ -294,11 +287,12 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 		Sha3_384: system.SystemSdkDigest,
 	}
 	t := s.state.NewTask("retrieve-sdk", "retrieve")
-	t.Set("sdk-setup", newSdk)
+	t.Set("sdk", newSdk.Name)
 
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk})
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -356,20 +350,18 @@ func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
 	}
 	s.mockSdk(c, testSdk)
 
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", testSdk.Setup)
 	t1 := s.state.NewTask("install-sdk", "test")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t1.Set("sdk", testSdk.Name)
 	t2 := s.state.NewTask("register-sdk", "test")
-	t2.Set("sdk-retrieve-task", t.ID())
+	t2.Set("sdk", testSdk.Name)
 	t2.WaitFor(t1)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1, t2)
+	setWorkshopProject("ws", s.project, t1, t2)
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
 	chg.AddTask(t2)
 	chg.AddTask(t1)
-	chg.AddTask(t)
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -402,20 +394,18 @@ func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
 	}
 	s.mockSdk(c, testSdk)
 
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", testSdk.Setup)
 	t1 := s.state.NewTask("install-sdk", "...")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t1.Set("sdk", testSdk.Name)
 	t2 := s.state.NewTask("register-sdk", "test-broken")
-	t2.Set("sdk-retrieve-task", t.ID())
+	t2.Set("sdk", testSdk.Name)
 	t2.WaitFor(t1)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t, t1, t2)
+	setWorkshopProject("ws", s.project, t1, t2)
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
 	chg.AddTask(t2)
 	chg.AddTask(t1)
-	chg.AddTask(t)
 
 	s.state.Unlock()
 	for i := 0; i < 6; i = i + 1 {
@@ -459,23 +449,21 @@ func (s *sdkStateSuite) TestDoUnregisterSdk(c *check.C) {
 		SdkYAML: sdkYaml,
 	}
 	s.mockSdk(c, newSdk)
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk.Setup)
 	t1 := s.state.NewTask("install-sdk", "...")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t1.Set("sdk", newSdk.Name)
 	register := s.state.NewTask("register-sdk", "test")
-	register.Set("sdk-retrieve-task", t.ID())
+	register.Set("sdk", newSdk.Name)
 	register.WaitFor(t1)
 
 	terr := s.state.NewTask("error-trigger", "provoking total undo")
 	terr.WaitFor(register)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, register, t, t1)
+	setWorkshopProject("ws", s.project, register, t1)
 
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(register)
-	chg.AddTask(t)
 	chg.AddTask(terr)
 	chg.AddTask(t1)
 
@@ -512,20 +500,18 @@ func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
 		SdkYAML: sdkYaml,
 	}
 	s.mockSdk(c, newSdk)
-	t := s.state.NewTask("fake-task", "retrieve")
-	t.Set("sdk-setup", newSdk.Setup)
 	t1 := s.state.NewTask("install-sdk", "...")
-	t1.Set("sdk-retrieve-task", t.ID())
+	t1.Set("sdk", newSdk.Name)
 	register := s.state.NewTask("register-sdk", "test")
-	register.Set("sdk-retrieve-task", t.ID())
+	register.Set("sdk", newSdk.Name)
 	register.WaitFor(t1)
 
 	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, register, t, t1)
+	setWorkshopProject("ws", s.project, register, t1)
 
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(register)
-	chg.AddTask(t)
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -544,7 +530,7 @@ func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
 
 func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	s.state.Lock()
-	newSdk := sdk.Meta{
+	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "test",
 			Channel:  "latest/stable",
@@ -554,13 +540,16 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 		},
 		SdkYAML: sdkYaml,
 	}
-	s.mockSdk(c, newSdk)
+	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("unregister-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk.Setup)
+	t.Set("sdk", oldSdk.Name)
+	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
+	newSdk := oldSdk
+	newSdk.Revision = sdk.R(2)
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 	s.state.Unlock()
@@ -575,7 +564,7 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	c.Check(chg.Err(), check.IsNil)
-	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
+	_, err := s.backend.Sdk(s.ctx, oldSdk.Setup)
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
 	c.Assert(t.IsClean(), check.Equals, true)
 }
@@ -594,14 +583,14 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
 	}
 	s.mockSdk(c, newSdk)
 	t := s.state.NewTask("install-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk.Setup)
+	t.Set("sdk", newSdk.Name)
 
 	t2 := s.state.NewTask("error-trigger", "...")
 	t2.WaitFor(t)
 
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t, t2)
 	chg.AddTask(t)
 	chg.AddTask(t2)
@@ -635,11 +624,11 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C
 	}
 	s.mockSdk(c, newSdk)
 	t := s.state.NewTask("install-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk.Setup)
+	t.Set("sdk", newSdk.Name)
 
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 	s.state.Unlock()
@@ -658,7 +647,7 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C
 
 func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	s.state.Lock()
-	newSdk := sdk.Meta{
+	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "test",
 			Channel:  "latest/stable",
@@ -668,13 +657,16 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 		},
 		SdkYAML: sdkYaml,
 	}
-	s.mockSdk(c, newSdk)
+	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("unregister-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk.Setup)
+	t.Set("sdk", oldSdk.Name)
+	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
+	newSdk := oldSdk
+	newSdk.Revision = sdk.R(2)
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 	s.state.Unlock()
@@ -690,7 +682,7 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 	// The volume should still exist
-	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
+	_, err := s.backend.Sdk(s.ctx, oldSdk.Setup)
 	c.Assert(err, check.IsNil)
 	// The task should not be clean (cleanup not performed)
 	c.Assert(t.IsClean(), check.Equals, false)
@@ -698,7 +690,7 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 
 func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 	s.state.Lock()
-	newSdk := sdk.Meta{
+	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "test",
 			Channel:  "latest/stable",
@@ -708,21 +700,24 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 		},
 		SdkYAML: sdkYaml,
 	}
-	s.mockSdk(c, newSdk)
+	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("unregister-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk.Setup)
+	t.Set("sdk", oldSdk.Name)
+	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
+	newSdk := oldSdk
+	newSdk.Revision = sdk.R(2)
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 
 	other := s.state.NewChange("launch", "...")
 	other.Set("user", "testuser")
+	other.Set("ws_sdks", []sdk.Setup{oldSdk.Setup})
 	t2 := s.state.NewTask("install-sdk", "t2")
-	t2.Set("sdk-retrieve-task", t2.ID())
-	t2.Set("sdk-setup", newSdk.Setup)
+	t2.Set("sdk", oldSdk.Name)
 	setWorkshopProject("ws", s.project, t2)
 	other.AddTask(t2)
 	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
@@ -736,7 +731,7 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 
 	s.state.Lock()
 
-	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
+	_, err := s.backend.Sdk(s.ctx, oldSdk.Setup)
 	c.Assert(err, check.IsNil)
 	c.Assert(t.IsClean(), check.Equals, true)
 	c.Assert(t2.IsClean(), check.Equals, true)
@@ -744,7 +739,7 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 
 func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePresent(c *check.C) {
 	s.state.Lock()
-	newSdk := sdk.Meta{
+	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "test",
 			Channel:  "latest/stable",
@@ -754,21 +749,24 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 		},
 		SdkYAML: sdkYaml,
 	}
-	s.mockSdk(c, newSdk)
+	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("unregister-sdk", "...")
-	t.Set("sdk-retrieve-task", t.ID())
-	t.Set("sdk-setup", newSdk.Setup)
+	t.Set("sdk", oldSdk.Name)
+	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
+	newSdk := oldSdk
+	newSdk.Revision = sdk.R(2)
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 
 	other := s.state.NewChange("launch", "...")
 	other.Set("user", "testuser")
+	other.Set("ws_sdks", []sdk.Setup{oldSdk.Setup})
 	t2 := s.state.NewTask("install-sdk", "t2")
-	t2.Set("sdk-retrieve-task", t2.ID())
-	t2.Set("sdk-setup", newSdk.Setup)
+	t2.Set("sdk", oldSdk.Name)
 	t2.SetToWait(state.DoStatus)
 	t3 := s.state.NewTask("error-trigger", "t3")
 	t3.WaitFor(t2)
@@ -785,7 +783,7 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 
 	s.state.Lock()
 
-	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
+	_, err := s.backend.Sdk(s.ctx, oldSdk.Setup)
 	c.Check(err, check.IsNil)
 	c.Check(t.IsClean(), check.Equals, false)
 
@@ -803,14 +801,14 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 	s.state.Lock()
 	defer s.state.Unlock()
 	c.Check(t.IsClean(), check.Equals, true)
-	_, err = s.backend.Sdk(s.ctx, newSdk.Setup)
+	_, err = s.backend.Sdk(s.ctx, oldSdk.Setup)
 	c.Assert(err, check.Equals, workshop.ErrVolumeNotFound)
 	c.Check(t2.IsClean(), check.Equals, true)
 }
 
 func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	s.state.Lock()
-	newSdk := sdk.Meta{
+	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "test",
 			Channel:  "latest/stable",
@@ -820,25 +818,29 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 		},
 		SdkYAML: sdkYaml,
 	}
-	s.mockSdk(c, newSdk)
+	s.mockSdk(c, oldSdk)
 
 	t1 := s.state.NewTask("unregister-sdk", "t1")
-	t1.Set("sdk-retrieve-task", t1.ID())
-	t1.Set("sdk-setup", newSdk.Setup)
+	t1.Set("sdk", oldSdk.Name)
+	t1.Set("sdk-setup", oldSdk.Setup)
 
 	t2 := s.state.NewTask("unregister-sdk", "t2")
-	t2.Set("sdk-retrieve-task", t2.ID())
-	t2.Set("sdk-setup", newSdk.Setup)
+	t2.Set("sdk", oldSdk.Name)
+	t2.Set("sdk-setup", oldSdk.Setup)
 	t2.WaitFor(t1)
 
 	// Add both tasks to their own changes
 	chg1 := s.state.NewChange("refresh", "chg1")
 	chg1.Set("user", "testuser")
+	newSdk := oldSdk
+	newSdk.Revision = sdk.R(2)
+	chg1.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
 
 	chg2 := s.state.NewChange("refresh", "chg2")
 	chg2.Set("user", "testuser")
+	chg2.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t2)
 	chg2.AddTask(t2)
 
@@ -857,7 +859,7 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	c.Assert(t1.IsClean(), check.Equals, true)
 	// The second task should not be clean (cleanup not performed, cooldown not passed)
 	c.Assert(t2.IsClean(), check.Equals, false)
-	_, err := s.backend.Sdk(s.ctx, newSdk.Setup)
+	_, err := s.backend.Sdk(s.ctx, oldSdk.Setup)
 	c.Assert(err, check.IsNil)
 }
 
@@ -868,7 +870,7 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 			Name:     "test",
 			Channel:  "latest/stable",
 			Source:   sdk.ProjectSource,
-			Revision: sdk.R(1),
+			Revision: sdk.R(-1),
 			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
@@ -876,10 +878,13 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 	s.mockSdk(c, sdkProject)
 
 	t1 := s.state.NewTask("unregister-sdk", "t1")
-	t1.Set("sdk-retrieve-task", t1.ID())
+	t1.Set("sdk", sdkProject.Name)
 	t1.Set("sdk-setup", sdkProject.Setup)
-	chg1 := s.state.NewChange("launch", "chg1")
+	chg1 := s.state.NewChange("refresh", "chg1")
 	chg1.Set("user", "testuser")
+	newSdk := sdkProject
+	newSdk.Revision = sdk.R(-2)
+	chg1.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
 

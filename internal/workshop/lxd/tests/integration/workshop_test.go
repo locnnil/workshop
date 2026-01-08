@@ -860,7 +860,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 
 	err = f.bd.InstallSdk(f.ctx, "test", meta.Setup)
 	c.Assert(err, check.IsNil)
-	defer func() { c.Check(f.bd.UninstallSdk(f.ctx, "test", meta.Setup), check.IsNil) }()
+	defer func() { c.Check(f.bd.UninstallSdk(f.ctx, "test", meta.Name), check.IsNil) }()
 
 	// Check that "test-sdk" directory is mounted.
 	fs, err := f.bd.WorkshopFs(f.ctx, "test")
@@ -882,7 +882,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	// Install SDK 2 post-snapshot. It should be gone post-restore.
 	err = f.bd.InstallSdk(f.ctx, "test", meta2.Setup)
 	c.Assert(err, check.IsNil)
-	defer func() { _ = f.bd.UninstallSdk(f.ctx, "test", meta2.Setup) }()
+	defer func() { _ = f.bd.UninstallSdk(f.ctx, "test", meta2.Name) }()
 
 	// Restore the workshop from the snapshot.
 	err = f.bd.StopWorkshop(f.ctx, "test", true)
@@ -955,7 +955,7 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}})
 
 	// Detach the volume from the first workshop.
-	err = f.bd.UninstallSdk(f.ctx, "test", meta.Setup)
+	err = f.bd.UninstallSdk(f.ctx, "test", meta.Name)
 	c.Assert(err, check.IsNil)
 
 	// Validate UsedBy in VolumeInfo.
@@ -964,6 +964,6 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Check(info.Meta, check.Equals, meta)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{other.ProjectId: {"test"}})
 
-	err = f.bd.UninstallSdk(otherCtx, "test", meta.Setup)
+	err = f.bd.UninstallSdk(otherCtx, "test", meta.Name)
 	c.Assert(err, check.IsNil)
 }

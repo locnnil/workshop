@@ -59,25 +59,21 @@ func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
 }
 
 func retrieveBase(st *state.State, image workshop.BaseImage) *state.Task {
-	download := st.NewTask("download-base", fmt.Sprintf("Download %q base image", image.Name))
-	download.Set("workshop-base", image)
-	return download
+	return st.NewTask("download-base", fmt.Sprintf("Download %q base image", image.Name))
 }
 
-func retrieveSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
+func retrieveSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	retrieve := state.NewTaskSet()
-	retrieveMap := map[string]string{}
 	for _, s := range sdks {
 		if s.Source.NeedsRetrieve() {
 			r := sdkstate.Retrieve(st, s)
 			retrieve.AddTask(r)
-			retrieveMap[s.Name] = r.ID()
 		}
 	}
-	return retrieve, retrieveMap
+	return retrieve
 }
 
-func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
+func installSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	all := state.NewTaskSet()
 
 	var prev *state.Task
@@ -95,18 +91,10 @@ func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]str
 		// The install task sets must not run concurrently as exec ops are not
 		// allowed by LXD to be run concurrently and in general case we cannot
 		// guarantee safety of concurrent installations.
-		var install *state.Task
-		var retrieveTask string
-		if setup.Source.NeedsRetrieve() {
-			retrieveTask = retrieveTasks[setup.Name]
-			install = sdkstate.Install(st, setup.Name, retrieveTask)
-		} else {
-			install = sdkstate.InstallLocalSdk(st, setup)
-			retrieveTask = install.ID()
-		}
+		install := sdkstate.Install(st, setup.Name)
 		addTask(install)
 
-		register := sdkstate.Register(st, setup.Name, retrieveTask)
+		register := sdkstate.Register(st, setup.Name)
 		addTask(register)
 
 		hook := hookstate.Hook(st, setup.Name, 0, hookstate.SetupBase)
@@ -120,7 +108,7 @@ func installSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]str
 
 // Like installSdks but we skip setup-base and snapshot-sdk after restoring
 // from a snapshot which already contains the setup-base modifications.
-func reinstallSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]string) *state.TaskSet {
+func reinstallSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	all := state.NewTaskSet()
 
 	var prev *state.Task
@@ -133,36 +121,36 @@ func reinstallSdks(st *state.State, sdks []sdk.Setup, retrieveTasks map[string]s
 	}
 
 	for _, setup := range sdks {
-		retrieveTask := retrieveTasks[setup.Name]
-
-		install := sdkstate.Install(st, setup.Name, retrieveTask)
+		install := sdkstate.Install(st, setup.Name)
 		addTask(install)
 
-		register := sdkstate.Register(st, setup.Name, retrieveTask)
+		register := sdkstate.Register(st, setup.Name)
 		addTask(register)
 	}
 	return all
 }
 
-func launchWorkshop(st *state.State, file *workshop.File, snapshot workshop.Snapshot) *state.TaskSet {
+func launchWorkshop(st *state.State, file *workshop.File) *state.TaskSet {
 	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
 	handlersetup.SetWorkshopFile(create, file)
-	create.Set("snapshot", snapshot)
 	return state.NewTaskSet(create)
 }
 
-func rebuildWorkshop(st *state.State, file *workshop.File, snapshot workshop.Snapshot) *state.TaskSet {
+func rebuildWorkshop(st *state.State, file *workshop.File, intact []sdk.Setup) *state.TaskSet {
+	var lastIntact string
 	var summary string
-	if snapshot.IsBase() {
+	if len(intact) == 0 {
 		summary = fmt.Sprintf("Rebuild %q workshop", file.Name)
 	} else {
-		last := snapshot.Sdks[len(snapshot.Sdks)-1].Name
-		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", file.Name, last)
+		lastIntact = intact[len(intact)-1].Name
+		summary = fmt.Sprintf("Restore %q workshop from %q snapshot", file.Name, lastIntact)
 	}
 
 	create := st.NewTask("rebuild-workshop", summary)
 	handlersetup.SetWorkshopFile(create, file)
-	create.Set("snapshot", snapshot)
+	if len(intact) > 0 {
+		create.Set("last-intact-sdk", lastIntact)
+	}
 	return state.NewTaskSet(create)
 }
 
@@ -189,21 +177,20 @@ func launch(st *state.State, project workshop.Project, manifest Manifest) *state
 	}
 
 	base := retrieveBase(st, manifest.Image)
-	retrieve, rmap := retrieveSdks(st, manifest.Sdks)
+	retrieve := retrieveSdks(st, manifest.Sdks)
 	retrieve.AddTask(base)
 	addTaskSet(retrieve)
 
 	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	snapshot := workshop.Snapshot{Image: manifest.Image}
-	create := launchWorkshop(st, manifest.File, snapshot)
+	create := launchWorkshop(st, manifest.File)
 	addTaskSet(create)
 
 	start := startWorkshop(st, manifest.File.Name)
 	addTaskSet(start)
 
-	install := installSdks(st, manifest.Sdks, rmap)
+	install := installSdks(st, manifest.Sdks)
 	addTaskSet(install)
 
 	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", manifest.File.Name))
@@ -395,14 +382,12 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 		prev = ts
 	}
 
-	snapshot := workshop.SdkSnapshot(plan.image, plan.Intact())
-
 	var base *state.Task
-	if snapshot.IsBase() {
+	if len(plan.Intact()) == 0 {
 		// Create download-base first so the task IDs are in a nice order.
-		base = retrieveBase(st, snapshot.Image)
+		base = retrieveBase(st, plan.image)
 	}
-	retrieve, rmap := retrieveSdks(st, plan.InstallOrRefresh())
+	retrieve := retrieveSdks(st, plan.InstallOrRefresh())
 	if base != nil {
 		retrieve.AddTask(base)
 	}
@@ -423,25 +408,25 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 
 	// Remove SDKs from interfaces repository. If refresh fails, the SDKs will be returned
 	// to the repository after restoring the stashed workshop (with the SDKs installed).
-	unregister, umap := unregisterSdks(st, plan.IntactOrRemove())
+	unregister := unregisterSdks(st, plan.IntactOrRemove())
 	addTaskSet(unregister)
 
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file, snapshot)
+	rebuild := rebuildWorkshop(st, file, plan.Intact())
 	addTaskSet(rebuild)
 
 	// Reinstall intact SDKs. The workshop definition can change plugs and
 	// slots, and SDKs need to be mounted after restoring a snapshot.
-	reinstall := reinstallSdks(st, plan.Intact(), umap)
+	reinstall := reinstallSdks(st, plan.Intact())
 	addTaskSet(reinstall)
 
 	start := startWorkshop(st, file.Name)
 	addTaskSet(start)
 
 	// Install updated SDKs to the rebuilt workshop.
-	install := installSdks(st, plan.InstallOrRefresh(), rmap)
+	install := installSdks(st, plan.InstallOrRefresh())
 	addTaskSet(install)
 
 	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", file.Name))
@@ -519,21 +504,19 @@ func autoconnectSdks(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet
 	return autoconnectSet
 }
 
-func unregisterSdks(st *state.State, sdks []sdk.Setup) (*state.TaskSet, map[string]string) {
+func unregisterSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	prev := (*state.Task)(nil)
 	unregisterSet := state.NewTaskSet()
-	unregisterMap := map[string]string{}
 	for _, s := range sdks {
 		unregister := sdkstate.Unregister(st, s)
 		unregisterSet.AddTask(unregister)
-		unregisterMap[s.Name] = unregister.ID()
 
 		if prev != nil {
 			unregister.WaitFor(prev)
 		}
 		prev = unregister
 	}
-	return unregisterSet, unregisterMap
+	return unregisterSet
 }
 
 func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
@@ -751,7 +734,7 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	addTaskSet(state.NewTaskSet(discard))
 
-	unregister, _ := unregisterSdks(st, sdks)
+	unregister := unregisterSdks(st, sdks)
 	addTaskSet(unregister)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))

@@ -202,9 +202,10 @@ func (s *healthSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 
 	chg := s.state.NewChange("launch", "test")
 	chg.Set("project-id", s.project.ProjectId)
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
@@ -223,10 +224,11 @@ func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
 
 	chg := s.state.NewChange("refresh", "test")
 	chg.Set("project-id", s.project.ProjectId)
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.SetStatus(state.WaitStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
@@ -286,10 +288,11 @@ func (s *healthSuite) TestCheckStatusPending(c *check.C) {
 
 	chg := s.state.NewChange("refresh", "test")
 	chg.Set("project-id", s.project.ProjectId)
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.SetStatus(state.DoingStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 
@@ -310,10 +313,11 @@ func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
 
 	chg := s.state.NewChange("refresh", "test")
 	chg.Set("project-id", s.project.ProjectId)
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", []sdk.Setup{})
 	chg.SetStatus(state.WaitStatus)
 	task := s.state.NewTask("create-workshop", "test task")
 	task.Set("workshop-file", "name: ws\nbase: ubuntu@20.04\n")
-	task.Set("snapshot", workshop.BaseOnly("ubuntu@20.04", "fakeimage123"))
 	setWorkshopProject("ws", s.project, task)
 	chg.AddTask(task)
 

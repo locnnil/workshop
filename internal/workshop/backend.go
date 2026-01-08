@@ -223,7 +223,7 @@ type Backend interface {
 	InstallSdk(ctx context.Context, name string, setup sdk.Setup) error
 
 	// Remove an SDK from the Sdks field and unmount the SDK volume.
-	UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error
+	UninstallSdk(ctx context.Context, name, sk string) error
 
 	// Execute a command in a given workshop. The client should differentiate
 	// between the errors that occured during the execution but not related to

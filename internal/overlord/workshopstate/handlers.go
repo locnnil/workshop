@@ -3,7 +3,6 @@ package workshopstate
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"syscall"
 	"time"
@@ -32,12 +31,11 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 	}
 
 	st := task.State()
-	var image workshop.BaseImage
 	st.Lock()
-	err = task.Get("workshop-base", &image)
+	image, err := WorkshopBase(task.Change(), w)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop base image not found (task ID: %s)", w, task.ID())
+		return err
 	}
 
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
@@ -73,12 +71,18 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		return err
 	}
 
-	var snapshot workshop.Snapshot
 	st.Lock()
-	err = task.Get("snapshot", &snapshot)
+	lastIntact, err := MaybeLastIntactSdk(task)
 	st.Unlock()
 	if err != nil {
-		return fmt.Errorf("internal error: %q workshop snapshot not found (task ID: %s)", w, task.ID())
+		return err
+	}
+
+	st.Lock()
+	snapshot, err := WorkshopSnapshot(task.Change(), w, lastIntact)
+	st.Unlock()
+	if err != nil {
+		return err
 	}
 
 	rev := revert.New()
@@ -98,7 +102,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 		})
 	}
 
-	if err := m.backend.LaunchOrRebuildWorkshop(ctx, wf, snapshot); err != nil {
+	if err := m.backend.LaunchOrRebuildWorkshop(ctx, wf, *snapshot); err != nil {
 		return err
 	}
 
