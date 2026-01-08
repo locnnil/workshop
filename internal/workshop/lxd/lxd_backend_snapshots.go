@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -53,11 +54,16 @@ func optionDomain(key string) configDomain {
 	}
 }
 
-func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
+func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
+
+	if snapshot.IsBase() {
+		return errors.New("internal error: attempted snapshot of base image")
+	}
+	sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
 
 	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
@@ -73,19 +79,10 @@ func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
 		return err
 	}
 
-	f, err := workshopFile(inst.Config)
-	if err != nil {
-		return fmt.Errorf("cannot load workshop: %v", err)
-	}
-	image := workshop.BaseImage{
-		Name:        f.Base,
-		Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
-	}
-
 	// Override all writable attributes. The snapshot is essentially a base
 	// image but is stored more efficiently. Config options and devices are
 	// reconstructed from scratch during launch and refresh.
-	config := configOverrides(projectId, name, sk, image, inst.Config)
+	config := configOverrides(projectId, name, sk, snapshot.Image, inst.Config)
 	devices, err := deviceOverrides(inst.Devices)
 	if err != nil {
 		return err
@@ -97,11 +94,11 @@ func (s *Backend) Snapshot(ctx context.Context, name, sk string) error {
 		Profiles:     []string{},
 	})
 
-	snapshot, err := sdkSnapshotName(sk)
+	snapshotName, err := sdkSnapshotName(sk)
 	if err != nil {
 		return err
 	}
-	args := lxd.InstanceCopyArgs{Name: snapshot, InstanceOnly: true}
+	args := lxd.InstanceCopyArgs{Name: snapshotName, InstanceOnly: true}
 	rop, err := snapshotConn.CopyInstance(conn, *inst, &args)
 	if err != nil {
 		return err

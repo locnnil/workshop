@@ -249,10 +249,18 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	st := task.State()
+	st.Lock()
+	snapshot, err := WorkshopSnapshot(task.Change(), w, sk)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	return m.backend.Snapshot(ctx, w, sk)
+	return m.backend.TakeSnapshot(ctx, w, *snapshot)
 }
 
 type SdkVolumeCooldownTimeKey string

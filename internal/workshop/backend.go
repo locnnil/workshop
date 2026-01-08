@@ -198,9 +198,9 @@ type Backend interface {
 	// will be reset to the default one.
 	LaunchOrRebuildWorkshop(ctx context.Context, file *File, snapshot Snapshot) error
 
-	// Create a snapshot of the workshop's rootfs. Should be called after
-	// installing the given SDK.
-	Snapshot(ctx context.Context, workshop, sk string) error
+	// Create a snapshot of the workshop's rootfs. The snapshot can be used
+	// by passing an identical Snapshot to LaunchOrRebuildWorkshop.
+	TakeSnapshot(ctx context.Context, name string, snapshot Snapshot) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error

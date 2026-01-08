@@ -1664,7 +1664,9 @@ func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
 	c.Assert(wpCalls, check.HasLen, len(sdks))
 
 	for i, sk := range sdks {
-		c.Assert(wpCalls[i].Sdk, check.Equals, sk)
+		ids := wpCalls[i].Snapshot.Sdks
+		c.Assert(ids, check.Not(check.HasLen), 0)
+		c.Check(ids[len(ids)-1].Name, check.Equals, sk)
 	}
 }
 
@@ -1837,8 +1839,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
-	s.checkSnapshotCalls(c, "basic", []string{
-		"system"})
+	s.checkSnapshotCalls(c, "basic", []string{"system"})
 
 	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "basic", basic_refreshed)

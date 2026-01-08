@@ -64,7 +64,7 @@ type AttachVolumeCall struct {
 
 type SnapshotCall struct {
 	Workshop string
-	Sdk      string
+	Snapshot workshop.Snapshot
 }
 
 type LaunchOrRebuildCall struct {
@@ -106,7 +106,7 @@ type FakeWorkshopBackend struct {
 	snapshotLock         sync.Mutex
 	LaunchOrRebuildCalls []LaunchOrRebuildCall
 	SnapshotCalls        []SnapshotCall
-	SnapshotCallback     func(ctx context.Context, workshop string, snapid string) error
+	SnapshotCallback     func(ctx context.Context, name string, snapshot workshop.Snapshot) error
 
 	BaseDir string
 }
@@ -777,13 +777,13 @@ func (s *FakeWorkshopBackend) detachVolume(ctx context.Context, name, what, wher
 	return err
 }
 
-func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, sk string) error {
+func (s *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Sdk: sk})
+	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapshot: snapshot})
 	if s.SnapshotCallback != nil {
-		return s.SnapshotCallback(ctx, name, sk)
+		return s.SnapshotCallback(ctx, name, snapshot)
 	}
 	return nil
 }
