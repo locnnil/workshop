@@ -314,14 +314,14 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	}
 
 	if !snapshot.IsBase() {
-		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
+		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot)
 	}
 
 	req.Source = api.InstanceSource{
 		Type:        api.SourceTypeImage,
 		Fingerprint: snapshot.Image.Fingerprint,
 	}
-	if err := s.launchOrRebuildFromImage(conn, snapshotConn, req); err != nil {
+	if err := s.launchOrRebuildFromImage(conn, req); err != nil {
 		return err
 	}
 
@@ -349,7 +349,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	return fs.WriteFile("/etc/cloud/cloud.cfg.d/90_workshop.cfg", forceLXD, 0644)
 }
 
-func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost) error {
+func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.InstancesPost) error {
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		// Create a new workshop.
@@ -364,19 +364,6 @@ func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer
 	}
 
 	// Rebuild the existing workshop.
-	projectId := inst.Config[workshop.ConfigProjectId]
-	name := inst.Config[workshop.ConfigWorkshopName]
-
-	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
-	if err != nil {
-		return err
-	}
-	for _, snapshot := range snapshots {
-		if err := s.deleteSnapshot(snapshotConn, snapshot); err != nil {
-			return err
-		}
-	}
-
 	op, err := conn.RebuildInstance(inst.Name, api.InstanceRebuildPost{Source: req.Source})
 	if err != nil {
 		return err
@@ -880,22 +867,11 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	conn, snapshotConn, err := s.snapshotClients(ctx)
+	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
-
-	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
-	if err != nil {
-		logger.Noticef("On RemoveWorkshop: failed to find SDK snapshots for %q workshop: %v", name, err)
-	} else {
-		for _, snapshot := range snapshots {
-			if err := s.deleteSnapshot(snapshotConn, snapshot); err != nil {
-				logger.Noticef("On RemoveWorkshop: failed to delete %q SDK snapshot for %q workshop: %v", snapshot, name, err)
-			}
-		}
-	}
 
 	op, err := conn.DeleteInstance(InstanceName(name, projectId), false)
 	if err != nil {

@@ -2,40 +2,40 @@ summary: Check support for trying out packed SDKs
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove || true
-  lxc storage volume delete workshop custom/test-sdk-basic-x1 || true
-  lxc storage volume delete workshop custom/test-sdk-basic-x2 || true
-  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/stable" && run_sdkcraft clean) || true
-  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/edge" && run_sdkcraft clean) || true
-  rm -rf /home/ubuntu/.local/share/workshop/try/test-sdk-basic
+  lxc storage volume delete workshop custom/test-sdk-basic-2-x1 || true
+  lxc storage volume delete workshop custom/test-sdk-basic-2-x2 || true
+  (cd "$TESTSLIB/sdk/test-sdk-basic-2/latest/stable" && run_sdkcraft clean) || true
+  (cd "$TESTSLIB/sdk/test-sdk-basic-2/latest/edge" && run_sdkcraft clean) || true
+  rm -rf /home/ubuntu/.local/share/workshop/try/test-sdk-basic-2
 execute: |
   . "$TESTSLIB"/utils.sh
 
   mkdir work
   chown ubuntu:ubuntu work
-  sudo -u ubuntu -- cp -r "$TESTSLIB/sdk/test-sdk-basic/latest"/{stable,edge} work/
+  sudo -u ubuntu -- cp -r "$TESTSLIB/sdk/test-sdk-basic-2/latest"/{stable,edge} work/
 
   echo "Launch workshop with SDKs from try area"
   (cd work/stable && run_sdkcraft try)
   workshop_exec launch
-  workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
-  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH '^~/.local/share/workshop/try/test-sdk-basic$'
-  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+  workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic-2 | MATCH 'workshop/custom/default_test-sdk-basic-2-x1'
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].tracking' | MATCH '^~/.local/share/workshop/try/test-sdk-basic-2$'
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].installed' | MATCH '\(x1\)$'
 
   echo "Check try and in-project SDKs can share revision numbers"
-  sed 's/try-test-sdk-basic/project-test-sdk-basic/' -i .workshop/dev.yaml
+  sed 's/try-test-sdk-basic-2/project-test-sdk-basic-2/' -i .workshop/dev.yaml
   workshop_exec exec -- test ! -f /in-project-marker
   workshop_exec refresh
   workshop_exec exec -- test -f /in-project-marker
-  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].installed' | MATCH '\(x1\)$'
 
   echo "Check existing try revisions are reused"
-  sed 's/project-test-sdk-basic/try-test-sdk-basic/' -i .workshop/dev.yaml
+  sed 's/project-test-sdk-basic-2/try-test-sdk-basic-2/' -i .workshop/dev.yaml
   workshop_exec refresh
   workshop_exec exec -- test ! -f /in-project-marker
-  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].installed' | MATCH '\(x1\)$'
 
   echo "Check SDKs in try area can be updated"
   (cd work/edge && run_sdkcraft try)
   workshop_exec refresh
-  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
-  workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].installed' | MATCH '\(x2\)$'
+  workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic-2/sdk/hooks/setup-project | MATCH 'setup-project v2'

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
@@ -182,9 +181,10 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	// Snapshot workshop.
 	err = s.bd.TakeSnapshot(s.ctx, wf.Name, snapshot)
 	c.Assert(err, check.IsNil)
+	defer func() { _ = s.bd.RemoveSnapshot(s.ctx, snapshot) }()
 
 	// Validate snapshot metadata.
-	sdkSnapshot := s.snapshotFormat(c, wf.Name, snapshot)
+	sdkSnapshot := s.snapshotFormat(c, snapshot)
 
 	conn, err := s.bd.LxdClient(s.ctx)
 	c.Assert(err, check.IsNil)
@@ -264,21 +264,16 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	return inst
 }
 
-func (s *snapshotSuite) snapshotFormat(c *check.C, name string, snapshot workshop.Snapshot) api.InstancePut {
+func (s *snapshotSuite) snapshotFormat(c *check.C, snapshot workshop.Snapshot) api.InstancePut {
 	conn, err := s.bd.LxdClient(s.ctx)
 	c.Assert(err, check.IsNil)
 	defer conn.Disconnect()
 	snapshotConn := conn.UseProject("workshop-snapshots." + s.usr.Username)
 
 	sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
-	snapshotName := s.snapshotName(c, snapshotConn, name, sk)
-	defer func() {
-		// TODO: move to main test once backend gets a RemoveSnapshot API.
-		op, err := snapshotConn.DeleteInstance(snapshotName, false)
-		c.Assert(err, check.IsNil)
-		c.Assert(op.Wait(), check.IsNil)
-	}()
-
+	digest, err := s.bd.HashSnapshot(snapshot)
+	c.Assert(err, check.IsNil)
+	snapshotName := sk + "-" + digest[:16]
 	inst := fullInstance(c, snapshotConn, snapshotName).Writable()
 
 	// Remove architecture to make the test hardware-agnostic. It already
@@ -295,9 +290,6 @@ func (s *snapshotSuite) snapshotFormat(c *check.C, name string, snapshot worksho
 	c.Check(inst.Config["user.workshop.base-fingerprint"], check.Equals, snapshot.Image.Fingerprint)
 	delete(inst.Config, "user.workshop.base-fingerprint")
 
-	digest, err := s.bd.HashSnapshot(snapshot)
-	c.Assert(err, check.IsNil)
-
 	// Avoid having to update the saved configs when bumping the revision.
 	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, lxdbackend.SnapshotFormatRevision.String())
 	delete(inst.Config, "user.workshop.format-revision")
@@ -305,20 +297,4 @@ func (s *snapshotSuite) snapshotFormat(c *check.C, name string, snapshot worksho
 	delete(inst.Config, "user.workshop.sha3-384")
 
 	return inst
-}
-
-func (s *snapshotSuite) snapshotName(c *check.C, snapshotConn lxd.InstanceServer, w, sk string) string {
-	args := lxd.GetInstancesArgs{
-		InstanceType: api.InstanceTypeContainer,
-		Filters: []string{
-			"config.user.workshop.project-id=" + s.project.ProjectId,
-			"config.user.workshop.name=" + w,
-			"config.user.workshop.snapshot-type=sdk",
-			"config.user.workshop.sdk=" + sk,
-		},
-	}
-	snapshots, err := snapshotConn.GetInstances(args)
-	c.Assert(err, check.IsNil)
-	c.Assert(snapshots, check.HasLen, 1)
-	return snapshots[0].Name
 }

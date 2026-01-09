@@ -32,30 +32,18 @@ const (
 
 var checkHealthTimeout = 5 * time.Second
 
-func (w *WorkshopManager) LaunchMany(project workshop.Project, manifests []Manifest) []*state.TaskSet {
+func (w *WorkshopManager) LaunchMany(ctx context.Context, project workshop.Project, manifests []Manifest) ([]*state.TaskSet, error) {
 	tasksets := make([]*state.TaskSet, 0, len(manifests))
 	for _, manifest := range manifests {
-		tasks := launch(w.state, project, manifest)
+		snapshot, err := w.bestSnapshot(ctx, manifest)
+		if err != nil {
+			return nil, err
+		}
+
+		tasks := launch(w.state, project, manifest, len(snapshot.Sdks))
 		tasksets = append(tasksets, tasks)
 	}
-	return tasksets
-}
-
-func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
-	ordered := make([]sdk.Setup, 0, len(order))
-
-	for _, sk := range order {
-		for _, setup := range setups {
-			contains := func(sp sdk.Setup) bool { return sk == sp.Name }
-
-			idx := slices.IndexFunc(setup, contains)
-			if idx != -1 {
-				ordered = append(ordered, setup[idx])
-				break
-			}
-		}
-	}
-	return ordered
+	return tasksets, nil
 }
 
 func retrieveBase(st *state.State, image workshop.BaseImage) *state.Task {
@@ -124,9 +112,21 @@ func reinstallSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	return all
 }
 
-func launchWorkshop(st *state.State, file *workshop.File) *state.TaskSet {
-	create := st.NewTask("create-workshop", fmt.Sprintf("Create new %q workshop", file.Name))
+func launchWorkshop(st *state.State, file *workshop.File, intact []sdk.Setup) *state.TaskSet {
+	var lastIntact string
+	var summary string
+	if len(intact) == 0 {
+		summary = fmt.Sprintf("Create new %q workshop", file.Name)
+	} else {
+		lastIntact = intact[len(intact)-1].Name
+		summary = fmt.Sprintf("Create new %q workshop from %q snapshot", file.Name, lastIntact)
+	}
+
+	create := st.NewTask("create-workshop", summary)
 	handlersetup.SetWorkshopFile(create, file)
+	if len(intact) > 0 {
+		create.Set("last-intact-sdk", lastIntact)
+	}
 	return state.NewTaskSet(create)
 }
 
@@ -153,7 +153,7 @@ func startWorkshop(st *state.State, name string) *state.TaskSet {
 	return state.NewTaskSet(start)
 }
 
-func launch(st *state.State, project workshop.Project, manifest Manifest) *state.TaskSet {
+func launch(st *state.State, project workshop.Project, manifest Manifest, intact int) *state.TaskSet {
 	var prevInstall *state.TaskSet
 	all := state.NewTaskSet()
 
@@ -170,21 +170,34 @@ func launch(st *state.State, project workshop.Project, manifest Manifest) *state
 		all.AddAll(ts)
 	}
 
-	base := retrieveBase(st, manifest.Image)
+	intactSdks := manifest.Sdks[:intact]
+	newSdks := manifest.Sdks[intact:]
+
+	var base *state.Task
+	if intact == 0 {
+		// Create download-base first so the task IDs are in a nice order.
+		base = retrieveBase(st, manifest.Image)
+	}
 	retrieve := retrieveSdks(st, manifest.Sdks)
-	retrieve.AddTask(base)
+	if base != nil {
+		retrieve.AddTask(base)
+	}
 	addTaskSet(retrieve)
 
 	createDirs := st.NewTask("create-workshop-storage", fmt.Sprintf("Create %q storage directories", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(createDirs))
 
-	create := launchWorkshop(st, manifest.File)
+	create := launchWorkshop(st, manifest.File, intactSdks)
 	addTaskSet(create)
+
+	// SDKs need to be mounted after restoring a snapshot.
+	reinstall := reinstallSdks(st, intactSdks)
+	addTaskSet(reinstall)
 
 	start := startWorkshop(st, manifest.File.Name)
 	addTaskSet(start)
 
-	install := installSdks(st, manifest.Sdks)
+	install := installSdks(st, newSdks)
 	addTaskSet(install)
 
 	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", manifest.File.Name))
@@ -210,13 +223,17 @@ func launch(st *state.State, project workshop.Project, manifest Manifest) *state
 	return all
 }
 
-func (w *WorkshopManager) RefreshMany(project workshop.Project, current, latest []Manifest, option conflict.RefreshOption) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RefreshMany(ctx context.Context, project workshop.Project, current, latest []Manifest, option conflict.RefreshOption) ([]*state.TaskSet, error) {
 	tasksets := make([]*state.TaskSet, 0, len(latest))
 
 	for i := range latest {
-		plan := resolveRefresh(current[i], latest[i])
-		if option == conflict.RefreshRestore || plan.HasUpdates(current[i].File, latest[i].File) {
-			tasks := refresh(w.state, project, plan, latest[i].File)
+		snapshot, err := w.bestSnapshot(ctx, latest[i])
+		if err != nil {
+			return nil, err
+		}
+
+		if option == conflict.RefreshRestore || hasUpdates(current[i], latest[i]) {
+			tasks := refresh(w.state, project, current[i], latest[i], len(snapshot.Sdks))
 			tasksets = append(tasksets, tasks)
 		}
 	}
@@ -249,65 +266,43 @@ func (w *WorkshopManager) RefreshMany(project workshop.Project, current, latest 
 	return tasksets, nil
 }
 
-func maybeRefresh(installed, candidate sdk.Setup) bool {
-	return installed.Source != candidate.Source || installed.Revision != candidate.Revision
+func (w *WorkshopManager) bestSnapshot(ctx context.Context, manifest Manifest) (*workshop.Snapshot, error) {
+	snapshot := workshop.SdkSnapshot(manifest.Image, manifest.Sdks)
+	for range manifest.Sdks {
+		found, err := w.backend.HasSnapshot(ctx, snapshot)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			break
+		}
+		snapshot.Sdks = snapshot.Sdks[:len(snapshot.Sdks)-1]
+	}
+	return &snapshot, nil
 }
 
-type refreshPlan struct {
-	image workshop.BaseImage
-
-	install []sdk.Setup
-	intact  []sdk.Setup
-	refresh []sdk.Setup
-	remove  []sdk.Setup
-
-	installOrder   []string
-	installedOrder []string
-}
-
-func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
-	return ordered(p.installOrder, p.install, p.refresh)
-}
-
-func (p refreshPlan) Intact() []sdk.Setup {
-	return ordered(p.installOrder, p.intact)
-}
-
-func (p refreshPlan) IntactOrRefresh() []sdk.Setup {
-	return ordered(p.installOrder, p.intact, p.refresh)
-}
-
-func (p refreshPlan) IntactOrRemove() []sdk.Setup {
-	revOrder := slices.Clone(p.installedOrder)
-	slices.Reverse(revOrder)
-	ordered := ordered(revOrder, p.intact, p.remove)
-	return ordered
-}
-
-func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
-	return ordered(p.installOrder, p.install, p.refresh, p.intact)
-}
-
-func (p refreshPlan) HasUpdates(current, latest *workshop.File) bool {
-	if len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 {
+func hasUpdates(current, latest Manifest) bool {
+	currentSnapshot := workshop.SdkSnapshot(current.Image, current.Sdks)
+	finalSnapshot := workshop.SdkSnapshot(latest.Image, latest.Sdks)
+	if !currentSnapshot.Equal(finalSnapshot) {
 		return true
 	}
 
-	for _, sk := range p.intact {
-		a := sdkAdditions(current.Sdks, sk.Name)
-		b := sdkAdditions(latest.Sdks, sk.Name)
+	for _, sk := range finalSnapshot.Sdks {
+		a := sdkAdditions(current.File.Sdks, sk.Name)
+		b := sdkAdditions(latest.File.Sdks, sk.Name)
 		if !reflect.DeepEqual(a, b) {
 			return true
 		}
 	}
 
-	if len(current.Connections) != len(latest.Connections) {
+	if len(current.File.Connections) != len(latest.File.Connections) {
 		return true
 	}
-	seen := make([]bool, len(latest.Connections))
+	seen := make([]bool, len(latest.File.Connections))
 out:
-	for _, conn := range current.Connections {
-		for i, other := range latest.Connections {
+	for _, conn := range current.File.Connections {
+		for i, other := range latest.File.Connections {
 			if !seen[i] && conn == other {
 				seen[i] = true
 				continue out
@@ -339,69 +334,7 @@ func sdkAdditions(sdks []workshop.SdkRecord, name string) workshop.SdkRecord {
 	return sk
 }
 
-func resolveRefresh(current, latest Manifest) *refreshPlan {
-	plan := &refreshPlan{
-		image:          latest.Image,
-		install:        make([]sdk.Setup, 0),
-		intact:         make([]sdk.Setup, 0),
-		refresh:        make([]sdk.Setup, 0),
-		remove:         make([]sdk.Setup, 0),
-		installOrder:   make([]string, 0),
-		installedOrder: make([]string, 0),
-	}
-
-	if current.Image == latest.Image {
-		for ci, s := range latest.Sdks {
-			// Do we have this SDK in the same order as in the running workshop?
-			if ci >= len(current.Sdks) || current.Sdks[ci].Name != s.Name {
-				break
-			}
-			// Has this SDK had any updates?
-			// If so, break the loop as the rest require to be reinstalled.
-			if maybeRefresh(current.Sdks[ci], s) {
-				break
-			}
-
-			// No updates to the SDK - reuse its snapshot and keep looking.
-			plan.intact = append(plan.intact, s)
-		}
-	}
-
-	for _, candidate := range latest.Sdks[len(plan.intact):] {
-		idx := slices.IndexFunc(current.Sdks, func(s sdk.Setup) bool {
-			return s.Name == candidate.Name
-		})
-		if idx >= 0 {
-			plan.refresh = append(plan.refresh, candidate)
-			plan.remove = append(plan.remove, current.Sdks[idx])
-		} else {
-			plan.install = append(plan.install, candidate)
-		}
-	}
-
-	// SDKs that only exist in the previous workshop are to be removed.
-	for _, installed := range current.Sdks {
-		if !slices.ContainsFunc(latest.Sdks, func(s sdk.Setup) bool {
-			return s.Name == installed.Name
-		}) {
-			plan.remove = append(plan.remove, installed)
-		}
-	}
-
-	// Establish SDK order for the installed SDKs.
-	for _, s := range current.Sdks {
-		plan.installedOrder = append(plan.installedOrder, s.Name)
-	}
-
-	// Establish SDK installation order.
-	for _, s := range latest.Sdks {
-		plan.installOrder = append(plan.installOrder, s.Name)
-	}
-
-	return plan
-}
-
-func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file *workshop.File) *state.TaskSet {
+func refresh(st *state.State, project workshop.Project, current, latest Manifest, intact int) *state.TaskSet {
 	refresh := state.NewTaskSet()
 	prev := (*state.TaskSet)(nil)
 	addTaskSet := func(ts *state.TaskSet) {
@@ -416,31 +349,40 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 		prev = ts
 	}
 
+	saveSdks, restoreSdks := saveRestore(current.Sdks, latest.Sdks)
+
+	currentSdks := slices.Clone(current.Sdks)
+	slices.Reverse(currentSdks)
+
+	intactSdks := latest.Sdks[:intact]
+	newSdks := latest.Sdks[intact:]
+
 	var base *state.Task
-	if len(plan.Intact()) == 0 {
+	if intact == 0 {
 		// Create download-base first so the task IDs are in a nice order.
-		base = retrieveBase(st, plan.image)
+		base = retrieveBase(st, latest.Image)
 	}
-	retrieve := retrieveSdks(st, plan.InstallOrRefresh())
+	// Retrieve all SDKs just in case the snapshot outlived some of them.
+	retrieve := retrieveSdks(st, latest.Sdks)
 	if base != nil {
 		retrieve.AddTask(base)
 	}
 	addTaskSet(retrieve)
 
-	if len(plan.IntactOrRefresh()) > 0 {
+	if len(saveSdks) > 0 {
 		stateStorage := st.NewTask("create-state-storage", "Create SDK state storage")
 		addTaskSet(state.NewTaskSet(stateStorage))
 	}
 
 	// Call save-state hooks for the SDKs that are installed and will not be
 	// removed after this refresh.
-	saveState := runHooks(st, plan.IntactOrRefresh(), 0, hookstate.SaveState)
+	saveState := runHooks(st, saveSdks, 0, hookstate.SaveState)
 	addTaskSet(saveState)
 
-	disconnect := disconnectSdks(st, plan.IntactOrRemove())
+	disconnect := disconnectSdks(st, currentSdks)
 	addTaskSet(disconnect)
 
-	stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", file.Name))
+	stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", latest.File.Name))
 	stop.Set("force", true)
 	addTaskSet(state.NewTaskSet(stop))
 
@@ -449,43 +391,43 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 	// SDKs will be implicitly unmounted when rebuilding the workshop. But
 	// the repository is lost when the daemon restarts. It's easier to
 	// reconstruct if we keep it in sync with the installed SDKs.
-	uninstall := uninstallSdks(st, plan.IntactOrRemove())
+	uninstall := uninstallSdks(st, currentSdks)
 	addTaskSet(uninstall)
 
-	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
+	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", latest.File.Name))
 	addTaskSet(state.NewTaskSet(stash))
 
-	rebuild := rebuildWorkshop(st, file, plan.Intact())
+	rebuild := rebuildWorkshop(st, latest.File, intactSdks)
 	addTaskSet(rebuild)
 
 	// Reinstall intact SDKs. The workshop definition can change plugs and
 	// slots, and SDKs need to be mounted after restoring a snapshot.
-	reinstall := reinstallSdks(st, plan.Intact())
+	reinstall := reinstallSdks(st, intactSdks)
 	addTaskSet(reinstall)
 
-	start := startWorkshop(st, file.Name)
+	start := startWorkshop(st, latest.File.Name)
 	addTaskSet(start)
 
 	// Install updated SDKs to the rebuilt workshop.
-	install := installSdks(st, plan.InstallOrRefresh())
+	install := installSdks(st, newSdks)
 	addTaskSet(install)
 
-	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", file.Name))
+	configureTimezone := st.NewTask("configure-timezone", fmt.Sprintf("Configure %q workshop timezone", latest.File.Name))
 	addTaskSet(state.NewTaskSet(configureTimezone))
 
 	mountProject := st.NewTask("mount-project", fmt.Sprintf("Mount project directory %q", project.Path))
 	addTaskSet(state.NewTaskSet(mountProject))
 
-	connect := autoconnectSdks(st, file.Name, plan.InstallIntactOrRefresh())
+	connect := autoconnectSdks(st, latest.File.Name, latest.Sdks)
 	addTaskSet(connect)
 
-	setupProject := runHooks(st, plan.InstallIntactOrRefresh(), 0, hookstate.SetupProject)
+	setupProject := runHooks(st, latest.Sdks, 0, hookstate.SetupProject)
 	addTaskSet(setupProject)
 
-	restoreState := runHooks(st, plan.IntactOrRefresh(), 0, hookstate.RestoreState)
+	restoreState := runHooks(st, restoreSdks, 0, hookstate.RestoreState)
 	addTaskSet(restoreState)
 
-	checkHealth := runHooks(st, plan.InstallIntactOrRefresh(), 0, hookstate.CheckHealth)
+	checkHealth := runHooks(st, latest.Sdks, 0, hookstate.CheckHealth)
 	addTaskSet(checkHealth)
 
 	length := len(refresh.Tasks())
@@ -494,7 +436,7 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 
 	cleanupLane := st.NewLane()
 
-	if len(plan.IntactOrRefresh()) > 0 {
+	if len(restoreSdks) > 0 {
 		removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 		addTaskSet(state.NewTaskSet(removeStateStorage))
 		removeStateStorage.JoinLane(cleanupLane)
@@ -502,7 +444,7 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 	}
 
 	// remove the workshop from stash after the state storage was detached
-	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", file.Name))
+	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", latest.File.Name))
 	// if the change was aborted during the cleanup stage execution,
 	// there is a chance that some of the workshop copies that had
 	// been created during the refresh were already deleted. If we
@@ -521,11 +463,32 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 	}
 
 	for _, task := range refresh.Tasks() {
-		task.Set("workshop", file.Name)
+		task.Set("workshop", latest.File.Name)
 		task.Set("project", project)
 	}
 
 	return refresh
+}
+
+// List SDKs which belong to both slices (regardless of version), sorted by
+// installation order in both cases.
+func saveRestore(current, latest []sdk.Setup) (save, restore []sdk.Setup) {
+	var saveIdxs []int
+	var saveSdks, restoreSdks []sdk.Setup
+	for _, sk := range latest {
+		idx := slices.IndexFunc(current, func(s sdk.Setup) bool {
+			return s.Name == sk.Name
+		})
+		if idx >= 0 {
+			saveIdxs = append(saveIdxs, idx)
+			restoreSdks = append(restoreSdks, sk)
+		}
+	}
+	slices.Sort(saveIdxs)
+	for _, i := range saveIdxs {
+		saveSdks = append(saveSdks, current[i])
+	}
+	return saveSdks, restoreSdks
 }
 
 func autoconnectSdks(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet {

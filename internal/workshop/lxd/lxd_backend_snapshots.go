@@ -3,24 +3,82 @@ package lxdbackend
 import (
 	"cmp"
 	"context"
-	"crypto/rand"
 	"crypto/sha3"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"maps"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
+	"sync"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/lxd/shared/entity"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 )
+
+var (
+	snapshotGuardsLock sync.Mutex
+	snapshotGuards     = map[string]*snapshotGuard{}
+)
+
+type snapshotGuard struct {
+	c       chan struct{}
+	counter int32
+}
+
+func lockSnapshot(ctx context.Context, name string) error {
+	snapshotGuardsLock.Lock()
+	guard, ok := snapshotGuards[name]
+	if !ok {
+		guard = &snapshotGuard{}
+		guard.counter = 0
+		guard.c = make(chan struct{}, 1)
+		snapshotGuards[name] = guard
+
+		guard.c <- struct{}{}
+	}
+	guard.counter += 1
+	snapshotGuardsLock.Unlock()
+
+	select {
+	case <-guard.c:
+		return nil
+	case <-ctx.Done():
+		snapshotGuardsLock.Lock()
+		guard.counter -= 1
+		if guard.counter == 0 {
+			close(guard.c)
+			delete(snapshotGuards, name)
+		}
+		snapshotGuardsLock.Unlock()
+		return ctx.Err()
+	}
+}
+
+func unlockSnapshot(name string) {
+	snapshotGuardsLock.Lock()
+	defer snapshotGuardsLock.Unlock()
+
+	guard, ok := snapshotGuards[name]
+	if !ok {
+		panic(fmt.Errorf("%q snapshot is not locked", name))
+	}
+	guard.c <- struct{}{}
+
+	guard.counter -= 1
+	if guard.counter == 0 {
+		close(guard.c)
+		delete(snapshotGuards, name)
+	}
+}
 
 // Classifies LXD config options into different domains which describe who is
 // responsible for them and how they (should) behave when copying an instance.
@@ -51,23 +109,144 @@ func optionDomain(key string) configDomain {
 	}
 }
 
+func (s *Backend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
+	if snapshot.IsBase() {
+		return false, errors.New("internal error: snapshots require at least one SDK")
+	}
+
+	conn, snapshotConn, err := s.snapshotClients(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Disconnect()
+
+	digest, err := s.HashSnapshot(snapshot)
+	if err != nil {
+		return false, fmt.Errorf("internal error: hashing snapshot info: %w", err)
+	}
+
+	name := sdkSnapshotName(snapshot, digest)
+	inst, _, err := snapshotConn.GetInstance(name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Check for in-progress snapshots. In this case we could wait for it to
+	// finish and return true, but this optimization would be better suited for
+	// the changes and tasks system; i.e. all concurrent launches and refreshes
+	// should coordinate their snapshots, not just those which happen to call
+	// HasSnapshot and TakeSnapshot at the same time.
+	if inst.Config[workshop.ConfigWorkshopSnapshotType] != "sdk" {
+		return false, nil
+	}
+
+	if err := detectHashCollision(inst, snapshot); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) error {
+	if inst.Config[workshop.ConfigWorkshopSnapshotFormat] != SnapshotFormatRevision.String() {
+		return fmt.Errorf("hash collision detected: %q snapshot taken by incompatible Workshop version", inst.Name)
+	}
+	saved, err := identifySnapshot(inst)
+	if err != nil {
+		return err
+	}
+	if err := compareSnapshots(inst.Name, *saved, snapshot); err != nil {
+		return fmt.Errorf("hash collision detected: %w", err)
+	}
+	return nil
+}
+
+func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
+	sdks := make([]sdk.ContentID, len(inst.Devices))
+	length := 0
+	maxInstallOrder := 0
+	for key, device := range inst.Devices {
+		installOrder, s, err := maybeSdkId(key, device)
+		if err != nil {
+			return nil, fmt.Errorf("invalid %q snapshot: %w", inst.Name, err)
+		}
+		if s == nil {
+			continue
+		}
+
+		if installOrder <= 0 || len(sdks) < installOrder {
+			return nil, fmt.Errorf("invalid %q snapshot: install-order for %q SDK out of bounds", inst.Name, s.Name)
+		}
+		if sdks[installOrder-1].Name != "" {
+			return nil, fmt.Errorf("invalid %q snapshot: %q and %q SDKs have same install-order", inst.Name, sdks[installOrder-1].Name, s.Name)
+		}
+		sdks[installOrder-1] = *s
+		length += 1
+		maxInstallOrder = max(maxInstallOrder, installOrder)
+	}
+
+	if maxInstallOrder > length {
+		return nil, fmt.Errorf("invalid %q snapshot: install-order for %q SDK out of bounds", inst.Name, sdks[maxInstallOrder-1].Name)
+	}
+
+	return &workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        inst.Config[workshop.ConfigWorkshopBase],
+			Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
+		},
+		Sdks: sdks[:length],
+	}, nil
+}
+
+// compareSnapshots is like reflect.DeepEqual with specific error messages.
+func compareSnapshots(name string, actual, expected workshop.Snapshot) error {
+	if actual.Image.Name != expected.Image.Name {
+		return fmt.Errorf("%q snapshot has %q base; required: %q", name, actual.Image.Name, expected.Image.Name)
+	}
+	if actual.Image.Fingerprint != expected.Image.Fingerprint {
+		return fmt.Errorf("%q snapshot has %q base fingerprint; required: %q", name, actual.Image.Fingerprint, expected.Image.Fingerprint)
+	}
+
+	for i, sk := range expected.Sdks {
+		if len(actual.Sdks) <= i {
+			return fmt.Errorf("%q snapshot is missing %q SDK", name, sk.Name)
+		}
+		if actual.Sdks[i].Name != sk.Name {
+			return fmt.Errorf("%q snapshot has %q SDK; required: %q", name, actual.Sdks[i].Name, sk.Name)
+		}
+		if actual.Sdks[i] != sk {
+			return fmt.Errorf("%q snapshot has unexpected revision of %q SDK", name, sk.Name)
+		}
+	}
+	if len(actual.Sdks) > len(expected.Sdks) {
+		return fmt.Errorf("%q snapshot has unexpected %q SDK", name, actual.Sdks[len(expected.Sdks)].Name)
+	}
+
+	return nil
+}
+
 func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
+	if snapshot.IsBase() {
+		return errors.New("internal error: snapshots require at least one SDK")
+	}
+
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	if snapshot.IsBase() {
-		return errors.New("internal error: attempted snapshot of base image")
-	}
-	sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
-
 	digest, err := s.HashSnapshot(snapshot)
 	if err != nil {
 		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
 	}
+	snapshotName := sdkSnapshotName(snapshot, digest)
 
-	conn, snapshotConn, err := s.snapshotClients(ctx)
+	// Disable cancellation, because the LXD operation will plow on regardless,
+	// and the lock is supposed to prevent concurrent import operations.
+	lockedCtx := context.WithoutCancel(ctx)
+	conn, snapshotConn, err := s.snapshotClients(lockedCtx)
 	if err != nil {
 		return err
 	}
@@ -88,14 +267,10 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	}
 	config := map[string]string{
 		"security.protection.start":            "true",
-		workshop.ConfigProjectId:               projectId,
-		workshop.ConfigWorkshopName:            name,
 		workshop.ConfigWorkshopBase:            snapshot.Image.Name,
 		workshop.ConfigWorkshopBaseFingerprint: snapshot.Image.Fingerprint,
-		workshop.ConfigWorkshopSnapshotType:    "sdk",
 		workshop.ConfigWorkshopSnapshotFormat:  SnapshotFormatRevision.String(),
 		workshop.ConfigWorkshopSha3_384:        digest,
-		workshop.ConfigWorkshopSdk:             sk,
 	}
 	mergeConfig(inst.Config, nil, config, newApi)
 
@@ -113,43 +288,171 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		Devices:      inst.Devices,
 		Profiles:     []string{},
 	})
-
-	snapshotName, err := sdkSnapshotName(sk)
-	if err != nil {
-		return err
-	}
 	args := lxd.InstanceCopyArgs{Name: snapshotName, InstanceOnly: true}
-	rop, err := snapshotConn.CopyInstance(conn, *inst, &args)
+
+	// LXD already prevents concurrent instance copies, but without a lock it's
+	// hard to tell if a conflict is caused by a concurrent copy or an aborted
+	// snapshot. After locking, any conflict we observe must be due to Workshop
+	// or LXD dying abruptly.
+	if err := lockSnapshot(ctx, snapshotName); err != nil {
+		return err
+	}
+	defer unlockSnapshot(snapshotName)
+
+	rev := revert.New()
+	defer rev.Fail()
+
+	for i := range 2 {
+		rop, err := snapshotConn.CopyInstance(conn, *inst, &args)
+		if err == nil {
+			err = rop.Wait()
+		}
+		if err == nil {
+			break
+		}
+
+		if i > 0 || !IsInstanceConflict(err, snapshotName) {
+			return err
+		}
+		if err := s.resolveSnapshotConflict(snapshotConn, snapshot, snapshotName); err != nil {
+			return err
+		}
+	}
+	rev.Add(func() {
+		// Once a snapshot is complete, it can't be deleted safely, so we check
+		// that case first before cleaning up.
+		if reverr := s.checkPartialSnapshot(snapshotConn, snapshot, snapshotName); reverr != nil {
+			logger.Noticef("On TakeSnapshot: %v", reverr)
+		}
+		if reverr := s.deleteSnapshot(snapshotConn, snapshotName); reverr != nil {
+			logger.Noticef("On TakeSnapshot: %v", reverr)
+		}
+	})
+
+	if err := s.commitPartialSnapshot(snapshotConn, snapshotName); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
+}
+
+func IsInstanceConflict(err error, name string) bool {
+	if err == nil {
+		return false
+	}
+	if api.StatusErrorCheck(err, http.StatusConflict) {
+		return true
+	}
+
+	suffixes := []string{
+		fmt.Sprintf(": Instance %q already exists", name),
+		`: Instance is busy running a "create" operation`,
+	}
+	return slices.ContainsFunc(suffixes, func(s string) bool {
+		return strings.HasSuffix(err.Error(), s)
+	})
+}
+
+// resolveSnapshotConflict returns ErrSnapshotAlreadyExists (or a hash
+// collision error) if a complete snapshot already exists. Otherwise, it waits
+// for outstanding operations on the snapshot and checks if it's complete
+// again. If not, the partial snapshot is deleted.
+func (s *Backend) resolveSnapshotConflict(snapshotConn lxd.InstanceServer, snapshot workshop.Snapshot, name string) error {
+	if err := s.checkPartialSnapshot(snapshotConn, snapshot, name); err != nil {
+		return err
+	}
+
+	info, err := snapshotConn.GetConnectionInfo()
 	if err != nil {
 		return err
 	}
-	return rop.Wait()
-}
 
-// Generates a random suffix for the SDK, to avoid clashing with SDK snapshots
-// from other projects and workshops, while remaining within the 63 characters
-// allowed for LXD instance names.
-func sdkSnapshotName(sk string) (string, error) {
-	bytes := make([]byte, 8)
-	_, err := rand.Read(bytes)
+	ops, err := snapshotConn.GetOperations()
 	if err != nil {
-		return "", err
+		return err
 	}
-	return sk + "-" + hex.EncodeToString(bytes), nil
+	for _, op := range ops {
+		isInstance, err := IsInstanceOperation(op, info.Project, name)
+		if err != nil {
+			return err
+		}
+		if !isInstance {
+			continue
+		}
+
+		if _, _, err := snapshotConn.GetOperationWait(op.ID, -1); err != nil && !api.StatusErrorCheck(err) {
+			return err
+		}
+	}
+
+	if err := s.checkPartialSnapshot(snapshotConn, snapshot, name); err != nil {
+		return err
+	}
+
+	return s.deleteSnapshot(snapshotConn, name)
 }
 
-func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost, sdks []sdk.ContentID) error {
-	projectId := req.Config[workshop.ConfigProjectId]
-	name := req.Config[workshop.ConfigWorkshopName]
+func IsInstanceOperation(op api.Operation, lxdProject, name string) (bool, error) {
+	// TODO: use api.MetadataEntityURL constant.
+	// See https://github.com/canonical/lxd/pull/18033.
+	entityUrl, ok := op.Metadata["entity_url"].(string)
+	if !ok {
+		// TODO: return false, nil here when we bump LXD to 6.8+.
+		if op.Description != "Updating instance" || len(op.Resources["instance"]) != 1 {
+			return false, nil
+		}
+		entityUrl = op.Resources["instance"][0]
+	}
 
-	// Find snapshots to keep and remove.
-	lastSdk := sdks[len(sdks)-1].Name
-	snapshotName, obstacles, err := s.snapshotNamesAfter(snapshotConn, projectId, name, lastSdk)
+	u, err := url.Parse(entityUrl)
+	if err != nil {
+		return false, err
+	}
+	entityType, project, _, args, err := entity.ParseURL(*u)
+	if err != nil {
+		return false, err
+	}
+
+	matches := entityType == entity.TypeInstance && project == lxdProject && slices.Equal(args, []string{name})
+	return matches, nil
+}
+
+func (s *Backend) checkPartialSnapshot(snapshotConn lxd.InstanceServer, snapshot workshop.Snapshot, name string) error {
+	inst, _, err := snapshotConn.GetInstance(name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) || (err == nil && inst.Config[workshop.ConfigWorkshopSnapshotType] != "sdk") {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
 
-	snapshot, _, err := snapshotConn.GetInstance(snapshotName)
+	if err := detectHashCollision(inst, snapshot); err != nil {
+		return err
+	}
+	return workshop.ErrSnapshotAlreadyExists
+}
+
+func (s *Backend) commitPartialSnapshot(snapshotConn lxd.InstanceServer, name string) error {
+	copy, etag, err := snapshotConn.GetInstance(name)
+	if err != nil {
+		return err
+	}
+	copy.Config[workshop.ConfigWorkshopSnapshotType] = "sdk"
+	op, err := snapshotConn.UpdateInstance(name, copy.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	return op.Wait()
+}
+
+func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost, snapshot workshop.Snapshot) error {
+	digest, err := s.HashSnapshot(snapshot)
+	if err != nil {
+		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
+	}
+
+	source, _, err := snapshotConn.GetInstance(sdkSnapshotName(snapshot, digest))
 	if err != nil {
 		return err
 	}
@@ -161,44 +464,34 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		return err
 	}
 
-	// Remove the newer snapshots, as LXD would do. This is not necessary
-	// to "restore the snapshot," i.e. replace the volume with a new one,
-	// but we want to avoid having two snapshots for the same SDK and
-	// workshop until we introduce a way to distinguish them.
-	for _, obstacle := range obstacles {
-		if err := s.deleteSnapshot(snapshotConn, obstacle); err != nil {
-			return err
-		}
-	}
-
 	newApi := conn.HasExtension("instance_refresh_config")
 
-	if snapshot.Config == nil {
-		snapshot.Config = map[string]string{}
+	if source.Config == nil {
+		source.Config = map[string]string{}
 	}
-	var snapshotConfig, reqConfig map[string]string
+	var sourceConfig, reqConfig map[string]string
 	if !newApi {
 		// The old API handles config options inconsistently. This
 		// computes the form required for UpdateInstance.
-		snapshotConfig = maps.Clone(snapshot.Config)
+		sourceConfig = maps.Clone(source.Config)
 		reqConfig = req.Config
 	}
-	mergeConfig(snapshot.Config, inst.Config, req.Config, newApi)
+	mergeConfig(source.Config, inst.Config, req.Config, newApi)
 
-	req.Architecture = snapshot.Architecture
-	req.Config = snapshot.Config
+	req.Architecture = source.Architecture
+	req.Config = source.Config
 	// Ensure LXD doesn't copy profiles from the snapshot.
 	if req.Profiles == nil {
 		req.Profiles = []string{}
 	}
-	snapshot.SetWritable(req.InstancePut)
+	source.SetWritable(req.InstancePut)
 
 	args := lxd.InstanceCopyArgs{
 		Name:         req.Name,
 		InstanceOnly: true,
 		Refresh:      true,
 	}
-	rop, err := conn.CopyInstance(snapshotConn, *snapshot, &args)
+	rop, err := conn.CopyInstance(snapshotConn, *source, &args)
 	if err != nil {
 		return err
 	}
@@ -221,13 +514,20 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 	// If the workshop already existed, it still has the old config options
 	// and devices. If it did not exist, the config and devices are mostly
 	// correct, but we still need to remove placeholder SDK devices.
-	mergeConfig(snapshotConfig, inst.Config, reqConfig, true)
-	req.Config = snapshotConfig
+	mergeConfig(sourceConfig, inst.Config, reqConfig, true)
+	req.Config = sourceConfig
 	op, err := conn.UpdateInstance(req.Name, req.InstancePut, etag)
 	if err != nil {
 		return err
 	}
 	return op.Wait()
+}
+
+// Hash is truncated to 16 hex digits to remain within the 63 characters
+// allowed for LXD instance names.
+func sdkSnapshotName(snapshot workshop.Snapshot, digest string) string {
+	sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
+	return sk + "-" + digest[:16]
 }
 
 func mergeConfig(source, target, config map[string]string, newApi bool) {
@@ -286,6 +586,25 @@ func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w s
 	return nil
 }
 
+func (s *Backend) RemoveSnapshot(ctx context.Context, snapshot workshop.Snapshot) error {
+	if snapshot.IsBase() {
+		return errors.New("internal error: snapshots require at least one SDK")
+	}
+
+	conn, snapshotConn, err := s.snapshotClients(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Disconnect()
+
+	digest, err := s.HashSnapshot(snapshot)
+	if err != nil {
+		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
+	}
+
+	return s.deleteSnapshot(snapshotConn, sdkSnapshotName(snapshot, digest))
+}
+
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
@@ -298,30 +617,6 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
-	if err != nil {
-		return err
-	}
-
-	rev := revert.New()
-	defer rev.Fail()
-
-	// Backup the workshop's SDK snapshots, modifying the instance name and
-	// snapshot type to distinguish the backups from the originals.
-	for _, snapshot := range snapshots {
-		newname := "stash-" + snapshot
-		config := map[string]string{workshop.ConfigWorkshopSnapshotType: "stash-sdk"}
-		if err := s.copyInstance(snapshotConn, snapshotConn, snapshot, newname, false, config); err != nil {
-			return err
-		}
-		rev.Add(func() {
-			if rerr := s.deleteSnapshot(snapshotConn, newname); rerr != nil {
-				logger.Noticef("On StashWorkshop: Cannot remove snapshot %q after failed stash operation: %v", newname, rerr)
-			}
-		})
-	}
-
-	// Backup the workshop itself.
 	instance := InstanceName(name, projectId)
 	stashed := instanceStashName(name, projectId)
 	// Mark the copy as a stash to avoid confusing it with an SDK snapshot.
@@ -330,7 +625,6 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 		return err
 	}
 
-	rev.Success()
 	return nil
 }
 
@@ -346,103 +640,11 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
-	if err != nil {
-		return err
-	}
-	stashSnapshots, err := s.snapshotNames(snapshotConn, projectId, name, "stash-sdk")
-	if err != nil {
-		return err
-	}
-
-	// Remove the snapshots that were created after stashing. These are the
-	// ones which don't have backups.
-	for _, snapshot := range snapshots {
-		if slices.Contains(stashSnapshots, "stash-"+snapshot) {
-			continue
-		}
-		if err := s.deleteSnapshot(snapshotConn, snapshot); err != nil {
-			return err
-		}
-	}
-
-	// Restore the snapshots that were deleted when restoring an SDK
-	// snapshot. These come from the backups whose source no longer exists.
-	for _, snapshot := range stashSnapshots {
-		name := strings.TrimPrefix(snapshot, "stash-")
-		if slices.Contains(snapshots, name) {
-			continue
-		}
-		// Restore the original snapshot type (stash-sdk -> sdk).
-		config := map[string]string{workshop.ConfigWorkshopSnapshotType: "sdk"}
-		if err := s.copyInstance(snapshotConn, snapshotConn, snapshot, name, false, config); err != nil {
-			return err
-		}
-	}
-
-	// Restore the workshop itself.
 	instance := InstanceName(name, projectId)
 	stash := instanceStashName(name, projectId)
 	// Avoid restoring the option which we added when stashing.
 	config := map[string]string{workshop.ConfigWorkshopSnapshotType: ""}
 	return s.copyInstance(snapshotConn, conn, stash, instance, true, config)
-}
-
-// Find snapshot names for all SDKs in the given workshop or stash.
-func (s *Backend) snapshotNames(snapshotConn lxd.InstanceServer, pid, w string, kind string) ([]string, error) {
-	args := lxd.GetInstancesArgs{
-		InstanceType: api.InstanceTypeContainer,
-		Filters: []string{
-			"config.user.workshop.project-id=" + pid,
-			"config.user.workshop.name=" + w,
-			"config.user.workshop.snapshot-type=" + kind,
-		},
-	}
-	snapshots, err := snapshotConn.GetInstances(args)
-	if err != nil {
-		return nil, err
-	}
-
-	names := make([]string, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		names = append(names, snapshot.Name)
-	}
-	return names, nil
-}
-
-// Find snapshot name for the given SDK and any subsequent SDKs.
-func (s *Backend) snapshotNamesAfter(snapshotConn lxd.InstanceServer, pid, w, sk string) (string, []string, error) {
-	args := lxd.GetInstancesArgs{
-		InstanceType: api.InstanceTypeContainer,
-		Filters: []string{
-			"config.user.workshop.project-id=" + pid,
-			"config.user.workshop.name=" + w,
-			"config.user.workshop.snapshot-type=sdk",
-		},
-	}
-	snapshots, err := snapshotConn.GetInstances(args)
-	if err != nil {
-		return "", nil, err
-	}
-
-	idx := slices.IndexFunc(snapshots, func(inst api.Instance) bool {
-		return inst.Config[workshop.ConfigWorkshopSdk] == sk
-	})
-	if idx < 0 {
-		return "", nil, fmt.Errorf("%q SDK snapshot not found in %q workshop", sk, w)
-	}
-	devices := snapshots[idx].Devices
-
-	// Any SDK which wasn't installed must have been added later.
-	obstacles := make([]string, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		device := workshop.SdkDeviceName(snapshot.Config[workshop.ConfigWorkshopSdk])
-		if _, ok := devices[device]; !ok {
-			obstacles = append(obstacles, snapshot.Name)
-		}
-	}
-
-	return snapshots[idx].Name, obstacles, nil
 }
 
 // Copies an instance from the src server to the dst server. The servers can be
@@ -546,14 +748,6 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 		return err
 	}
 	defer conn.Disconnect()
-
-	snapshots, err := s.snapshotNames(conn, projectId, name, "stash-sdk")
-	if err == nil {
-		for _, snapshot := range snapshots {
-			err1 := s.deleteSnapshot(conn, snapshot)
-			err = cmp.Or(err, err1)
-		}
-	}
 
 	err1 := s.deleteSnapshot(conn, instanceStashName(name, projectId))
 	return cmp.Or(err, err1)

@@ -55,7 +55,9 @@ FakeWorkshopBackend:
   LaunchOrRebuildCalls:
   SnapshotCalls:
   SnapshotCallback:
+  Snapshots:
   BaseDir:
+  SnapshotDir:
 FakeWorkshop:
   Workshop: '*workshop.Workshop'
   Devices: map[string]map[string]string

@@ -21,6 +21,8 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -146,11 +148,25 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	erroringHandler := func(task *state.Task, _ *tomb.Tomb) error {
 		return ErrTrigger
 	}
+	errorOnceHandler := func(task *state.Task, _ *tomb.Tomb) error {
+		st := task.State()
+		st.Lock()
+		attempt, err := conflict.ChangeAttempt(task.Change())
+		st.Unlock()
+		if err != nil {
+			return err
+		}
+		if attempt <= 1 {
+			return ErrTrigger
+		}
+		return nil
+	}
 	retryHandler := func(task *state.Task, _ *tomb.Tomb) error {
 		// to keep the change not ready
 		return &state.Retry{After: 1 * time.Hour}
 	}
 	s.runner.AddHandler("error-trigger", erroringHandler, nil)
+	s.runner.AddHandler("error-once", handlersetup.OnDo(errorOnceHandler), nil)
 	s.runner.AddHandler("retry-task", retryHandler, nil)
 
 	s.se = overlord.NewStateEngine(s.state)
@@ -470,6 +486,138 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	expected, err := system.SystemSdkFs.ReadFile("meta/sdk.yaml")
 	c.Assert(err, check.IsNil)
 	c.Check(newSdk.Filepath()+".yaml", testutil.FileEquals, expected)
+}
+
+func (s *sdkStateSuite) TestSnapshotSdkTwice(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"}
+	sdks := []sdk.Setup{{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}, {
+		Name:     "next",
+		Channel:  "latest/edge",
+		Revision: sdk.R(2),
+		Sha3_384: "f77092aae283a4d8ffe7ae51017569d6c999afdbe7c4264ab82f44e79a82151994de9b90ae43216dee70aaec91b23647",
+	}}
+	snapshot1 := workshop.SdkSnapshot(image, sdks[:1])
+	snapshot2 := workshop.SdkSnapshot(image, sdks)
+
+	t1 := s.state.NewTask("snapshot-sdk", "...")
+	t1.Set("sdk", "test")
+	t2 := s.state.NewTask("snapshot-sdk", "...")
+	t2.Set("sdk", "next")
+	t2.WaitFor(t1)
+	setWorkshopProject("ws", s.project, t1, t2)
+
+	chg := s.state.NewChange("launch", "...")
+	chg.Set("user", "testuser")
+	chg.Set("ws_base", image)
+	chg.Set("ws_sdks", sdks)
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.IsNil)
+	c.Assert(s.backend.SnapshotCalls, check.HasLen, 2)
+	c.Check(s.backend.SnapshotCalls[0].Snapshot, check.DeepEquals, snapshot1)
+	c.Check(s.backend.SnapshotCalls[1].Snapshot, check.DeepEquals, snapshot2)
+	c.Assert(s.backend.Snapshots, check.HasLen, 2)
+	c.Check(s.backend.Snapshots[0].Snapshot, check.DeepEquals, snapshot1)
+	c.Check(s.backend.Snapshots[1].Snapshot, check.DeepEquals, snapshot2)
+
+	t := s.state.NewTask("snapshot-sdk", "...")
+	t.Set("sdk", "test")
+	setWorkshopProject("ws", s.project, t)
+
+	chg = s.state.NewChange("launch", "...")
+	chg.Set("user", "testuser")
+	chg.Set("ws_base", image)
+	chg.Set("ws_sdks", sdks[:1])
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.IsNil)
+	c.Assert(s.backend.SnapshotCalls, check.HasLen, 3)
+	c.Check(s.backend.SnapshotCalls[0].Snapshot, check.DeepEquals, snapshot1)
+	c.Check(s.backend.SnapshotCalls[1].Snapshot, check.DeepEquals, snapshot2)
+	c.Check(s.backend.SnapshotCalls[2].Snapshot, check.DeepEquals, snapshot1)
+	c.Assert(s.backend.Snapshots, check.HasLen, 2)
+	c.Check(s.backend.Snapshots[0].Snapshot, check.DeepEquals, snapshot1)
+	c.Check(s.backend.Snapshots[1].Snapshot, check.DeepEquals, snapshot2)
+}
+
+func (s *sdkStateSuite) TestSnapshotSkippedPostResume(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	sdks := []sdk.Setup{{
+		Name:     "test",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}}
+
+	t1 := s.state.NewTask("error-once", "...")
+
+	t2 := s.state.NewTask("snapshot-sdk", "...")
+	t2.Set("sdk", "test")
+	setWorkshopProject("ws", s.project, t2)
+	t2.WaitFor(t1)
+
+	chg := s.state.NewChange("launch", "...")
+	chg.Set("user", "testuser")
+	chg.Set("project-id", s.project.ProjectId)
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", sdks)
+	chg.Set("wait-setup", conflict.ChangeSetup{Mode: conflict.ChangeWaitOnError.String()})
+	chg.AddTask(t1)
+	chg.AddTask(t2)
+
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.IsNil)
+	c.Assert(chg.Status(), check.Equals, state.WaitStatus)
+
+	chg2, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "launch")
+	c.Assert(err, check.IsNil)
+	c.Assert(chg2.ID(), check.Equals, chg.ID())
+
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.IsNil)
+	c.Assert(chg.Status(), check.Equals, state.DoneStatus)
+
+	c.Check(s.backend.SnapshotCalls, check.HasLen, 0)
+	log := t2.Log()
+	c.Assert(log, check.HasLen, 1)
+	c.Check(log[0], check.Matches, ".* Skipping snapshot after launch was resumed")
 }
 
 func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {

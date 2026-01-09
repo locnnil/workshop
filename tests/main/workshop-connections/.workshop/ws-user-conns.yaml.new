@@ -1,7 +1,7 @@
 name: ws-user-conns
 base: ubuntu@22.04
 sdks:
-  - name: test-sdk-basic
+  - name: test-sdk-basic-2
     slots:
       user-slot:
         interface: mount
@@ -9,4 +9,4 @@ sdks:
   - name: test-sdk-mount
 connections:
   - plug: test-sdk-mount:two
-    slot: test-sdk-basic:user-slot
+    slot: test-sdk-basic-2:user-slot

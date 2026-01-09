@@ -16,6 +16,7 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/overlord/conflict"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
@@ -345,6 +346,21 @@ func (m *SdkManager) registerSdk(ctx context.Context, w, sk string) error {
 }
 
 func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
+	st := task.State()
+	st.Lock()
+	change := task.Change()
+	attempt, err := conflict.ChangeAttempt(change)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+	if attempt > 1 {
+		st.Lock()
+		task.Logf("Skipping snapshot after %s was resumed", change.Kind())
+		st.Unlock()
+		return nil
+	}
+
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
@@ -355,9 +371,8 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
 	st.Lock()
-	snapshot, err := WorkshopSnapshot(task.Change(), w, sk)
+	snapshot, err := WorkshopSnapshot(change, w, sk)
 	st.Unlock()
 	if err != nil {
 		return err
@@ -366,7 +381,11 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	return m.backend.TakeSnapshot(ctx, w, *snapshot)
+	if err := m.backend.TakeSnapshot(ctx, w, *snapshot); err != nil && !errors.Is(err, workshop.ErrSnapshotAlreadyExists) {
+		return err
+	}
+
+	return nil
 }
 
 type SdkVolumeCooldownTimeKey string

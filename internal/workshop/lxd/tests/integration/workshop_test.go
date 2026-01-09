@@ -97,39 +97,13 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
-	// Create some snapshots.
-	snapshot := workshop.Snapshot{
-		Image: workshop.BaseImage{
-			Name:        "ubuntu@24.04",
-			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
-		},
-		Sdks: []sdk.ContentID{{
-			Name:     "test-sdk-1",
-			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
-			IsVolume: true,
-		}},
-	}
-	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
-	c.Assert(err, check.IsNil)
-
-	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
-		Name:     "test-sdk-2",
-		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
-		IsVolume: true,
-	})
-	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
-	c.Assert(err, check.IsNil)
-
-	snapshots := f.listSnapshots(c, "test", false)
-	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
-
 	// Collect workshop metadata.
 	f.waitForNetwork(c, "test")
 	preStash := f.workshopMetadata(c, "test")
 	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
 
 	// Stop workshop.
-	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	err := f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 
 	// Validate metadata changes.
@@ -160,9 +134,6 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Check(stash.config, check.DeepEquals, config)
 	c.Check(stash.devices, check.DeepEquals, postStash.devices)
 
-	snapshots = f.listSnapshots(c, "test", true)
-	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
-
 	// Rebuild workshop.
 	wf := &workshop.File{
 		Name: "test",
@@ -172,13 +143,9 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = f.bd.DownloadBase(f.ctx, image, nil)
 	c.Assert(err, check.IsNil)
-	snapshot = workshop.Snapshot{Image: image}
+	snapshot := workshop.Snapshot{Image: image}
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
-
-	// Check snapshots are gone.
-	snapshots = f.listSnapshots(c, "test", false)
-	c.Check(snapshots, check.HasLen, 0)
 
 	// Unstash workshop.
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
@@ -192,10 +159,6 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Check(postUnstash.config, check.DeepEquals, preStash.config)
 	c.Check(postUnstash.devices, check.DeepEquals, preStash.devices)
 	c.Check(postUnstash.addresses, testutil.DeepUnsortedMatches, preStash.addresses)
-
-	// Check snapshots came back.
-	snapshots = f.listSnapshots(c, "test", false)
-	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 }
 
 // Wait until workshop acquires both an IPv4 and an IPv6 address.
@@ -278,68 +241,12 @@ func ipAddresses(inst *api.InstanceFull) []string {
 	return addresses
 }
 
-func (f *wsOps) listSnapshots(c *check.C, name string, stash bool) []string {
-	conn, err := f.bd.LxdClient(f.ctx)
-	c.Assert(err, check.IsNil)
-	defer conn.Disconnect()
-
-	conn = conn.UseProject("workshop-snapshots." + f.usr.Username)
-
-	snapshotType := "sdk"
-	if stash {
-		snapshotType = "stash-sdk"
-	}
-
-	args := lxd.GetInstancesArgs{
-		InstanceType: api.InstanceTypeContainer,
-		Filters: []string{
-			"config.user.workshop.project-id=" + f.project.ProjectId,
-			"config.user.workshop.name=" + name,
-			"config.user.workshop.snapshot-type=" + snapshotType,
-		},
-	}
-	snapshots, err := conn.GetInstances(args)
-	c.Assert(err, check.IsNil)
-
-	names := make([]string, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		names = append(names, snapshot.Config["user.workshop.sdk"])
-	}
-	return names
-}
-
 func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
-	// Create some snapshots.
-	snapshot := workshop.Snapshot{
-		Image: workshop.BaseImage{
-			Name:        "ubuntu@24.04",
-			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
-		},
-		Sdks: []sdk.ContentID{{
-			Name:     "test-sdk-1",
-			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
-			IsVolume: true,
-		}},
-	}
-	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
-	c.Assert(err, check.IsNil)
-
-	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
-		Name:     "test-sdk-2",
-		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
-		IsVolume: true,
-	})
-	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
-	c.Assert(err, check.IsNil)
-
-	snapshots := f.listSnapshots(c, "test", false)
-	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
-
 	// Execute
-	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	err := f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 	err = f.bd.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
@@ -347,16 +254,12 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	// Validate
 	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
-	snapshots = f.listSnapshots(c, "test", true)
-	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
 	// Execute
 	err = f.bd.RemoveWorkshopStash(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate
-	snapshots = f.listSnapshots(c, "test", true)
-	c.Check(snapshots, check.HasLen, 0)
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
 	c.Assert(err, check.ErrorMatches, "workshop not launched")
 }
@@ -557,41 +460,13 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	// Launch
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
-	// Create some snapshots.
-	snapshot := workshop.Snapshot{
-		Image: workshop.BaseImage{
-			Name:        "ubuntu@24.04",
-			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
-		},
-		Sdks: []sdk.ContentID{{
-			Name:     "test-sdk-1",
-			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
-			IsVolume: true,
-		}},
-	}
-	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
-	c.Assert(err, check.IsNil)
-
-	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
-		Name:     "test-sdk-2",
-		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
-		IsVolume: true,
-	})
-	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
-	c.Assert(err, check.IsNil)
-
-	snapshots := f.listSnapshots(c, "test", false)
-	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
-
 	// Validate
-	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	err := f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 	err = f.bd.RemoveWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Check(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
-	snapshots = f.listSnapshots(c, "test", false)
-	c.Check(snapshots, check.HasLen, 0)
 }
 
 // List images marked by Workshop for the given base.
@@ -1144,4 +1019,244 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 
 	err = f.bd.UninstallSdk(otherCtx, "test", meta.Name)
 	c.Assert(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendSnapshotOK(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+
+	inst, _, err := conn.GetInstance(lxdbackend.InstanceName("test", f.project.ProjectId))
+	c.Assert(err, check.IsNil)
+	for i := range 4 {
+		name := fmt.Sprint("test", i+2)
+		args := &lxd.InstanceCopyArgs{Name: lxdbackend.InstanceName(name, f.project.ProjectId)}
+		op, err := conn.CopyInstance(conn, *inst, args)
+		c.Assert(err, check.IsNil)
+		c.Assert(op.Wait(), check.IsNil)
+		defer func() { _ = f.bd.RemoveWorkshop(f.ctx, name) }()
+	}
+
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
+		},
+		Sdks: []sdk.ContentID{{
+			Name:     "system",
+			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+			IsVolume: true,
+		}},
+	}
+
+	exists, err := f.bd.HasSnapshot(f.ctx, snapshot)
+	c.Assert(err, check.IsNil)
+	c.Check(exists, check.Equals, false)
+
+	defer func() { _ = f.bd.RemoveSnapshot(f.ctx, snapshot) }()
+	var wg sync.WaitGroup
+	var successCnt, existCnt int32
+	for i := range 5 {
+		wg.Go(func() {
+			name := "test"
+			if i > 0 {
+				name = fmt.Sprint("test", i+1)
+			}
+			if err := f.bd.TakeSnapshot(f.ctx, name, snapshot); err == nil {
+				atomic.AddInt32(&successCnt, 1)
+			} else if errors.Is(err, workshop.ErrSnapshotAlreadyExists) {
+				atomic.AddInt32(&existCnt, 1)
+			} else {
+				c.Errorf("unexpected error: %v", err)
+			}
+
+			exists, err := f.bd.HasSnapshot(f.ctx, snapshot)
+			c.Assert(err, check.IsNil)
+			c.Check(exists, check.Equals, true)
+		})
+	}
+	wg.Wait()
+
+	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
+	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(4))
+}
+
+// This test detects changes to the snapshot operation type and conflict error
+// message. See IsInstanceOperation and IsInstanceConflict.
+func (f *wsOps) TestLxdBackendSnapshotConflict(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
+		},
+		Sdks: []sdk.ContentID{{
+			Name:     "system",
+			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+			IsVolume: true,
+		}},
+	}
+	digest, err := f.bd.HashSnapshot(snapshot)
+	c.Assert(err, check.IsNil)
+
+	// Create test project without racing for it.
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	conn.Disconnect()
+
+	var wg sync.WaitGroup
+
+	var successCnt, existCnt int32
+	for range 2 {
+		wg.Go(func() {
+			conn, err := f.bd.LxdClient(f.ctx)
+			c.Assert(err, check.IsNil)
+			defer conn.Disconnect()
+			lxdProject := "workshop-snapshots." + f.usr.Username
+			snapshotConn := conn.UseProject(lxdProject)
+
+			inst, _, err := conn.GetInstance(lxdbackend.InstanceName("test", f.project.ProjectId))
+			c.Assert(err, check.IsNil)
+
+			args := &lxd.InstanceCopyArgs{Name: "system-" + digest[:16]}
+			rop, err := snapshotConn.CopyInstance(conn, *inst, args)
+			if err == nil {
+				op, err1 := rop.GetTarget()
+				c.Assert(err1, check.IsNil)
+				isInstance, err1 := lxdbackend.IsInstanceOperation(*op, lxdProject, args.Name)
+				c.Assert(err1, check.IsNil)
+				c.Check(isInstance, check.Equals, true, check.Commentf("%#v", op))
+				err = rop.Wait()
+			}
+			if lxdbackend.IsInstanceConflict(err, args.Name) {
+				atomic.AddInt32(&existCnt, 1)
+				return
+			} else if !c.Check(err, check.IsNil) {
+				return
+			}
+
+			atomic.AddInt32(&successCnt, 1)
+
+			inst, etag, err := snapshotConn.GetInstance(args.Name)
+			c.Assert(err, check.IsNil)
+			inst.Config[workshop.ConfigWorkshopSnapshotType] = "sdk"
+			op, err := snapshotConn.UpdateInstance(args.Name, inst.Writable(), etag)
+			c.Assert(err, check.IsNil)
+			isInstance, err := lxdbackend.IsInstanceOperation(op.Get(), lxdProject, args.Name)
+			c.Assert(err, check.IsNil)
+			c.Check(isInstance, check.Equals, true, check.Commentf("%#v", op.Get()))
+			c.Assert(op.Wait(), check.IsNil)
+		})
+	}
+	wg.Wait()
+
+	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
+	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(1))
+
+	err = f.bd.RemoveSnapshot(f.ctx, snapshot)
+	c.Check(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendSnapshotInterrupted(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+	snapshotConn := conn.UseProject("workshop-snapshots." + f.usr.Username)
+
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
+		},
+		Sdks: []sdk.ContentID{{
+			Name:     "system",
+			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+			IsVolume: true,
+		}},
+	}
+	digest, err := f.bd.HashSnapshot(snapshot)
+	c.Assert(err, check.IsNil)
+
+	// Simulate operation started by previous workshopd run.
+	started := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		inst, _, err := conn.GetInstance(lxdbackend.InstanceName("test", f.project.ProjectId))
+		c.Assert(err, check.IsNil)
+
+		op, err := snapshotConn.CopyInstance(conn, *inst, &lxd.InstanceCopyArgs{Name: "system-" + digest[:16]})
+		c.Assert(err, check.IsNil)
+		close(started)
+		_ = op.Wait()
+	}()
+
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
+	c.Check(err, check.IsNil)
+
+	select {
+	case <-started:
+	case <-done:
+	}
+
+	err = f.bd.RemoveSnapshot(f.ctx, snapshot)
+	c.Check(err, check.IsNil)
+
+	<-done
+}
+
+func (f *wsOps) TestLxdBackendSnapshotHashCollision(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
+		},
+		Sdks: []sdk.ContentID{{
+			Name:     "system",
+			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+			IsVolume: true,
+		}},
+	}
+	digest, err := f.bd.HashSnapshot(snapshot)
+	c.Assert(err, check.IsNil)
+
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
+	c.Assert(err, check.IsNil)
+	defer func() { _ = f.bd.RemoveSnapshot(f.ctx, snapshot) }()
+
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+	snapshotConn := conn.UseProject("workshop-snapshots." + f.usr.Username)
+
+	inst, etag, err := snapshotConn.GetInstance("system-" + digest[:16])
+	c.Assert(err, check.IsNil)
+	inst.Config[workshop.ConfigWorkshopBase] = "ubuntu@22.04"
+	op, err := snapshotConn.UpdateInstance(inst.Name, inst.Writable(), etag)
+	c.Assert(err, check.IsNil)
+	c.Assert(op.Wait(), check.IsNil)
+
+	_, err = f.bd.HasSnapshot(f.ctx, snapshot)
+	c.Check(err, check.ErrorMatches, `hash collision detected: "system-.*" snapshot has "ubuntu@22.04" base; required: "ubuntu@24.04"`)
+
+	inst.Config[workshop.ConfigWorkshopBase] = "ubuntu@24.04"
+	inst.Devices[workshop.SdkDeviceName("system")]["user.sdk.sha3-384"] = "2870b68e0d49e89556af56a80c86e297a4af45242bf01b6ae57e56c443f08fd66b175d0284d49d20649676147817607e"
+	op, err = snapshotConn.UpdateInstance(inst.Name, inst.Writable(), "")
+	c.Assert(err, check.IsNil)
+	c.Assert(op.Wait(), check.IsNil)
+
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
+	c.Check(err, check.ErrorMatches, `hash collision detected: "system-.*" snapshot has unexpected revision of "system" SDK`)
 }
