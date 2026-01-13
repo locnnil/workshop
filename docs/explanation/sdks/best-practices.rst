@@ -41,7 +41,7 @@ that configures and starts the :program:`systemd` service
 by including a service file:
 
 .. code-block:: yaml
-   :caption: ollama/sdk.yaml
+   :caption: ollama/sdkcraft.yaml
 
    parts:
      user-service:
@@ -100,7 +100,7 @@ Consider the :samp:`go` SDK, which uses a single part
 because the Go toolchain can be distributed as a cohesive unit:
 
 .. code-block:: yaml
-   :caption: go/sdk.yaml
+   :caption: go/sdkcraft.yaml
 
    parts:
      go:
@@ -114,7 +114,7 @@ for the runtime and service configuration,
 allowing selective updates and reducing build times:
 
 .. code-block:: yaml
-   :caption: ollama/sdk.yaml
+   :caption: ollama/sdkcraft.yaml
 
    parts:
      ollama:
@@ -173,7 +173,7 @@ improving performance for `workshop refresh`:
 improving performance for repeated operations:
 
 .. code-block:: yaml
-   :caption: uv/sdk.yaml
+   :caption: uv/sdkcraft.yaml
 
    plugs:
      cache:
@@ -191,7 +191,7 @@ to expose its server functionality on a specific port,
 enabling external access to its services:
 
 .. code-block:: yaml
-   :caption: dotnet10/sdk.yaml
+   :caption: dotnet10/sdkcraft.yaml
 
    slots:
      ollama-server:
@@ -308,7 +308,7 @@ and avoids eventual dependency conflicts.
 The :samp:`uv` SDK shows this approach by shipping pre-built Rust binaries:
 
 .. code-block:: yaml
-   :caption: uv/sdk.yaml
+   :caption: uv/sdkcraft.yaml
 
    parts:
      uv:
@@ -500,7 +500,7 @@ one SDK can provide a shared environment that others consume.
 The :samp:`uv` SDK demonstrates this by exposing a virtual environment slot:
 
 .. code-block:: yaml
-   :caption: uv/sdk.yaml
+   :caption: uv/sdkcraft.yaml
 
    slots:
      venv:
@@ -516,7 +516,7 @@ through corresponding plugs.
 The :samp:`jupyter` SDK shows this pattern:
 
 .. code-block:: yaml
-   :caption: jupyter/sdk.yaml
+   :caption: jupyter/sdkcraft.yaml
 
    plugs:
      venv:

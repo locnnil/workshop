@@ -36,8 +36,9 @@ jobs:
       - name: Generate Schema
         run: |
           cd sdkcraft
+          uv run python sdkcraft/models/metadata.py
           uv run python sdkcraft/models/project.py
-          mv schema.json ../docs/reference/definition-files/schema-sdk.json
+          mv schema-sdk.json schema-sdkcraft.json ../docs/reference/definition-files/
 
       - name: Check for changes, commit, and create PR if any
         run: |

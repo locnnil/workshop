@@ -15,11 +15,20 @@ Filename convention
 
 .. @artefact sdkcraft (CLI)
 
-The name of the SDK definition file must be :file:`sdk.yaml`;
-the file is usually stored under :file:`$XDG_DATA_HOME/workshop/`
-when :ref:`sketching a local SDK <tut_sketch_sdks>`,
-or under an arbitrary source directory
-when :ref:`crafting and publishing a regular SDK <tut_craft_sdks>`.
+When :ref:`crafting and publishing a regular SDK <tut_craft_sdks>`,
+the name of the SDK definition file must be :file:`sdkcraft.yaml` or :file:`.sdkcraft.yaml`.
+
+In-project SDKs are defined using :file:`sdk.yaml` or :file:`meta/sdk.yaml`
+and stored in :file:`.workshop/<NAME>/`.
+These definitions don't support |sdk_markup| build-time features,
+like :samp:`build-base`, :samp:`platforms` or :samp:`parts`.
+
+When :ref:`sketching a local SDK <tut_sketch_sdks>`,
+the SDK definition file is named :file:`sdk.yaml` and stored under :file:`$XDG_DATA_HOME/workshop/`.
+|ws_markup| ignores other files in this directory,
+but hooks can be defined inline.
+Like in-project SDKs,
+the sketch SDK doesn't support |sdk_markup| build-time features.
 
 
 Structure
@@ -123,14 +132,23 @@ JSON Schema
 
 The following
 `JSON Schema`
-formalizes the description above:
+formalizes the :file:`sdkcraft.yaml` format:
 
 .. @artefact SDK schema
+
+.. dropdown:: |sdk_markup| definition schema
+
+   .. literalinclude:: schema-sdkcraft.json
+      :language: json
+
+
+This one formalizes the :file:`sdk.yaml` format:
 
 .. dropdown:: SDK definition schema
 
    .. literalinclude:: schema-sdk.json
       :language: json
+
 
 Examples
 --------
@@ -140,15 +158,15 @@ for a Go development environment.
 It involves a non-trivial layout of build and target architectures,
 and also uses the :ref:`parts <ref_sdk_parts>` mechanism:
 
-.. literalinclude:: ../../examples/go-sdk.yaml
+.. literalinclude:: ../../examples/go-sdkcraft.yaml
    :language: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
 
 This YAML file defines an SDK that supports multiple bases:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    name: multibase
    version: '0.1'
@@ -169,7 +187,7 @@ This is a more elaborate example of an SDK
 that uses several :ref:`plugs <ref_sdk_plugs_slots>`:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    name: ros2
    title: The ROS 2 SDK

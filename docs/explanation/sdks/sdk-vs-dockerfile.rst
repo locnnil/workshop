@@ -174,7 +174,7 @@ per each directory you want to retain during the workshop's lifecycle.
 .. @artefact sdkcraft (CLI)
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    name: data-science
    title: Data science SDK
@@ -210,7 +210,7 @@ when they are accessed from inside the workshop.
 Here's a corresponding workshop definition:
 
 .. code-block:: yaml
-   :caption: .workshop.data.yaml
+   :caption: .workshop/data.yaml
 
    name: data
    base: ubuntu@22.04
@@ -445,7 +445,7 @@ additional filesystem mounts are defined by the SDK author or the user
 using the :ref:`mount interface <exp_mount_interface>`:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    plugs:
      ros-cache:

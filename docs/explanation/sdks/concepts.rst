@@ -40,9 +40,9 @@ the definition may look like this:
 
 .. @artefact sdkcraft (CLI)
 
-.. literalinclude:: ../../examples/go-sdk.yaml
+.. literalinclude:: ../../examples/go-sdkcraft.yaml
    :language: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
 
 .. _exp_sdk_hooks:

@@ -113,7 +113,7 @@ Next, browse to the SDK directory and initialize it:
 
 
 This command creates a template definition file
-named :file:`sdk.yaml`;
+named :file:`sdkcraft.yaml`;
 although it's almost empty,
 it can already be :ref:`built <tut_sdkcraft_try>`.
 
@@ -124,13 +124,13 @@ to explore what goes into an SDK.
 Update metadata
 ---------------
 
-Update the metadata in :file:`sdk.yaml`
+Update the metadata in :file:`sdkcraft.yaml`
 with some domain-specific information
 to describe the project
 and build SDKs for several platforms:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    name: ollama
    version: "0.9.6"
@@ -162,7 +162,7 @@ one to download the Ollama binary from its GitHub release page,
 and another for the :program:`systemd` service file:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
 
    # ...
    parts:
@@ -248,11 +248,11 @@ The latter is a resource that the SDK itself exposes,
 so it will be defined as a slot;
 the former two are plugs because they access external resources.
 
-Open :file:`sdk.yaml` again
+Open :file:`sdkcraft.yaml` again
 and add two plugs and a slot to the appropriate sections:
 
 .. code-block:: yaml
-   :caption: sdk.yaml
+   :caption: sdkcraft.yaml
    :emphasize-lines: 12-22
 
    name: ollama
@@ -492,10 +492,10 @@ such as :file:`ollama_amd64_ubuntu@24.04.sdk`,
 which contain the build artifacts
 along with SDK metadata, hooks, and other components.
 This is repeated for all supported :samp:`platforms`
-defined in the :file:`sdk.yaml` metadata.
+defined in the :file:`sdkcraft.yaml` metadata.
 
 In particular, the command builds all :ref:`SDK parts <exp_sdk_parts>`
-defined in the :file:`sdk.yaml` file,
+defined in the :file:`sdkcraft.yaml` file,
 e.g., pulling source code, applying patches, configuring and compiling it
 according to the part definition.
 
