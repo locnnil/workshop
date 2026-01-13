@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -58,19 +57,6 @@ func (s *localSdk) createRevision(c *check.C, revision, contents string) string 
 	return name
 }
 
-func dirEntries(names ...string) []string {
-	slices.Sort(names)
-	for i, name := range names {
-		r, err := sdk.ParseRevision(name)
-		if err == nil && r.Local() && r.String() == name {
-			names[i] = "Lrwxrwxrwx " + name
-		} else {
-			names[i] = "drwxr-xr-x " + name
-		}
-	}
-	return names
-}
-
 func (s *localSdk) TestCommitSuccess(c *check.C) {
 	one := s.createSource(c, "1")
 	revision, digest1, err := sdk.CommitRevision(s.user, one, s.target, sdk.Revision{})
@@ -82,7 +68,10 @@ func (s *localSdk) TestCommitSuccess(c *check.C) {
 		c.Check(filepath.Join(s.target, digest1), testutil.DirEquals, []string{"-rw-r--r-- contents"})
 		c.Check(filepath.Join(s.target, digest1, "contents"), testutil.FileEquals, "1")
 	}
-	c.Check(s.target, testutil.DirEquals, dirEntries(digest1, "x1"))
+	c.Check(s.target, testutil.DirEquals, []string{
+		"drwxr-xr-x " + digest1,
+		"Lrwxrwxrwx x1",
+	})
 	checkRev1()
 
 	two := s.createSource(c, "2")
@@ -95,7 +84,12 @@ func (s *localSdk) TestCommitSuccess(c *check.C) {
 		c.Check(filepath.Join(s.target, digest2), testutil.DirEquals, []string{"-rw-r--r-- contents"})
 		c.Check(filepath.Join(s.target, digest2, "contents"), testutil.FileEquals, "2")
 	}
-	c.Check(s.target, testutil.DirEquals, dirEntries(digest1, digest2, "x1", "x2"))
+	c.Check(s.target, testutil.DirEquals, []string{
+		"drwxr-xr-x " + digest1,
+		"drwxr-xr-x " + digest2,
+		"Lrwxrwxrwx x1",
+		"Lrwxrwxrwx x2",
+	})
 	checkRev1()
 	checkRev2()
 
@@ -105,7 +99,12 @@ func (s *localSdk) TestCommitSuccess(c *check.C) {
 	c.Check(revision, check.Equals, sdk.R(-1))
 	c.Check(digest1Again, check.Equals, digest1)
 
-	c.Check(s.target, testutil.DirEquals, dirEntries(digest1, digest2, "x1", "x2"))
+	c.Check(s.target, testutil.DirEquals, []string{
+		"drwxr-xr-x " + digest1,
+		"drwxr-xr-x " + digest2,
+		"Lrwxrwxrwx x1",
+		"Lrwxrwxrwx x2",
+	})
 	checkRev1()
 	checkRev2()
 
@@ -156,7 +155,14 @@ func (s *localSdk) TestCommitRemovesOldRevisions(c *check.C) {
 	revision, digest45, err := sdk.CommitRevision(s.user, source, s.target, sdk.R(-44))
 	c.Assert(err, check.IsNil)
 	c.Check(revision, check.Equals, sdk.R(-45))
-	c.Check(s.target, testutil.DirEquals, dirEntries(digest42, digest44, digest45, "x42", "x44", "x45"))
+	c.Check(s.target, testutil.DirEquals, []string{
+		"drwxr-xr-x " + digest42,
+		"drwxr-xr-x " + digest44,
+		"drwxr-xr-x " + digest45,
+		"Lrwxrwxrwx x42",
+		"Lrwxrwxrwx x44",
+		"Lrwxrwxrwx x45",
+	})
 }
 
 func (s *localSdk) TestCommitKeepsInstalled(c *check.C) {
@@ -175,7 +181,14 @@ func (s *localSdk) TestCommitKeepsInstalled(c *check.C) {
 	revision, digest45, err := sdk.CommitRevision(s.user, source, s.target, sdk.R(-43))
 	c.Assert(err, check.IsNil)
 	c.Check(revision, check.Equals, sdk.R(-45))
-	c.Check(s.target, testutil.DirEquals, dirEntries(digest43, digest44, digest45, "x43", "x44", "x45"))
+	c.Check(s.target, testutil.DirEquals, []string{
+		"drwxr-xr-x " + digest43,
+		"drwxr-xr-x " + digest44,
+		"drwxr-xr-x " + digest45,
+		"Lrwxrwxrwx x43",
+		"Lrwxrwxrwx x44",
+		"Lrwxrwxrwx x45",
+	})
 }
 
 func (s *localSdk) TestCommitExistingUpdatesTimestamp(c *check.C) {
@@ -195,7 +208,16 @@ func (s *localSdk) TestCommitExistingUpdatesTimestamp(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(revision, check.Equals, sdk.R(-43))
 	c.Check(digest43Again, check.Equals, digest43)
-	c.Check(s.target, testutil.DirEquals, dirEntries(digest41, digest42, digest43, digest44, "x41", "x42", "x43", "x44"))
+	c.Check(s.target, testutil.DirEquals, []string{
+		"drwxr-xr-x " + digest41,
+		"drwxr-xr-x " + digest42,
+		"drwxr-xr-x " + digest43,
+		"drwxr-xr-x " + digest44,
+		"Lrwxrwxrwx x41",
+		"Lrwxrwxrwx x42",
+		"Lrwxrwxrwx x43",
+		"Lrwxrwxrwx x44",
+	})
 
 	info, err = os.Lstat(filepath.Join(s.target, "x43"))
 	c.Assert(err, check.IsNil)

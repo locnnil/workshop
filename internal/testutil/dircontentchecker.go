@@ -71,5 +71,5 @@ func (c *dirContentChecker) Check(params []any, names []string) (bool, string) {
 		obtained = append(obtained, fmt.Sprintf("%s %s", info.Mode().String(), info.Name()))
 	}
 
-	return check.DeepEquals.Check([]any{obtained, params[1]}, names)
+	return DeepUnsortedMatches.Check([]any{obtained, params[1]}, names)
 }
