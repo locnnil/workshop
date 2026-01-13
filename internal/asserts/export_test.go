@@ -69,7 +69,7 @@ func NewDecoderStressed(r io.Reader, bufSize, maxHeadersSize, maxBodySize, maxSi
 	}).initBuffer()
 }
 
-func CompileAttrMatcher(constraints interface{}, allowedOperations []string) (func(attrs map[string]interface{}, helper AttrMatchContext) error, error) {
+func CompileAttrMatcher(constraints any, allowedOperations []string) (func(attrs map[string]any, helper AttrMatchContext) error, error) {
 	// XXX adjust
 	cc := compileContext{
 		opts: &compileAttrMatcherOptions{
@@ -80,7 +80,7 @@ func CompileAttrMatcher(constraints interface{}, allowedOperations []string) (fu
 	if err != nil {
 		return nil, err
 	}
-	domatch := func(attrs map[string]interface{}, helper AttrMatchContext) error {
+	domatch := func(attrs map[string]any, helper AttrMatchContext) error {
 		return matcher.match("", attrs, &attrMatchingContext{
 			attrWord: "field",
 			helper:   helper,

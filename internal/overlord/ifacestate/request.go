@@ -64,7 +64,7 @@ func Connect(st *state.State, plugW *workshop.Workshop, slotW *workshop.Workshop
 		slave.Set("plug", p)
 		slave.Set("delayed-setup-profile", true)
 
-		slave.Set("plug-dynamic", map[string]interface{}{"bind": bref.ID()})
+		slave.Set("plug-dynamic", map[string]any{"bind": bref.ID()})
 
 		slave.WaitFor(prev)
 		prev = slave

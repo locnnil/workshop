@@ -312,7 +312,7 @@ var (
 // looking for specific progress labels. NOTE: There is no guarantee that the
 // LXD's progress reporting formant won't change; this meta data parser is valid
 // for LXD 6.5.
-func handleImageUpdate(opmeta map[string]interface{}, imsize int) *downloadUpdate {
+func handleImageUpdate(opmeta map[string]any, imsize int) *downloadUpdate {
 	upd, ok := opmeta["download_progress"].(string)
 	if !ok {
 		return nil

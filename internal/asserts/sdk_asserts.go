@@ -27,7 +27,7 @@ import (
 	_ "golang.org/x/crypto/sha3"
 )
 
-func compilePlugRules(plugs map[string]interface{}, compiled func(iface string, plugRule *PlugRule)) error {
+func compilePlugRules(plugs map[string]any, compiled func(iface string, plugRule *PlugRule)) error {
 	for iface, rule := range plugs {
 		plugRule, err := compilePlugRule(iface, rule)
 		if err != nil {
@@ -38,7 +38,7 @@ func compilePlugRules(plugs map[string]interface{}, compiled func(iface string, 
 	return nil
 }
 
-func compileSlotRules(slots map[string]interface{}, compiled func(iface string, slotRule *SlotRule)) error {
+func compileSlotRules(slots map[string]any, compiled func(iface string, slotRule *SlotRule)) error {
 	for iface, rule := range slots {
 		slotRule, err := compileSlotRule(iface, rule)
 		if err != nil {
@@ -132,7 +132,7 @@ func BuiltinBaseDeclaration() *BaseDeclaration {
 
 var (
 	builtinBaseDeclarationCheckOrder      = []string{"type", "authority-id", "series"}
-	builtinBaseDeclarationExpectedHeaders = map[string]interface{}{
+	builtinBaseDeclarationExpectedHeaders = map[string]any{
 		"type":         "base-declaration",
 		"authority-id": "canonical",
 		"series":       "1",

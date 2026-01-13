@@ -48,7 +48,7 @@ func (s *BaseTest) AddCleanup(f func()) {
 }
 
 // Backup the specified list of elements before further mocking.
-func Backup(mockablesByPtr ...interface{}) (restore func()) {
+func Backup(mockablesByPtr ...any) (restore func()) {
 	backup := backupMockables(mockablesByPtr)
 
 	return func() {
@@ -59,7 +59,7 @@ func Backup(mockablesByPtr ...interface{}) (restore func()) {
 	}
 }
 
-func backupMockables(mockablesByPtr []interface{}) (backup []*reflect.Value) {
+func backupMockables(mockablesByPtr []any) (backup []*reflect.Value) {
 	backup = make([]*reflect.Value, len(mockablesByPtr))
 
 	for i, ptr := range mockablesByPtr {

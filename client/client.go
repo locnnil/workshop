@@ -57,7 +57,7 @@ func (s SocketNotFoundError) Unwrap() error {
 
 // decodeWithNumber decodes input data using json.Decoder, ensuring numbers are preserved
 // via json.Number data type. It errors out on invalid json or any excess input.
-func decodeWithNumber(r io.Reader, value interface{}) error {
+func decodeWithNumber(r io.Reader, value any) error {
 	dec := json.NewDecoder(r)
 	dec.UseNumber()
 	if err := dec.Decode(&value); err != nil {
@@ -129,7 +129,7 @@ type clientWebsocket interface {
 }
 
 type jsonWriter interface {
-	WriteJSON(v interface{}) error
+	WriteJSON(v any) error
 }
 
 func New(config *Config) (*Client, error) {
@@ -295,7 +295,7 @@ func (client *Client) Hijack(f func(*http.Request) (*http.Response, error)) {
 // do performs a request and decodes the resulting json into the given
 // value. It's low-level, for testing/experimenting only; you should
 // usually use a higher level interface that builds on this.
-func (client *Client) do(method, path string, query url.Values, headers map[string]string, body io.Reader, v interface{}) error {
+func (client *Client) do(method, path string, query url.Values, headers map[string]string, body io.Reader, v any) error {
 	retry := time.NewTicker(doRetry)
 	defer retry.Stop()
 	timeout := time.After(doTimeout)
@@ -327,7 +327,7 @@ func (client *Client) do(method, path string, query url.Values, headers map[stri
 	return nil
 }
 
-func decodeInto(reader io.Reader, v interface{}) error {
+func decodeInto(reader io.Reader, v any) error {
 	dec := json.NewDecoder(reader)
 	if err := dec.Decode(v); err != nil {
 		r := dec.Buffered()
@@ -346,7 +346,7 @@ func decodeInto(reader io.Reader, v interface{}) error {
 // which produces json.Numbers instead of float64 types for numbers.
 //
 //nolint:unparam // Match related function signatures for consistency.
-func (client *Client) doSync(method, path string, query url.Values, headers map[string]string, body io.Reader, v interface{}) (*ResultInfo, error) {
+func (client *Client) doSync(method, path string, query url.Values, headers map[string]string, body io.Reader, v any) (*ResultInfo, error) {
 	var rsp response
 	if err := client.do(method, path, query, headers, body, &rsp); err != nil {
 		return nil, err
@@ -422,9 +422,9 @@ type response struct {
 
 // Error is the real value of response.Result when an error occurs.
 type Error struct {
-	Kind    string      `json:"kind"`
-	Value   interface{} `json:"value"`
-	Message string      `json:"message"`
+	Kind    string `json:"kind"`
+	Value   any    `json:"value"`
+	Message string `json:"message"`
 
 	StatusCode int
 }
@@ -511,12 +511,12 @@ func (client *Client) SysInfo() (*SysInfo, error) {
 }
 
 type debugAction struct {
-	Action string      `json:"action"`
-	Params interface{} `json:"params,omitempty"`
+	Action string `json:"action"`
+	Params any    `json:"params,omitempty"`
 }
 
 // DebugPost sends a POST debug action to the server with the provided parameters.
-func (client *Client) DebugPost(action string, params interface{}, result interface{}) error {
+func (client *Client) DebugPost(action string, params any, result any) error {
 	body, err := json.Marshal(debugAction{
 		Action: action,
 		Params: params,
@@ -530,7 +530,7 @@ func (client *Client) DebugPost(action string, params interface{}, result interf
 }
 
 // DebugGet sends a GET debug action to the server with the provided parameters.
-func (client *Client) DebugGet(action string, result interface{}, params map[string]string) error {
+func (client *Client) DebugGet(action string, result any, params map[string]string) error {
 	urlParams := url.Values{"action": []string{action}}
 	for k, v := range params {
 		urlParams.Set(k, v)

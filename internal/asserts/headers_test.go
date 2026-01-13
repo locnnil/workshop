@@ -33,7 +33,7 @@ func (s *headersSuite) TestParseHeadersSimple(c *check.C) {
 	m, err := asserts.ParseHeaders([]byte(`foo: 1
 bar: baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
 		"foo": "1",
 		"bar": "baz",
 	})
@@ -45,7 +45,7 @@ func (s *headersSuite) TestParseHeadersMultiline(c *check.C) {
     
 bar: baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
 		"foo": "abc\n",
 		"bar": "baz",
 	})
@@ -54,7 +54,7 @@ bar: baz`))
 bar:
     baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
 		"foo": "1",
 		"bar": "baz",
 	})
@@ -64,7 +64,7 @@ bar:
     baz
     `))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
 		"foo": "1",
 		"bar": "baz\n",
 	})
@@ -75,7 +75,7 @@ bar:
     
     baz2`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
 		"foo": "1",
 		"bar": "baz\n\nbaz2",
 	})
@@ -88,8 +88,8 @@ func (s *headersSuite) TestParseHeadersSimpleList(c *check.C) {
   - z
 bar: baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"foo": []interface{}{"x", "y", "z"},
+	c.Check(m, check.DeepEquals, map[string]any{
+		"foo": []any{"x", "y", "z"},
 		"bar": "baz",
 	})
 }
@@ -104,8 +104,8 @@ func (s *headersSuite) TestParseHeadersListNestedMultiline(c *check.C) {
   - z
 bar: baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"foo": []interface{}{"x", "y1\ny2\n", "z"},
+	c.Check(m, check.DeepEquals, map[string]any{
+		"foo": []any{"x", "y1\ny2\n", "z"},
 		"bar": "baz",
 	})
 
@@ -119,8 +119,8 @@ foo:
       y2
       `))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"foo": []interface{}{[]interface{}{"u1", "u2"}, "y1\ny2\n"},
+	c.Check(m, check.DeepEquals, map[string]any{
+		"foo": []any{[]any{"u1", "u2"}, "y1\ny2\n"},
 		"bar": "baz",
 	})
 }
@@ -132,8 +132,8 @@ func (s *headersSuite) TestParseHeadersSimpleMap(c *check.C) {
   z5: 
 bar: baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"foo": map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
+		"foo": map[string]any{
 			"x":  "X",
 			"yy": "YY",
 			"z5": "",
@@ -153,11 +153,11 @@ func (s *headersSuite) TestParseHeadersMapNestedMultiline(c *check.C) {
     - u2
 bar: baz`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"foo": map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
+		"foo": map[string]any{
 			"x":  "X",
 			"yy": "YY1\nYY2",
-			"u":  []interface{}{"u1", "u2"},
+			"u":  []any{"u1", "u2"},
 		},
 		"bar": "baz",
 	})
@@ -166,9 +166,9 @@ bar: baz`))
   two:
     three: `))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"one": map[string]interface{}{
-			"two": map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
+		"one": map[string]any{
+			"two": map[string]any{
 				"three": "",
 			},
 		},
@@ -178,8 +178,8 @@ bar: baz`))
   two:
       three`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"one": map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
+		"one": map[string]any{
 			"two": "three",
 		},
 	})
@@ -188,9 +188,9 @@ bar: baz`))
   lev1:
     lev2: x`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"map-within-map": map[string]interface{}{
-			"lev1": map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
+		"map-within-map": map[string]any{
+			"lev1": map[string]any{
 				"lev2": "x",
 			},
 		},
@@ -203,13 +203,13 @@ bar: baz`))
   -
     entry: bar`))
 	c.Assert(err, check.IsNil)
-	c.Check(m, check.DeepEquals, map[string]interface{}{
-		"list-of-maps": []interface{}{
-			map[string]interface{}{
+	c.Check(m, check.DeepEquals, map[string]any{
+		"list-of-maps": []any{
+			map[string]any{
 				"entry": "foo",
 				"bar":   "baz",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"entry": "bar",
 			},
 		},

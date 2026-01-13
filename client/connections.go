@@ -33,9 +33,9 @@ type Connection struct {
 	// Manual is set for connections that were established manually.
 	Manual bool `json:"manual"`
 	// SlotAttrs is the list of attributes of the slot side of the connection.
-	SlotAttrs map[string]interface{} `json:"slot-attrs,omitempty"`
+	SlotAttrs map[string]any `json:"slot-attrs,omitempty"`
 	// PlugAttrs is the list of attributes of the plug side of the connection.
-	PlugAttrs map[string]interface{} `json:"plug-attrs,omitempty"`
+	PlugAttrs map[string]any `json:"plug-attrs,omitempty"`
 }
 
 // Connections contains information about connections, as well as related plugs

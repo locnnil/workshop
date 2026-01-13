@@ -268,13 +268,13 @@ func (s *interfaceHandlersSuite) TestAutoconnectPlugSlotPairSuccess(c *check.C) 
 	c.Assert(ref, check.HasLen, 1)
 	c.Assert(err, check.IsNil)
 
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.state.Get("conns", &conns)
-	c.Assert(conns, check.DeepEquals, map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
+	c.Assert(conns, check.DeepEquals, map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]any{
 			"interface":   "mock-network",
 			"auto":        true,
-			"plug-static": map[string]interface{}{"attribute": "one"},
+			"plug-static": map[string]any{"attribute": "one"},
 		},
 	})
 
@@ -315,29 +315,29 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 	c.Check(ref, check.HasLen, 4)
 	c.Check(err, check.IsNil)
 
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.state.Get("conns", &conns)
-	c.Check(conns, check.DeepEquals, map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
+	c.Check(conns, check.DeepEquals, map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]any{
 			"interface":   "mock-network",
 			"auto":        true,
-			"plug-static": map[string]interface{}{"attribute": "one"},
+			"plug-static": map[string]any{"attribute": "one"},
 		},
-		"42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:plug2 42424242/ws-producer/producer:slot": map[string]any{
 			"interface":   "mock-network",
 			"auto":        true,
-			"plug-static": map[string]interface{}{"attribute": "two"},
+			"plug-static": map[string]any{"attribute": "two"},
 		},
-		"42424242/ws/consumer:plug3 42424242/ws-producer/producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:plug3 42424242/ws-producer/producer:slot": map[string]any{
 			"interface":   "mock-network",
 			"auto":        true,
-			"plug-static": map[string]interface{}{"attribute": "three"},
+			"plug-static": map[string]any{"attribute": "three"},
 		},
-		"42424242/ws/consumer:bound 42424242/ws-producer/producer:slot": map[string]interface{}{
+		"42424242/ws/consumer:bound 42424242/ws-producer/producer:slot": map[string]any{
 			"interface":    "mock-network",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug 42424242/ws-producer/producer:slot"},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{"bind": "42424242/ws/consumer:plug 42424242/ws-producer/producer:slot"},
 		},
 	})
 
@@ -423,7 +423,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBackendSetupFail(c *check.C) {
 	c.Assert(ref, check.HasLen, 0)
 	c.Assert(err, check.IsNil)
 
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 0)
 }
@@ -523,9 +523,9 @@ func (s *interfaceHandlersSuite) TestAutoconnectNoConnectionCandidates(c *check.
 	// Validate
 	c.Assert(repo.Plugs(s.prj.ProjectId, "ws", "consumer"), check.HasLen, 0)
 
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.state.Get("conns", &conns)
-	c.Assert(conns, check.DeepEquals, map[string]interface{}(nil))
+	c.Assert(conns, check.DeepEquals, map[string]any(nil))
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 }
@@ -566,14 +566,14 @@ func (s *interfaceHandlersSuite) TestAutoconnectRemountedPlugsOnRefresh(c *check
 
 	// Validate
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.state.Get("conns", &conns)
-	c.Assert(conns, check.DeepEquals, map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]interface{}{
+	c.Assert(conns, check.DeepEquals, map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws-producer/producer:slot": map[string]any{
 			"interface":    "mock-network",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"slot-dynamic": map[string]interface{}{"host-source": "/old/source"},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"slot-dynamic": map[string]any{"host-source": "/old/source"},
 		},
 	})
 
@@ -661,16 +661,16 @@ slots:
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, sdkYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 	c.Assert(s.mgr.Repository().AddSdk(sdk.MockInfo(c, systemYaml, s.prj.ProjectId, "ws-consumer")), check.IsNil)
 
-	dynamic := map[string]interface{}{}
+	dynamic := map[string]any{}
 	if source != "" {
 		dynamic["host-source"] = source
 	}
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount": map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		"42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount": map[string]any{
 			"interface":    "mount",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"workshop-target": "/opt"},
+			"plug-static":  map[string]any{"workshop-target": "/opt"},
 			"slot-dynamic": dynamic,
 		},
 	})
@@ -719,10 +719,10 @@ func (s *interfaceHandlersSuite) TestRemountSuccessDestExistsAndEmpty(c *check.C
 		Auto:             true,
 		Interface:        "mount",
 		Undesired:        false,
-		StaticPlugAttrs:  map[string]interface{}{"workshop-target": "/opt"},
-		DynamicPlugAttrs: map[string]interface{}{},
-		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{"host-source": newSource}})
+		StaticPlugAttrs:  map[string]any{"workshop-target": "/opt"},
+		DynamicPlugAttrs: map[string]any{},
+		StaticSlotAttrs:  map[string]any{},
+		DynamicSlotAttrs: map[string]any{"host-source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -765,10 +765,10 @@ func (s *interfaceHandlersSuite) TestRemountSuccessIfNewSourceDoesNotExist(c *ch
 		Auto:             true,
 		Interface:        "mount",
 		Undesired:        false,
-		StaticPlugAttrs:  map[string]interface{}{"workshop-target": "/opt"},
-		DynamicPlugAttrs: map[string]interface{}{},
-		StaticSlotAttrs:  map[string]interface{}{},
-		DynamicSlotAttrs: map[string]interface{}{"host-source": newSource}})
+		StaticPlugAttrs:  map[string]any{"workshop-target": "/opt"},
+		DynamicPlugAttrs: map[string]any{},
+		StaticSlotAttrs:  map[string]any{},
+		DynamicSlotAttrs: map[string]any{"host-source": newSource}})
 	c.Assert(conns, check.HasLen, 1)
 }
 
@@ -1009,12 +1009,12 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	}
 
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		connRef.ID(): map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		connRef.ID(): map[string]any{
 			"interface":    "mock-network",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"test-dynamic-attr": "new-dynamic-value"},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{"test-dynamic-attr": "new-dynamic-value"},
 		},
 	})
 	_, err := ifacestate.ReloadConnections(s.mgr, "", "", "")
@@ -1036,7 +1036,7 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSuccess(c *check.C) {
 	c.Assert(repo.Plugs(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
 	c.Assert(repo.Slots(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
 
-	var stateConns map[string]interface{}
+	var stateConns map[string]any
 	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
 	c.Assert(stateConns, check.HasLen, 0)
 
@@ -1062,11 +1062,11 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectSavesRemounts(c *check.C) {
 	c.Check(chg.Err(), check.IsNil)
 
 	// Validate
-	var stateConns map[string]interface{}
+	var stateConns map[string]any
 	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
 	c.Assert(stateConns, check.HasLen, 0)
 
-	var attrs map[string]interface{}
+	var attrs map[string]any
 	c.Assert(chg.Get("remounts", &attrs), check.IsNil)
 	c.Assert(attrs, check.HasLen, 1)
 	c.Assert(attrs["42424242/ws-consumer/consumer:plug 42424242/ws-consumer/system:mount"],
@@ -1092,11 +1092,11 @@ func (s *interfaceHandlersSuite) TestAutoDisconnectIgnoresAutoConnections(c *che
 	c.Check(chg.Err(), check.IsNil)
 
 	// Validate
-	var stateConns map[string]interface{}
+	var stateConns map[string]any
 	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
 	c.Assert(stateConns, check.HasLen, 0)
 
-	var attrs map[string]interface{}
+	var attrs map[string]any
 	c.Assert(chg.Get("remounts", &attrs), check.NotNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
@@ -1177,12 +1177,12 @@ func (s *interfaceHandlersSuite) TestUndoAutoDisconnect(c *check.C) {
 	}
 
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		connRef.ID(): map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		connRef.ID(): map[string]any{
 			"interface":    "mock-network",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"test-dynamic-attr": "new-dynamic-value"},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{"test-dynamic-attr": "new-dynamic-value"},
 		},
 	})
 	_, err := ifacestate.ReloadConnections(s.mgr, "", "", "")
@@ -1204,7 +1204,7 @@ func (s *interfaceHandlersSuite) TestUndoAutoDisconnect(c *check.C) {
 	c.Assert(repo.Plugs(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 1)
 	c.Assert(repo.Slots(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
 
-	var stateConns map[string]interface{}
+	var stateConns map[string]any
 	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
 	c.Assert(stateConns, check.HasLen, 1)
 
@@ -1225,11 +1225,11 @@ func (s *interfaceHandlersSuite) TestUndoAutoDisconnectManualRestored(c *check.C
 	}
 
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		connRef.ID(): map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		connRef.ID(): map[string]any{
 			"interface":    "mock-network",
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"test-dynamic-attr": "new-dynamic-value"},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{"test-dynamic-attr": "new-dynamic-value"},
 		},
 	})
 	_, err := ifacestate.ReloadConnections(s.mgr, "", "", "")
@@ -1251,7 +1251,7 @@ func (s *interfaceHandlersSuite) TestUndoAutoDisconnectManualRestored(c *check.C
 	c.Assert(repo.Plugs(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 1)
 	c.Assert(repo.Slots(s.prj.ProjectId, "ws-consumer", "consumer"), check.HasLen, 0)
 
-	var stateConns map[string]interface{}
+	var stateConns map[string]any
 	c.Assert(s.state.Get("conns", &stateConns), check.IsNil)
 	c.Assert(stateConns, check.HasLen, 1)
 
@@ -1286,12 +1286,12 @@ func (s *interfaceHandlersSuite) TestDisconnectSuccess(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"interface":    "mock-network",
 			"auto":         false,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{},
 		},
 	})
 	s.state.Unlock()
@@ -1327,12 +1327,12 @@ func (s *interfaceHandlersSuite) TestDisconnectAuto(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
 	connRefKey := "42424242/ws/consumer:plug 42424242/ws/producer:slot"
-	s.state.Set("conns", map[string]interface{}{
-		connRefKey: map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		connRefKey: map[string]any{
 			"interface":    "mock-network",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{},
 		},
 	})
 	s.state.Unlock()
@@ -1373,12 +1373,12 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
 	connRefKey := "42424242/ws/consumer:plug 42424242/ws/producer:slot"
-	s.state.Set("conns", map[string]interface{}{
-		connRefKey: map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		connRefKey: map[string]any{
 			"interface":    "mock-network",
 			"auto":         true,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{},
 		},
 	})
 	s.state.Unlock()
@@ -1417,12 +1417,12 @@ func (s *interfaceHandlersSuite) TestUndoDisconnect(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"interface":    "mock-network",
 			"auto":         false,
-			"plug-static":  map[string]interface{}{"attribute": "one"},
-			"plug-dynamic": map[string]interface{}{"bind": "42424242/ws/consumer:plug2 42424242/ws/producer:slot"},
+			"plug-static":  map[string]any{"attribute": "one"},
+			"plug-dynamic": map[string]any{"bind": "42424242/ws/consumer:plug2 42424242/ws/producer:slot"},
 		},
 	})
 	s.state.Unlock()
@@ -1466,8 +1466,8 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectUndesiredSuccess(c *check.C) 
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
-	conn := map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+	conn := map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"interface": "mock-network",
 			"auto":      true,
 			"undesired": true,
@@ -1505,7 +1505,7 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectUndesiredSuccess(c *check.C) 
 	c.Assert(err, check.IsNil)
 	c.Assert(prods, check.HasLen, 0)
 
-	conns := map[string]interface{}{}
+	conns := map[string]any{}
 	s.state.Get("conns", &conns)
 	c.Assert(conns, check.DeepEquals, conn)
 
@@ -1625,7 +1625,7 @@ func (s *interfaceHandlersSuite) TestConnectSetsPlugDynamicAttrs(c *check.C) {
 	chg := s.connectChange("ws", false, true)
 	s.state.Lock()
 	tsk := chg.Tasks()[0]
-	tsk.Set("plug-dynamic", map[string]interface{}{"dynamic": "value"})
+	tsk.Set("plug-dynamic", map[string]any{"dynamic": "value"})
 	tsk.Set("delayed-setup-profile", false)
 	s.state.Unlock()
 
@@ -1691,10 +1691,10 @@ func (s *interfaceHandlersSuite) TestConnectAuto(c *check.C) {
 		"42424242/ws/consumer:plug 42424242/ws/producer:slot": {
 			Auto:             true,
 			Interface:        "mock-network",
-			StaticPlugAttrs:  map[string]interface{}{"attribute": "one"},
-			DynamicPlugAttrs: map[string]interface{}{},
-			StaticSlotAttrs:  map[string]interface{}{},
-			DynamicSlotAttrs: map[string]interface{}{},
+			StaticPlugAttrs:  map[string]any{"attribute": "one"},
+			DynamicPlugAttrs: map[string]any{},
+			StaticSlotAttrs:  map[string]any{},
+			DynamicSlotAttrs: map[string]any{},
 		},
 	})
 }
@@ -1707,8 +1707,8 @@ func (s *interfaceHandlersSuite) TestUndoConnectUndesired(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,
@@ -1787,23 +1787,23 @@ func (s *interfaceHandlersSuite) TestDiscardConnsSuccess(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,
 		},
-		"42424242/ws-1/consumer:plug 42424242/ws-1/producer:slot": map[string]interface{}{
+		"42424242/ws-1/consumer:plug 42424242/ws-1/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,
 		},
-		"other/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+		"other/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,
 		},
-		"other/ws/consumer:plug other/ws/producer:slot": map[string]interface{}{
+		"other/ws/consumer:plug other/ws/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,
@@ -1858,13 +1858,13 @@ func (s *interfaceHandlersSuite) TestUndoDiscardConnsSuccess(c *check.C) {
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 
 	s.state.Lock()
-	s.state.Set("conns", map[string]interface{}{
-		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,
 		},
-		"other/ws/consumer:plug 42424242/ws/producer:slot": map[string]interface{}{
+		"other/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
 			"auto":      true,
 			"interface": "mock-network",
 			"undesired": true,

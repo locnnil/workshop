@@ -97,7 +97,7 @@ func (iface *tunnelInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 		return err
 	}
 	if plug.Attrs == nil {
-		plug.Attrs = make(map[string]interface{})
+		plug.Attrs = make(map[string]any)
 	}
 	plug.Attrs["endpoint"] = address
 
@@ -116,7 +116,7 @@ func (iface *tunnelInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 		return err
 	}
 	if slot.Attrs == nil {
-		slot.Attrs = make(map[string]interface{})
+		slot.Attrs = make(map[string]any)
 	}
 	slot.Attrs["endpoint"] = address
 

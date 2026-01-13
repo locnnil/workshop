@@ -784,7 +784,7 @@ func (as *assertsSuite) TestHeaders(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	hs := a.Headers()
-	c.Check(hs, check.DeepEquals, map[string]interface{}{
+	c.Check(hs, check.DeepEquals, map[string]any{
 		"type":              "test-only",
 		"authority-id":      "auth-id2",
 		"primary-key":       "abc",
@@ -849,7 +849,7 @@ func (as *assertsSuite) TestAssembleHeadersCheck(c *check.C) {
 		"authority-id: auth-id2\n" +
 		"primary-key: abc\n" +
 		"revision: 5")
-	headers := map[string]interface{}{
+	headers := map[string]any{
 		"type":         "test-only",
 		"authority-id": "auth-id2",
 		"primary-key":  "abc",

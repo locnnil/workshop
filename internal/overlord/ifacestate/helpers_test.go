@@ -102,11 +102,11 @@ func (s *helpersSuite) TestAutoConnectChecker(c *check.C) {
 func (s *helpersSuite) TestGetConns(c *check.C) {
 	s.st.Lock()
 	defer s.st.Unlock()
-	s.st.Set("conns", map[string]interface{}{
-		"42424242/ws/app:mount 42424242/ws/core:mount": map[string]interface{}{
+	s.st.Set("conns", map[string]any{
+		"42424242/ws/app:mount 42424242/ws/core:mount": map[string]any{
 			"auto":      true,
 			"interface": "mount",
-			"slot-static": map[string]interface{}{
+			"slot-static": map[string]any{
 				"number": int(78),
 			},
 		},
@@ -131,11 +131,11 @@ func (s *helpersSuite) TestSetConns(c *check.C) {
 	}
 
 	ifacestate.SetConns(s.st, conns)
-	var readconns map[string]interface{}
+	var readconns map[string]any
 	err := s.st.Get("conns", &readconns)
 	c.Assert(err, check.IsNil)
-	c.Assert(readconns, check.DeepEquals, map[string]interface{}{
-		"42424242/ws/app:mount 42424242/ws/core:mount": map[string]interface{}{
+	c.Assert(readconns, check.DeepEquals, map[string]any{
+		"42424242/ws/app:mount 42424242/ws/core:mount": map[string]any{
 			"auto":      true,
 			"interface": "mount",
 		}})

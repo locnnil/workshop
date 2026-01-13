@@ -37,7 +37,7 @@ func (f *workshopFile) SetUpTest(c *check.C) {
 	}
 }
 
-func (f *workshopFile) createWFile(c *check.C, name, yaml string, checkArgs ...interface{}) {
+func (f *workshopFile) createWFile(c *check.C, name, yaml string, checkArgs ...any) {
 	path := workshop.Filepath(f.project.Path, name)
 
 	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
@@ -338,7 +338,7 @@ sdks:
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
 		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"db": {Plug: "tunnel"}, "tunnel": {}}},
-		{Name: "etl-sdk", Channel: "latest/stable", Slots: map[string]interface{}{"dashboard": "tunnel", "tunnel": nil}},
+		{Name: "etl-sdk", Channel: "latest/stable", Slots: map[string]any{"dashboard": "tunnel", "tunnel": nil}},
 	})
 }
 
@@ -385,7 +385,7 @@ sdks:
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
-		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"cache": {Plug: map[string]interface{}{"attr1": "val"}}}},
+		{Name: "data-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"cache": {Plug: map[string]any{"attr1": "val"}}}},
 		{Name: "etl-sdk", Channel: "latest/stable", Plugs: map[string]workshop.PlugOrBind{"data": {Bind: &workshop.PlugRef{Sdk: "data-sdk", Name: "aux"}}}},
 	})
 }
@@ -579,7 +579,7 @@ sdks:
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(err, check.IsNil)
 	c.Assert(file.Sdks, check.DeepEquals, []workshop.SdkRecord{
-		{Name: sdk.System.String(), Source: sdk.SystemSource, Slots: map[string]interface{}{"training-data": map[string]interface{}{"workshop-source": "relative/path"}}}})
+		{Name: sdk.System.String(), Source: sdk.SystemSource, Slots: map[string]any{"training-data": map[string]any{"workshop-source": "relative/path"}}}})
 }
 
 func (f *workshopFile) TestWorkshopConnectionsOK(c *check.C) {

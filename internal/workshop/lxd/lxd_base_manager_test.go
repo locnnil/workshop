@@ -7,7 +7,7 @@ import (
 )
 
 func (f *LxdBeTests) TestLaunchProgressReporter(c *check.C) {
-	metas := []map[string]interface{}{
+	metas := []map[string]any{
 		{"download_progress": "metadata: 100% (3.01GB/s)"},
 		{"download_progress": "rootfs: 65% (254.2Kb/s)"},
 		{"download_progress": "rootfs delta: 65% (254Kb/s)"},

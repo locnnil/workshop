@@ -144,7 +144,7 @@ func (s revisionSuite) TestParseRevision(c *C) {
 
 func (s *revisionSuite) TestR(c *C) {
 	type testItem struct {
-		v interface{}
+		v any
 		n int
 		e string
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 )
 
-func (s *apiSuite) testWarnings(c *check.C, all bool, body io.Reader) (calls string, result interface{}) {
+func (s *apiSuite) testWarnings(c *check.C, all bool, body io.Reader) (calls string, result any) {
 	s.daemon(c)
 
 	okayWarns := func(*state.State, time.Time) int { calls += "ok"; return 0 }

@@ -175,14 +175,14 @@ plugs:
 
 	s.state.Lock()
 	key := fmt.Sprintf("%s/ws/consumer:plug %s/ws/system:mount", s.prj.ProjectId, s.prj.ProjectId)
-	s.state.Set("conns", map[string]interface{}{
-		key: map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		key: map[string]any{
 			"interface": "mount",
-			"plug-static": map[string]interface{}{
+			"plug-static": map[string]any{
 				"mount": "foo",
 				"attr":  "stored-value",
 			},
-			"slot-static": map[string]interface{}{
+			"slot-static": map[string]any{
 				"mount": "foo",
 				"attr":  "stored-value",
 			},
@@ -206,12 +206,12 @@ plugs:
 	conn, err := repo.Connection(cref)
 	c.Assert(err, check.IsNil)
 	c.Assert(conn.Plug.Name(), check.Equals, "plug")
-	c.Assert(conn.Plug.StaticAttrs(), check.DeepEquals, map[string]interface{}{
+	c.Assert(conn.Plug.StaticAttrs(), check.DeepEquals, map[string]any{
 		"mount": "foo",
 		"attr":  "stored-value",
 	})
 	c.Assert(conn.Slot.Name(), check.Equals, "mount")
-	c.Assert(conn.Slot.StaticAttrs(), check.DeepEquals, map[string]interface{}{
+	c.Assert(conn.Slot.StaticAttrs(), check.DeepEquals, map[string]any{
 		"mount": "foo",
 		"attr":  "stored-value",
 	})
@@ -244,8 +244,8 @@ slots:
 
 	s.state.Lock()
 	key := fmt.Sprintf("%s/ws/consumer:plug %s/core/producer:slot", s.prj.ProjectId, s.prj.ProjectId)
-	s.state.Set("conns", map[string]interface{}{
-		key: map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		key: map[string]any{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
@@ -288,8 +288,8 @@ slots:
 	s.state.Lock()
 	key := fmt.Sprintf("%s/ws/consumer:plug-1 %s/core/producer:slot-1", s.prj.ProjectId, s.prj.ProjectId)
 
-	s.state.Set("conns", map[string]interface{}{
-		key: map[string]interface{}{
+	s.state.Set("conns", map[string]any{
+		key: map[string]any{
 			"interface": "test",
 			"auto":      true,
 		},
@@ -309,16 +309,16 @@ func (s *interfaceManagerSuite) TestConnectionStatesAutoManual(c *check.C) {
 		"pid/ws/consumer:plug pid/ws/producer:slot": {
 			Interface: "test",
 			Auto:      true,
-			StaticPlugAttrs: map[string]interface{}{
+			StaticPlugAttrs: map[string]any{
 				"attr1": "value1",
 			},
-			DynamicPlugAttrs: map[string]interface{}{
+			DynamicPlugAttrs: map[string]any{
 				"dynamic-number": int64(7),
 			},
-			StaticSlotAttrs: map[string]interface{}{
+			StaticSlotAttrs: map[string]any{
 				"attr2": "value2",
 			},
-			DynamicSlotAttrs: map[string]interface{}{
+			DynamicSlotAttrs: map[string]any{
 				"other-number": int64(9),
 			},
 		}})
@@ -331,16 +331,16 @@ func (s *interfaceManagerSuite) TestConnectionStatesUndesired(c *check.C) {
 			Interface: "test",
 			Auto:      true,
 			Undesired: true,
-			StaticPlugAttrs: map[string]interface{}{
+			StaticPlugAttrs: map[string]any{
 				"attr1": "value1",
 			},
-			DynamicPlugAttrs: map[string]interface{}{
+			DynamicPlugAttrs: map[string]any{
 				"dynamic-number": int64(7),
 			},
-			StaticSlotAttrs: map[string]interface{}{
+			StaticSlotAttrs: map[string]any{
 				"attr2": "value2",
 			},
-			DynamicSlotAttrs: map[string]interface{}{
+			DynamicSlotAttrs: map[string]any{
 				"other-number": int64(9),
 			},
 		}})
@@ -381,8 +381,8 @@ slots:
 	c.Assert(slot, check.NotNil)
 	plug := consumer.Plugs["plug"]
 	c.Assert(plug, check.NotNil)
-	dynamicPlugAttrs := map[string]interface{}{"dynamic-number": 7}
-	dynamicSlotAttrs := map[string]interface{}{"other-number": 9}
+	dynamicPlugAttrs := map[string]any{"dynamic-number": 7}
+	dynamicSlotAttrs := map[string]any{"other-number": 9}
 	// create connection in conns state
 	conn := &interfaces.Connection{
 		Plug: interfaces.NewConnectedPlug(plug, nil, dynamicPlugAttrs),

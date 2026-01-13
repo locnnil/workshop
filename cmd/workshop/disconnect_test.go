@@ -27,18 +27,18 @@ func (m *disconnectSuite) SetUpTest(c *check.C) {
 
 func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 	cmd := &CmdDisconnect{root: &CmdRoot{}}
-	body := map[string]interface{}{
+	body := map[string]any{
 		"action": "disconnect",
-		"plugs": []interface{}{
-			map[string]interface{}{
+		"plugs": []any{
+			map[string]any{
 				"project-id": "42424242",
 				"workshop":   "ws",
 				"sdk":        "sdk",
 				"plug":       "plug",
 			},
 		},
-		"slots": []interface{}{
-			map[string]interface{}{
+		"slots": []any{
+			map[string]any{
 				"project-id": "42424242",
 				"workshop":   "ws",
 				"sdk":        "system",
@@ -75,18 +75,18 @@ func (m *disconnectSuite) TestDisconnectPlugAndSlotProvided(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	n = 0
-	body = map[string]interface{}{
+	body = map[string]any{
 		"action": "disconnect",
-		"plugs": []interface{}{
-			map[string]interface{}{
+		"plugs": []any{
+			map[string]any{
 				"project-id": "42424242",
 				"workshop":   "ws",
 				"sdk":        "sdk",
 				"plug":       "plug2",
 			},
 		},
-		"slots": []interface{}{
-			map[string]interface{}{
+		"slots": []any{
+			map[string]any{
 				"project-id": "42424242",
 				"workshop":   "ws",
 				"sdk":        "sdk-2",
@@ -103,18 +103,18 @@ func (m *disconnectSuite) TestDisconnectPlugOrSlotProvided(c *check.C) {
 	cmd := &CmdDisconnect{root: &CmdRoot{}}
 
 	n := 0
-	body := map[string]interface{}{
+	body := map[string]any{
 		"action": "disconnect",
-		"plugs": []interface{}{
-			map[string]interface{}{
+		"plugs": []any{
+			map[string]any{
 				"project-id": "42424242",
 				"workshop":   "ws",
 				"sdk":        "sdk",
 				"plug":       "plug",
 			},
 		},
-		"slots": []interface{}{
-			map[string]interface{}{
+		"slots": []any{
+			map[string]any{
 				"project-id": "",
 				"workshop":   "",
 				"sdk":        "",

@@ -188,15 +188,15 @@ func (m *BaseWorkshopSuite) connectionsRedirectHelper(c *check.C, conns client.C
 }
 
 // EncodeResponseBody writes JSON-serialized body to the response writer.
-func EncodeResponseBody(c *check.C, w http.ResponseWriter, body interface{}) {
+func EncodeResponseBody(c *check.C, w http.ResponseWriter, body any) {
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(body)
 	c.Assert(err, check.IsNil)
 }
 
 // DecodedRequestBody returns the JSON-decoded body of the request.
-func DecodedRequestBody(c *check.C, r *http.Request) map[string]interface{} {
-	var body map[string]interface{}
+func DecodedRequestBody(c *check.C, r *http.Request) map[string]any {
+	var body map[string]any
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
 	err := decoder.Decode(&body)

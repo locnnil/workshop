@@ -36,7 +36,7 @@ var DirEquals check.Checker = &dirContentChecker{
 	CheckerInfo: &check.CheckerInfo{Name: "DirEquals", Params: []string{"directory", "contents"}},
 }
 
-func (c *dirContentChecker) Check(params []interface{}, names []string) (bool, string) {
+func (c *dirContentChecker) Check(params []any, names []string) (bool, string) {
 	var infos []os.FileInfo
 	switch dir := params[0].(type) {
 	case string:
@@ -71,5 +71,5 @@ func (c *dirContentChecker) Check(params []interface{}, names []string) (bool, s
 		obtained = append(obtained, fmt.Sprintf("%s %s", info.Mode().String(), info.Name()))
 	}
 
-	return check.DeepEquals.Check([]interface{}{obtained, params[1]}, names)
+	return check.DeepEquals.Check([]any{obtained, params[1]}, names)
 }

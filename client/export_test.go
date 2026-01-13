@@ -28,7 +28,7 @@ func (client *Client) SetDoer(d doer) {
 	client.doer = d
 }
 
-func (client *Client) Do(method, path string, query url.Values, body io.Reader, v interface{}) error {
+func (client *Client) Do(method, path string, query url.Values, body io.Reader, v any) error {
 	return client.do(method, path, query, nil, body, v)
 }
 

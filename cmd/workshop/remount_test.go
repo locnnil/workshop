@@ -28,9 +28,9 @@ func (m *remountSuite) SetUpTest(c *check.C) {
 
 func (m *remountSuite) TestRemountSuccess(c *check.C) {
 	cmd := &CmdRemount{root: &CmdRoot{}}
-	body := map[string]interface{}{
+	body := map[string]any{
 		"action": "remount",
-		"plug": map[string]interface{}{
+		"plug": map[string]any{
 			"project-id": "42424242",
 			"workshop":   "ws",
 			"sdk":        "sdk",

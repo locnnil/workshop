@@ -52,7 +52,7 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c.Assert(r.Method, check.Equals, "GET")
 		c.Assert(r.URL.Path, check.Equals, "/v1/sdks/openvino")
-		body := map[string]interface{}{
+		body := map[string]any{
 			"type":   "sync",
 			"result": resp,
 		}
