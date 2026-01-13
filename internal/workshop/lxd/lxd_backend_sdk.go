@@ -383,7 +383,7 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
 
 	if mount.MakeWhere {
-		if err := s.mkdir(ctx, name, mount.Where); err != nil {
+		if err := s.mkdir(ctx, name, mount.Where, mount.Mode); err != nil {
 			return err
 		}
 	}
@@ -432,14 +432,14 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	return op.WaitContext(ctx)
 }
 
-func (s *Backend) mkdir(ctx context.Context, name string, path string) error {
+func (s *Backend) mkdir(ctx context.Context, name string, path string, perm os.FileMode) error {
 	fs, err := s.WorkshopFs(ctx, name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	return fs.MkdirAll(path, 0755)
+	return fs.MkdirAll(path, perm)
 }
 
 func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string]string, error) {
