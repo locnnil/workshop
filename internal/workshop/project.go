@@ -329,12 +329,6 @@ func isProject(dir string) bool {
 }
 
 func (w *Project) updateLock() error {
-	lock, err := os.Create(LockPath(w.Path))
-	if err != nil {
-		return err
-	}
-	defer lock.Close()
-
 	// get the desired ownership
 	info, err := os.Stat(w.Path)
 	if err != nil {
@@ -346,16 +340,7 @@ func (w *Project) updateLock() error {
 		return err
 	}
 
-	if err = sys.Chown(lock, uid, gid); err != nil {
-		return err
-	}
-
-	_, err = lock.Write([]byte(w.ProjectId))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return osutil.AtomicWriteChown(LockPath(w.Path), strings.NewReader(w.ProjectId), 0666, 0, uid, gid)
 }
 
 func allocateProjectId() (string, error) {
