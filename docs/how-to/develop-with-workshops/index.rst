@@ -18,3 +18,4 @@ These articles cover the aspects of using |ws_markup| with developer tooling:
    Run JupyterLab in your browser <run-jupyterlab-in-browser>
    Run VS Code in your browser <run-vscode-in-browser>
    Use workshops with Git <use-git>
+   Use workshops for agentic coding <use-workshops-for-agentic-coding>
