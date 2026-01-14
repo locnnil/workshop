@@ -29,6 +29,7 @@ Here's how and why you could get involved:
 The guidelines below will keep your contributions effective and meaningful.
 
 
+
 Environment setup
 -----------------
 #. ``Workshop`` has a client-server architecture.
@@ -130,16 +131,79 @@ This helps to understand the reasoning and collaborate better.
 Coding standards
 ~~~~~~~~~~~~~~~~
 
-See the :doc:`Workshop coding style guide <coding-style-guide>`
-for detailed Go coding conventions, including:
+- **Avoid nested conditions**:
+  Refrain from nesting conditions to enhance readability and maintainability.
 
-- Error handling patterns and message formatting
-- Naming conventions for functions, variables, and tests
-- Code structure and organization principles
-- Testing patterns and best practices
-- Architecture and separation of concerns
-- Type handling and nil patterns
-- Security considerations
+- **Eliminate dead code and redundant comments**:
+  Remove unused or obsolete code and comments.
+  This promotes a cleaner code base and reduces confusion.
+
+- **Normalize symmetries**:
+  Handle identical operations consistently, using a uniform approach.
+  This also improves consistency and readability.
+
+
+Error handling
+~~~~~~~~~~~~~~
+
+When handling errors or multiple returns,
+follow a consistent pattern:
+
+.. code-block:: go
+
+   // one way to handle errors
+   if err := f(); err != nil {
+      ...
+   }
+
+   // one way to handle multiple returns
+   val, err := f()
+   if err != nil {
+      ...
+   }
+
+
+Error messages
+~~~~~~~~~~~~~~
+
+- **Be consistent**:
+  Try to match the style of existing error messages.
+  Most of these can be found by searching for ``fmt.Errorf`` and ``errors.New``.
+  Paths and other identifiers should be double-quoted if possible.
+
+- **Consider the user experience**:
+  Error messages should be clear and actionable.
+
+- **Be specific**:
+  For example, if a file was not found, the error message should include its path.
+
+- **Mind the nesting**:
+  Start in lowercase and avoid trailing punctuation.
+  Avoid excessively long or repetitive error chains.
+  A common template is: ``what was attempted: why it went wrong``.
+
+
+Code structure
+~~~~~~~~~~~~~~
+
+- **Check coupled code elements**:
+  Verify that coupled code elements, files and directories are adjacent.
+  For instance, store test data close to the corresponding test code.
+
+- **Group variable declaration and initialization**:
+  Declare and initialize variables together
+  to improve code organization and readability.
+
+- **Divide large expressions**:
+  Break down large expressions
+  into smaller self-explanatory parts.
+  Use multiple variables if necessary
+  to make the code more understandable
+  and choose names to reflect their purpose.
+
+- **Use blank lines for logical separation**:
+  Insert a blank line between two logically distinct sections of code.
+  This improves its structure and makes it easier to comprehend.
 
 
 Linting
@@ -404,6 +468,61 @@ Here's the publishing checklist to follow:
   on GitHub
 
 
+.. _contributing_copilot:
+
+Copilot configuration
+---------------------
+
+The repository includes configurations
+to help GitHub Copilot provide assistance;
+these are located in the ``.github/`` directory
+and include general instructions
+as well as customized agent prompts for specific tasks.
+
+
+Copilot instructions
+~~~~~~~~~~~~~~~~~~~~
+
+The ``.github/copilot-instructions.md`` file
+provides general project context to GitHub Copilot.
+
+Also, there are documentation- and code-specific instructions
+in ``.github/docs.instructions.md`` and ``.github/go.instructions.md``,
+tailored to guide Copilot when assisting with documentation and Go code tasks,
+respectively.
+
+
+Custom agents
+~~~~~~~~~~~~~
+
+The ``.github/agents/`` subdirectory contains
+`custom agent prompts
+<https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents>`__
+for specific review and maintenance tasks:
+
+- ``code-review.agent.md``:
+  A code review specialist that enforces commit message standards,
+  coding conventions, and error handling patterns,
+  referencing this contribution guide
+  and the :ref:`coding style guide <coding_style_guide>`.
+
+- ``doc-review.agent.md``:
+  A technical documentation reviewer
+  that performs a multi-stage review process
+  including build validation, content analysis, and style checking,
+  referencing this contribution guide
+  and the :ref:`documentation style guide <doc_style_guide>`.
+
+- ``doc-schema-update.agent.md``:
+  A specialized agent for reconciling
+  the JSON schema in ``docs/reference/definition-files/schema.json``
+  with the validation logic in ``internal/workshop/workshop_file.go``.
+
+
+These agents provide structured, actionable feedback
+and help maintain consistency across contributions.
+
+
 .. _contributing_doc:
 
 Documentation
@@ -456,7 +575,7 @@ See the relevant documentation before making changes:
 CLI reference
 ~~~~~~~~~~~~~
 
-The :ref:`command-line reference <ref_workshop__cli>`
+The :ref:`command-line reference <ref_workshop__cli>` for Workshop
 is produced directly from the Cobra command tree:
 
 .. code-block:: console
@@ -469,7 +588,16 @@ uses the `gencodo <https://github.com/canonical/gencodo>`_ Go module
 to convert the command metadata into ``.rst`` files with clever templates.
 
 In particular, this is used during the
-:ref:`release workflow <contributing_doc_cicd>`.
+:ref:`release workflow <contributing_cicd>`.
+
+---
+
+The :ref:`command-line reference <ref_sdkcraft__cli>` for SDKcraft
+can be generated in the SDKcraft repository;
+run ``gendocs.py`` there to generate the files.
+Current implementation relies on
+`craft-application <https://github.com/canonical/craft-application/>`__
+and doesn't fully integrate with Workshop documentation yet.
 
 
 .. _contributing_doc_release:
@@ -484,10 +612,10 @@ At every release, remember to:
 - Bump the snap revision used across the docs.
 
 - Update three schema files:
-  :file:`schema.json`,
-  :file:`schema-sdk.json`,
-  and :file:`schema-sdkcraft.json`
-  under :file:`docs/reference/definition-files/`.
+  ``schema.json``,
+  ``schema-sdk.json``,
+  and ``schema-sdkcraft.json``
+  under ``docs/reference/definition-files/``.
 
   The first needs to be updated manually,
   but you can generate the others in the SDKcraft repository root:
@@ -502,8 +630,8 @@ At every release, remember to:
   with relevant details, following the established format;
   for an SDKcraft release, update the respective section in the same manner.
 
-- Copy the release notes to the documentation under :file:`docs/release-notes/`
-  and update the latest version in :file:`docs/release-notes/index.rst`;
+- Copy the release notes to the documentation under ``docs/release-notes/``
+  and update the latest version in ``docs/release-notes/index.rst``;
   the recent version lists should contain versions from the last 6 months.
 
 - Refresh the
@@ -511,21 +639,30 @@ At every release, remember to:
   by running the ``.github/workflows/doc-cover.yaml`` workflow
   and merging the resulting pull request.
 
+- Copy the auto-generated SDKcraft CLI reference
+  from the `SDKcraft repository <https://github.com/canonical/sdkcraft>`__
+  to ``docs/reference/cli/sdkcraft/``,
+  making sure the updated documentation builds properly.
 
-.. _contributing_doc_cicd:
+
+.. _contributing_cicd:
 
 CI/CD
-~~~~~
+-----
 
-A few
+Multiple
 `GitHub Actions
-<https://docs.github.com/en/actions/get-started/understanding-github-actions>`_,
+<https://docs.github.com/en/actions/get-started/understanding-github-actions>`_
+workflows,
 defined in the ``.github/workflows/`` directory,
-keep the documentation running smoothly.
+automate testing, building, documentation, and release processes.
 
 Some of these workflows come from the
-:ref:`starter pack <contributing_doc_structure>`,
-while others are custom-made for our needs:
+:ref:`starter pack <contributing_doc_structure>` (marked SP),
+while others are custom-made for Workshop's needs.
+
+
+Documentation workflows:
 
 .. list-table::
    :header-rows: 1
@@ -538,14 +675,66 @@ while others are custom-made for our needs:
      - Build the documentation and fail on Sphinx warnings.
 
    * - ``doc-cover.yaml``
-     - Update the coverage map.
+     - Generate and update the documentation coverage map.
 
-   * - ``sphinx-python-dependency-build-checks.yml`` (SP)
-     - Ensure that the Sphinx virtual environment can be built from source.
+   * - ``doc-update-sdk-schema.yml``
+     - Update SDK schema files from the SDKcraft repository.
 
    * - ``markdown-style-checks.yml`` (SP)
-     - Check style, spelling, and links in documentation source.
+     - Check style, spelling, and links in Markdown documentation files.
+
+   * - ``sphinx-python-dependency-build-checks.yml`` (SP)
+     - Ensure the Sphinx virtual environment can be built from source.
+
+   * - ``update-starter-pack.yaml``
+     - Update documentation starter pack files weekly and on demand.
+
+
+Code quality and testing workflows:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 40
+
+   * - Workflow
+     - Purpose
+
+   * - ``cover.yaml``
+     - Orchestrates ``spread.yaml`` and ``unit-tests.yaml``;
+       aggregates coverage reports.
+
+   * - ``fixup.yaml``
+     - Check for fixup and squash commits in pull requests.
+
+   * - ``lint.yaml``
+     - Run ``golangci-lint`` and ``errcheck`` on Go code.
+
+   * - ``scanning.yml``
+     - Scan for known security vulnerabilities using Trivy.
+
+   * - ``spread.yaml``
+     - Run end-to-end tests with Spread (reusable workflow).
+
+   * - ``unit-tests.yaml``
+     - Run Go unit tests and check for race conditions (reusable workflow).
+
+
+Build and release workflows:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 40
+
+   * - Workflow
+     - Purpose
+
+   * - ``build-deps.yaml``
+     - Build and cache Workshop snap (reusable workflow).
+
+   * - ``lxd-candidate-check.yaml``
+     - Test Workshop against LXD candidate channel daily;
+       uses ``build-deps.yaml``.
 
    * - ``release.yaml``
-     - Trigger a pull request
-       with :ref:`regenerated <contributing_doc_generation>` CLI reference docs.
+     - Build release snaps for ARM64 and X64;
+       create GitHub release and trigger CLI docs update PR.

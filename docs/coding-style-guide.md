@@ -7,6 +7,8 @@
                  principles derived from PR discussions and contribution standards.
 ```
 
+(coding_style_guide)=
+
 # Workshop Go coding style guide
 
 This style guide documents Go-specific coding conventions used in the Workshop project. It captures patterns from code review discussions in merged PRs and established project standards. These guidelines complement Canonical's general coding standards with Workshop-specific decisions.

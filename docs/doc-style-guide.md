@@ -7,6 +7,8 @@
                  conventions, terminology, and project-specific patterns.
 ```
 
+(doc_style_guide)=
+
 # Workshop documentation style guide
 
 This style guide documents the established conventions used in the Workshop documentation. It captures actual patterns observed across the documentation set and serves as a reference for maintaining consistency in new contributions.
