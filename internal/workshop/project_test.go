@@ -97,7 +97,7 @@ func (p *projectSuite) TestTrackNewProject(c *check.C) {
 	c.Check(project.Path, check.Equals, d)
 	c.Check(project.ProjectId, check.Not(check.Equals), "")
 	c.Check(tracker.Projects, check.HasLen, 1)
-	c.Assert(workshop.LockPath(d), testutil.FilePresent)
+	c.Assert(workshop.LockPath(d), testutil.FileEquals, project.ProjectId)
 
 	// Multi-workshop project
 	d = c.MkDir()
@@ -113,7 +113,7 @@ func (p *projectSuite) TestTrackNewProject(c *check.C) {
 	c.Check(project.Path, check.Equals, d)
 	c.Check(project.ProjectId, check.Not(check.Equals), "")
 	c.Check(tracker.Projects, check.HasLen, 2)
-	c.Assert(workshop.LockPath(d), testutil.FilePresent)
+	c.Assert(workshop.LockPath(d), testutil.FileEquals, project.ProjectId)
 
 	// Mixed convention project
 	d = c.MkDir()
@@ -129,7 +129,7 @@ func (p *projectSuite) TestTrackNewProject(c *check.C) {
 	c.Check(project.Path, check.Equals, d)
 	c.Check(project.ProjectId, check.Not(check.Equals), "")
 	c.Check(tracker.Projects, check.HasLen, 3)
-	c.Assert(workshop.LockPath(d), testutil.FilePresent)
+	c.Assert(workshop.LockPath(d), testutil.FileEquals, project.ProjectId)
 
 	// Invalid project
 	d = c.MkDir()
@@ -153,7 +153,7 @@ func (p *projectSuite) TestTrackNewProject(c *check.C) {
 	c.Check(project.Path, check.Equals, d)
 	c.Check(project.ProjectId, check.Not(check.Equals), "")
 	c.Check(tracker.Projects, check.HasLen, 4)
-	c.Assert(workshop.LockPath(d), testutil.FilePresent)
+	c.Assert(workshop.LockPath(d), testutil.FileEquals, project.ProjectId)
 }
 
 func (p *projectSuite) TestTrackProjectSubDirectory(c *check.C) {
@@ -299,7 +299,7 @@ func (p *projectSuite) TestTrackRecoversProjectIds(c *check.C) {
 	c.Check(result, check.Equals, workshop.ProjectFound)
 	c.Check(project, check.DeepEquals, &expected)
 	c.Check(tracker.Projects, check.DeepEquals, []workshop.Project{expected})
-	c.Assert(workshop.LockPath(d), testutil.FilePresent)
+	c.Assert(workshop.LockPath(d), testutil.FileEquals, project.ProjectId)
 
 	// Unknown directory with .lock file.
 	tracker = workshop.ProjectTracker{}
@@ -315,6 +315,8 @@ func (p *projectSuite) TestTrackRecoversProjectIds(c *check.C) {
 	project, result, err = tracker.Track(d)
 	c.Assert(err, check.IsNil)
 	c.Check(result, check.Equals, workshop.ProjectAdded)
-	c.Check(project, check.DeepEquals, &expected)
-	c.Check(tracker.Projects, check.DeepEquals, []workshop.Project{expected})
+	c.Check(project.Path, check.Equals, expected.Path)
+	c.Check(project.ProjectId, check.Not(check.Equals), "")
+	c.Check(tracker.Projects, check.DeepEquals, []workshop.Project{*project})
+	c.Assert(workshop.LockPath(d), testutil.FileEquals, project.ProjectId)
 }

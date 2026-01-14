@@ -182,7 +182,9 @@ func (t *ProjectTracker) Track(path string) (*Project, TrackResult, error) {
 
 	project, result, err := t.maybeFindProject(path, id)
 	if err == nil && project == nil {
-		return t.createProjectWithId(path, id)
+		// Ignore unrecognised project ID. Restore it from the path or
+		// generate a new one to avoid trusting user input.
+		return t.writeProjectId(path)
 	}
 	return project, result, err
 }
@@ -281,18 +283,6 @@ func (t *ProjectTracker) createProject(path string) (*Project, TrackResult, erro
 		return nil, ProjectError, err
 	}
 
-	t.Projects = append(t.Projects, project)
-	return &project, ProjectAdded, nil
-}
-
-func (t *ProjectTracker) createProjectWithId(path, id string) (*Project, TrackResult, error) {
-	// If there is at least one workshop definition,
-	// we consider the path as a project and use the given ID.
-	if !isProject(path) {
-		return nil, ProjectError, ErrNotProject
-	}
-
-	project := Project{ProjectId: id, Path: path}
 	t.Projects = append(t.Projects, project)
 	return &project, ProjectAdded, nil
 }
