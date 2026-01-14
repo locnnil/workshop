@@ -48,6 +48,12 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
    $ sudo snap install --classic workshop
 
 
+.. warning::
+
+   If this command fails, you may need an invitation;
+   contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
+
+
 Prerequisites
 ~~~~~~~~~~~~~
 
