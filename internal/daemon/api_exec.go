@@ -160,7 +160,7 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	if idx < 0 {
 		return statusInternalError(`cannot find "exec" task`)
 	}
-	result := map[string]interface{}{
+	result := map[string]any{
 		"task-id": tasks[idx].ID(),
 	}
 

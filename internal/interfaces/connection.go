@@ -36,8 +36,8 @@ type Connection struct {
 // ConnectedPlug represents a plug that is connected to a slot.
 type ConnectedPlug struct {
 	plugInfo     *sdk.PlugInfo
-	staticAttrs  map[string]interface{}
-	dynamicAttrs map[string]interface{}
+	staticAttrs  map[string]any
+	dynamicAttrs map[string]any
 }
 
 func (p *ConnectedPlug) CheckBound() (*ConnRef, bool) {
@@ -60,22 +60,22 @@ func (p *ConnectedPlug) CheckBound() (*ConnRef, bool) {
 // ConnectedSlot represents a slot that is connected to a plug.
 type ConnectedSlot struct {
 	slotInfo     *sdk.SlotInfo
-	staticAttrs  map[string]interface{}
-	dynamicAttrs map[string]interface{}
+	staticAttrs  map[string]any
+	dynamicAttrs map[string]any
 }
 
 // Attrer is an interface with Attr getter method common
 // to ConnectedSlot, ConnectedPlug, PlugInfo and SlotInfo types.
 type Attrer interface {
 	// Attr returns attribute value for given path, or an error. Dotted paths are supported.
-	Attr(path string, value interface{}) error
+	Attr(path string, value any) error
 	// Lookup returns attribute value for given path, or false. Dotted paths are supported.
-	Lookup(path string) (value interface{}, ok bool)
+	Lookup(path string) (value any, ok bool)
 }
 
 // NewConnectedSlot creates an object representing a connected slot.
-func NewConnectedSlot(slot *sdk.SlotInfo, staticAttrs, dynamicAttrs map[string]interface{}) *ConnectedSlot {
-	var static map[string]interface{}
+func NewConnectedSlot(slot *sdk.SlotInfo, staticAttrs, dynamicAttrs map[string]any) *ConnectedSlot {
+	var static map[string]any
 	if staticAttrs != nil {
 		static = staticAttrs
 	} else {
@@ -84,13 +84,13 @@ func NewConnectedSlot(slot *sdk.SlotInfo, staticAttrs, dynamicAttrs map[string]i
 	return &ConnectedSlot{
 		slotInfo:     slot,
 		staticAttrs:  utils.CopyAttributes(static),
-		dynamicAttrs: utils.NormalizeInterfaceAttributes(dynamicAttrs).(map[string]interface{}),
+		dynamicAttrs: utils.NormalizeInterfaceAttributes(dynamicAttrs).(map[string]any),
 	}
 }
 
 // NewConnectedPlug creates an object representing a connected plug.
-func NewConnectedPlug(plug *sdk.PlugInfo, staticAttrs, dynamicAttrs map[string]interface{}) *ConnectedPlug {
-	var static map[string]interface{}
+func NewConnectedPlug(plug *sdk.PlugInfo, staticAttrs, dynamicAttrs map[string]any) *ConnectedPlug {
+	var static map[string]any
 	if staticAttrs != nil {
 		static = staticAttrs
 	} else {
@@ -99,7 +99,7 @@ func NewConnectedPlug(plug *sdk.PlugInfo, staticAttrs, dynamicAttrs map[string]i
 	return &ConnectedPlug{
 		plugInfo:     plug,
 		staticAttrs:  utils.CopyAttributes(static),
-		dynamicAttrs: utils.NormalizeInterfaceAttributes(dynamicAttrs).(map[string]interface{}),
+		dynamicAttrs: utils.NormalizeInterfaceAttributes(dynamicAttrs).(map[string]any),
 	}
 }
 
@@ -119,28 +119,28 @@ func (plug *ConnectedPlug) Sdk() *sdk.Info {
 }
 
 // StaticAttr returns a static attribute with the given key, or error if attribute doesn't exist.
-func (plug *ConnectedPlug) StaticAttr(key string, val interface{}) error {
+func (plug *ConnectedPlug) StaticAttr(key string, val any) error {
 	return plug.getAttribute(nil, key, val)
 }
 
 // StaticAttrs returns all static attributes.
-func (plug *ConnectedPlug) StaticAttrs() map[string]interface{} {
+func (plug *ConnectedPlug) StaticAttrs() map[string]any {
 	return utils.CopyAttributes(plug.staticAttrs)
 }
 
 // DynamicAttrs returns all dynamic attributes.
-func (plug *ConnectedPlug) DynamicAttrs() map[string]interface{} {
+func (plug *ConnectedPlug) DynamicAttrs() map[string]any {
 	return utils.CopyAttributes(plug.dynamicAttrs)
 }
 
 // Attr returns a dynamic attribute with the given name. It falls back to returning static
 // attribute if dynamic one doesn't exist. Error is returned if neither dynamic nor static
 // attribute exist.
-func (plug *ConnectedPlug) Attr(key string, val interface{}) error {
+func (plug *ConnectedPlug) Attr(key string, val any) error {
 	return plug.getAttribute(plug.dynamicAttrs, key, val)
 }
 
-func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
+func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]any, key string, val any) error {
 	v, ok := metautil.LookupAttr(plug.staticAttrs, dynamicAttrs, key)
 	if !ok {
 		ref := plug.Ref()
@@ -153,17 +153,17 @@ func (plug *ConnectedPlug) getAttribute(dynamicAttrs map[string]interface{}, key
 	return nil
 }
 
-func (plug *ConnectedPlug) Lookup(path string) (interface{}, bool) {
+func (plug *ConnectedPlug) Lookup(path string) (any, bool) {
 	return metautil.LookupAttr(plug.staticAttrs, plug.dynamicAttrs, path)
 }
 
 // SetAttr sets the given dynamic attribute. Error is returned if the key is already used by a static attribute.
-func (plug *ConnectedPlug) SetAttr(key string, value interface{}) error {
+func (plug *ConnectedPlug) SetAttr(key string, value any) error {
 	if _, ok := plug.staticAttrs[key]; ok {
 		return fmt.Errorf("cannot change attribute %q as it was statically specified in the %q SDK details", key, plug.plugInfo.Sdk.Name)
 	}
 	if plug.dynamicAttrs == nil {
-		plug.dynamicAttrs = make(map[string]interface{})
+		plug.dynamicAttrs = make(map[string]any)
 	}
 	plug.dynamicAttrs[key] = utils.NormalizeInterfaceAttributes(value)
 	return nil
@@ -190,28 +190,28 @@ func (slot *ConnectedSlot) Sdk() *sdk.Info {
 }
 
 // StaticAttr returns a static attribute with the given key, or error if attribute doesn't exist.
-func (slot *ConnectedSlot) StaticAttr(key string, val interface{}) error {
+func (slot *ConnectedSlot) StaticAttr(key string, val any) error {
 	return slot.getAttribute(nil, key, val)
 }
 
 // StaticAttrs returns all static attributes.
-func (slot *ConnectedSlot) StaticAttrs() map[string]interface{} {
+func (slot *ConnectedSlot) StaticAttrs() map[string]any {
 	return utils.CopyAttributes(slot.staticAttrs)
 }
 
 // DynamicAttrs returns all dynamic attributes.
-func (slot *ConnectedSlot) DynamicAttrs() map[string]interface{} {
+func (slot *ConnectedSlot) DynamicAttrs() map[string]any {
 	return utils.CopyAttributes(slot.dynamicAttrs)
 }
 
 // Attr returns a dynamic attribute with the given name. It falls back to returning static
 // attribute if dynamic one doesn't exist. Error is returned if neither dynamic nor static
 // attribute exist.
-func (slot *ConnectedSlot) Attr(key string, val interface{}) error {
+func (slot *ConnectedSlot) Attr(key string, val any) error {
 	return slot.getAttribute(slot.dynamicAttrs, key, val)
 }
 
-func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]interface{}, key string, val interface{}) error {
+func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]any, key string, val any) error {
 	v, ok := metautil.LookupAttr(slot.staticAttrs, dynamicAttrs, key)
 	if !ok {
 		ref := slot.Ref()
@@ -224,17 +224,17 @@ func (slot *ConnectedSlot) getAttribute(dynamicAttrs map[string]interface{}, key
 	return nil
 }
 
-func (slot *ConnectedSlot) Lookup(path string) (interface{}, bool) {
+func (slot *ConnectedSlot) Lookup(path string) (any, bool) {
 	return metautil.LookupAttr(slot.staticAttrs, slot.dynamicAttrs, path)
 }
 
 // SetAttr sets the given dynamic attribute. Error is returned if the key is already used by a static attribute.
-func (slot *ConnectedSlot) SetAttr(key string, value interface{}) error {
+func (slot *ConnectedSlot) SetAttr(key string, value any) error {
 	if _, ok := slot.staticAttrs[key]; ok {
 		return fmt.Errorf("cannot change attribute %q as it was statically specified in the %q SDK details", key, slot.slotInfo.Sdk.Name)
 	}
 	if slot.dynamicAttrs == nil {
-		slot.dynamicAttrs = make(map[string]interface{})
+		slot.dynamicAttrs = make(map[string]any)
 	}
 	slot.dynamicAttrs[key] = utils.NormalizeInterfaceAttributes(value)
 	return nil

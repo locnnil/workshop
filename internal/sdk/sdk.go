@@ -106,16 +106,16 @@ func SetupId(setup Setup) Id {
 }
 
 type sdkYaml struct {
-	Name        string                 `yaml:"name"`
-	Base        string                 `yaml:"base"`
-	Arch        string                 `yaml:"architecture"`
-	Version     string                 `yaml:"version,omitempty"`
-	Summary     string                 `yaml:"summary"`
-	Description string                 `yaml:"description"`
-	Type        string                 `yaml:"type"`
-	BuildTime   *time.Time             `yaml:"sdkcraft-started-at,omitempty"`
-	Plugs       map[string]interface{} `yaml:"plugs,omitempty"`
-	Slots       map[string]interface{} `yaml:"slots,omitempty"`
+	Name        string         `yaml:"name"`
+	Base        string         `yaml:"base"`
+	Arch        string         `yaml:"architecture"`
+	Version     string         `yaml:"version,omitempty"`
+	Summary     string         `yaml:"summary"`
+	Description string         `yaml:"description"`
+	Type        string         `yaml:"type"`
+	BuildTime   *time.Time     `yaml:"sdkcraft-started-at,omitempty"`
+	Plugs       map[string]any `yaml:"plugs,omitempty"`
+	Slots       map[string]any `yaml:"slots,omitempty"`
 }
 
 type Type string
@@ -184,7 +184,7 @@ func (i *Info) SetupPlugBinds(binds map[string]PlugRef) error {
 }
 
 // Adds slots defined for this SDK in a workshop file.
-func (i *Info) SetupWorkshopSlots(slots map[string]interface{}) error {
+func (i *Info) SetupWorkshopSlots(slots map[string]any) error {
 	for name, data := range slots {
 		if _, exist := i.Slots[name]; exist {
 			return fmt.Errorf("cannot add slot %q to %q SDK: already exists", name, i.Name)
@@ -207,7 +207,7 @@ func (i *Info) SetupWorkshopSlots(slots map[string]interface{}) error {
 }
 
 // Adds slots defined for this SDK in a workshop file.
-func (i *Info) SetupWorkshopPlugs(plugs map[string]interface{}) error {
+func (i *Info) SetupWorkshopPlugs(plugs map[string]any) error {
 	for name, data := range plugs {
 		if _, exist := i.Plugs[name]; exist {
 			return fmt.Errorf("cannot add plug %q to %q SDK: already exists", name, i.Name)
@@ -326,14 +326,14 @@ func setSlotsFromSdkYaml(y *sdkYaml, sdk *Info) error {
 	return nil
 }
 
-func convertToSlotOrPlugData(plugOrSlot, name string, data interface{}) (iface, label string, attrs map[string]interface{}, err error) {
+func convertToSlotOrPlugData(plugOrSlot, name string, data any) (iface, label string, attrs map[string]any, err error) {
 	iface = name
 	switch data := data.(type) {
 	case string:
 		return data, "", nil, nil
 	case nil:
 		return name, "", nil, nil
-	case map[string]interface{}:
+	case map[string]any:
 		for key, valueData := range data {
 			if strings.HasPrefix(key, "$") {
 				err := fmt.Errorf("%s %q uses reserved attribute %q", plugOrSlot, name, key)
@@ -360,7 +360,7 @@ func convertToSlotOrPlugData(plugOrSlot, name string, data interface{}) (iface, 
 				label = value
 			default:
 				if attrs == nil {
-					attrs = make(map[string]interface{})
+					attrs = make(map[string]any)
 				}
 				value, err := metautil.NormalizeValue(valueData)
 				if err != nil {
@@ -382,7 +382,7 @@ type SlotInfo struct {
 
 	Name      string
 	Interface string
-	Attrs     map[string]interface{}
+	Attrs     map[string]any
 	Label     string
 }
 
@@ -400,7 +400,7 @@ func (e *AttributeNotFoundError) Error() string {
 
 }
 
-func (slot *SlotInfo) Attr(key string, val interface{}) error {
+func (slot *SlotInfo) Attr(key string, val any) error {
 	v, ok := slot.Lookup(key)
 	if !ok {
 		ref := slot.Ref()
@@ -413,7 +413,7 @@ func (slot *SlotInfo) Attr(key string, val interface{}) error {
 	return nil
 }
 
-func (slot *SlotInfo) Lookup(key string) (interface{}, bool) {
+func (slot *SlotInfo) Lookup(key string) (any, bool) {
 	return metautil.LookupAttr(slot.Attrs, nil, key)
 }
 
@@ -460,11 +460,11 @@ type PlugInfo struct {
 
 	Name      string
 	Interface string
-	Attrs     map[string]interface{}
+	Attrs     map[string]any
 	Label     string
 }
 
-func (plug *PlugInfo) Attr(key string, val interface{}) error {
+func (plug *PlugInfo) Attr(key string, val any) error {
 	v, ok := plug.Lookup(key)
 	if !ok {
 		ref := plug.Ref()
@@ -477,7 +477,7 @@ func (plug *PlugInfo) Attr(key string, val interface{}) error {
 	return nil
 }
 
-func (plug *PlugInfo) Lookup(key string) (interface{}, bool) {
+func (plug *PlugInfo) Lookup(key string) (any, bool) {
 	return metautil.LookupAttr(plug.Attrs, nil, key)
 }
 

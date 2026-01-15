@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	defaultOutcome = map[string]interface{}{
+	defaultOutcome = map[string]any{
 		"allow-installation":    "true",
 		"allow-connection":      "true",
 		"allow-auto-connection": "true",
@@ -18,7 +18,7 @@ var (
 		"deny-auto-connection":  "false",
 	}
 
-	invertedOutcome = map[string]interface{}{
+	invertedOutcome = map[string]any{
 		"allow-installation":    "false",
 		"allow-connection":      "false",
 		"allow-auto-connection": "false",
@@ -226,7 +226,7 @@ var (
 	validSpecialNameConstraint = regexp.MustCompile(`^\$[A-Z][A-Z0-9_]*$`)
 )
 
-func compileNameMatcher(whichName string, v interface{}) (nameMatcher, error) {
+func compileNameMatcher(whichName string, v any) (nameMatcher, error) {
 	s, ok := v.(string)
 	if !ok {
 		return nil, fmt.Errorf("%s constraint entry must be a regexp or special $ value", whichName)
@@ -276,8 +276,8 @@ type NameConstraints struct {
 	matchers []nameMatcher
 }
 
-func compileNameConstraints(whichName string, constraints interface{}) (*NameConstraints, error) {
-	l, ok := constraints.([]interface{})
+func compileNameConstraints(whichName string, constraints any) (*NameConstraints, error) {
+	l, ok := constraints.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s constraints must be a list of regexps and special $ values", whichName)
 	}
@@ -385,7 +385,7 @@ func compileSlotConnectionConstraints(context *subruleContext, cDef constraintsD
 	return slotConnCstrs, nil
 }
 
-func compileSideArityConstraint(context *subruleContext, which string, v interface{}) (SideArityConstraint, error) {
+func compileSideArityConstraint(context *subruleContext, which string, v any) (SideArityConstraint, error) {
 	var a SideArityConstraint
 	if context.installation() || !context.allow() {
 		return a, fmt.Errorf("%v cannot specify a %v constraint, they apply only to allow-*connection", context, which)
@@ -417,14 +417,14 @@ func (matcher fixedAttrMatcher) feature(flabel string) bool {
 	return false
 }
 
-func (matcher fixedAttrMatcher) match(apath string, v interface{}, ctx *attrMatchingContext) error {
+func (matcher fixedAttrMatcher) match(apath string, v any, ctx *attrMatchingContext) error {
 	return matcher.result
 }
 
 // AttrMatchContext has contextual helpers for evaluating attribute constraints.
 type AttrMatchContext interface {
-	PlugAttr(arg string) (interface{}, error)
-	SlotAttr(arg string) (interface{}, error)
+	PlugAttr(arg string) (any, error)
+	SlotAttr(arg string) (any, error)
 }
 
 // AttributeConstraints implements a set of constraints on the attributes of a slot or plug.
@@ -446,7 +446,7 @@ func (c *AttributeConstraints) Check(attrer Attrer, helper AttrMatchContext) err
 
 // compileAttributeConstraints checks and compiles a mapping or list
 // from the assertion format into AttributeConstraints.
-func compileAttributeConstraints(constraints interface{}) (*AttributeConstraints, error) {
+func compileAttributeConstraints(constraints any) (*AttributeConstraints, error) {
 	cc := compileContext{
 		opts: &compileAttrMatcherOptions{
 			allowedOperations: []string{"SLOT", "PLUG"},
@@ -466,7 +466,7 @@ var (
 
 // Attrer reflects part of the Attrer interface (see interfaces.Attrer).
 type Attrer interface {
-	Lookup(path string) (interface{}, bool)
+	Lookup(path string) (any, bool)
 }
 
 func baseCompileConstraints(context *subruleContext, cDef constraintsDef, target constraintsHolder, nameConstraints, attrConstraints, idConstraints []string) error {
@@ -772,7 +772,7 @@ var plugRuleCompilers = map[string]subruleCompiler{
 	"deny-auto-connection":  compilePlugConnectionConstraints,
 }
 
-func compilePlugRule(interfaceName string, rule interface{}) (*PlugRule, error) {
+func compilePlugRule(interfaceName string, rule any) (*PlugRule, error) {
 	context := fmt.Sprintf("plug rule for interface %q", interfaceName)
 	plugRule := &PlugRule{
 		Interface: interfaceName,
@@ -825,7 +825,7 @@ func (c *subruleContext) autoConnection() bool {
 }
 
 type constraintsDef struct {
-	cMap   map[string]interface{}
+	cMap   map[string]any
 	invert bool
 }
 
@@ -850,7 +850,7 @@ var slotRuleCompilers = map[string]subruleCompiler{
 	"deny-auto-connection":  compileSlotConnectionConstraints,
 }
 
-func compileSlotRule(interfaceName string, rule interface{}) (*SlotRule, error) {
+func compileSlotRule(interfaceName string, rule any) (*SlotRule, error) {
 	context := fmt.Sprintf("slot rule for interface %q", interfaceName)
 	slotRule := &SlotRule{
 		Interface: interfaceName,
@@ -862,9 +862,9 @@ func compileSlotRule(interfaceName string, rule interface{}) (*SlotRule, error) 
 	return slotRule, nil
 }
 
-func checkMapOrShortcut(v interface{}) (m map[string]interface{}, invert bool, err error) {
+func checkMapOrShortcut(v any) (m map[string]any, invert bool, err error) {
 	switch x := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		return x, false, nil
 	case string:
 		switch x {
@@ -877,7 +877,7 @@ func checkMapOrShortcut(v interface{}) (m map[string]interface{}, invert bool, e
 	return nil, false, errors.New("unexpected type")
 }
 
-func baseCompileRule(context string, rule interface{}, target rule, subrules []string, compilers map[string]subruleCompiler, defaultOutcome, invertedOutcome map[string]interface{}) error {
+func baseCompileRule(context string, rule any, target rule, subrules []string, compilers map[string]subruleCompiler, defaultOutcome, invertedOutcome map[string]any) error {
 	rMap, invert, err := checkMapOrShortcut(rule)
 	if err != nil {
 		return fmt.Errorf("%s must be a map or one of the shortcuts 'true' or 'false'", context)
@@ -892,18 +892,18 @@ func baseCompileRule(context string, rule interface{}, target rule, subrules []s
 	// compile and set subrules
 	for _, subrule := range subrules {
 		v := rMap[subrule]
-		var lst []interface{}
+		var lst []any
 		alternatives := false
 		switch x := v.(type) {
 		case nil:
 			v = defaultOutcome[subrule]
 			defaultUsed++
-		case []interface{}:
+		case []any:
 			alternatives = true
 			lst = x
 		}
 		if lst == nil { // v is map or a string, checked below
-			lst = []interface{}{v}
+			lst = []any{v}
 		}
 		compiler := compilers[subrule]
 		if compiler == nil {

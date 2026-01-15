@@ -25,27 +25,27 @@ import (
 
 // plugJSON aids in marshaling snap.PlugInfo into JSON.
 type plugJSON struct {
-	ProjectId string                 `json:"project-id"`
-	Workshop  string                 `json:"workshop"`
-	Sdk       string                 `json:"sdk"`
-	Name      string                 `json:"plug"`
-	Interface string                 `json:"interface,omitempty"`
-	Attrs     map[string]interface{} `json:"attrs,omitempty"`
-	Label     string                 `json:"label,omitempty"`
-	Bind      *sdk.PlugRef           `json:"bind,omitempty"`
+	ProjectId string         `json:"project-id"`
+	Workshop  string         `json:"workshop"`
+	Sdk       string         `json:"sdk"`
+	Name      string         `json:"plug"`
+	Interface string         `json:"interface,omitempty"`
+	Attrs     map[string]any `json:"attrs,omitempty"`
+	Label     string         `json:"label,omitempty"`
+	Bind      *sdk.PlugRef   `json:"bind,omitempty"`
 	// Connections are synthesized, they are not on the original type.
 	Connections []sdk.SlotRef `json:"connections,omitempty"`
 }
 
 // slotJSON aids in marshaling snap.SlotInfo into JSON.
 type slotJSON struct {
-	ProjectId string                 `json:"project-id"`
-	Workshop  string                 `json:"workshop"`
-	Sdk       string                 `json:"sdk"`
-	Name      string                 `json:"slot"`
-	Interface string                 `json:"interface,omitempty"`
-	Attrs     map[string]interface{} `json:"attrs,omitempty"`
-	Label     string                 `json:"label,omitempty"`
+	ProjectId string         `json:"project-id"`
+	Workshop  string         `json:"workshop"`
+	Sdk       string         `json:"sdk"`
+	Name      string         `json:"slot"`
+	Interface string         `json:"interface,omitempty"`
+	Attrs     map[string]any `json:"attrs,omitempty"`
+	Label     string         `json:"label,omitempty"`
 	// Connections are synthesized, they are not on the original type.
 	Connections []sdk.PlugRef `json:"connections,omitempty"`
 }
@@ -61,12 +61,12 @@ type interfaceAction struct {
 // connectionsJSON aids in marshalling information about a single connection
 // into JSON
 type connectionJSON struct {
-	Slot      sdk.SlotRef            `json:"slot"`
-	Plug      sdk.PlugRef            `json:"plug"`
-	Interface string                 `json:"interface"`
-	Manual    bool                   `json:"manual,omitempty"`
-	SlotAttrs map[string]interface{} `json:"slot-attrs,omitempty"`
-	PlugAttrs map[string]interface{} `json:"plug-attrs,omitempty"`
+	Slot      sdk.SlotRef    `json:"slot"`
+	Plug      sdk.PlugRef    `json:"plug"`
+	Interface string         `json:"interface"`
+	Manual    bool           `json:"manual,omitempty"`
+	SlotAttrs map[string]any `json:"slot-attrs,omitempty"`
+	PlugAttrs map[string]any `json:"plug-attrs,omitempty"`
 }
 
 // connectionsJSON aids in marshaling connections into JSON.

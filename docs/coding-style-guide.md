@@ -1194,7 +1194,7 @@ import "github.com/canonical/workshop/internal/overlord/state"
 
 // Store persistent data that survives restarts
 func saveConnectionState(st *state.State) error {
-    conns := map[string]interface{}{
+    conns := map[string]any{
         "workshop/sdk:plug": "workshop/system:slot",
     }
     st.Set("conns", conns)
@@ -1202,8 +1202,8 @@ func saveConnectionState(st *state.State) error {
 }
 
 // Retrieve persistent data
-func loadConnectionState(st *state.State) (map[string]interface{}, error) {
-    var conns map[string]interface{}
+func loadConnectionState(st *state.State) (map[string]any, error) {
+    var conns map[string]any
     err := st.Get("conns", &conns)
     if err != nil && err != state.ErrNoState {
         return nil, err
@@ -1232,7 +1232,7 @@ func getStore(st *state.State) (*Store, error) {
 
 ```go
 // Don't do manual JSON serialization for state
-func saveState(path string, data interface{}) error {
+func saveState(path string, data any) error {
     json, _ := json.Marshal(data)
     return os.WriteFile(path, json, 0644)
 }

@@ -208,7 +208,7 @@ type KernelArgument struct {
 }
 
 // UnmarshalYAML implements the Unmarshaler interface.
-func (ka *KernelArgument) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (ka *KernelArgument) UnmarshalYAML(unmarshal func(any) error) error {
 	var arg string
 	if err := unmarshal(&arg); err != nil {
 		return errors.New("cannot unmarshal kernel argument")

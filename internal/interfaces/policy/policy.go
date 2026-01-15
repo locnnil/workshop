@@ -103,7 +103,7 @@ type ConnectCandidate struct {
 	BaseDeclaration *asserts.BaseDeclaration
 }
 
-func nestedGet(which string, attrs interfaces.Attrer, path string) (interface{}, error) {
+func nestedGet(which string, attrs interfaces.Attrer, path string) (any, error) {
 	val, ok := attrs.Lookup(path)
 	if !ok {
 		return nil, fmt.Errorf("%s attribute %q not found", which, path)
@@ -111,11 +111,11 @@ func nestedGet(which string, attrs interfaces.Attrer, path string) (interface{},
 	return val, nil
 }
 
-func (connc *ConnectCandidate) PlugAttr(arg string) (interface{}, error) {
+func (connc *ConnectCandidate) PlugAttr(arg string) (any, error) {
 	return nestedGet("plug", connc.Plug, arg)
 }
 
-func (connc *ConnectCandidate) SlotAttr(arg string) (interface{}, error) {
+func (connc *ConnectCandidate) SlotAttr(arg string) (any, error) {
 	return nestedGet("slot", connc.Slot, arg)
 }
 func (connc *ConnectCandidate) checkPlugRule(kind string, rule *asserts.PlugRule) (interfaces.SideArity, error) {

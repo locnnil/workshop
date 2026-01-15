@@ -89,7 +89,7 @@ one:
 	c.Check(contains(document, nodes.One.Nest.C.Node), check.Equals, true)
 }
 
-func unmarshalAndDecode(c *check.C, v interface{}, content string) *yaml.Node {
+func unmarshalAndDecode(c *check.C, v any, content string) *yaml.Node {
 	var document yaml.Node
 	c.Assert(yaml.Unmarshal([]byte(content), &document), check.IsNil)
 	c.Assert(document.Decode(v), check.IsNil)
@@ -439,7 +439,7 @@ b:
 	checkRemoveNodes(c, before, after, &maps, &maps.B)
 }
 
-func checkRemoveNodes(c *check.C, before, after string, v interface{}, nodeRefs ...*NodeRef) {
+func checkRemoveNodes(c *check.C, before, after string, v any, nodeRefs ...*NodeRef) {
 	document := unmarshalAndDecode(c, v, before)
 
 	nodes := make([]*yaml.Node, 0, len(nodeRefs))

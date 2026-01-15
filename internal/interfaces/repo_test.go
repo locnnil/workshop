@@ -1502,8 +1502,8 @@ func (s *RepositorySuite) TestBeforeConnectValidation(c *C) {
 	s2 := sdk.MockInfo(c, ifacehooksSnap2, s.projectId, "ws-s2")
 	c.Assert(s.emptyRepo.AddSdk(s2), IsNil)
 
-	plugDynAttrs := map[string]interface{}{"attr1": "val1"}
-	slotDynAttrs := map[string]interface{}{"attr1": "val1"}
+	plugDynAttrs := map[string]any{"attr1": "val1"}
+	slotDynAttrs := map[string]any{"attr1": "val1"}
 
 	policyCheck := func(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) { return true, nil }
 	conn, err := s.emptyRepo.Connect(&ConnRef{
@@ -1515,10 +1515,10 @@ func (s *RepositorySuite) TestBeforeConnectValidation(c *C) {
 	c.Assert(conn.Plug, NotNil)
 	c.Assert(conn.Slot, NotNil)
 
-	c.Assert(conn.Plug.StaticAttrs(), DeepEquals, map[string]interface{}{"attr0": "val0"})
-	c.Assert(conn.Plug.DynamicAttrs(), DeepEquals, map[string]interface{}{"attr1": "val1-validated"})
-	c.Assert(conn.Slot.StaticAttrs(), DeepEquals, map[string]interface{}{"attr0": "val0"})
-	c.Assert(conn.Slot.DynamicAttrs(), DeepEquals, map[string]interface{}{"attr1": "val1-validated"})
+	c.Assert(conn.Plug.StaticAttrs(), DeepEquals, map[string]any{"attr0": "val0"})
+	c.Assert(conn.Plug.DynamicAttrs(), DeepEquals, map[string]any{"attr1": "val1-validated"})
+	c.Assert(conn.Slot.StaticAttrs(), DeepEquals, map[string]any{"attr0": "val0"})
+	c.Assert(conn.Slot.DynamicAttrs(), DeepEquals, map[string]any{"attr1": "val1-validated"})
 }
 
 func (s *RepositorySuite) TestBeforeConnectValidationFailure(c *C) {
@@ -1538,8 +1538,8 @@ func (s *RepositorySuite) TestBeforeConnectValidationFailure(c *C) {
 	s2 := sdk.MockInfo(c, ifacehooksSnap2, s.projectId, "ws-s2")
 	c.Assert(s.emptyRepo.AddSdk(s2), IsNil)
 
-	plugDynAttrs := map[string]interface{}{"attr1": "val1"}
-	slotDynAttrs := map[string]interface{}{"attr1": "val1"}
+	plugDynAttrs := map[string]any{"attr1": "val1"}
+	slotDynAttrs := map[string]any{"attr1": "val1"}
 
 	policyCheck := func(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) { return true, nil }
 
@@ -1564,8 +1564,8 @@ func (s *RepositorySuite) TestBeforeConnectValidationPolicyCheckFailure(c *C) {
 	s2 := sdk.MockInfo(c, ifacehooksSnap2, s.projectId, "ws-s2")
 	c.Assert(s.emptyRepo.AddSdk(s2), IsNil)
 
-	plugDynAttrs := map[string]interface{}{"attr1": "val1"}
-	slotDynAttrs := map[string]interface{}{"attr1": "val1"}
+	plugDynAttrs := map[string]any{"attr1": "val1"}
+	slotDynAttrs := map[string]any{"attr1": "val1"}
 
 	policyCheck := func(plug *ConnectedPlug, slot *ConnectedSlot) (bool, error) {
 		return false, fmt.Errorf("policy check failed")
@@ -1617,8 +1617,8 @@ func (s *RepositorySuite) TestConnectWithStaticAttrs(c *C) {
 
 	connRef := NewConnRef(s.plug, s.slot)
 
-	plugAttrs := map[string]interface{}{"foo": "bar"}
-	slotAttrs := map[string]interface{}{"boo": "baz"}
+	plugAttrs := map[string]any{"foo": "bar"}
+	slotAttrs := map[string]any{"boo": "baz"}
 	_, err := s.testRepo.Connect(connRef, plugAttrs, nil, slotAttrs, nil, nil)
 	c.Assert(err, IsNil)
 

@@ -26,15 +26,15 @@ import (
 
 // Plug represents the potential of a given snap to connect to a slot.
 type Plug struct {
-	ProjectId   string                 `json:"project-id"`
-	Workshop    string                 `json:"workshop"`
-	Sdk         string                 `json:"sdk"`
-	Name        string                 `json:"plug"`
-	Interface   string                 `json:"interface,omitempty"`
-	Attrs       map[string]interface{} `json:"attrs,omitempty"`
-	Label       string                 `json:"label,omitempty"`
-	Bind        *PlugRef               `json:"bind,omitempty"`
-	Connections []SlotRef              `json:"connections,omitempty"`
+	ProjectId   string         `json:"project-id"`
+	Workshop    string         `json:"workshop"`
+	Sdk         string         `json:"sdk"`
+	Name        string         `json:"plug"`
+	Interface   string         `json:"interface,omitempty"`
+	Attrs       map[string]any `json:"attrs,omitempty"`
+	Label       string         `json:"label,omitempty"`
+	Bind        *PlugRef       `json:"bind,omitempty"`
+	Connections []SlotRef      `json:"connections,omitempty"`
 }
 
 func (p *Plug) Ref() PlugRef {
@@ -51,14 +51,14 @@ type PlugRef struct {
 
 // Slot represents a capacity offered by a snap.
 type Slot struct {
-	ProjectId   string                 `json:"project-id"`
-	Workshop    string                 `json:"workshop"`
-	Sdk         string                 `json:"sdk"`
-	Name        string                 `json:"slot"`
-	Interface   string                 `json:"interface,omitempty"`
-	Attrs       map[string]interface{} `json:"attrs,omitempty"`
-	Label       string                 `json:"label,omitempty"`
-	Connections []PlugRef              `json:"connections,omitempty"`
+	ProjectId   string         `json:"project-id"`
+	Workshop    string         `json:"workshop"`
+	Sdk         string         `json:"sdk"`
+	Name        string         `json:"slot"`
+	Interface   string         `json:"interface,omitempty"`
+	Attrs       map[string]any `json:"attrs,omitempty"`
+	Label       string         `json:"label,omitempty"`
+	Connections []PlugRef      `json:"connections,omitempty"`
 }
 
 // SlotRef is a reference to a slot.

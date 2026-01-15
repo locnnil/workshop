@@ -308,22 +308,22 @@ func (cs *clientSuite) TestClientConnect(c *check.C) {
 	id, err := cs.cli.Connect("b8639dea", "consumer-ws", "consumer", "plug", "b8639dea", "producer-ws", "producer", "slot", nil)
 	c.Assert(err, check.IsNil)
 	c.Check(id, check.Equals, "42")
-	var body map[string]interface{}
+	var body map[string]any
 	decoder := json.NewDecoder(cs.req.Body)
 	err = decoder.Decode(&body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
 		"action": "connect",
-		"plugs": []interface{}{
-			map[string]interface{}{
+		"plugs": []any{
+			map[string]any{
 				"project-id": "b8639dea",
 				"workshop":   "consumer-ws",
 				"sdk":        "consumer",
 				"plug":       "plug",
 			},
 		},
-		"slots": []interface{}{
-			map[string]interface{}{
+		"slots": []any{
+			map[string]any{
 				"project-id": "b8639dea",
 				"workshop":   "producer-ws",
 				"sdk":        "producer",
@@ -345,22 +345,22 @@ func (cs *clientSuite) TestClientDisconnect(c *check.C) {
 	id, err := cs.cli.Disconnect("b8639dea", "consumer-ws", "consumer", "plug", "b8639dea", "producer-ws", "producer", "slot", opts)
 	c.Assert(err, check.IsNil)
 	c.Check(id, check.Equals, "42")
-	var body map[string]interface{}
+	var body map[string]any
 	decoder := json.NewDecoder(cs.req.Body)
 	err = decoder.Decode(&body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
 		"action": "disconnect",
-		"plugs": []interface{}{
-			map[string]interface{}{
+		"plugs": []any{
+			map[string]any{
 				"project-id": "b8639dea",
 				"workshop":   "consumer-ws",
 				"sdk":        "consumer",
 				"plug":       "plug",
 			},
 		},
-		"slots": []interface{}{
-			map[string]interface{}{
+		"slots": []any{
+			map[string]any{
 				"project-id": "b8639dea",
 				"workshop":   "producer-ws",
 				"sdk":        "producer",
@@ -382,23 +382,23 @@ func (cs *clientSuite) TestClientDisconnectForget(c *check.C) {
 	id, err := cs.cli.Disconnect("b8639dea", "consumer-ws", "consumer", "plug", "b8639dea", "producer-ws", "producer", "slot", opts)
 	c.Assert(err, check.IsNil)
 	c.Check(id, check.Equals, "42")
-	var body map[string]interface{}
+	var body map[string]any
 	decoder := json.NewDecoder(cs.req.Body)
 	err = decoder.Decode(&body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
 		"action": "disconnect",
 		"forget": true,
-		"plugs": []interface{}{
-			map[string]interface{}{
+		"plugs": []any{
+			map[string]any{
 				"project-id": "b8639dea",
 				"workshop":   "consumer-ws",
 				"sdk":        "consumer",
 				"plug":       "plug",
 			},
 		},
-		"slots": []interface{}{
-			map[string]interface{}{
+		"slots": []any{
+			map[string]any{
 				"project-id": "b8639dea",
 				"workshop":   "producer-ws",
 				"sdk":        "producer",

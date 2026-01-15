@@ -42,7 +42,7 @@ type resp struct {
 	Status           int          `json:"status-code"`
 	Type             ResponseType `json:"type"`
 	Change           string       `json:"change,omitempty"`
-	Result           interface{}  `json:"result,omitempty"`
+	Result           any          `json:"result,omitempty"`
 	WarningTimestamp *time.Time   `json:"warning-timestamp,omitempty"`
 	WarningCount     int          `json:"warning-count,omitempty"`
 	Maintenance      *errorResult `json:"maintenance,omitempty"`
@@ -53,7 +53,7 @@ type respJSON struct {
 	Status           int          `json:"status-code"`
 	StatusText       string       `json:"status,omitempty"`
 	Change           string       `json:"change,omitempty"`
-	Result           interface{}  `json:"result,omitempty"`
+	Result           any          `json:"result,omitempty"`
 	WarningTimestamp *time.Time   `json:"warning-timestamp,omitempty"`
 	WarningCount     int          `json:"warning-count,omitempty"`
 	Maintenance      *errorResult `json:"maintenance,omitempty"`
@@ -101,7 +101,7 @@ func (r *resp) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 
 	hdr := w.Header()
 	if r.Status == 202 || r.Status == 201 {
-		if m, ok := r.Result.(map[string]interface{}); ok {
+		if m, ok := r.Result.(map[string]any); ok {
 			if location, ok := m["resource"]; ok {
 				if location, ok := location.(string); ok && location != "" {
 					hdr.Set("Location", location)
@@ -128,7 +128,7 @@ const (
 	errorKindNoUpdatesAvailable = errorKind("no-updates-available")
 )
 
-type errorValue interface{}
+type errorValue any
 
 type errorResult struct {
 	Message string     `json:"message"` // note no omitempty
@@ -136,7 +136,7 @@ type errorResult struct {
 	Value   errorValue `json:"value,omitempty"`
 }
 
-func SyncResponse(result interface{}, status int) Response {
+func SyncResponse(result any, status int) Response {
 	if err, ok := result.(error); ok {
 		return statusInternalError("internal error: %w", err)
 	}
@@ -152,7 +152,7 @@ func SyncResponse(result interface{}, status int) Response {
 	}
 }
 
-func AsyncResponse(result map[string]interface{}, change string) Response {
+func AsyncResponse(result map[string]any, change string) Response {
 	return &resp{
 		Type:   ResponseTypeAsync,
 		Status: 202,
@@ -172,7 +172,7 @@ func (f fileResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func makeErrorResponder(status int) errorResponder {
-	return func(format string, v ...interface{}) Response {
+	return func(format string, v ...any) Response {
 		res := &errorResult{}
 		response := &resp{
 			Type:   ResponseTypeError,
@@ -198,7 +198,7 @@ func makeErrorResponder(status int) errorResponder {
 
 // errorResponder is a callable that produces an error Response.
 // e.g., InternalError("something broke: %v", err), etc.
-type errorResponder func(string, ...interface{}) Response
+type errorResponder func(string, ...any) Response
 
 // Standard error responses.
 var (

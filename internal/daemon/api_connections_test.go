@@ -134,7 +134,7 @@ func (s *apiSuite) mockInstalledSDKBoundPlug(c *check.C, yaml string, w string, 
 	return wp
 }
 
-func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string, connsState map[string]interface{}, repoConnected []string, expected map[string]interface{}) {
+func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string, connsState map[string]any, repoConnected []string, expected map[string]any) {
 	repo := d.Overlord().InterfaceManager().Repository()
 	for crefStr, cstate := range connsState {
 		// if repoConnected is defined, then given connection must be on
@@ -145,7 +145,7 @@ func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string,
 		}
 		cref, err := interfaces.ParseConnRef(crefStr)
 		c.Assert(err, check.IsNil)
-		conn := cstate.(map[string]interface{})
+		conn := cstate.(map[string]any)
 		if undesiredRaw, ok := conn["undesired"]; ok {
 			undesired, ok := undesiredRaw.(bool)
 			c.Assert(ok, check.Equals, true, check.Commentf("unexpected value for key 'undesired': %v", cstate))
@@ -154,10 +154,10 @@ func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string,
 				continue
 			}
 		}
-		staticPlugAttrs, _ := conn["plug-static"].(map[string]interface{})
-		dynamicPlugAttrs, _ := conn["plug-dynamic"].(map[string]interface{})
-		staticSlotAttrs, _ := conn["slot-static"].(map[string]interface{})
-		dynamicSlotAttrs, _ := conn["slot-dynamic"].(map[string]interface{})
+		staticPlugAttrs, _ := conn["plug-static"].(map[string]any)
+		dynamicPlugAttrs, _ := conn["plug-dynamic"].(map[string]any)
+		staticSlotAttrs, _ := conn["slot-static"].(map[string]any)
+		dynamicSlotAttrs, _ := conn["slot-dynamic"].(map[string]any)
 		_, err = repo.Connect(cref, staticPlugAttrs, dynamicPlugAttrs, staticSlotAttrs, dynamicSlotAttrs, nil)
 		c.Assert(err, check.IsNil)
 	}
@@ -170,14 +170,14 @@ func (s *apiSuite) testConnectionsConnected(c *check.C, d *Daemon, query string,
 	s.testConnections(c, query, expected)
 }
 
-func (s *apiSuite) testConnections(c *check.C, query string, expected map[string]interface{}) {
+func (s *apiSuite) testConnections(c *check.C, query string, expected map[string]any) {
 	cmd := apiCmd("/v1/connections")
 	req, err := s.createProjectsRequest("GET", query, nil)
 	c.Assert(err, check.IsNil)
 	rec := httptest.NewRecorder()
 	v1GetConnections(cmd, req, nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 200)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, expected)
@@ -191,11 +191,11 @@ func (s *apiSuite) TestConnectionsUnhappy(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1GetConnections(cmd, req, nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": "unsupported select qualifier"},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -205,21 +205,21 @@ func (s *apiSuite) TestConnectionsUnhappy(c *check.C) {
 
 func (s *apiSuite) TestConnectionsEmpty(c *check.C) {
 	s.daemon(c)
-	s.testConnections(c, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs":       []interface{}{},
-			"slots":       []interface{}{},
+	s.testConnections(c, "/v2/connections?project-id=b8639dea", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs":       []any{},
+			"slots":       []any{},
 		},
 		"status":      "OK",
 		"status-code": 200.0,
 		"type":        "sync",
 	})
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs":       []interface{}{},
-			"slots":       []interface{}{},
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs":       []any{},
+			"slots":       []any{},
 		},
 		"status":      "OK",
 		"status-code": 200.0,
@@ -235,11 +235,11 @@ func (s *apiSuite) TestConnectionsNotFound(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1GetConnections(cmd, req, nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 404)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `cannot access workshop "not-found": workshop not launched`,
 		},
 		"status":      "Not Found",
@@ -257,28 +257,28 @@ func (s *apiSuite) TestConnectionsUnconnected(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "ws-consumer")
 	s.mockInstalledSDK(c, producerYaml, "ws-producer")
 
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs": []interface{}{
-				map[string]interface{}{
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs": []any{
+				map[string]any{
 					"project-id": s.project.ProjectId,
 					"workshop":   "ws-consumer",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": s.project.ProjectId,
 					"workshop":   "ws-producer",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
@@ -298,86 +298,86 @@ func (s *apiSuite) TestConnectionsByWorkshopName(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&workshop=producer-ws", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"slots": []interface{}{
-				map[string]interface{}{
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&workshop=producer-ws", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"slots": []any{
+				map[string]any{
 					"project-id": s.project.ProjectId,
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"plugs": []interface{}{},
+			"plugs": []any{},
 		},
 		"status":      "OK",
 		"status-code": 200.0,
 		"type":        "sync",
 	})
 
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&workshop=consumer-ws", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs": []interface{}{
-				map[string]interface{}{
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&workshop=consumer-ws", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs": []any{
+				map[string]any{
 					"project-id": s.project.ProjectId,
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"slots": []interface{}{},
+			"slots": []any{},
 		},
 		"status":      "OK",
 		"status-code": 200.0,
 		"type":        "sync",
 	})
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
 					},
 				},
 			},
-			"established": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"established": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"manual":    true,
 					"interface": "test",
 				},
@@ -399,49 +399,49 @@ func (s *apiSuite) TestConnectionsMissingPlugSlotFilteredOut(c *check.C) {
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
 	for _, missingPlugOrSlot := range []string{"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot", "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot2"} {
-		s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]interface{}{
-			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+		s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&workshop=producer-ws", map[string]any{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 				"interface": "test",
 			},
-			missingPlugOrSlot: map[string]interface{}{
+			missingPlugOrSlot: map[string]any{
 				"interface": "test",
 			},
 		},
 			[]string{"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
-			map[string]interface{}{
-				"result": map[string]interface{}{
-					"plugs": []interface{}{
-						map[string]interface{}{
+			map[string]any{
+				"result": map[string]any{
+					"plugs": []any{
+						map[string]any{
 							"project-id": "b8639dea",
 							"workshop":   "consumer-ws",
 							"sdk":        "consumer",
 							"plug":       "plug",
 							"interface":  "test",
-							"attrs":      map[string]interface{}{"key": "value"},
+							"attrs":      map[string]any{"key": "value"},
 							"label":      "label",
-							"connections": []interface{}{
-								map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+							"connections": []any{
+								map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 							},
 						},
 					},
-					"slots": []interface{}{
-						map[string]interface{}{
+					"slots": []any{
+						map[string]any{
 							"project-id": "b8639dea",
 							"workshop":   "producer-ws",
 							"sdk":        "producer",
 							"slot":       "slot",
 							"interface":  "test",
-							"attrs":      map[string]interface{}{"key": "value"},
+							"attrs":      map[string]any{"key": "value"},
 							"label":      "label",
-							"connections": []interface{}{
-								map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+							"connections": []any{
+								map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
 							},
 						},
 					},
-					"established": []interface{}{
-						map[string]interface{}{
-							"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-							"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"established": []any{
+						map[string]any{
+							"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+							"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 							"manual":    true,
 							"interface": "test",
 						},
@@ -485,28 +485,28 @@ plugs:
 	s.mockInstalledSDK(c, differentConsumerYaml, "consumer-diff-ws")
 	s.mockInstalledSDK(c, differentProducerYaml, "producer-diff-ws")
 
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&interface=test", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs": []interface{}{
-				map[string]interface{}{
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&interface=test", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
@@ -515,28 +515,28 @@ plugs:
 		"status-code": 200.0,
 		"type":        "sync",
 	})
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&interface=different", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs": []interface{}{
-				map[string]interface{}{
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&select=all&interface=different", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-diff-ws",
 					"sdk":        "different-consumer",
 					"plug":       "plug",
 					"interface":  "different",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-diff-ws",
 					"sdk":        "different-producer",
 					"slot":       "slot",
 					"interface":  "different",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
@@ -547,44 +547,44 @@ plugs:
 	})
 
 	// modifies state internally
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&interfaces=test", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&interfaces=test", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
 					},
 				},
 			},
-			"established": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"established": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"manual":    true,
 					"interface": "test",
 				},
@@ -595,11 +595,11 @@ plugs:
 		"type":        "sync",
 	})
 	// use state modified by previous call
-	s.testConnections(c, "/v2/connections?project-id=b8639dea&interface=different", map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"slots":       []interface{}{},
-			"plugs":       []interface{}{},
+	s.testConnections(c, "/v2/connections?project-id=b8639dea&interface=different", map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"slots":       []any{},
+			"plugs":       []any{},
 		},
 		"status":      "OK",
 		"status-code": 200.0,
@@ -616,44 +616,44 @@ func (s *apiSuite) TestConnectionsDefaultManual(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
 					},
 				},
 			},
-			"established": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"established": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"manual":    true,
 					"interface": "test",
 				},
@@ -674,63 +674,63 @@ func (s *apiSuite) TestConnectionsDefaultAuto(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
-			"plug-static": map[string]interface{}{
+			"plug-static": map[string]any{
 				"key": "value",
 			},
-			"plug-dynamic": map[string]interface{}{
+			"plug-dynamic": map[string]any{
 				"foo-plug-dynamic": "bar-dynamic",
 			},
-			"slot-static": map[string]interface{}{
+			"slot-static": map[string]any{
 				"key": "value",
 			},
-			"slot-dynamic": map[string]interface{}{
+			"slot-dynamic": map[string]any{
 				"foo-slot-dynamic": "bar-dynamic",
 			},
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
 					},
 				},
 			},
-			"established": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"established": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"interface": "test",
-					"plug-attrs": map[string]interface{}{
+					"plug-attrs": map[string]any{
 						"key":              "value",
 						"foo-plug-dynamic": "bar-dynamic",
 					},
-					"slot-attrs": map[string]interface{}{
+					"slot-attrs": map[string]any{
 						"key":              "value",
 						"foo-slot-dynamic": "bar-dynamic",
 					},
@@ -752,73 +752,73 @@ func (s *apiSuite) TestConnectionsBoundPlug(c *check.C) {
 	s.mockInstalledSDKBoundPlug(c, consumerYamlManyPlugs, "consumer-ws", "plug", "plug2")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
-			"plug-static": map[string]interface{}{
+			"plug-static": map[string]any{
 				"key": "value",
 			},
-			"plug-dynamic": map[string]interface{}{
+			"plug-dynamic": map[string]any{
 				"foo-plug-dynamic": "bar-dynamic",
 			},
-			"slot-static": map[string]interface{}{
+			"slot-static": map[string]any{
 				"key": "value",
 			},
-			"slot-dynamic": map[string]interface{}{
+			"slot-dynamic": map[string]any{
 				"foo-slot-dynamic": "bar-dynamic",
 			},
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"bind":       map[string]interface{}{"plug": "plug2", "project-id": "b8639dea", "sdk": "consumer", "workshop": "consumer-ws"},
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"bind":       map[string]any{"plug": "plug2", "project-id": "b8639dea", "sdk": "consumer", "workshop": "consumer-ws"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug2",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value2"},
+					"attrs":      map[string]any{"key": "value2"},
 					"label":      "label2",
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
 					},
 				},
 			},
-			"established": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"established": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"interface": "test",
-					"plug-attrs": map[string]interface{}{
+					"plug-attrs": map[string]any{
 						"key":              "value",
 						"foo-plug-dynamic": "bar-dynamic",
 					},
-					"slot-attrs": map[string]interface{}{
+					"slot-attrs": map[string]any{
 						"key":              "value",
 						"foo-slot-dynamic": "bar-dynamic",
 					},
@@ -840,41 +840,41 @@ func (s *apiSuite) TestConnectionsAll(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea&select=all", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
 				},
 			},
-			"undesired": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"undesired": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"manual":    true,
 					"interface": "test",
 				},
@@ -895,17 +895,17 @@ func (s *apiSuite) TestConnectionsOnlyConnected(c *check.C) {
 	s.mockInstalledSDK(c, consumerYaml, "consumer-ws")
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
 			"undesired": true,
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"established": []interface{}{},
-			"plugs":       []interface{}{},
-			"slots":       []interface{}{},
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"established": []any{},
+			"plugs":       []any{},
+			"slots":       []any{},
 		},
 		"status":      "OK",
 		"status-code": 200.0,
@@ -944,111 +944,111 @@ slots:
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 	s.mockInstalledSDK(c, anotherProducerYaml, "another-producer-ws")
 
-	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	s.testConnectionsConnected(c, d, "/v2/connections?project-id=b8639dea", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea/consumer-ws-abc/another-consumer-abc:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-abc/another-consumer-abc:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
 		},
-		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/another-producer-ws/another-producer:slot": map[string]interface{}{
+		"b8639dea/consumer-ws-def/another-consumer-def:plug b8639dea/another-producer-ws/another-producer:slot": map[string]any{
 			"interface": "test",
 			"auto":      true,
 		},
-	}, nil, map[string]interface{}{
-		"result": map[string]interface{}{
-			"plugs": []interface{}{
-				map[string]interface{}{
+	}, nil, map[string]any{
+		"result": map[string]any{
+			"plugs": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws",
 					"sdk":        "consumer",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws-abc",
 					"sdk":        "another-consumer-abc",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "consumer-ws-def",
 					"sdk":        "another-consumer-def",
 					"plug":       "plug",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "another-producer-ws", "sdk": "another-producer", "slot": "slot"},
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "another-producer-ws", "sdk": "another-producer", "slot": "slot"},
+						map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					},
 				},
 			},
-			"slots": []interface{}{
-				map[string]interface{}{
+			"slots": []any{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "another-producer-ws",
 					"sdk":        "another-producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"project-id": "b8639dea",
 					"workshop":   "producer-ws",
 					"sdk":        "producer",
 					"slot":       "slot",
 					"interface":  "test",
-					"attrs":      map[string]interface{}{"key": "value"},
+					"attrs":      map[string]any{"key": "value"},
 					"label":      "label",
-					"connections": []interface{}{
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws-abc", "sdk": "another-consumer-abc", "plug": "plug"},
-						map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
+					"connections": []any{
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws-abc", "sdk": "another-consumer-abc", "plug": "plug"},
+						map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
 					},
 				},
 			},
-			"established": []interface{}{
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+			"established": []any{
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws", "sdk": "consumer", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"interface": "test",
 				},
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws-abc", "sdk": "another-consumer-abc", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws-abc", "sdk": "another-consumer-abc", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"interface": "test",
 				},
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "another-producer-ws", "sdk": "another-producer", "slot": "slot"},
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "another-producer-ws", "sdk": "another-producer", "slot": "slot"},
 					"interface": "test",
 				},
-				map[string]interface{}{
-					"plug":      map[string]interface{}{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
-					"slot":      map[string]interface{}{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
+				map[string]any{
+					"plug":      map[string]any{"project-id": "b8639dea", "workshop": "consumer-ws-def", "sdk": "another-consumer-def", "plug": "plug"},
+					"slot":      map[string]any{"project-id": "b8639dea", "workshop": "producer-ws", "sdk": "producer", "slot": "slot"},
 					"interface": "test",
 				},
 			},
@@ -1087,7 +1087,7 @@ func (s *apiSuite) TestConnectPlugSuccess(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 202)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
 	id := body["change"].(string)
@@ -1145,7 +1145,7 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 202)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
 	id := body["change"].(string)
@@ -1177,22 +1177,22 @@ func (s *apiSuite) TestConnectBoundPlugSuccess(c *check.C) {
 	}
 	c.Check(ifaces.Connections, check.DeepEquals, []*interfaces.ConnRef{mainConn, boundConn})
 
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Lock()
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 2)
 	c.Assert(conns, check.DeepEquals,
-		map[string]interface{}{
-			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+		map[string]any{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 				"interface":   "test",
-				"plug-static": map[string]interface{}{"key": "value"},
-				"slot-static": map[string]interface{}{"key": "value"},
+				"plug-static": map[string]any{"key": "value"},
+				"slot-static": map[string]any{"key": "value"},
 			},
-			"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot": map[string]interface{}{
+			"b8639dea/consumer-ws/consumer:plug2 b8639dea/producer-ws/producer:slot": map[string]any{
 				"interface":    "test",
-				"plug-static":  map[string]interface{}{"key": "value2"},
-				"slot-static":  map[string]interface{}{"key": "value"},
-				"plug-dynamic": map[string]interface{}{"bind": "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
+				"plug-static":  map[string]any{"key": "value2"},
+				"slot-static":  map[string]any{"key": "value"},
+				"plug-dynamic": map[string]any{"bind": "b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot"},
 			},
 		})
 	s.d.state.Unlock()
@@ -1236,11 +1236,11 @@ slots:
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `cannot connect "consumer-ws/consumer:plug" ("test" interface) to "producer-ws/producer:slot" ("different" interface)`,
 		},
 		"status":      "Bad Request",
@@ -1275,11 +1275,11 @@ func (s *apiSuite) TestConnectPlugFailureNoSuchPlug(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `SDK "consumer-ws/consumer" has no plug named "missingplug"`,
 		},
 		"status":      "Bad Request",
@@ -1314,11 +1314,11 @@ func (s *apiSuite) TestConnectPlugFailureNoSuchSlot(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `SDK "producer-ws/producer" has no slot named "missingslot"`,
 		},
 		"status":      "Bad Request",
@@ -1344,8 +1344,8 @@ func (s *apiSuite) TestConnectAlreadyConnected(c *check.C) {
 	}
 	st := d.Overlord().State()
 	st.Lock()
-	st.Set("conns", map[string]interface{}{
-		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+	st.Set("conns", map[string]any{
+		"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 			"interface": "test",
 		},
 	})
@@ -1371,7 +1371,7 @@ func (s *apiSuite) TestConnectAlreadyConnected(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 202)
-	var body map[string]interface{}
+	var body map[string]any
 	json.Unmarshal(rec.Body.Bytes(), &body)
 	id := body["change"].(string)
 
@@ -1421,11 +1421,11 @@ func (s *apiSuite) TestConnectFailureOnConflict(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `cannot connect "producer-ws/producer:slot": other changes in progress`,
 		},
 		"status":      "Bad Request",
@@ -1473,7 +1473,7 @@ func (s *apiSuite) TestConnectWarnOnExec(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 202)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
 	id := body["change"].(string)
@@ -1532,14 +1532,14 @@ func (s *apiSuite) testDisconnect(c *check.C, pW, pSdk, pName string, sW, sSdk, 
 	wp.File.Sdks[0].Plugs = opts.bind
 	s.mockInstalledSDK(c, producerYaml, "producer-ws")
 
-	conns := map[string]interface{}{}
+	conns := map[string]any{}
 	connRef := s.connect(c, "plug")
-	conns[connRef.ID()] = map[string]interface{}{"interface": "test", "auto": opts.auto}
+	conns[connRef.ID()] = map[string]any{"interface": "test", "auto": opts.auto}
 
 	for n := range opts.bind {
 		cRef := s.connect(c, n)
-		conns[cRef.ID()] = map[string]interface{}{"interface": "test", "auto": opts.auto,
-			"plug-dynamic": map[string]interface{}{"bind": connRef.ID()}}
+		conns[cRef.ID()] = map[string]any{"interface": "test", "auto": opts.auto,
+			"plug-dynamic": map[string]any{"bind": connRef.ID()}}
 	}
 
 	st := d.Overlord().State()
@@ -1565,7 +1565,7 @@ func (s *apiSuite) testDisconnect(c *check.C, pW, pSdk, pName string, sW, sSdk, 
 	cmd := apiCmd("/v1/connections")
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 202)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
 	id := body["change"].(string)
@@ -1591,7 +1591,7 @@ func (s *apiSuite) testDisconnect(c *check.C, pW, pSdk, pName string, sW, sSdk, 
 func (s *apiSuite) TestDisconnectPlugSuccess(c *check.C) {
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", &disconnectOpts{})
 	s.d.state.Lock()
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 0)
 	s.d.state.Unlock()
@@ -1600,12 +1600,12 @@ func (s *apiSuite) TestDisconnectPlugSuccess(c *check.C) {
 func (s *apiSuite) TestDisconnectPlugAutoSuccess(c *check.C) {
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", &disconnectOpts{auto: true})
 	s.d.state.Lock()
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 1)
 	c.Assert(conns, check.DeepEquals,
-		map[string]interface{}{
-			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]interface{}{
+		map[string]any{
+			"b8639dea/consumer-ws/consumer:plug b8639dea/producer-ws/producer:slot": map[string]any{
 				"auto": true, "interface": "test", "undesired": true,
 			}})
 	s.d.state.Unlock()
@@ -1618,7 +1618,7 @@ func (s *apiSuite) TestDisconnectPlugForgetSuccess(c *check.C) {
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
 	s.d.state.Lock()
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 0)
 	s.d.state.Unlock()
@@ -1632,7 +1632,7 @@ func (s *apiSuite) TestDisconnectBoundPlugMasterSuccess(c *check.C) {
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug", "producer-ws", "producer", "slot", opts)
 	s.d.state.Lock()
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 0)
 	s.d.state.Unlock()
@@ -1646,7 +1646,7 @@ func (s *apiSuite) TestDisconnectBoundWithEmptyPlug(c *check.C) {
 	}
 	s.testDisconnect(c, "", "", "", "producer-ws", "producer", "slot", opts)
 	s.d.state.Lock()
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 0)
 	s.d.state.Unlock()
@@ -1660,7 +1660,7 @@ func (s *apiSuite) TestDisconnectBoundPlugSlaveSuccess(c *check.C) {
 	}
 	s.testDisconnect(c, "consumer-ws", "consumer", "plug2", "producer-ws", "producer", "slot", opts)
 	s.d.state.Lock()
-	var conns map[string]interface{}
+	var conns map[string]any
 	s.d.state.Get("conns", &conns)
 	c.Assert(conns, check.HasLen, 0)
 	s.d.state.Unlock()
@@ -1705,11 +1705,11 @@ func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `SDK "consumer-ws/consumer" has no plug named "missingplug"`,
 		},
 		"status":      "Bad Request",
@@ -1750,13 +1750,13 @@ func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 404)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
 
 	if producer {
-		c.Check(body, check.DeepEquals, map[string]interface{}{
-			"result": map[string]interface{}{
+		c.Check(body, check.DeepEquals, map[string]any{
+			"result": map[string]any{
 				"message": `cannot access workshop "consumer-ws": workshop not launched`,
 			},
 			"status":      "Not Found",
@@ -1764,8 +1764,8 @@ func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop
 			"type":        "error",
 		})
 	} else {
-		c.Check(body, check.DeepEquals, map[string]interface{}{
-			"result": map[string]interface{}{
+		c.Check(body, check.DeepEquals, map[string]any{
+			"result": map[string]any{
 				"message": `cannot access workshop "producer-ws": workshop not launched`,
 			},
 			"status":      "Not Found",
@@ -1806,11 +1806,11 @@ func (s *apiSuite) TestDisconnectPlugNothingToDo(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": "nothing to do",
 		},
 		"status":      "Bad Request",
@@ -1842,11 +1842,11 @@ func (s *apiSuite) TestDisconnectPlugFailureNotConnected(c *check.C) {
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `cannot disconnect "consumer-ws/consumer:plug" from "producer-ws/producer:slot": not connected`,
 		},
 		"status":      "Bad Request",
@@ -1879,11 +1879,11 @@ func (s *apiSuite) TestDisconnectForgetPlugFailureNotConnected(c *check.C) {
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `cannot forget connection between "consumer-ws/consumer:plug" and "producer-ws/producer:slot": not connected`,
 		},
 		"status":      "Bad Request",
@@ -1933,11 +1933,11 @@ func (s *apiSuite) TestDisconnectFailureOnConflict(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `cannot disconnect "consumer-ws/consumer:plug": other changes in progress`,
 		},
 		"status":      "Bad Request",
@@ -1955,11 +1955,11 @@ func (s *apiSuite) TestUnsupportedInterfaceRequest(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": "cannot decode request body into an interface action: invalid character 'g' looking for beginning of value",
 		},
 		"status":      "Bad Request",
@@ -1980,11 +1980,11 @@ func (s *apiSuite) TestMissingInterfaceAction(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": "interface action not specified",
 		},
 		"status":      "Bad Request",
@@ -2005,11 +2005,11 @@ func (s *apiSuite) TestUnsupportedInterfaceAction(c *check.C) {
 	rec := httptest.NewRecorder()
 	v1PostConnections(cmd, req.WithContext(s.ctx), nil).ServeHTTP(rec, req)
 	c.Check(rec.Code, check.Equals, 400)
-	var body map[string]interface{}
+	var body map[string]any
 	err = json.Unmarshal(rec.Body.Bytes(), &body)
 	c.Check(err, check.IsNil)
-	c.Check(body, check.DeepEquals, map[string]interface{}{
-		"result": map[string]interface{}{
+	c.Check(body, check.DeepEquals, map[string]any{
+		"result": map[string]any{
 			"message": `unsupported interface action: "foo"`,
 		},
 		"status":      "Bad Request",

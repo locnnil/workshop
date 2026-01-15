@@ -74,7 +74,7 @@ plugs:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"workshop-target": "/project"},
+		Attrs:     map[string]any{"workshop-target": "/project"},
 	})
 }
 
@@ -95,7 +95,7 @@ slots:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"workshop-source": "/project"},
+		Attrs:     map[string]any{"workshop-source": "/project"},
 	})
 }
 
@@ -119,10 +119,10 @@ plugs:
 		Sdk:       info,
 		Name:      "iface",
 		Interface: "complex",
-		Attrs: map[string]interface{}{
+		Attrs: map[string]any{
 			"i": int64(3),
-			"l": []interface{}{int64(1), int64(2), int64(3)},
-			"m": map[string]interface{}{"a": "A", "b": "B"},
+			"l": []any{int64(1), int64(2), int64(3)},
+			"m": map[string]any{"a": "A", "b": "B"},
 		},
 	})
 }
@@ -157,7 +157,7 @@ plugs:
 		Sdk:       info,
 		Name:      "mount",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"ipv6-aware": true},
+		Attrs:     map[string]any{"ipv6-aware": true},
 	})
 }
 
@@ -327,7 +327,7 @@ slots:
 		Sdk:       info,
 		Name:      "net",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"ipv6-aware": true},
+		Attrs:     map[string]any{"ipv6-aware": true},
 	})
 }
 
@@ -350,10 +350,10 @@ slots:
 		Sdk:       info,
 		Name:      "iface",
 		Interface: "complex",
-		Attrs: map[string]interface{}{
+		Attrs: map[string]any{
 			"i": int64(3),
-			"l": []interface{}{int64(1), int64(2)},
-			"m": map[string]interface{}{"a": "A"},
+			"l": []any{int64(1), int64(2)},
+			"m": map[string]any{"a": "A"},
 		},
 	})
 }
@@ -388,7 +388,7 @@ slots:
 		Sdk:       info,
 		Name:      "mount",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"ipv6-aware": true},
+		Attrs:     map[string]any{"ipv6-aware": true},
 	})
 }
 
@@ -508,10 +508,10 @@ slots:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"workshop-source": "/project"},
+		Attrs:     map[string]any{"workshop-source": "/project"},
 	})
-	slots := map[string]interface{}{
-		"cache": map[string]interface{}{
+	slots := map[string]any{
+		"cache": map[string]any{
 			"interface":       "mount",
 			"workshop-source": "/var/cache",
 		},
@@ -524,7 +524,7 @@ slots:
 		Sdk:       info,
 		Name:      "cache",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"workshop-source": "/var/cache"},
+		Attrs:     map[string]any{"workshop-source": "/var/cache"},
 	})
 }
 
@@ -545,10 +545,10 @@ slots:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"workshop-source": "/project"},
+		Attrs:     map[string]any{"workshop-source": "/project"},
 	})
-	slots := map[string]interface{}{
-		"training": map[string]interface{}{
+	slots := map[string]any{
+		"training": map[string]any{
 			"workshop-source": "/data",
 		},
 	}
@@ -573,10 +573,10 @@ plugs:
 		Sdk:       info,
 		Name:      "training",
 		Interface: "mount",
-		Attrs:     map[string]interface{}{"workshop-target": "/project"},
+		Attrs:     map[string]any{"workshop-target": "/project"},
 	})
-	plugs := map[string]interface{}{
-		"training": map[string]interface{}{
+	plugs := map[string]any{
+		"training": map[string]any{
 			"workshop-target": "/data",
 		},
 	}

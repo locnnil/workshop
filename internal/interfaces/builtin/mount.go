@@ -142,7 +142,7 @@ func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	return nil
 }
 
-func parseBool(attrs map[string]interface{}, key string, fallback bool) (bool, error) {
+func parseBool(attrs map[string]any, key string, fallback bool) (bool, error) {
 	object, ok := attrs[key]
 	if !ok {
 		attrs[key] = fallback
@@ -164,7 +164,7 @@ func parseBool(attrs map[string]interface{}, key string, fallback bool) (bool, e
 	}
 }
 
-func parseInt(attrs map[string]interface{}, key string, fallback int64) (int64, error) {
+func parseInt(attrs map[string]any, key string, fallback int64) (int64, error) {
 	object, ok := attrs[key]
 	if !ok {
 		attrs[key] = fallback
@@ -204,7 +204,7 @@ func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	return err
 }
 
-func parseMountPath(attrs map[string]interface{}, kind, key string, sk string) (string, error) {
+func parseMountPath(attrs map[string]any, kind, key string, sk string) (string, error) {
 	attr, exist := attrs[key]
 	if !exist {
 		return "", fmt.Errorf("mount %s must contain %q", kind, key)

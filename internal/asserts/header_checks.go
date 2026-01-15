@@ -31,7 +31,7 @@ import (
 
 // common checks used when decoding/assembling assertions
 
-func checkExistsStringWhat(m map[string]interface{}, name, what string) (string, error) {
+func checkExistsStringWhat(m map[string]any, name, what string) (string, error) {
 	value, ok := m[name]
 	if !ok {
 		return "", fmt.Errorf("%q %s is mandatory", name, what)
@@ -43,11 +43,11 @@ func checkExistsStringWhat(m map[string]interface{}, name, what string) (string,
 	return s, nil
 }
 
-func checkNotEmptyString(headers map[string]interface{}, name string) (string, error) {
+func checkNotEmptyString(headers map[string]any, name string) (string, error) {
 	return checkNotEmptyStringWhat(headers, name, "header")
 }
 
-func checkNotEmptyStringWhat(m map[string]interface{}, name, what string) (string, error) {
+func checkNotEmptyStringWhat(m map[string]any, name, what string) (string, error) {
 	s, err := checkExistsStringWhat(m, name, what)
 	if err != nil {
 		return "", err
@@ -58,7 +58,7 @@ func checkNotEmptyStringWhat(m map[string]interface{}, name, what string) (strin
 	return s, nil
 }
 
-func checkPrimaryKey(headers map[string]interface{}, primKey string) (string, error) {
+func checkPrimaryKey(headers map[string]any, primKey string) (string, error) {
 	value, err := checkNotEmptyString(headers, primKey)
 	if err != nil {
 		return "", err
@@ -72,7 +72,7 @@ func checkPrimaryKey(headers map[string]interface{}, primKey string) (string, er
 // use 'defl' default if missing
 //
 //nolint:unparam // Copied from snapd.
-func checkIntWithDefault(headers map[string]interface{}, name string, defl int) (int, error) {
+func checkIntWithDefault(headers map[string]any, name string, defl int) (int, error) {
 	value, ok := headers[name]
 	if !ok {
 		return defl, nil
@@ -94,7 +94,7 @@ func (e intSyntaxError) Error() string {
 	return string(e)
 }
 
-func atoi(valueStr, whichFmt string, whichArgs ...interface{}) (int, error) {
+func atoi(valueStr, whichFmt string, whichArgs ...any) (int, error) {
 	value, err := strconv.Atoi(valueStr)
 	if err != nil {
 		which := fmt.Sprintf(whichFmt, whichArgs...)
@@ -113,11 +113,11 @@ func prefixZeros(s string) bool {
 	return strings.HasPrefix(s, "0") && s != "0"
 }
 
-func checkRFC3339Date(headers map[string]interface{}, name string) (time.Time, error) {
+func checkRFC3339Date(headers map[string]any, name string) (time.Time, error) {
 	return checkRFC3339DateWhat(headers, name, "header")
 }
 
-func checkRFC3339DateWhat(m map[string]interface{}, name, what string) (time.Time, error) {
+func checkRFC3339DateWhat(m map[string]any, name, what string) (time.Time, error) {
 	dateStr, err := checkNotEmptyStringWhat(m, name, what)
 	if err != nil {
 		return time.Time{}, err
@@ -129,11 +129,11 @@ func checkRFC3339DateWhat(m map[string]interface{}, name, what string) (time.Tim
 	return date, nil
 }
 
-func checkDigest(headers map[string]interface{}, name string, h crypto.Hash) ([]byte, error) {
+func checkDigest(headers map[string]any, name string, h crypto.Hash) ([]byte, error) {
 	return checkDigestWhat(headers, name, h, "header")
 }
 
-func checkDigestWhat(headers map[string]interface{}, name string, h crypto.Hash, what string) ([]byte, error) {
+func checkDigestWhat(headers map[string]any, name string, h crypto.Hash, what string) ([]byte, error) {
 	digestStr, err := checkNotEmptyStringWhat(headers, name, what)
 	if err != nil {
 		return nil, err
@@ -153,12 +153,12 @@ func checkDigestWhat(headers map[string]interface{}, name string, h crypto.Hash,
 // if `m` has an entry for `name` and it isn't a `[]string`, an error is returned
 // if pattern is not nil, all the strings must match that pattern, otherwise an error is returned
 // `what` is a descriptor, used for error messages
-func checkStringListInMap(m map[string]interface{}, name, what string, pattern *regexp.Regexp) ([]string, error) {
+func checkStringListInMap(m map[string]any, name, what string, pattern *regexp.Regexp) ([]string, error) {
 	value, ok := m[name]
 	if !ok {
 		return nil, nil
 	}
-	lst, ok := value.([]interface{})
+	lst, ok := value.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be a list of strings", what)
 	}
@@ -179,16 +179,16 @@ func checkStringListInMap(m map[string]interface{}, name, what string, pattern *
 	return res, nil
 }
 
-func checkMap(headers map[string]interface{}, name string) (map[string]interface{}, error) {
+func checkMap(headers map[string]any, name string) (map[string]any, error) {
 	return checkMapWhat(headers, name, "header")
 }
 
-func checkMapWhat(m map[string]interface{}, name, what string) (map[string]interface{}, error) {
+func checkMapWhat(m map[string]any, name, what string) (map[string]any, error) {
 	value, ok := m[name]
 	if !ok {
 		return nil, nil
 	}
-	mv, ok := value.(map[string]interface{})
+	mv, ok := value.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("%q %s must be a map", name, what)
 	}

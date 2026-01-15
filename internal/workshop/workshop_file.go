@@ -43,7 +43,7 @@ func ProjectSdkPath(project, name string) string {
 
 type PlugOrBind struct {
 	Bind *PlugRef
-	Plug interface{}
+	Plug any
 }
 
 func (p *PlugOrBind) UnmarshalYAML(value *yaml.Node) error {
@@ -53,8 +53,8 @@ func (p *PlugOrBind) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	var plug struct {
-		Bind       *PlugRef               `yaml:"bind"`
-		Attributes map[string]interface{} `yaml:",inline"`
+		Bind       *PlugRef       `yaml:"bind"`
+		Attributes map[string]any `yaml:",inline"`
 	}
 	if err := value.Decode(&plug); err != nil {
 		return err
@@ -72,7 +72,7 @@ func (p *PlugOrBind) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (p PlugOrBind) MarshalYAML() (interface{}, error) {
+func (p PlugOrBind) MarshalYAML() (any, error) {
 	if p.Bind == nil {
 		return p.Plug, nil
 	}
@@ -85,7 +85,7 @@ func (p PlugOrBind) MarshalYAML() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{"bind": bind}, nil
+	return map[string]any{"bind": bind}, nil
 }
 
 type PlugRef struct {
@@ -121,19 +121,19 @@ func (b *PlugRef) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (b PlugRef) MarshalYAML() (interface{}, error) {
+func (b PlugRef) MarshalYAML() (any, error) {
 	return fmt.Sprintf("%s:%s", b.Sdk, b.Name), nil
 }
 
 type SdkRecord struct {
-	Name    string                 `yaml:"name"`
-	Channel string                 `yaml:"channel,omitempty"`
-	Source  sdk.Source             `yaml:"source,omitempty"`
-	Plugs   map[string]PlugOrBind  `yaml:"plugs,omitempty"`
-	Slots   map[string]interface{} `yaml:"slots,omitempty"`
+	Name    string                `yaml:"name"`
+	Channel string                `yaml:"channel,omitempty"`
+	Source  sdk.Source            `yaml:"source,omitempty"`
+	Plugs   map[string]PlugOrBind `yaml:"plugs,omitempty"`
+	Slots   map[string]any        `yaml:"slots,omitempty"`
 }
 
-func (s SdkRecord) MarshalYAML() (interface{}, error) {
+func (s SdkRecord) MarshalYAML() (any, error) {
 	switch s.Source {
 	case sdk.TrySource:
 		s.Name = fmt.Sprintf("try-%s", s.Name)
@@ -199,7 +199,7 @@ func (a Action) String() string {
 	return script
 }
 
-func (a Action) MarshalYAML() (interface{}, error) {
+func (a Action) MarshalYAML() (any, error) {
 	node := &yaml.Node{}
 	err := node.Encode(a.String())
 	return node, err

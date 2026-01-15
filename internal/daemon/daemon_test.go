@@ -905,7 +905,7 @@ func (s *daemonSuite) TestRestartExpectedRebootOK(c *check.C) {
 	st := d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	var v interface{}
+	var v any
 	// these were cleared
 	c.Check(st.Get("daemon-system-restart-at", &v), testutil.ErrorIs, state.ErrNoState)
 	c.Check(st.Get("system-restart-from-boot-id", &v), testutil.ErrorIs, state.ErrNoState)
@@ -929,7 +929,7 @@ func (s *daemonSuite) TestRestartExpectedRebootGiveUp(c *check.C) {
 	st := d.overlord.State()
 	st.Lock()
 	defer st.Unlock()
-	var v interface{}
+	var v any
 	// these were cleared
 	c.Check(st.Get("daemon-system-restart-at", &v), testutil.ErrorIs, state.ErrNoState)
 	c.Check(st.Get("system-restart-from-boot-id", &v), testutil.ErrorIs, state.ErrNoState)

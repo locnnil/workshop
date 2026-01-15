@@ -26,9 +26,9 @@ type ConnState struct {
 	Interface string `json:"interface,omitempty" yaml:"interface"`
 	// Undesired tracks connections that were manually disconnected after being auto-connected,
 	// so that they are not automatically reconnected again in the future.
-	Undesired        bool                   `json:"undesired,omitempty" yaml:"undesired"`
-	StaticPlugAttrs  map[string]interface{} `json:"plug-static,omitempty" yaml:"plug-static,omitempty"`
-	DynamicPlugAttrs map[string]interface{} `json:"plug-dynamic,omitempty" yaml:"plug-dynamic,omitempty"`
-	StaticSlotAttrs  map[string]interface{} `json:"slot-static,omitempty" yaml:"slot-static,omitempty"`
-	DynamicSlotAttrs map[string]interface{} `json:"slot-dynamic,omitempty" yaml:"slot-dynamic,omitempty"`
+	Undesired        bool           `json:"undesired,omitempty" yaml:"undesired"`
+	StaticPlugAttrs  map[string]any `json:"plug-static,omitempty" yaml:"plug-static,omitempty"`
+	DynamicPlugAttrs map[string]any `json:"plug-dynamic,omitempty" yaml:"plug-dynamic,omitempty"`
+	StaticSlotAttrs  map[string]any `json:"slot-static,omitempty" yaml:"slot-static,omitempty"`
+	DynamicSlotAttrs map[string]any `json:"slot-dynamic,omitempty" yaml:"slot-dynamic,omitempty"`
 }

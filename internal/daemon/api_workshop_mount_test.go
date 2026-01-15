@@ -104,7 +104,7 @@ func (s *apiSuite) TestWorkshopRemountBoundPlugSuccess(c *check.C) {
 	s.runMountTest(c, "manysdks", requests, expected)
 	conn, err := repo.Connection(ref[0])
 	c.Assert(err, check.IsNil)
-	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]interface{}{"host-source": src})
+	c.Assert(conn.Slot.DynamicAttrs(), check.DeepEquals, map[string]any{"host-source": src})
 }
 
 func (s *apiSuite) TestWorkshopRemountNoWorkshop(c *check.C) {

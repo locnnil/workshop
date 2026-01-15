@@ -99,8 +99,8 @@ func (s *execSuite) TestExitZero(c *C) {
 		Command: []string{"true"},
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"true"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"true"},
 	})
 	err := s.wait(c, process)
 	c.Assert(err, IsNil)
@@ -111,8 +111,8 @@ func (s *execSuite) TestExitNonZero(c *C) {
 		Command: []string{"false"},
 	}
 	process, reqBody := s.exec(c, opts, 1)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"false"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"false"},
 	})
 	err := s.wait(c, process)
 	exitError, ok := err.(*client.ExitError)
@@ -126,8 +126,8 @@ func (s *execSuite) TestTimeout(c *C) {
 		Timeout: time.Second,
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"sleep", "3"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"sleep", "3"},
 		"timeout": "1s",
 	})
 	err := s.wait(c, process)
@@ -150,9 +150,9 @@ func (s *execSuite) TestOtherOptions(c *C) {
 		Stderr:      io.Discard,
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command":     []interface{}{"echo", "foo"},
-		"environment": map[string]interface{}{"K1": "V1", "K2": "V2"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command":     []any{"echo", "foo"},
+		"environment": map[string]any{"K1": "V1", "K2": "V2"},
 		"working-dir": "WD",
 		"user-id":     1000.0,
 		"group-id":    2000.0,
@@ -169,8 +169,8 @@ func (s *execSuite) TestWaitChangeError(c *C) {
 		Command: []string{"foo"},
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"foo"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"foo"},
 	})
 
 	// Make /v1/changes/{id}/wait return a "change error"
@@ -194,8 +194,8 @@ func (s *execSuite) TestWaitTasksError(c *C) {
 		Command: []string{"foo"},
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"foo"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"foo"},
 	})
 
 	// Make /v1/changes/{id}/wait return no tasks
@@ -218,8 +218,8 @@ func (s *execSuite) TestWaitExitCodeError(c *C) {
 		Command: []string{"foo"},
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"foo"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"foo"},
 	})
 
 	// Make /v1/changes/{id}/wait return no exit code
@@ -246,8 +246,8 @@ func (s *execSuite) TestSendSignal(c *C) {
 		Command: []string{"server"},
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"server"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"server"},
 	})
 	err := process.SendSignal(syscall.SIGHUP)
 	c.Assert(err, IsNil)
@@ -264,8 +264,8 @@ func (s *execSuite) TestSendResize(c *C) {
 		Command: []string{"server"},
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"server"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"server"},
 	})
 	err := process.SendResize(150, 50)
 	c.Assert(err, IsNil)
@@ -290,8 +290,8 @@ func (s *execSuite) TestOutputCombinedForInteractive(c *C) {
 		Interactive: true,
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command":     []interface{}{"/bin/sh", "-c", "echo OUT; echo ERR >err"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command":     []any{"/bin/sh", "-c", "echo OUT; echo ERR >err"},
 		"interactive": true,
 	})
 	err := s.wait(c, process)
@@ -316,8 +316,8 @@ func (s *execSuite) TestOutputSplitForNonInteractive(c *C) {
 		Stderr:  &stderr,
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"/bin/sh", "-c", "echo OUT; echo ERR >err"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"/bin/sh", "-c", "echo OUT; echo ERR >err"},
 	})
 	err := s.wait(c, process)
 	c.Assert(err, IsNil)
@@ -337,8 +337,8 @@ func (s *execSuite) TestStdinAndStdout(c *C) {
 		Stdout:  &stdout,
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"awk", "{ print toupper($0) }"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"awk", "{ print toupper($0) }"},
 	})
 	err := s.wait(c, process)
 	c.Assert(err, IsNil)
@@ -355,8 +355,8 @@ func (s *execSuite) TestAction(c *C) {
 		Action:  true,
 	}
 	process, reqBody := s.exec(c, opts, 0)
-	c.Assert(reqBody, DeepEquals, map[string]interface{}{
-		"command": []interface{}{"tests"},
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"tests"},
 		"action":  true,
 	})
 	err := s.wait(c, process)
@@ -396,7 +396,7 @@ func (w *testWebsocket) Close() error {
 	return nil
 }
 
-func (w *testWebsocket) WriteJSON(v interface{}) error {
+func (w *testWebsocket) WriteJSON(v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -405,7 +405,7 @@ func (w *testWebsocket) WriteJSON(v interface{}) error {
 	return nil
 }
 
-func (s *execSuite) exec(c *C, opts *client.ExecOptions, exitCode int) (process *client.ExecProcess, requestBody map[string]interface{}) {
+func (s *execSuite) exec(c *C, opts *client.ExecOptions, exitCode int) (process *client.ExecProcess, requestBody map[string]any) {
 	if opts.Action {
 		s.addRunResponses("123", exitCode)
 	} else {

@@ -21,13 +21,13 @@ package metautil
 
 import "strings"
 
-func LookupAttr(static, dynamic map[string]interface{}, path string) (interface{}, bool) {
+func LookupAttr(static, dynamic map[string]any, path string) (any, bool) {
 	parts := strings.FieldsFunc(path, func(r rune) bool { return r == '.' })
 	if len(parts) == 0 {
 		return nil, false
 	}
 
-	var v interface{}
+	var v any
 	if _, ok := dynamic[parts[0]]; ok {
 		v = dynamic
 	} else {
@@ -35,7 +35,7 @@ func LookupAttr(static, dynamic map[string]interface{}, path string) (interface{
 	}
 
 	for _, part := range parts {
-		m, ok := v.(map[string]interface{})
+		m, ok := v.(map[string]any)
 		if !ok {
 			return nil, false
 		}

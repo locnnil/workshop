@@ -63,7 +63,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnected(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -156,7 +156,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedPlugs(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -210,7 +210,7 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -358,7 +358,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnected(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -497,7 +497,7 @@ func (s *connectionsSuite) TestConnectionsSomeConnectedBound(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -632,7 +632,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnected(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -763,7 +763,7 @@ func (s *connectionsSuite) TestConnectionsSomeDisconnectedBound(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -834,7 +834,7 @@ func (s *connectionsSuite) TestConnectionsOnlyDisconnected(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -874,7 +874,7 @@ func (s *connectionsSuite) TestConnectionsFiltering(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})
@@ -1112,7 +1112,7 @@ func (s *connectionsSuite) TestConnectionsSorting(c *check.C) {
 			body, err := io.ReadAll(r.Body)
 			c.Check(err, check.IsNil)
 			c.Check(body, check.DeepEquals, []byte{})
-			EncodeResponseBody(c, w, map[string]interface{}{
+			EncodeResponseBody(c, w, map[string]any{
 				"type":   "sync",
 				"result": result,
 			})

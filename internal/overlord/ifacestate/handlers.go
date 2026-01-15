@@ -125,7 +125,7 @@ func (m *InterfaceManager) remountSources(projectId, w, s string) map[string]str
 	return candidates
 }
 
-func (m *InterfaceManager) batchAutoConnectTasks(wp *workshop.Workshop, info *sdk.Info, refs []*interfaces.ConnRef, plugDynamic, slotDynamic map[string]map[string]interface{}) *state.TaskSet {
+func (m *InterfaceManager) batchAutoConnectTasks(wp *workshop.Workshop, info *sdk.Info, refs []*interfaces.ConnRef, plugDynamic, slotDynamic map[string]map[string]any) *state.TaskSet {
 
 	connectTs := state.NewTaskSet()
 	var affected = map[sdk.Ref]bool{}
@@ -188,8 +188,8 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 
 	var connectRefs = []*interfaces.ConnRef{}
 	var wconns = workshopConns(wp)
-	var plugDynamic = make(map[string]map[string]interface{})
-	var slotDynamic = make(map[string]map[string]interface{})
+	var plugDynamic = make(map[string]map[string]any)
+	var slotDynamic = make(map[string]map[string]any)
 
 	for _, plug := range info.Plugs {
 		ref := plug.Ref()
@@ -206,7 +206,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 		for _, slot := range candidates {
 			connRef := interfaces.NewConnRef(plug, slot)
 			if slotDynamic[connRef.ID()] == nil {
-				slotDynamic[connRef.ID()] = make(map[string]interface{})
+				slotDynamic[connRef.ID()] = make(map[string]any)
 			}
 
 			// remounts may be not nil when a previously existing mount
@@ -224,7 +224,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
 				if _, ok := conns[slref.ID()]; !ok {
 					connectRefs = append(connectRefs, slref)
-					plugDynamic[slref.ID()] = make(map[string]interface{})
+					plugDynamic[slref.ID()] = make(map[string]any)
 					plugDynamic[slref.ID()]["bind"] = connRef.ID()
 				}
 			}
@@ -254,7 +254,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 
 			connRef := interfaces.NewConnRef(plug, slot)
 			if slotDynamic[connRef.ID()] == nil {
-				slotDynamic[connRef.ID()] = make(map[string]interface{})
+				slotDynamic[connRef.ID()] = make(map[string]any)
 			}
 
 			// remounts may be not nil when a previously existing mount
@@ -272,7 +272,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				slref := &interfaces.ConnRef{PlugRef: slave, SlotRef: slotRef}
 				if _, ok := conns[slref.ID()]; !ok {
 					connectRefs = append(connectRefs, slref)
-					plugDynamic[slref.ID()] = make(map[string]interface{})
+					plugDynamic[slref.ID()] = make(map[string]any)
 					plugDynamic[slref.ID()]["bind"] = connRef.ID()
 				}
 			}
@@ -465,7 +465,7 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 		return fmt.Errorf("SDK %q has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
 	}
 
-	var plugDynamicAttrs, slotDynamicAttrs map[string]interface{}
+	var plugDynamicAttrs, slotDynamicAttrs map[string]any
 	if err = task.Get("plug-dynamic", &plugDynamicAttrs); err != nil && !errors.Is(err, state.ErrNoState) {
 		return err
 	}

@@ -84,10 +84,10 @@ $ workshop sketch-sdk nimble --stash`,
 }
 
 type SketchFile struct {
-	Name  string                 `yaml:"name"`
-	Plugs map[string]interface{} `yaml:"plugs,omitempty"`
-	Slots map[string]interface{} `yaml:"slots,omitempty"`
-	Hooks map[string]string      `yaml:"hooks,omitempty"`
+	Name  string            `yaml:"name"`
+	Plugs map[string]any    `yaml:"plugs,omitempty"`
+	Slots map[string]any    `yaml:"slots,omitempty"`
+	Hooks map[string]string `yaml:"hooks,omitempty"`
 }
 
 var sketchTemplate = `# Sketch SDK for %s
