@@ -182,7 +182,9 @@ func (t *ProjectTracker) Track(path string) (*Project, TrackResult, error) {
 
 	project, result, err := t.maybeFindProject(path, id)
 	if err == nil && project == nil {
-		return t.createProjectWithId(path, id)
+		// Ignore unrecognised project ID. Restore it from the path or
+		// generate a new one to avoid trusting user input.
+		return t.writeProjectId(path)
 	}
 	return project, result, err
 }
@@ -285,18 +287,6 @@ func (t *ProjectTracker) createProject(path string) (*Project, TrackResult, erro
 	return &project, ProjectAdded, nil
 }
 
-func (t *ProjectTracker) createProjectWithId(path, id string) (*Project, TrackResult, error) {
-	// If there is at least one workshop definition,
-	// we consider the path as a project and use the given ID.
-	if !isProject(path) {
-		return nil, ProjectError, ErrNotProject
-	}
-
-	project := Project{ProjectId: id, Path: path}
-	t.Projects = append(t.Projects, project)
-	return &project, ProjectAdded, nil
-}
-
 // A directory is a project if it has at least one workshop definition.
 func isProject(dir string) bool {
 	files, err := filepath.Glob(filepath.Join(dir, Directory, "*.yaml"))
@@ -329,12 +319,6 @@ func isProject(dir string) bool {
 }
 
 func (w *Project) updateLock() error {
-	lock, err := os.Create(LockPath(w.Path))
-	if err != nil {
-		return err
-	}
-	defer lock.Close()
-
 	// get the desired ownership
 	info, err := os.Stat(w.Path)
 	if err != nil {
@@ -346,16 +330,7 @@ func (w *Project) updateLock() error {
 		return err
 	}
 
-	if err = sys.Chown(lock, uid, gid); err != nil {
-		return err
-	}
-
-	_, err = lock.Write([]byte(w.ProjectId))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return osutil.AtomicWriteChown(LockPath(w.Path), strings.NewReader(w.ProjectId), 0666, 0, uid, gid)
 }
 
 func allocateProjectId() (string, error) {
