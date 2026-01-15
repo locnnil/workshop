@@ -8,6 +8,7 @@ __debug_bin*
 workshop
 workshopctl
 !workshop/
+!workshopctl/
 .spread-reuse.*
 .workshop.lock
 *.snap
