@@ -49,7 +49,7 @@ fmt
 func
 GCP
 gcs
-gencodo
+Gencodo
 gendocs
 GH
 GiB

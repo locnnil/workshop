@@ -63,7 +63,7 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 		SingleCommandTemplate: string(singleCommandTemplate),
 	}
 
-	err = gencodo.GenDocsTree(
+	err = gencodo.GenRSTTree(
 		c.root.Command(),
 		docDir,
 		td,

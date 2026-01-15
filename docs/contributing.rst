@@ -584,7 +584,7 @@ is produced directly from the Cobra command tree:
 
 
 The helper in ``cmd/workshop/gendocs.go``
-uses the `gencodo <https://github.com/canonical/gencodo>`_ Go module
+uses the `Gencodo <https://github.com/canonical/gencodo>`_ Go module
 to convert the command metadata into ``.rst`` files with clever templates.
 
 In particular, this is used during the
