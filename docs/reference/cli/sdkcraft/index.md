@@ -4,6 +4,8 @@
                  commands and global options for managing SDKcraft projects.
 ```
 
+(ref_sdkcraft__cli)=
+
 # sdkcraft (CLI)
 
 The `sdkcraft` utility exposes the following commands,

@@ -73,6 +73,9 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
    sudo snap install --classic workshop
 
 
+If this command fails, you may need an invitation;
+contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
+
 Alternatively, you can download the latest Workshop snap from the
 `Releases <https://github.com/canonical/workshop/releases/>`_
 page on GitHub and install it,
@@ -85,6 +88,10 @@ for example:
 .. code-block:: console
 
    sudo snap install --dangerous --classic ./workshop_0.1.29_amd64.snap
+
+
+The downside of this method is that you will need to manually
+check for and install updates.
 
 
 Prerequisites
