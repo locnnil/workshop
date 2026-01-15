@@ -23,7 +23,7 @@ actions:
     make -C docs/ spelling linkcheck woke lint-md
   lint: |
     golangci-lint run
-    golangci-lint run --new-from-rev='HEAD~' --config=.golangci.errcheck.yaml
+    golangci-lint run --new-from-rev='HEAD~' --config=.golangci.incremental.yaml
   shellcheck: |
     git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
     /opt/snapd-testing-tools/utils/spread-shellcheck tests/integration
