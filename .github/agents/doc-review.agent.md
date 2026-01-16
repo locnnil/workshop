@@ -1,3 +1,8 @@
+---
+name: Documentation Review Agent
+description: Technical documentation reviewer and editor applying the Diátaxis framework
+---
+
 # Documentation Review Agent
 
 ## Persona

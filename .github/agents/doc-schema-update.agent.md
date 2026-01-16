@@ -1,4 +1,9 @@
-Title: Reconcile workshop_file.go Validation Logic with schema.json
+---
+name: Schema Update Agent
+description: Reconciles workshop_file.go validation logic with schema.json
+---
+
+# Schema Update Agent
 
 Mission:
 Ensure that the JSON schema at docs/reference/definition-files/schema.json precisely reflects the validation and parsing rules enforced in internal/workshop/workshop_file.go, correcting only those discrepancies where the Go verification logic clearly requires a different mandatory structure or constraint than what the schema currently defines.
