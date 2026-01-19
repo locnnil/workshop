@@ -50,59 +50,93 @@ That's where |ws_markup| thrives.
 ----
 
 
+
 In this documentation
 ---------------------
 
-.. grid:: 1 1 2 2
+.. list-table::
+   :widths: 20 80
+   :class: borderless
 
-   .. grid-item-card:: :doc:`Tutorial <tutorial/index>`
+   * - **Tutorial**
+     - :ref:`Get started <tut_get_started>` •
+       :ref:`Work with interfaces <tut_interfaces>` •
+       :ref:`Sketch SDKs <tut_sketch_sdks>` •
+       :ref:`Craft SDKs <tut_craft_sdks>`
 
-      | :ref:`Part 1: Get started <tut_get_started>`
-      | :ref:`Part 2: Work with interfaces <tut_interfaces>`
-      | :ref:`Part 3: Sketch SDKs <tut_sketch_sdks>`
-      | :ref:`Part 4: Craft SDKs <tut_craft_sdks>`
+   * - **Workshops**
+     - :ref:`Concepts <exp_workshop_concepts>` •
+       :ref:`Launch <ref_workshop_launch>` •
+       :ref:`Refresh <ref_workshop_refresh>` •
+       :ref:`Connect <ref_workshop_connect>` •
+       :ref:`Shell access <ref_workshop_shell>` •
+       :ref:`Add actions <how_add_actions>` •
+       :ref:`Status diagrams <ref_workshop_status>` •
+       :ref:`Definition file <ref_workshop_definition>`
 
-   .. grid-item-card:: :doc:`How-to guides <how-to/index>`
+   * - **SDKs**
+     - :ref:`Concepts <exp_sdk_concepts>` •
+       :ref:`Sketch SDKs in-place <tut_sketch_sdks>` •
+       :ref:`Craft full SDKs <tut_craft_sdks>` •
+       :ref:`Design best practices <exp_sdk_best_practices>` •
+       :ref:`SDKs vs Dockerfiles <exp_dockerfile_vs_sdk>` •
+       :ref:`Definition file <ref_sdk_definition>` •
+       :ref:`Internals <ref_sdk_internals>`
 
-      Step-by-step guides for common |ws_markup| and |sdk_markup| tasks
+   * - **Interfaces**
+     - :ref:`Concepts <exp_interface_concepts>` •
+       :ref:`Camera <exp_camera_interface>` •
+       :ref:`Desktop <exp_desktop_interface>` •
+       :ref:`GPU <exp_gpu_interface>` •
+       :ref:`Mounts <exp_mount_interface>` •
+       :ref:`SSH agent <exp_ssh_interface>` •
+       :ref:`Networking <exp_tunnel_interface>`
+
+   * - **Development**
+     - :ref:`Connect VS Code <how_vscode_connect_remote>` •
+       :ref:`JetBrains Gateway <how_jetbrains_gateway>` •
+       :ref:`VS Code in browser <how_vscode_run_in_browser>` •
+       :ref:`JupyterLab in browser <how_jupyterlab_run_in_browser>` •
+       :ref:`Use with Git <how_git_workshops>` •
+       :ref:`GitHub Actions locally <how_run_github_actions_locally>`
+
+   * - **Projects**
+     - :ref:`Concepts <exp_projects>` •
+       :ref:`Move projects <how_move_projects>` •
+       :ref:`Update projects <tut_project_updates>` •
+       :ref:`Changes and tasks <exp_changes_tasks>`
+
+   * - **Troubleshooting**
+     - :ref:`Debug workshops <how_debug_issues_workshops>` •
+       :ref:`Fix installation <how_troubleshoot>` •
+       :ref:`Resolve plug conflicts <how_resolve_plug_conflicts>` •
+       :ref:`Purge workshops <how_purge>`
+
+   * - **Reference**
+     - :ref:`Workshop CLI <ref_workshop__cli>` •
+       :ref:`SDKcraft CLI <ref_sdkcraft__cli>` •
+       :ref:`Workshop internals <ref_workshop_internals>` •
+       :ref:`SDK internals <ref_sdk_internals>` •
+       :ref:`Runtime behavior <exp_arch_runtime_behavior>`
 
 
-   .. grid-item-card:: :doc:`Explanation <explanation/index>`
+How this documentation is organised
+------------------------------------
 
-      Discussion and clarification of key topics
+This documentation follows the `Diátaxis documentation framework <https://diataxis.fr/>`_,
+organizing content by the type of information users need.
 
+:doc:`Tutorial <tutorial/index>`: Hands-on learning path for new |ws_markup| users,
+progressing from basic operations through interface usage to SDK development.
 
-   .. grid-item-card:: :doc:`Reference <reference/index>`
+:doc:`How-to guides <how-to/index>`: Step-by-step instructions for specific tasks
+like connecting IDEs, managing projects, and troubleshooting issues.
 
-      Technical details, specifications, APIs
+:doc:`Reference <reference/index>`: Technical specifications for CLI commands,
+definition file formats, and internal behavior.
 
-
-- **Projects**: :ref:`Concepts <exp_projects>` |
-  :ref:`Move projects <how_move_projects>` |
-  :ref:`Update projects <tut_project_updates>`
-
-- **Workshops**: :ref:`Concepts <exp_workshop_concepts>` |
-  :ref:`Internals <ref_workshop_internals>` |
-  :ref:`Definition file <ref_workshop_definition>` |
-  :ref:`Status diagrams <ref_workshop_status>` |
-  :ref:`Debug workshops <how_debug_issues_workshops>`
-
-- **SDKs**: :ref:`Concepts <exp_sdk_concepts>` |
-  :ref:`Internals <ref_sdk_internals>` |
-  :ref:`Definition file <ref_sdk_definition>` |
-  :ref:`Sketch SDKs in-place <tut_sketch_sdks>` |
-  :ref:`Craft full SDKs <tut_craft_sdks>`
-
-- **Interfaces**: :ref:`Concepts <exp_interface_concepts>` |
-  :ref:`Camera <exp_camera_interface>` |
-  :ref:`Desktop <exp_desktop_interface>` |
-  :ref:`GPU <exp_gpu_interface>` |
-  :ref:`Mounts <exp_mount_interface>` |
-  :ref:`SSH agent <exp_ssh_interface>` |
-  :ref:`Networking <exp_tunnel_interface>`
-
-- **Utilities**: :ref:`Command-line tools <ref_cli>` |
-  :ref:`Troubleshoot installation <how_troubleshoot>`
+:doc:`Explanation <explanation/index>`: In-depth discussion of |ws_markup| architecture,
+concepts, and design principles.
 
 ----
 
@@ -131,17 +165,21 @@ and we'll see what |ws_markup| can do for you.
 Let us know if you have an SDK or framework to try with |ws_markup|:
 we'll help you get it out there.
 
+.. rubric:: Get involved
+
+- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
+- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
+- :ref:`Contribution and participation <contributing>`
+
+.. rubric:: Releases and roadmap
+
+- :ref:`Release notes <release_notes>`
+- `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
+
+.. rubric:: Governance and policies
 
 - `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
 
-- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
-
-- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
-
-- `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
-
-- :ref:`Contribution and participation <contributing>`
-
-- :ref:`Release notes <release_notes>`
+.. rubric:: Feedback and support
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues>`__
