@@ -146,7 +146,7 @@ Project and community
 ---------------------
 
 |ws_markup| is an emergent project
-within the Enterprise Engineering department here at Canonical;
+within the DevEx department here at Canonical;
 |sdk_markup| is its sibling project,
 aimed at publishers who create and distribute SDKs for |ws_markup|.
 
