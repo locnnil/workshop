@@ -707,7 +707,7 @@ Code quality and testing workflows:
      - Check for fixup and squash commits in pull requests.
 
    * - ``lint.yaml``
-     - Run ``golangci-lint`` and ``errcheck`` on Go code.
+     - Run ``golangci-lint`` on Go code.
 
    * - ``scanning.yml``
      - Scan for known security vulnerabilities using Trivy.

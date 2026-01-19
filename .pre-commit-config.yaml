@@ -4,10 +4,10 @@ repos:
     hooks:
       - id: golangci-lint
       - id: golangci-lint
-        alias: errcheck
-        name: errcheck
+        alias: golangci-incremental
+        name: golangci-incremental
         args:
-          - --config=.golangci.errcheck.yaml
+          - --config=.golangci.incremental.yaml
 
   - repo: local
     hooks:

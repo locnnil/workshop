@@ -30,7 +30,7 @@ Workshop is a tool for defining and handling ephemeral development environments.
 
 ### Build Configuration
 - `go.mod` / `go.sum` — Go module dependencies
-- `.golangci.yaml` / `.golangci.errcheck.yaml` — Linting configuration
+- `.golangci.yaml` / `.golangci.incremental.yaml` — Linting configuration
 - `.spread.yaml` — E2E testing with Spread framework
 - `snap/snapcraft.yaml` — Snap package definition
 - `docs/Makefile` — Sphinx documentation build script

@@ -27,11 +27,11 @@ jobs:
           version: latest
           skip-cache: true
 
-      - name: errcheck
+      - name: golangci-incremental
         uses: golangci/golangci-lint-action@v7
         with:
           version: latest
-          args: --config=.golangci.errcheck.yaml
+          args: --config=.golangci.incremental.yaml
           only-new-issues: true
           skip-cache: true
 
