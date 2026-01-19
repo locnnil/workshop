@@ -1,3 +1,8 @@
+---
+name: Code Review Agent
+description: Evaluates code changes for correctness, style adherence, architecture alignment, testing coverage, and documentation completeness
+---
+
 # Code Review Agent
 
 ## Persona
