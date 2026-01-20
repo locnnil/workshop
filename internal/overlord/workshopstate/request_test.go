@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"os/user"
 	"path/filepath"
 	"testing"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -22,10 +24,14 @@ import (
 
 type requestSuite struct {
 	state   *state.State
+	user    *user.User
 	project workshop.Project
 	backend workshop.Backend
 	mgr     *workshopstate.WorkshopManager
 	ctx     context.Context
+
+	restoreUserLookup func()
+	restoreUserEnv    func()
 }
 
 var _ = check.Suite(&requestSuite{})
@@ -37,6 +43,17 @@ func (s *requestSuite) SetUpTest(c *check.C) {
 	s.state = state.New(nil)
 	s.ctx = context.WithValue(context.Background(), workshop.ContextUser, "testuser")
 
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir()}
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
+
 	s.backend, err = fakebackend.New(c.MkDir())
 	c.Assert(err, check.IsNil)
 	workshop.ReplaceBackend(s.state, s.backend)
@@ -45,6 +62,11 @@ func (s *requestSuite) SetUpTest(c *check.C) {
 	c.Assert(err, check.IsNil)
 	s.project = *project
 	s.ctx = context.WithValue(s.ctx, workshop.ContextProjectId, s.project.ProjectId)
+}
+
+func (s *requestSuite) TearDownTest(c *check.C) {
+	s.restoreUserEnv()
+	s.restoreUserLookup()
 }
 
 var workshopTemplate = `name: %s

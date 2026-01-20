@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -37,9 +38,12 @@ type sdkStateSuite struct {
 	sdkmgr      *sdkstate.SdkManager
 	repo        *interfaces.Repository
 	ctx         context.Context
+	user        *user.User
 	project     workshop.Project
 	installTime time.Time
 
+	restoreUserLookup  func()
+	restoreUserEnv     func()
 	restoreProjectId   func()
 	restoreInstallTime func()
 }
@@ -102,6 +106,17 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
+
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir()}
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
 
 	s.backend, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
@@ -174,6 +189,8 @@ func mockIface(c *check.C, repo *interfaces.Repository, iface interfaces.Interfa
 }
 
 func (s *sdkStateSuite) TearDownTest(c *check.C) {
+	s.restoreUserLookup()
+	s.restoreUserEnv()
 	s.restoreProjectId()
 	s.restoreInstallTime()
 }

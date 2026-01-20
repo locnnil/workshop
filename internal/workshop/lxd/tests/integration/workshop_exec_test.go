@@ -34,6 +34,7 @@ type wsExec struct {
 	project             workshop.Project
 	lookupUserRestore   func()
 	lookupUserIdRestore func()
+	userEnvRestore      func()
 	newProjectidRestore func()
 	restoreImageServer  func()
 	restoreDevices      func()
@@ -59,6 +60,21 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
 	f.restoreImageServer = lxdbackend.FakeImageServer(helper.MinimalImageServer)
+
+	f.usr = &user.User{
+		Username: "testuser",
+		Uid:      "1000",
+		Gid:      "1000",
+	}
+	f.lookupUserRestore = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		return f.usr, nil
+	})
+	f.lookupUserIdRestore = testutil.FakeFunc(func(uid string) (*user.User, error) {
+		return f.usr, nil
+	}, &daemon.LookupUserId)
+	f.userEnvRestore = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
 
 	socketPath := c.MkDir() + ".workshop.socket"
 	var err error
@@ -86,24 +102,10 @@ func (f *wsExec) SetUpSuite(c *check.C) {
 		Path:      c.MkDir(),
 	}
 
-	f.usr = &user.User{
-		Username: "testuser",
-		Uid:      "1000",
-		Gid:      "1000",
-	}
-
 	f.ctx = helper.CreateTestContext(f.usr.Username, f.project.ProjectId)
 
 	f.lxdClient, err = f.be.(*lxdbackend.Backend).LxdClient(f.ctx)
 	c.Check(err, check.IsNil)
-
-	f.lookupUserRestore = osutil.FakeUserLookup(func(name string) (*user.User, error) {
-		return f.usr, nil
-	})
-
-	f.lookupUserIdRestore = testutil.FakeFunc(func(uid string) (*user.User, error) {
-		return f.usr, nil
-	}, &daemon.LookupUserId)
 
 	f.restoreDevices = workshop.FakeDefaultDevices(execTestDevices(c.MkDir()))
 
@@ -120,6 +122,7 @@ func (f *wsExec) TearDownSuite(c *check.C) {
 	c.Check(err, check.IsNil)
 	f.lookupUserRestore()
 	f.lookupUserIdRestore()
+	f.userEnvRestore()
 	f.newProjectidRestore()
 	f.restoreImageServer()
 	f.restoreDevices()

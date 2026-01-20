@@ -16,6 +16,7 @@ import (
 	"github.com/canonical/x-go/strutil"
 
 	"github.com/canonical/workshop/internal/fsutil"
+	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
@@ -647,7 +648,7 @@ func (s *FakeWorkshopBackend) sdkVolume(name string, volume FakeVolume) workshop
 }
 
 func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
-	_, projectId, err := b.userProject(ctx)
+	user, projectId, err := b.userProject(ctx)
 	if err != nil {
 		return err
 	}
@@ -665,7 +666,12 @@ func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup
 		InstallTime:  workshop.InstallTimeNow(),
 	}
 
-	userDataDir := filepath.Join(b.BaseDir, "share")
+	usr, env, err := osutil.UserAndEnv(user)
+	if err != nil {
+		return err
+	}
+	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
+
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
 	if mount.Type == workshop.Volume {
 		return b.attachVolume(ctx, name, mount)
