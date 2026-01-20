@@ -101,6 +101,7 @@ func SdkMount(userDataDir, pid, w string, setup sdk.Setup) Mount {
 		Name:      SdkDeviceName(setup.Name),
 		Where:     sdk.SdkDir(setup.Name),
 		MakeWhere: true,
+		Mode:      0755,
 		ReadOnly:  true,
 	}
 

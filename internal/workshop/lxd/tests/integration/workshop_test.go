@@ -103,10 +103,28 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
 
 	// Create some snapshots.
-	err := f.bd.Snapshot(f.ctx, "test", "test-sdk-1")
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
+		},
+		Sdks: []sdk.Id{{
+			Name:     "test-sdk-1",
+			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
+			IsVolume: true,
+		}},
+	}
+	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
-	err = f.bd.Snapshot(f.ctx, "test", "test-sdk-2")
+
+	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+		Name:     "test-sdk-2",
+		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+		IsVolume: true,
+	})
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
+
 	snapshots := f.listSnapshots(c, "test", false)
 	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
@@ -145,7 +163,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = f.bd.DownloadBase(f.ctx, image, nil)
 	c.Assert(err, check.IsNil)
-	snapshot := workshop.Snapshot{Image: image}
+	snapshot = workshop.Snapshot{Image: image}
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -273,10 +291,28 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	// Create some snapshots.
-	err := f.bd.Snapshot(f.ctx, "test", "test-sdk-1")
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
+		},
+		Sdks: []sdk.Id{{
+			Name:     "test-sdk-1",
+			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
+			IsVolume: true,
+		}},
+	}
+	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
-	err = f.bd.Snapshot(f.ctx, "test", "test-sdk-2")
+
+	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+		Name:     "test-sdk-2",
+		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+		IsVolume: true,
+	})
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
+
 	snapshots := f.listSnapshots(c, "test", false)
 	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
@@ -420,10 +456,28 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 
 	// Create some snapshots.
-	err := f.bd.Snapshot(f.ctx, "test", "test-sdk-1")
+	snapshot := workshop.Snapshot{
+		Image: workshop.BaseImage{
+			Name:        "ubuntu@24.04",
+			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
+		},
+		Sdks: []sdk.Id{{
+			Name:     "test-sdk-1",
+			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
+			IsVolume: true,
+		}},
+	}
+	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
-	err = f.bd.Snapshot(f.ctx, "test", "test-sdk-2")
+
+	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+		Name:     "test-sdk-2",
+		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+		IsVolume: true,
+	})
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
+
 	snapshots := f.listSnapshots(c, "test", false)
 	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
@@ -860,7 +914,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 
 	err = f.bd.InstallSdk(f.ctx, "test", meta.Setup)
 	c.Assert(err, check.IsNil)
-	defer func() { c.Check(f.bd.UninstallSdk(f.ctx, "test", meta.Setup), check.IsNil) }()
+	defer func() { c.Check(f.bd.UninstallSdk(f.ctx, "test", meta.Name), check.IsNil) }()
 
 	// Check that "test-sdk" directory is mounted.
 	fs, err := f.bd.WorkshopFs(f.ctx, "test")
@@ -876,20 +930,20 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Check(info.Meta, check.Equals, saved)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}})
 
-	err = f.bd.Snapshot(f.ctx, "test", "test-sdk")
+	snapshot := workshop.SdkSnapshot(w.Image, []sdk.Setup{meta.Setup})
+	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
 	// Install SDK 2 post-snapshot. It should be gone post-restore.
 	err = f.bd.InstallSdk(f.ctx, "test", meta2.Setup)
 	c.Assert(err, check.IsNil)
-	defer func() { _ = f.bd.UninstallSdk(f.ctx, "test", meta2.Setup) }()
+	defer func() { _ = f.bd.UninstallSdk(f.ctx, "test", meta2.Name) }()
 
 	// Restore the workshop from the snapshot.
 	err = f.bd.StopWorkshop(f.ctx, "test", true)
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
-	snapshot := workshop.SdkSnapshot(w.Image, []sdk.Setup{meta.Setup})
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -955,7 +1009,7 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}})
 
 	// Detach the volume from the first workshop.
-	err = f.bd.UninstallSdk(f.ctx, "test", meta.Setup)
+	err = f.bd.UninstallSdk(f.ctx, "test", meta.Name)
 	c.Assert(err, check.IsNil)
 
 	// Validate UsedBy in VolumeInfo.
@@ -964,6 +1018,6 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	c.Check(info.Meta, check.Equals, meta)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{other.ProjectId: {"test"}})
 
-	err = f.bd.UninstallSdk(otherCtx, "test", meta.Setup)
+	err = f.bd.UninstallSdk(otherCtx, "test", meta.Name)
 	c.Assert(err, check.IsNil)
 }

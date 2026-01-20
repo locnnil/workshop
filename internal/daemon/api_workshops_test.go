@@ -18,7 +18,6 @@ import (
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
-	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
@@ -1002,10 +1001,12 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
 	sdks := make([]sdk.Meta, 0, len(actions))
 	for _, act := range actions {
-		setup := apiSuiteSdks[act.Name].Setup
-		setup.Channel = act.Channel
-		sdkYaml := apiSuiteSdks[act.Name].SdkYAML
-		sdks = append(sdks, sdk.Meta{Setup: setup, SdkYAML: sdkYaml})
+		sk, ok := apiSuiteSdks[act.Name]
+		if !ok {
+			return nil, fmt.Errorf("%q SDK not found in Store", act.Name)
+		}
+		sk.Channel = act.Channel
+		sdks = append(sdks, sk)
 	}
 	return sdks, nil
 }
@@ -1202,130 +1203,6 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
-}
-
-func (s *apiSuite) TestLaunchWorkshopNoTrySdk(c *check.C) {
-	s.daemon(c)
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
-	// Setup
-	s.createWFile(c, "manysdks", manysdks_try)
-	defer s.store.SetDownloadCallback(storeDownload)()
-
-	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-	}
-	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
-	trydir := workshop.TrySdkDir(userDataDir, "test-sdk")
-	message := fmt.Sprintf(`cannot launch "manysdks": SDK "try-test-sdk" not found: open %s: no such file or directory`, trydir)
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: message,
-		},
-	}
-	s.runActionTest(c, requests, expected)
-
-	c.Assert(os.MkdirAll(trydir, os.ModePerm), check.IsNil)
-
-	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-	}
-	filename := fmt.Sprintf("test-sdk_%s_ubuntu@22.04.sdk", arch.DpkgArchitecture())
-	tryfile := filepath.Join(trydir, filename)
-	message = fmt.Sprintf(`cannot launch "manysdks": SDK "try-test-sdk" not found: openat %s: no such file or directory`, tryfile)
-	expected = []*expectedResp{
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: message,
-		},
-	}
-	s.runActionTest(c, requests, expected)
-
-	c.Assert(os.WriteFile(tryfile, nil, 0666), check.IsNil)
-
-	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-	}
-	trydigest := tryfile + ".sha3-384"
-	message = fmt.Sprintf(`cannot launch "manysdks": invalid SDK "try-test-sdk": openat %s: no such file or directory`, trydigest)
-	expected = []*expectedResp{
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: message,
-		},
-	}
-	s.runActionTest(c, requests, expected)
-
-	c.Assert(os.WriteFile(trydigest, nil, 0666), check.IsNil)
-
-	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-	}
-	trymeta := tryfile + ".yaml"
-	message = fmt.Sprintf(`cannot launch "manysdks": invalid SDK "try-test-sdk": openat %s: no such file or directory`, trymeta)
-	expected = []*expectedResp{
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: message,
-		},
-	}
-	s.runActionTest(c, requests, expected)
-
-	_, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
-
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
-
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
-}
-
-func (s *apiSuite) TestLaunchWorkshopNoProjectSdk(c *check.C) {
-	s.daemon(c)
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
-	// Setup
-	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
-	s.createWFile(c, "manysdks", manysdks_project)
-	defer s.store.SetDownloadCallback(storeDownload)()
-
-	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-	}
-
-	message := fmt.Sprintf(`cannot launch "manysdks": stat %s/.workshop/test-sdk: no such file or directory`, s.project.Path)
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: message,
-		},
-	}
-
-	s.runActionTest(c, requests, expected)
-
-	_, err := s.b.Workshop(s.ctx, "manysdks")
-	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
-
-	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", sdk.System.String()), check.HasLen, 0)
-
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk"), check.HasLen, 0)
-
-	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
-	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
@@ -1787,7 +1664,9 @@ func (s *apiSuite) checkSnapshotCalls(c *check.C, name string, sdks []string) {
 	c.Assert(wpCalls, check.HasLen, len(sdks))
 
 	for i, sk := range sdks {
-		c.Assert(wpCalls[i].Sdk, check.Equals, sk)
+		ids := wpCalls[i].Snapshot.Sdks
+		c.Assert(ids, check.Not(check.HasLen), 0)
+		c.Check(ids[len(ids)-1].Name, check.Equals, sk)
 	}
 }
 
@@ -1960,8 +1839,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
-	s.checkSnapshotCalls(c, "basic", []string{
-		"system"})
+	s.checkSnapshotCalls(c, "basic", []string{"system"})
 
 	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "basic", basic_refreshed)

@@ -19,64 +19,78 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-func SdkSetup(task *state.Task) (sdk.Setup, error) {
+func SdkSetup(task *state.Task, w string) (sdk.Setup, error) {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
-	var retrieveId string
-	var sdkSetup sdk.Setup
+	// Some tasks, notably unregister-sdk, store the sdk.Setup directly,
+	// since it isn't stored anywhere else. Note that the unregister-sdk
+	// handler only needs the SDK name, but the cleanup handler needs more.
+	var setup sdk.Setup
+	if err := task.Get("sdk-setup", &setup); err == nil {
+		return setup, nil
+	}
 
-	if err := task.Get("sdk-retrieve-task", &retrieveId); err != nil {
+	// Tasks like install-sdk and register-sdk can reuse the sdk.Setup
+	// from the launch or refresh Change.
+	var sk string
+	if err := task.Get("sdk", &sk); err != nil {
 		return sdk.Setup{}, err
 	}
 
-	retrieve := st.Task(retrieveId)
-	if retrieve == nil {
-		return sdk.Setup{}, fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
-	}
-
-	if err := retrieve.Get("sdk-setup", &sdkSetup); err != nil {
+	setups, err := WorkshopSdks(task.Change(), w)
+	if err != nil {
 		return sdk.Setup{}, err
 	}
-	return sdkSetup, nil
+
+	idx := slices.IndexFunc(setups, func(s sdk.Setup) bool {
+		return s.Name == sk
+	})
+	if idx < 0 {
+		return sdk.Setup{}, fmt.Errorf("internal error: %q workshop has no %q SDK", w, sk)
+	}
+	return setups[idx], nil
 }
 
-func maybeSdkYaml(task *state.Task) (string, error) {
+func sdkName(task *state.Task) (string, error) {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
-	var retrieveId string
-	var sdkYaml string
-
-	if err := task.Get("sdk-retrieve-task", &retrieveId); err != nil {
+	var sk string
+	if err := task.Get("sdk", &sk); err != nil {
 		return "", err
 	}
+	return sk, nil
+}
 
-	retrieve := st.Task(retrieveId)
-	if retrieve == nil {
-		return "", fmt.Errorf("internal error: no corresponding retrieve-sdk task found")
+// replaceSdkSetup updates a launch or refresh change with the latest SDK
+// revision, if it changed between the planning phase and retrieval. TODO:
+// remove this once the Store supports downloading a specific revision.
+func replaceSdkSetup(change *state.Change, w string, setup sdk.Setup) {
+	setups, err := WorkshopSdks(change, w)
+	if err != nil {
+		// Nothing to replace.
+		return
 	}
 
-	if err := retrieve.Get("sdk-yaml", &sdkYaml); err != nil {
-		return "", nil
+	for i, s := range setups {
+		if s.Name == setup.Name {
+			setups[i] = setup
+			change.Set(WorkshopSdksKey(w), setups)
+			break
+		}
 	}
-	return sdkYaml, nil
 }
 
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, _, err := UserProjectWorkshop(task)
+	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		return err
 	}
 
-	st := task.State()
-	var rec sdk.Setup
-
-	st.Lock()
-	err = task.Get("sdk-setup", &rec)
-	st.Unlock()
+	rec, err := SdkSetup(task, w)
 	if err != nil {
 		return err
 	}
@@ -84,6 +98,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
+	st := task.State()
 	reporter := &progress.Reporter{
 		Name: task.ID(),
 		Report: func(label string, done, total int) {
@@ -112,13 +127,17 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	// since DownloadSdk won't return metadata after that).
 	if meta.Revision != rec.Revision {
 		st.Lock()
-		task.Set("sdk-setup", meta.Setup)
-		// Ideally we would validate the YAML here, but we can't check
-		// the base without knowing about the workshop. And this task
-		// should remain workshop-agnostic if possible. Instead we
-		// pass it to doInstallSdk and validate there.
-		task.Set("sdk-yaml", meta.SdkYAML)
+		change := task.Change()
+		replaceSdkSetup(change, w, meta.Setup)
+		base, err := WorkshopBase(change, w)
 		st.Unlock()
+		if err != nil {
+			return err
+		}
+
+		if err := workshop.ValidateSdkInfo(project.ProjectId, w, base.Name, meta.Name, meta.SdkYAML); err != nil {
+			return err
+		}
 	}
 
 	file, err := os.Open(meta.Filepath())
@@ -141,29 +160,13 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	sdkSetup, err := SdkSetup(task)
+	sdkSetup, err := SdkSetup(task, w)
 	if err != nil {
 		return err
 	}
 
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
-
-	// TODO: Remove this section when we can download a specific SDK
-	// revision from the Store (this revision was validated earlier).
-	wp, err := m.backend.Workshop(ctx, w)
-	if err != nil {
-		return err
-	}
-	sdkYaml, err := maybeSdkYaml(task)
-	if err != nil {
-		return err
-	}
-	if sdkYaml != "" {
-		if err := workshop.ValidateSdkInfo(project.ProjectId, wp.File, sdkSetup.Name, sdkYaml); err != nil {
-			return err
-		}
-	}
 
 	return m.backend.InstallSdk(ctx, w, sdkSetup)
 }
@@ -174,15 +177,15 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
-	sdkSetup, err := SdkSetup(task)
+	sk, err := sdkName(task)
 	if err != nil {
 		return err
 	}
 
-	return m.backend.UninstallSdk(ctx, w, sdkSetup)
+	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
+	defer cancel()
+
+	return m.backend.UninstallSdk(ctx, w, sk)
 }
 
 func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -191,7 +194,7 @@ func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	setup, err := SdkSetup(task)
+	sk, err := sdkName(task)
 	if err != nil {
 		return err
 	}
@@ -204,7 +207,7 @@ func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	info, err := wp.SdkInfo(ctx, setup.Name)
+	info, err := wp.SdkInfo(ctx, sk)
 	if err != nil {
 		return err
 	}
@@ -227,12 +230,12 @@ func (m *SdkManager) doUnregisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	setup, err := SdkSetup(task)
+	sk, err := sdkName(task)
 	if err != nil {
 		return err
 	}
 
-	return m.repo.RemoveSdk(project.ProjectId, w, setup.Name)
+	return m.repo.RemoveSdk(project.ProjectId, w, sk)
 }
 
 func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -241,11 +244,14 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	st := task.State()
-	var sdk string
+	sk, err := sdkName(task)
+	if err != nil {
+		return err
+	}
 
+	st := task.State()
 	st.Lock()
-	err = task.Get("sdk", &sdk)
+	snapshot, err := WorkshopSnapshot(task.Change(), w, sk)
 	st.Unlock()
 	if err != nil {
 		return err
@@ -254,7 +260,7 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	return m.backend.Snapshot(ctx, w, sdk)
+	return m.backend.TakeSnapshot(ctx, w, *snapshot)
 }
 
 type SdkVolumeCooldownTimeKey string
@@ -272,9 +278,14 @@ type SdkVolumeCooldownTimeKey string
 //     and is no longer used by any other workshop (unregister-sdk or, if refresh failed, install-sdk task)
 //   - A workshop launch failed (install-sdk task)
 func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb) error {
-	st := task.State()
+	user, prj, w, err := UserProjectWorkshop(task)
+	if err != nil {
+		// Log as an internal error, no need to retry again.
+		logger.Debugf("On SdkManager.Cleanup: internal error: %v", err)
+		return nil
+	}
 
-	sdkSetup, err := SdkSetup(task)
+	sdkSetup, err := SdkSetup(task, w)
 	if err != nil {
 		logger.Debugf("On SdkManager.Cleanup: the %q task is not associated with a SDK setup", task.ID())
 		return nil
@@ -284,16 +295,10 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		return nil
 	}
 
-	user, prj, _, err := UserProjectWorkshop(task)
-	if err != nil {
-		// Log as an internal error, no need to retry again.
-		logger.Debugf("On SdkManager.Cleanup: internal error: %v", err)
-		return nil
-	}
-
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
+	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 

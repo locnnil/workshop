@@ -64,7 +64,7 @@ type AttachVolumeCall struct {
 
 type SnapshotCall struct {
 	Workshop string
-	Sdk      string
+	Snapshot workshop.Snapshot
 }
 
 type LaunchOrRebuildCall struct {
@@ -106,7 +106,7 @@ type FakeWorkshopBackend struct {
 	snapshotLock         sync.Mutex
 	LaunchOrRebuildCalls []LaunchOrRebuildCall
 	SnapshotCalls        []SnapshotCall
-	SnapshotCallback     func(ctx context.Context, workshop string, snapid string) error
+	SnapshotCallback     func(ctx context.Context, name string, snapshot workshop.Snapshot) error
 
 	BaseDir string
 }
@@ -253,7 +253,7 @@ func (f *FakeWorkshopBackend) rebuildWorkshop(ctx context.Context, file *worksho
 	// Remove SDKs.
 	slices.Reverse(sdks)
 	for _, setup := range sdks {
-		if err := f.UninstallSdk(ctx, ws.Name, setup.Setup); err != nil {
+		if err := f.UninstallSdk(ctx, ws.Name, setup.Name); err != nil {
 			return err
 		}
 	}
@@ -279,7 +279,7 @@ func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) e
 	}
 
 	for _, sk := range wp.Sdks {
-		if err := f.UninstallSdk(ctx, name, sk.Setup); err != nil {
+		if err := f.UninstallSdk(ctx, name, sk.Name); err != nil {
 			return err
 		}
 	}
@@ -717,7 +717,7 @@ func (s *FakeWorkshopBackend) attachVolume(ctx context.Context, name string, mou
 	return nil
 }
 
-func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name, sk string) error {
 	_, projectId, err := b.userProject(ctx)
 	if err != nil {
 		return err
@@ -726,7 +726,11 @@ func (b *FakeWorkshopBackend) UninstallSdk(ctx context.Context, name string, set
 	b.workshopLock.Lock()
 	wp := b.Workshops[projectId][name]
 	b.workshopLock.Unlock()
-	delete(wp.Sdks, setup.Name)
+	setup, ok := wp.Sdks[sk]
+	if !ok {
+		return nil
+	}
+	delete(wp.Sdks, sk)
 
 	if setup.IsVolume() {
 		what := sdk.VolumeName(setup.Name, setup.Revision)
@@ -773,13 +777,13 @@ func (s *FakeWorkshopBackend) detachVolume(ctx context.Context, name, what, wher
 	return err
 }
 
-func (s *FakeWorkshopBackend) Snapshot(ctx context.Context, name, sk string) error {
+func (s *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Sdk: sk})
+	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapshot: snapshot})
 	if s.SnapshotCallback != nil {
-		return s.SnapshotCallback(ctx, name, sk)
+		return s.SnapshotCallback(ctx, name, snapshot)
 	}
 	return nil
 }

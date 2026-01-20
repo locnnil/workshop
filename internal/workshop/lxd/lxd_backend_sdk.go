@@ -383,7 +383,7 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
 
 	if mount.MakeWhere {
-		if err := s.mkdir(ctx, name, mount.Where); err != nil {
+		if err := s.mkdir(ctx, name, mount.Where, mount.Mode); err != nil {
 			return err
 		}
 	}
@@ -432,14 +432,14 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	return op.WaitContext(ctx)
 }
 
-func (s *Backend) mkdir(ctx context.Context, name string, path string) error {
+func (s *Backend) mkdir(ctx context.Context, name string, path string, perm os.FileMode) error {
 	fs, err := s.WorkshopFs(ctx, name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	return fs.MkdirAll(path, 0755)
+	return fs.MkdirAll(path, perm)
 }
 
 func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string]string, error) {
@@ -529,7 +529,7 @@ func maybeSdkId(key string, device map[string]string) (int, *sdk.Id, error) {
 	return int(installOrder), s, nil
 }
 
-func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup) error {
+func (s *Backend) UninstallSdk(ctx context.Context, name, sk string) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -546,7 +546,7 @@ func (s *Backend) UninstallSdk(ctx context.Context, name string, setup sdk.Setup
 		return err
 	}
 
-	delete(inst.Devices, workshop.SdkDeviceName(setup.Name))
+	delete(inst.Devices, workshop.SdkDeviceName(sk))
 
 	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
 	if err != nil {

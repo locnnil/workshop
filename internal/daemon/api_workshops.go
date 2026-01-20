@@ -17,6 +17,7 @@ import (
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -409,6 +410,21 @@ func actionMode(reqData *workshopReq) (conflict.Mode, error) {
 	return mode, nil
 }
 
+func launch(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]workshopstate.Manifest, []*state.TaskSet, error) {
+	project, err := mgr.Project(ctx, pid)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	manifests, err := mgr.LaunchManifests(ctx, project, reqData.Names)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	taskset := mgr.LaunchMany(project, manifests)
+	return manifests, taskset, nil
+}
+
 func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
 	if reqData.Options.RefreshOption == "" {
 		reqData.Options.RefreshOption = "update"
@@ -417,16 +433,28 @@ func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
 	return conflict.ParseRefreshSetting(reqData.Options.RefreshOption)
 }
 
-func refresh(ctx context.Context, st *state.State, mgr *workshopstate.WorkshopManager, reqData *workshopReq, user, pid string) (*state.Change, []*state.TaskSet, error) {
+func refresh(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]workshopstate.Manifest, []*state.TaskSet, error) {
 	refreshOption, err := refreshOption(reqData)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	change := newWorkshopChange(st, "refresh", user, pid, reqData.Action, reqData.Names)
-	taskset, err := mgr.RefreshMany(ctx, pid, reqData.Names, refreshOption)
+	project, err := mgr.Project(ctx, pid)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return change, taskset, err
+	current, latest, err := mgr.RefreshManifests(ctx, project, reqData.Names, refreshOption)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	taskset, err := mgr.RefreshMany(project, current, latest, refreshOption)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return latest, taskset, nil
 }
 
 var validActions = []string{
@@ -479,6 +507,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	var change *state.Change
+	var manifests []workshopstate.Manifest
 	var taskset []*state.TaskSet
 
 	if mode.Resume() {
@@ -488,11 +517,12 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		switch reqData.Action {
 		case "launch":
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.LaunchMany(r.Context(), reqData.Names, projectId)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+			manifests, taskset, err = launch(r.Context(), wsmgr, &reqData, projectId)
 		case "refresh":
-			change, taskset, err = refresh(r.Context(), st, wsmgr, &reqData, user, projectId)
+			change = newWorkshopChange(st, "refresh", user, projectId, reqData.Action, reqData.Names)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+			manifests, taskset, err = refresh(r.Context(), wsmgr, &reqData, projectId)
 		case "start":
 			change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
 			taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId)
@@ -514,6 +544,10 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("%w", err)
 	}
 
+	for _, m := range manifests {
+		change.Set(handlersetup.WorkshopBaseKey(m.File.Name), m.Image)
+		change.Set(handlersetup.WorkshopSdksKey(m.File.Name), m.Sdks)
+	}
 	for _, tset := range taskset {
 		change.AddAll(tset)
 	}

@@ -114,8 +114,7 @@ func (s *requestSuite) TestStartMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	ts, err := workshopstate.StartManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
-	c.Assert(err, check.IsNil)
+	ts := workshopstate.StartManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(ts, check.HasLen, 2)
 	c.Assert(ts[0].Tasks()[0].Kind(), check.Equals, "start-workshop")
 	c.Assert(ts[1].Tasks()[0].Kind(), check.Equals, "start-workshop")
@@ -125,8 +124,7 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	ts, err := workshopstate.StopManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
-	c.Assert(err, check.IsNil)
+	ts := workshopstate.StopManyImpl(s.state, []string{"ws-1", "ws-2"}, s.project)
 	c.Assert(ts, check.HasLen, 2)
 	c.Assert(ts[0].Tasks()[0].Kind(), check.Equals, "stop-workshop")
 	c.Assert(ts[1].Tasks()[0].Kind(), check.Equals, "stop-workshop")
