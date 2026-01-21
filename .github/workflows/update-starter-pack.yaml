@@ -16,7 +16,10 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
       - name: Checkout starter pack repository
         uses: actions/checkout@v6
@@ -30,15 +33,14 @@ jobs:
           make -C docs clean
           rm -rf docs/{Makefile,.sphinx}
 
-          # Ensure the docs directory exists
-          mkdir -p docs
-
           # Copy the Makefile and .sphinx directory to the project's docs directory
           cp -a starter-pack-temp/docs/{Makefile,.sphinx} docs/
 
-          # Merge and sort requirements.txt files
-          cat docs/requirements.txt starter-pack-temp/docs/requirements.txt | sort -u > docs/requirements.txt.tmp
-          mv docs/requirements.txt.tmp docs/requirements.txt
+          # Merge requirements from input files to locked output file
+          uv pip compile --universal \
+            docs/requirements.in \
+            starter-pack-temp/docs/requirements.txt \
+            --output-file docs/requirements.txt
 
           # Get the latest commit hash from the starter pack
           cd starter-pack-temp
