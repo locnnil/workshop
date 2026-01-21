@@ -36,9 +36,9 @@ jobs:
           # Copy the Makefile and .sphinx directory to the project's docs directory
           cp -a starter-pack-temp/docs/{Makefile,.sphinx} docs/
 
-          # Merge requirements.txt files using uv
+          # Merge requirements from input files to locked output file
           uv pip compile --universal \
-            docs/requirements.txt \
+            docs/requirements.in \
             starter-pack-temp/docs/requirements.txt \
             --output-file docs/requirements.txt
 
