@@ -570,7 +570,7 @@ See the relevant documentation before making changes:
   <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/doc-cheat-sheet/>`_
 
 
-.. _contributing_doc_dependecies:
+.. _contributing_doc_dependencies:
 
 Dependency management
 ~~~~~~~~~~~~~~~~~~~~~
