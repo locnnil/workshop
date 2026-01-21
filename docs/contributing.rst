@@ -575,6 +575,8 @@ See the relevant documentation before making changes:
 Dependency management
 ~~~~~~~~~~~~~~~~~~~~~
 
+The documentation build requires Python 3.11 or later.
+
 Documentation dependencies are managed using ``uv``:
 
 - ``docs/requirements.in`` contains dependencies specific to Workshop docs
