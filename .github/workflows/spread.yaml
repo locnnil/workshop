@@ -57,9 +57,10 @@ jobs:
           spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}
       - name: Trim trailing slash from matrix.suite
         id: sanitize
+        env:
+          SUITE_NAME: ${{ matrix.suite }}
         run: |
-          suite_name="${{ matrix.suite }}"
-          sanitized_name="${suite_name%/}"
+          echo "sanitized_name=${SUITE_NAME%/}" >> "$GITHUB_OUTPUT"
       - name: Upload Coverage
         uses: actions/upload-artifact@v4
         with:

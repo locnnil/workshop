@@ -33,6 +33,8 @@ jobs:
 
       - name: Download Coverage
         uses: actions/download-artifact@v4
+        with:
+          pattern: '*code-coverage*'
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -46,6 +48,11 @@ jobs:
           retry 5 go install github.com/axw/gocov/gocov@v1.1.0
           retry 5 go install github.com/AlekSi/gocov-xml@v1.1.0
           retry 5 go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Build with verbose mode on
+        run: |
+          . "$GITHUB_WORKSPACE/tests/lib/retry.sh"
+          retry 5 go build -a -x -v ./...
 
       - name: Merge Coverage
         run: |
