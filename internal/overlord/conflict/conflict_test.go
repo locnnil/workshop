@@ -208,9 +208,17 @@ func (s *conflictSuite) TestResumeChangeContinue(c *check.C) {
 	task := change.Tasks()[0]
 	task.SetToWait(state.HoldStatus)
 
-	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	attempt, err := conflict.ChangeAttempt(change)
+	c.Assert(err, check.IsNil)
+	c.Check(attempt, check.Equals, 1)
+
+	_, err = conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
 	c.Assert(err, check.IsNil)
 	c.Assert(task.Status(), check.Equals, state.HoldStatus)
+
+	attempt, err = conflict.ChangeAttempt(change)
+	c.Assert(err, check.IsNil)
+	c.Check(attempt, check.Equals, 2)
 }
 
 func (s *conflictSuite) TestResumeChangeAbort(c *check.C) {

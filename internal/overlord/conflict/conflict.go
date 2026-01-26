@@ -239,6 +239,14 @@ func ResumeAfterWait(st *state.State,
 		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
 	}
 
+	if mode == ChangeContinue {
+		attempt, err := ChangeAttempt(chg)
+		if err != nil {
+			return nil, err
+		}
+		chg.Set("attempt", attempt+1)
+	}
+
 	for _, tsk := range chg.Tasks() {
 		if tsk.Status() == state.WaitStatus {
 			switch mode {
@@ -258,6 +266,16 @@ func ResumeAfterWait(st *state.State,
 	}
 
 	return chg, nil
+}
+
+func ChangeAttempt(change *state.Change) (int, error) {
+	var attempt int
+	if err := change.Get("attempt", &attempt); errors.Is(err, state.ErrNoState) {
+		attempt = 1
+	} else if err != nil {
+		return 0, fmt.Errorf("internal error: change attempt counter invalid (change ID: %s)", change.ID())
+	}
+	return attempt, nil
 }
 
 // Iterates over the list of running tasks and returns a change ID if
