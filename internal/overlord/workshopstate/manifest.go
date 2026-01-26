@@ -283,6 +283,17 @@ func (a *artifactFinder) findLocalSdks(ctx context.Context, current *Manifest, l
 	}
 	if meta != nil {
 		sdks = append(sdks, *meta)
+	} else {
+		// If there's no sketch SDK, it's usually fine. But in rare
+		// cases (e.g. plug binding) the user might add the sketch SDK
+		// to the workshop definition. We shouldn't just ignore it,
+		// since it makes it harder to reason about the list of SDKs.
+		idx := slices.IndexFunc(latest.Sdks, func(s workshop.SdkRecord) bool {
+			return s.Source == sdk.SketchSource
+		})
+		if idx >= 0 {
+			return nil, fmt.Errorf("%q SDK not found, but appears in workshop definition", latest.Sdks[idx].Name)
+		}
 	}
 
 	return validateSdkMeta(a.project.ProjectId, latest, sdks)
