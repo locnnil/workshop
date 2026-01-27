@@ -2,8 +2,6 @@ package sdk
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -83,7 +81,7 @@ type FakeStore struct {
 	DownloadCalls []TestDownloadCall
 
 	ActionCallback   func(ctx context.Context, actions []SdkAction) ([]Meta, error)
-	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) error
+	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)
 }
 
 func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]Meta, error)) func() {
@@ -94,7 +92,7 @@ func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []Sdk
 	}
 }
 
-func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup, report *progress.Reporter) error) func() {
+func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)) func() {
 	old := f.DownloadCallback
 	f.DownloadCallback = fa
 	return func() {
@@ -119,16 +117,8 @@ func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progre
 		Setup: setup,
 	})
 	if f.DownloadCallback != nil {
-		if err := f.DownloadCallback(ctx, setup, report); err != nil {
-			return nil, err
-		}
+		return f.DownloadCallback(ctx, setup, report)
 	}
 
-	sdkYaml := "name: " + setup.Name
-	content, err := os.ReadFile(filepath.Join(setup.Filepath(), "meta", "sdk.yaml"))
-	if err == nil {
-		sdkYaml = string(content)
-	}
-
-	return &Meta{Setup: setup, SdkYAML: sdkYaml}, nil
+	return &Meta{Setup: setup, SdkYAML: "name: " + setup.Name}, nil
 }

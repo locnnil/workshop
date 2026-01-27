@@ -967,35 +967,53 @@ func (s *apiSuite) createWFile(c *check.C, name, yaml string) {
 	c.Assert(err, check.IsNil)
 }
 
-func storeDownloadWithSaveRestore(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
-	if err := storeDownload(ctx, setup, report); err != nil || setup.Source == sdk.SystemSource {
-		return err
+func storeDownloadWithSaveRestore(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
+	meta, err := storeDownload(ctx, setup, report)
+	if err != nil || setup.Source == sdk.SystemSource {
+		return meta, err
 	}
 	hooksdir := filepath.Join(setup.Filepath(), "sdk", "hooks")
 	if err := os.WriteFile(filepath.Join(hooksdir, "save-state"), nil, 0o644); err != nil {
-		return err
+		return nil, err
 	}
-	return os.WriteFile(filepath.Join(hooksdir, "restore-state"), nil, 0o644)
+	if err := os.WriteFile(filepath.Join(hooksdir, "restore-state"), nil, 0o644); err != nil {
+		return nil, err
+	}
+	return meta, nil
 }
 
-func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Reporter) error {
+func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
 	// Emulate store action behaviour which would reuse the existing SDK if
 	// present.
 	sdkdir := setup.Filepath()
 	_, isDir, err := osutil.ExistsIsDir(sdkdir)
 	if isDir {
-		return nil
+		sdkYaml := "name: " + setup.Name
+		content, err := os.ReadFile(filepath.Join(sdkdir, "meta", "sdk.yaml"))
+		if err == nil {
+			sdkYaml = string(content)
+		}
+		return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if setup.Source == sdk.SystemSource {
-		return os.CopyFS(sdkdir, system.SystemSdkFs)
+		if err := os.CopyFS(sdkdir, system.SystemSdkFs); err != nil {
+			return nil, err
+		}
+		return system.SystemSdkMeta()
 	}
+
 	metadir := filepath.Join(sdkdir, "meta")
 	hooksdir := filepath.Join(sdkdir, "sdk", "hooks")
-	return mockSdk(metadir, hooksdir, apiSuiteSdks[setup.Name].SdkYAML)
+	sdkYaml := apiSuiteSdks[setup.Name].SdkYAML
+	if err := mockSdk(metadir, hooksdir, sdkYaml); err != nil {
+		return nil, err
+	}
+
+	return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
 }
 
 func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
