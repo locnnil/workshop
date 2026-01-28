@@ -870,6 +870,21 @@ func (s *manifestSuite) TestLaunchRemovesSketchSdk(c *check.C) {
 	c.Check(stashdir, testutil.FilePresent)
 }
 
+func (s *manifestSuite) TestRefreshRespectsExplicitSketchSdk(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	sdks := []workshop.SdkRecord{{
+		Name:   "sketch",
+		Source: sdk.SketchSource,
+		Plugs:  map[string]workshop.PlugOrBind{"ssh-agent": {Plug: nil}},
+	}}
+	s.launchWorkshopWithSDKs(c, "test-1", "ubuntu@20.04", sdks)
+
+	_, _, err := s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1"}, conflict.RefreshUpdate)
+	c.Check(err, check.ErrorMatches, `cannot refresh "test-1": "sketch" SDK not found, but appears in workshop definition`)
+}
+
 func (s *manifestSuite) TestRefreshSortsSdks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()

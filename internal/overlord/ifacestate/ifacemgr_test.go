@@ -33,6 +33,7 @@ type interfaceManagerSuite struct {
 	runner     *state.TaskRunner
 	ctx        context.Context
 	wsbackend  workshop.Backend
+	user       *user.User
 	prj        workshop.Project
 	secBackend *ifacetest.TestSecurityBackend
 
@@ -47,8 +48,12 @@ func (s *interfaceManagerSuite) SetUpTest(c *check.C) {
 	s.BaseTest.SetUpTest(c)
 	var err error
 
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir()}
 	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
-		return nil, user.UnknownUserError("not found")
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
 	})
 	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
 		return nil, nil

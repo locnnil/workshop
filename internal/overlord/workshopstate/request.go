@@ -219,10 +219,10 @@ func launch(st *state.State, project workshop.Project, manifest Manifest) *state
 func (w *WorkshopManager) RefreshMany(project workshop.Project, current, latest []Manifest, option conflict.RefreshOption) ([]*state.TaskSet, error) {
 	tasksets := make([]*state.TaskSet, 0, len(latest))
 
-	for i, manifest := range latest {
-		plan := resolveRefresh(current[i], manifest)
-		if option == conflict.RefreshRestore || plan.HasUpdates() {
-			tasks := refresh(w.state, project, plan, manifest.File)
+	for i := range latest {
+		plan := resolveRefresh(current[i], latest[i])
+		if option == conflict.RefreshRestore || plan.HasUpdates(current[i].File, latest[i].File) {
+			tasks := refresh(w.state, project, plan, latest[i].File)
 			tasksets = append(tasksets, tasks)
 		}
 	}
@@ -269,10 +269,6 @@ type refreshPlan struct {
 
 	installOrder   []string
 	installedOrder []string
-
-	// Indicates if the Workshop definition was updated, i.e. if any new plugs,
-	// slots or connections were added.
-	workshopDefinitionUpdated bool
 }
 
 func (p refreshPlan) InstallOrRefresh() []sdk.Setup {
@@ -298,8 +294,55 @@ func (p refreshPlan) InstallIntactOrRefresh() []sdk.Setup {
 	return ordered(p.installOrder, p.install, p.refresh, p.intact)
 }
 
-func (p refreshPlan) HasUpdates() bool {
-	return len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 || p.workshopDefinitionUpdated
+func (p refreshPlan) HasUpdates(current, latest *workshop.File) bool {
+	if len(p.InstallOrRefresh()) > 0 || len(p.remove) > 0 {
+		return true
+	}
+
+	for _, sk := range p.intact {
+		a := sdkAdditions(current.Sdks, sk.Name)
+		b := sdkAdditions(latest.Sdks, sk.Name)
+		if !reflect.DeepEqual(a, b) {
+			return true
+		}
+	}
+
+	if len(current.Connections) != len(latest.Connections) {
+		return true
+	}
+	seen := make([]bool, len(latest.Connections))
+out:
+	for _, conn := range current.Connections {
+		for i, other := range latest.Connections {
+			if !seen[i] && conn == other {
+				seen[i] = true
+				continue out
+			}
+		}
+		return true
+	}
+
+	return false
+}
+
+// Determine workshop-specific adjustments for the given SDK. Currently this is
+// determined by plugs and slots.
+func sdkAdditions(sdks []workshop.SdkRecord, name string) workshop.SdkRecord {
+	idx := slices.IndexFunc(sdks, func(s workshop.SdkRecord) bool {
+		return s.Name == name
+	})
+	if idx < 0 {
+		// Likely system or sketch SDK.
+		return workshop.SdkRecord{}
+	}
+
+	// It's better to refresh too often than to ignore the user's changes,
+	// so return a partial record instead of extracting plugs and slots.
+	sk := sdks[idx]
+	sk.Name = ""
+	sk.Channel = ""
+	sk.Source = sdk.StoreSource
+	return sk
 }
 
 func resolveRefresh(current, latest Manifest) *refreshPlan {
@@ -360,9 +403,6 @@ func resolveRefresh(current, latest Manifest) *refreshPlan {
 	for _, s := range latest.Sdks {
 		plan.installOrder = append(plan.installOrder, s.Name)
 	}
-
-	plan.workshopDefinitionUpdated = !reflect.DeepEqual(current.File.Sdks, latest.File.Sdks) ||
-		!reflect.DeepEqual(current.File.Connections, latest.File.Connections)
 
 	return plan
 }

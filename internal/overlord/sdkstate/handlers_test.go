@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
 	"syscall"
 	"testing"
@@ -20,8 +21,10 @@ import (
 	"github.com/canonical/workshop/internal/interfaces/ifacetest"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
@@ -37,9 +40,12 @@ type sdkStateSuite struct {
 	sdkmgr      *sdkstate.SdkManager
 	repo        *interfaces.Repository
 	ctx         context.Context
+	user        *user.User
 	project     workshop.Project
 	installTime time.Time
 
+	restoreUserLookup  func()
+	restoreUserEnv     func()
 	restoreProjectId   func()
 	restoreInstallTime func()
 }
@@ -102,6 +108,17 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 
 	ctx := context.WithValue(context.TODO(), workshop.ContextProjectId, "projectId")
 	s.ctx = context.WithValue(ctx, workshop.ContextUser, "testuser")
+
+	s.user = &user.User{Username: "testuser", HomeDir: c.MkDir()}
+	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
+		if name != "testuser" {
+			return nil, user.UnknownUserError("not found")
+		}
+		return s.user, nil
+	})
+	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
+		return nil, nil
+	})
 
 	s.backend, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
@@ -174,6 +191,8 @@ func mockIface(c *check.C, repo *interfaces.Repository, iface interfaces.Interfa
 }
 
 func (s *sdkStateSuite) TearDownTest(c *check.C) {
+	s.restoreUserLookup()
+	s.restoreUserEnv()
 	s.restoreProjectId()
 	s.restoreInstallTime()
 }
@@ -331,6 +350,73 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	}
 
 	c.Check(entries, check.DeepEquals, []string{"drwxr-xr-x meta/", "-rw-r--r-- meta/sdk.yaml"})
+}
+
+// This tests that we correctly handle the case where the Store is updated
+// after SdkAction but before DownloadSdk. Should be able to remove when we
+// switch over to the real Store.
+func (s *sdkStateSuite) TestRetrieveUpdatedSdk(c *check.C) {
+	store := sdk.NewFakeStore()
+	sdk.ReplaceStore(s.state, store)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	oldSdks := []sdk.Setup{{
+		Name:     "dependency",
+		Channel:  "latest/stable",
+		Revision: sdk.R(10),
+		Sha3_384: "71843b99f85547fbe99fec9caf39f9ead64bc59de11447f9c2065597af88ccc5d5239f3b83a7e82a79582eff5f3868e8",
+	}, {
+		Name:     "test",
+		Channel:  "6/edge",
+		Revision: sdk.R(100),
+		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+	}, {
+		Name:     "project",
+		Source:   sdk.ProjectSource,
+		Revision: sdk.R(-5),
+		Sha3_384: "6b1715cb90ce493a4f7f0c6745ad8155eac1874075d06c23fcba628b1276b6a0b093ef1b1969be891a1cfbc9345ffc5a",
+	}}
+	newSdk := sdk.Setup{
+		Name:     "test",
+		Channel:  "6/edge",
+		Revision: sdk.R(101),
+		Sha3_384: "805b5d3a5b935a255100653612b26c117ee280e3f522b69743ade2b907e566e716a8c8dcd706255577b0bc7dcd9eeeeb",
+	}
+
+	restore := store.SetDownloadCallback(func(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
+		if setup == oldSdks[1] {
+			if err := os.MkdirAll(newSdk.Filepath(), 0755); err != nil {
+				return nil, err
+			}
+			return &sdk.Meta{Setup: newSdk, SdkYAML: "name: test\n"}, nil
+		}
+		return nil, os.ErrNotExist
+	})
+	defer restore()
+
+	t := s.state.NewTask("retrieve-sdk", "retrieve")
+	t.Set("sdk", oldSdks[1].Name)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t)
+	chg.Set("user", "testuser")
+	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@24.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_sdks", oldSdks)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	c.Assert(s.se.Ensure(), check.IsNil)
+	s.se.Wait()
+	s.state.Lock()
+	c.Assert(chg.Err(), check.IsNil)
+
+	sdks, err := handlersetup.WorkshopSdks(chg, "ws")
+	c.Assert(err, check.IsNil)
+	c.Check(sdks[0], check.Equals, oldSdks[0])
+	c.Check(sdks[1], check.Equals, newSdk)
+	c.Check(sdks[2], check.Equals, oldSdks[2])
 }
 
 func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
