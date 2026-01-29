@@ -174,6 +174,7 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
       - [ ] Check flag definitions (name, shorthand, type, default, help text)
       - [ ] Confirm help text matches `Use:` and `Short:` fields
       - [ ] Verify output formatting (tabwriter usage, column headers, sorting)
+      - [ ] **CLI Reference vs. Command Help**: If you notice a discrepancy between command help and CLI reference docs, note that CLI reference is auto-generated from help regularly (it will be autofixed). However, if the command help itself is wrong, flag it as a code issue.
     
     - **API Surface**:
       - [ ] Find route definition in `internal/daemon/api.go`
