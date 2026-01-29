@@ -195,6 +195,29 @@ Investigate it using the :command:`workshop tasks` command
 to view detailed error information.
 
 
+SDK-installed software versions
+-------------------------------
+
+Components installed via SDKs
+cannot be updated using their regular mechanisms.
+SDKs are mounted read-only inside workshops,
+so regular update commands won't affect the SDK-provided files,
+likely failing instead.
+
+SDK definitions identify possible base systems
+and are usually versioned after the software they install;
+different SDK versions may be published via different channels.
+
+To update any components provided by an SDK,
+refresh the workshop with :command:`workshop refresh`.
+This pulls the latest version of each SDK from its configured channel
+and installs the updated SDK components.
+
+To switch to a different version,
+update the channel in the workshop definition,
+then refresh the workshop to apply the change.
+
+
 List and suppress warnings
 --------------------------
 
