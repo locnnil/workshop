@@ -39,20 +39,6 @@ then ensure it runs.
 .. @artefact workshopd
 .. @artefact workshop (CLI)
 
-Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
-
-.. code-block:: console
-
-   $ sudo snap login
-   $ sudo snap install --classic workshop
-
-
-.. warning::
-
-   If this command fails, you may need an invitation;
-   contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
-
 
 Prerequisites
 ~~~~~~~~~~~~~
@@ -93,6 +79,24 @@ To refresh an existing installation:
    is enabled and running.
    Again, refer to LXD documentation
    and your distribution's manuals for guidance.
+
+
+Installation
+~~~~~~~~~~~~
+
+Authenticate to the Snap Store and install the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+
+.. code-block:: console
+
+   $ sudo snap login
+   $ sudo snap install --classic workshop
+
+
+.. warning::
+
+   If this command fails, you may need an invitation;
+   contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
 
 
 .. _tut_define_launch:

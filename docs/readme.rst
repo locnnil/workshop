@@ -64,6 +64,25 @@ Installation
 
 Workshop is supported on Ubuntu and other ``snap``-enabled Linux distributions.
 
+Prerequisites
+~~~~~~~~~~~~~
+
+Workshop requires
+`LXD 6.3+ <https://canonical.com/lxd>`_
+for low-level operation.
+
+If the ``snap install`` command reports an issue with LXD,
+install a recent LXD version with ``snap``:
+
+.. code-block:: console
+
+   sudo snap install --channel=6/stable lxd  # to install
+   sudo snap refresh --channel=6/stable lxd  # to update
+
+
+Install Workshop
+~~~~~~~~~~~~~~~~
+
 Authenticate to the Snap Store and install the snap
 using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
 
@@ -92,23 +111,6 @@ for example:
 
 The downside of this method is that you will need to manually
 check for and install updates.
-
-
-Prerequisites
-~~~~~~~~~~~~~
-
-Workshop requires
-`LXD 6.3+ <https://canonical.com/lxd>`_
-for low-level operation.
-
-If the ``snap install`` command reports an issue with LXD,
-install a recent LXD version with ``snap``:
-
-.. code-block:: console
-
-   sudo snap install --channel=6/stable lxd  # to install
-   sudo snap refresh --channel=6/stable lxd  # to update
-
 
 Documentation
 -------------
