@@ -377,7 +377,7 @@ to serve as our workspace.
 
 First, let's put our example workshop to practical use;
 download a simple AI model *inside the workshop*
-using the :command:`workshop exec` command.
+using the :command:`workshop exec` command.
 We'll use the :samp:`tinyllama` model, which is small and quick to download:
 
 .. @artefact workshop exec

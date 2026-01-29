@@ -140,8 +140,8 @@ instead of reverting the workshop to its previous state,
      then run "workshop refresh --continue blank".
      To abort and revert, run "workshop refresh --abort blank"
 
-To help determine what went wrong, use the :command:`workshop changes` and
-:command:`workshop tasks` commands discussed above.
+To help determine what went wrong, use the :command:`workshop changes` and
+:command:`workshop tasks` commands discussed above.
 
 Next, you can shell into the workshop to debug and possibly fix it:
 
@@ -174,7 +174,7 @@ Isolate problematic SDKs
 ------------------------
 
 When a workshop uses multiple SDKs
-and has issues during :command:`workshop refresh` or :command:`workshop launch`,
+and has issues during :command:`workshop refresh` or :command:`workshop launch`,
 it can be difficult to determine which SDK is causing the problem.
 
 Start by testing each SDK in isolation before combining them;
@@ -191,7 +191,7 @@ and refresh the workshop after each change.
 When the issue reappears,
 the cause is likely the SDK you just re-enabled,
 or its interaction with other SDKs.
-Investigate it using the :command:`workshop tasks` command
+Investigate it using the :command:`workshop tasks` command
 to view detailed error information.
 
 

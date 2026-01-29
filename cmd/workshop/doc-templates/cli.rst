@@ -35,7 +35,7 @@ Shell completion
 ----------------
 
 To configure shell completion,
-follow the instructions offered by **workshop completion**:
+follow the instructions offered by :command:`workshop completion`:
 
 .. code-block:: console
 
