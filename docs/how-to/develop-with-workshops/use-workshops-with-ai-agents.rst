@@ -147,10 +147,10 @@ Create a workshop definition file in the project root:
        claude --model $CLAUDE_MODEL --dangerously-skip-permissions "$@"
 
      copilot-auto: |
-       copilot --model $COPILOT_MODEL --allow-all-tools --allow-all-paths --allow-all-urls --silent --prompt "$@"
+       copilot --model $COPILOT_MODEL --yolo --silent --prompt "$@"
 
      copilot: |
-       copilot --model $COPILOT_MODEL --allow-all-tools --allow-all-paths --allow-all-urls --interactive "$@"
+       copilot --model $COPILOT_MODEL --yolo --interactive "$@"
 
 
 The definition adds the two SDKs,
