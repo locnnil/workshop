@@ -473,10 +473,10 @@ Program/command names:
 
 ```restructuredtext
 :program:`workshop`
-:command:`workshop launch`
+:command:`workshop launch`
 ```
 
-Commands in `:command:` roles should be presented in their complete form (e.g. `workshop launch`, not just `launch`) and should not be used as verbs or nouns in the text. Use non-breaking spaces to prevent longer compound commands from wrapping.
+Commands in `:command:` roles should be presented in their complete form (e.g. `workshop launch`, not just `launch`) and should not be used as verbs or nouns in the text. Use non-breaking spaces in inline command literals to prevent longer compound commands from wrapping.
 
 File paths:
 
@@ -541,7 +541,7 @@ See the `GitHub`_ repository for source code.
 Refer to the `LXD`_ documentation for setup details.
 ```
 
-**Non-breaking spaces:** Use non-breaking spaces (U+00A0 or `~` in LaTeX contexts) for important proper names and compound commands where line breaks would be awkward, though this is rarely needed in reStructuredText.
+**Non-breaking spaces:** Use non-breaking spaces (U+00A0 or `~` in LaTeX contexts) for important proper names and inline compound commands where line breaks would be awkward, though this is rarely needed in reStructuredText.
 
 **Lists**
 
@@ -610,6 +610,28 @@ See also
 
 Explanation:
 
+* :ref:`exp_sdks`
+* :ref:`exp_workshop`
+
+How-to guides:
+
+* :ref:`how_resolve_plug_conflicts`
+
+Reference:
+
+* :ref:`ref_cli`
+* :ref:`ref_workshop_connect`
+* :ref:`ref_workshop_info`
+```
+
+Or using custom link text:
+
+```restructuredtext
+See also
+--------
+
+Explanation:
+
 * :ref:`changes, tasks (concepts) <exp_changes_tasks>`
 * :ref:`project (concept) <exp_project>`
 * :ref:`workshop (concept) <exp_workshop>`, :ref:`workshop definition (file) <exp_workshop_definition>`
@@ -619,24 +641,9 @@ Reference:
 * :ref:`workshop changes (command) <ref_workshop_changes>`
 ```
 
-Or using more informal link style:
-
-```restructuredtext
-See also
---------
-
-How-to guides:
-
-* Debug :ref:`issues in workshops <how_debug_issues_workshops>`
-
-Reference:
-
-* :ref:`workshop changes (command) <ref_workshop_changes>`
-
-Tutorial:
-
-* :ref:`Wait on error <tut_refresh_wait_on_error>`
-```
+Links listed here must point to concepts used in the main document;
+vice versa, concepts appearing in the main text should be linked in "See also"
+if a well-established related page exists.
 
 Special case: If "See also" is the only subsection on the page, hide the sidebar ToC on the right using the `:hide-toc:` directive at the top of the file.
 
@@ -698,6 +705,28 @@ Example with options:
 ```
 
 **Spacing and formatting**
+
+Use three spaces to indent reStructuredText directives and separate directive content with a blank line:
+
+```restructuredtext
+.. tab::
+
+   .. code-block:: console
+   
+      $ workshop launch dev
+```
+
+Separate `list-table` rows with blank lines:
+
+```restructuredtext
+.. list-table::
+
+   * - **Tutorial**
+     - :ref:`Get started <tut_get_started>` • ...
+
+   * - **Workshops**
+     - :ref:`Concepts <exp_workshop_concepts>` • ...
+```
 
 Section gaps: Include a non-cumulative two-line gap (two blank lines) after code samples, lists, tables, and before headings for visual clarity.
 
@@ -761,24 +790,117 @@ Install |ws_markup|
 
 ---
 
-## Markdown conventions
+## Markdown style conventions
 
-**Usage pattern**
+This section covers Markdown-specific conventions used in the Workshop documentation. For general writing style, see the "Writing style and tone" section above.
+
+### When to use Markdown
 
 Markdown is used for:
 - Release notes (`release-notes/v0.*.md`)
 - Auto-generated CLI reference (`reference/cli/sdkcraft/*.md`)
-- Special files (`security.md`, `coverage.md`)
+- Special files rendered on GitHub (`security.md`, `coverage.md`)
 
-**Release notes**
+For all other documentation, prefer reStructuredText (`.rst` files).
 
-Release notes are written in Markdown and stored in the `docs/release-notes/` directory.
+### File naming
 
-**File naming**
+Use the version number as the filename for release notes: `vX.Y.Z.md`.
 
-Use the version number as the filename: `vX.Y.Z.md`.
+### Metadata blocks
 
-**Template**
+Pattern: Markdown files should include metadata using the `{eval-rst}` directive at the top of the file.
+
+Required for:
+- Release notes (`release-notes/v0.*.md`)
+- Any Markdown documentation files that will be rendered in Sphinx
+
+Format:
+
+````markdown
+```{eval-rst}
+.. meta::
+   :description: Brief description for search engines and social media.
+```
+
+# Page Title
+````
+
+Exception: Auto-generated CLI reference files for SDKcraft (`reference/cli/sdkcraft/*.md`) do not require metadata blocks, as they are automatically generated from command definitions.
+
+Example from release notes:
+
+````markdown
+```{eval-rst}
+.. meta::
+   :description: Release notes for Workshop v0.1.28, highlighting key changes,
+                 new features, and bug fixes in this version.
+```
+
+# Workshop v0.1.28 release notes
+````
+
+### Headings
+
+Use ATX-style headers (`#`) with sentence case (capitalize only first word and proper nouns):
+
+```markdown
+# Page title
+
+## Section heading
+
+### Subsection heading
+```
+
+### Links
+
+Use inline link syntax:
+
+```markdown
+See [Privately reporting a security vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) for instructions.
+```
+
+Avoid reference-style links in Markdown files.
+
+### Code blocks
+
+Use fenced code blocks with language specifiers:
+
+````markdown
+```console
+workshop launch dev
+```
+
+```yaml
+name: dev
+base: ubuntu@22.04
+```
+````
+
+### Lists
+
+Use hyphens (`-`) for unordered lists:
+
+```markdown
+- First item
+- Second item
+- Third item
+```
+
+Use numbers for ordered lists:
+
+```markdown
+1. First step
+2. Second step
+3. Third step
+```
+
+### Emphasis
+
+- *Italics*: Use single asterisks `*text*`
+- **Bold**: Use double asterisks `**text**`
+
+### Release notes template
 
 Use the following template for new release notes, ensuring all links and version numbers are updated:
 
@@ -815,42 +937,28 @@ Workshop relies on Snap and LXD:
 https://github.com/canonical/workshop/compare/vX.Y.Z-1...vX.Y.Z
 ````
 
-**Metadata in Markdown files**
+### Simplified markup for GitHub-rendered files
 
-Pattern: Markdown files should include metadata using the `{eval-rst}` directive at the top of the file.
+Use simplified markup for files that have special meaning on GitHub and need to be rendered there (such as `docs/readme.rst` or `docs/contributring.rst`). These files should be more accessible to users viewing them directly.
 
-Required for:
-- Release notes (`release-notes/v0.*.md`)
-- Any Markdown documentation files that will be rendered in Sphinx
+Key simplifications:
 
-Format:
+- No `$` prompts in code blocks: GitHub doesn't prevent prompt selection during copying, which can confuse users.
+- No semantic roles: Fall back to generic markup instead (e.g., use double backticks for code instead of `:command:` or `:program:`).
+- Plain link syntax: Use simple inline links instead of reference-style links.
 
-````markdown
-```{eval-rst}
-.. meta::
-   :description: Brief description for search engines and social media.
+Examples:
+
+```restructuredtext
+.. code-block:: console
+
+   sudo snap login
+   sudo snap install --classic workshop
 ```
 
-# Page Title
-````
+Notice: No `$` prompt, making it easier to copy commands directly.
 
-Exception: Currently, auto-generated CLI reference files for SDKcraft (`reference/cli/sdkcraft/*.md`) do not require metadata blocks, as they are automatically generated from command definitions.
-
-Example from release notes:
-
-````markdown
-```{eval-rst}
-.. meta::
-   :description: Release notes for Workshop v0.1.28, highlighting key changes,
-                 new features, and bug fixes in this version.
-```
-
-# Workshop v0.1.28 release notes
-````
-
-**Simplified markup for GitHub**
-
-Use simplified markup for files that have special meaning on GitHub and need to be rendered there (such as `README.rst`, `CONTRIBUTING.rst`, `SECURITY.rst`). For example, don't use `$` prompts in command samples for these files because GitHub doesn't prevent their selection during copying, which can confuse users.
+Notice: Plain inline links instead of reference-style links, generic double backticks instead of semantic roles.
 
 ---
 
@@ -904,7 +1012,7 @@ Comments in commands: Use two forms for comments:
 
 **Configuration examples**
 
-Always include caption:
+Always include caption when it can be deduced from context:
 
 ```restructuredtext
 .. code-block:: yaml
