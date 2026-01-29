@@ -288,9 +288,11 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 **Inputs**: Findings from Stages 1-8.
 **Actions**:
 -   Construct the review using the **Output Template** below.
+-   **Concentrate all actionable recommendations in the final "Recommendations" section** — avoid scattering action items throughout the report.
+-   In individual sections, provide **analysis and observations only**; reserve specific action items for the Recommendations section.
 -   Ensure all style suggestions reference specific sections in the coding style guide.
--   Prioritize blocking issues (test failures, security concerns, linting errors) over minor style nits.
--   Include coverage artefact references for documentation gaps.
+-   In the Recommendations section, sort items by priority (highest to lowest) using the established priority order.
+-   Include file:line references, style guide citations, and documentation artifact references for all recommendations.
 
 **Outcome**: A formatted review comment ready for submission.
 
@@ -332,18 +334,21 @@ Structure your review as follows:
 [List of new/modified public APIs, CLI commands, config options, interfaces, behaviors]
 
 #### Findings
-[Only include findings verified through Sub-stage B search process]
+[Only include findings verified through Sub-stage B verification process]
 
-**Entity: `<entity-name>`** (ref: `docs/.coverage.yaml` line X, category: Y, type: Z)
+**Entity: `<entity-name>`**
+
 - **Current Coverage**:
   - Tutorial: [file:line or "Missing"]
   - How-to: [file:line or "Missing"]
   - Explanation: [file:line or "Missing"]
   - Reference: [file:line or "Missing"]
+
 - **Issue**: [Confirmed Missing | Present but Undiscoverable | Present but Incomplete | Present but Outdated]
   - [Brief description of the gap or problem]
+
 - **Recommended Action**:
-  - [File path]: [Specific action]
+  - [File path]: [Specific action using existing patterns]
   - Rationale: [Why needed]
 
 [Repeat for each verified finding]
@@ -362,7 +367,22 @@ All changed entities are properly documented across appropriate Diátaxis pillar
 - **Operational**: [Error messages, logging, resource management]
 
 ### Recommendations
-[Prioritized list of specific actions with file:line references, style guide citations, and coverage artefact references]
+
+**Priority Order**: Security issues > Test failures > Breaking changes > Documentation gaps > Style violations
+
+[List all actionable items from the review above, sorted by priority. Each recommendation must include:]
+- **File:line reference**: Exact location requiring change
+- **Issue**: Brief description of what needs to be addressed
+- **Action**: Specific change to make
+- **Rationale**: Why this change is needed (with style guide citation, code evidence, or documentation reference)
+
+[Format each item as:]
+
+**[Priority Level]: [Brief title]**
+- File: `[path/file.ext:line]`
+- Issue: [Description]
+- Action: [Specific change]
+- Rationale: [Why, with references]
 ```
 
 ## Boundaries & Guidelines
