@@ -235,18 +235,18 @@ used for temporary storage during workshop rebuild operations.
 
 .. _exp_arch_zfs_storage:
 
-ZFS storage
-~~~~~~~~~~~
+Storage backends
+~~~~~~~~~~~~~~~~
 
-|ws_markup| uses ZFS for its storage needs, managed via LXD;
-it requires a minimum pool size of 5 GiB.
+|ws_markup| uses ZFS for storage on Linux,
+with automatic Btrfs fallback on Windows Subsystem for Linux (WSL).
+Storage is managed via LXD and requires a minimum pool size of 5 GiB.
 
-The ZFS pool manages container root filesystems, workshop-specific data volumes,
+The storage backend manages container root filesystems, workshop-specific data volumes,
 cached base images, and snapshots for efficient workshop updates and rollbacks.
 This component provides copy-on-write storage utilization, LZ4 compression,
 and quota management,
 and is utilized by the :ref:`LXD backend <exp_arch_lxd_backend>` for container operations.
-
 
 
 

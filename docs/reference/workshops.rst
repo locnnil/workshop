@@ -141,23 +141,26 @@ trigger the refresh mechanism:
 This prevents broken states during major refreshes.
 
 
-ZFS storage and pool size
+Storage pools and drivers
 -------------------------
 
-|ws_markup| stores its containers and data on a ZFS pool by default.
+|ws_markup| stores its containers and data on a storage pool.
+On Linux, |ws_markup| uses ZFS,
+while on Windows Subsystem for Linux it automatically uses Btrfs.
 This approach consolidates container images, :program:`apt` caches, SDKs
 and other workshop content under a single system.
 
 If you need more space or different performance,
-you can resize or tune the ZFS pool (it's named :samp:`workshop`),
-using the :command:`lxc storage` command
+you can resize or tune the storage pool (it's named :samp:`workshop`),
+using the :command:`lxc storage` command
 as suggested in this `LXD documentation section
 <https://documentation.ubuntu.com/lxd/latest/howto/storage_pools/>`_.
 However, day-to-day usage requires little manual intervention.
 
 .. attention::
 
-   Don't use the default ZFS utilities to alter the LXD-managed ZFS pool,
+   Don't use storage driver utilities (such as :command:`zfs` or :command:`btrfs`)
+   directly to alter the LXD-managed storage pool,
    as this may cause issues with LXD.
 
 
