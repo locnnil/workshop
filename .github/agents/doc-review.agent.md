@@ -91,10 +91,10 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 **Outcome**: Identification of content gaps, missing artefacts, or broken navigation.
 
-### Stage 4.5: Code Backing Verification for Doc Changes (Docs ⇄ Code Consistency)
-**Intent**: Validate that documentation changes accurately reflect the actual codebase behavior, ensuring docs-to-code consistency. This stage mirrors the code review agent's "Documentation Completeness" stage (Stage 6) but operates in reverse: code is the authoritative source, and documentation must be verified against it. This mandatory verification prevents false claims and ensures documentation correctness.
+### Stage 5: Code Backing Verification for Doc Changes (Docs ⇄ Code Consistency)
+**Intent**: Validate that documentation changes accurately reflect the actual codebase behavior, ensuring docs-to-code consistency. This stage mirrors the code review agent's "Documentation Completeness" stage but operates in reverse: code is the authoritative source, and documentation must be verified against it. This mandatory verification prevents false claims and ensures documentation correctness.
 
-**Design Note**: This stage implements the reverse counterpart to the code review agent's Stage 6 (Documentation Completeness). While Stage 6 verifies "code changes → docs support", this stage verifies "doc changes → code backing". Both use three-substage patterns (Discovery → Verification → Refined Report) with explicit false-positive prevention.
+**Design Note**: This stage implements the reverse counterpart to the code review agent's Documentation Completeness stage. While that stage verifies "code changes → docs support", this stage verifies "doc changes → code backing". Both use three-substage patterns (Discovery → Verification → Refined Report) with explicit false-positive prevention.
 
 **Inputs**: Changed documentation files (from git diff), full codebase in `cmd/`, `internal/`, `client/`, test files, configuration schemas, coverage map (from Stage 1).
 
@@ -174,6 +174,7 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
       - [ ] Check flag definitions (name, shorthand, type, default, help text)
       - [ ] Confirm help text matches `Use:` and `Short:` fields
       - [ ] Verify output formatting (tabwriter usage, column headers, sorting)
+      - [ ] **CLI Reference vs. Command Help**: If you notice a discrepancy between command help and CLI reference docs, note that CLI reference is auto-generated from help regularly (it will be autofixed). However, if the command help itself is wrong, flag it as a code issue.
     
     - **API Surface**:
       - [ ] Find route definition in `internal/daemon/api.go`
@@ -308,7 +309,7 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 **Outcome**: A final, evidence-based code backing report containing ONLY verified issues with supporting code references and conservative, minimal documentation edits.
 
-### Stage 5: Style & Formatting Review
+### Stage 6: Style & Formatting Review
 **Intent**: Enforce style guides, formatting conventions, and reST syntax.
 **Inputs**: File content, [`docs/doc-style-guide.md`](../../docs/doc-style-guide.md).
 **Actions**:
@@ -317,9 +318,9 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 **Outcome**: A list of style violations with supporting quotes.
 
-### Stage 6: Code Backing Verification Report Integration
+### Stage 7: Code Backing Verification Report Integration
 **Intent**: Integrate code backing verification findings into the overall review.
-**Inputs**: Findings from Stage 4.5.
+**Inputs**: Findings from Stage 5.
 **Actions**:
 -   Ensure code backing findings are prioritized appropriately (blocking issues for incorrect/unsupported claims).
 -   Cross-reference with Diátaxis compliance findings (Stage 2) to identify if inaccuracies stem from category misalignment.
@@ -327,13 +328,16 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 **Outcome**: Integrated findings ready for final output generation.
 
-### Stage 7: Final Output Generation
+### Stage 8: Final Output Generation
 **Intent**: Synthesize findings into a structured, actionable review comment.
-**Inputs**: Findings from Stages 1-6.
+**Inputs**: Findings from Stages 1-7.
 **Actions**:
 -   Construct the review using the **Output Template** below.
+-   **Concentrate all actionable recommendations in the final "Recommendations" section** — avoid scattering action items throughout the report.
+-   In individual sections, provide **analysis and observations only**; reserve specific action items for the Recommendations section.
 -   Ensure all style suggestions include a quote from the style guide.
--   Prioritize blocking issues (build failures, broken links) over minor style nits.
+-   In the Recommendations section, sort items by priority (highest to lowest) using the established priority order.
+-   Include file:line references, code evidence references, and style guide quotes for all recommendations.
 
 **Outcome**: A formatted review comment ready for submission.
 
@@ -343,7 +347,7 @@ Structure your review as follows:
 
 ```markdown
 ### Documentation Impact Summary
-[What docs changed, which sections affected]
+[2-3 sentences: what documentation changed, which sections/pillars affected, scope of modifications]
 
 ### Diátaxis Compliance Report
 - **Declared Category**: [Tutorial | How-to | Explanation | Reference]
@@ -354,8 +358,8 @@ Structure your review as follows:
 - **Misalignments**: [Specific examples where the content deviates from its category or quality standards]
 - **Corrective Actions**: [Minimal suggestions to realign content]
 
-### Artefact Coverage
-[Reference `docs/coverage.md`; missing `.. @artefact` comments or `.coverage.yaml` entities?]
+### Documentation Completeness
+[Missing documentation, cross-references, navigation]
 
 ### File Structure & Naming
 [Anchor labels, metadata blocks, file naming]
@@ -363,7 +367,7 @@ Structure your review as follows:
 ### Content Quality
 [Clarity, accuracy, cross-references]
 
-### Code Backing Verification (Stage 4.5)
+### Code Backing Verification
 #### Changed Documentation Claims
 [List of claims from git diff: behavior assertions, options/defaults, examples, CLI/API surface, error messages, terminology]
 
@@ -397,13 +401,28 @@ Structure your review as follows:
 All documentation claims are backed by code evidence. No corrections required.
 
 ### Style Adherence
-**Quote from `docs/doc-style-guide.md`, [Section Name]:**
+**Quote from `doc-style-guide.md`, [Section Name]:**
 > [Exact relevant passage]
 
 [Observation about adherence or suggested change]
 
 ### Recommendations
-[Prioritized list of specific actions with file:line references, code evidence references, and style guide quotes. Prioritize: 1) Code backing issues, 2) Build failures, 3) Diátaxis misalignments, 4) Style violations]
+
+**Priority Order**: Code backing issues > Build failures > Diátaxis misalignments > Style violations
+
+[List all actionable items from the review above, sorted by priority. Each recommendation must include:]
+- **File:line reference**: Exact location requiring change
+- **Issue**: Brief description of what needs to be addressed
+- **Action**: Specific change to make
+- **Rationale**: Why this change is needed (with style guide quote, code evidence, or documentation reference)
+
+[Format each item as:]
+
+**[Priority Level]: [Brief title]**
+- File: `[path/file.ext:line]`
+- Issue: [Description]
+- Action: [Specific change]
+- Rationale: [Why, with references]
 ```
 
 ## Boundaries & Guidelines
@@ -413,7 +432,7 @@ All documentation claims are backed by code evidence. No corrections required.
 -   Build docs locally (`make spelling linkcheck woke lint-md`) to catch Sphinx warnings.
 -   Update and check `docs/coverage.md` for artefact gaps.
 -   Verify cross-references resolve correctly.
--   **Complete code backing verification (Stage 4.5, Sub-stage B)** before reporting documentation claims — search actual codebase with ≥2 verification strategies.
+-   **Complete code backing verification (Stage 5, Sub-stage B)** before reporting documentation claims — search actual codebase with ≥2 verification strategies.
 -   **Provide code evidence for all documentation consistency claims**: Include search strategies, file paths, line numbers, test references, or explicit "no code found" statements.
 -   **Code is the source of truth**: Flag documentation that contradicts code behavior, not vice versa.
 

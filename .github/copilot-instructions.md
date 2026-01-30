@@ -69,6 +69,14 @@ See [`docs/contributing.rst`](../docs/contributing.rst) for detailed standards. 
 - **Code Review Agent**: [`.github/agents/code-review.agent.md`](.github/agents/code-review.agent.md) — For PR code reviews
 - **Docs Review Agent**: [`.github/agents/doc-review.agent.md`](.github/agents/doc-review.agent.md) — For PR documentation reviews
 
+## Related Repositories
+
+These external repositories provide authoritative context for the Workshop project:
+
+- https://github.com/canonical/sdkcraft — SDKcraft utility codebase for packaging and publishing SDKs
+- https://github.com/canonical/sdks — Existing SDK implementations used in tests, documentation, and examples
+- https://github.com/canonical/reference-workshops — Reference workshop implementations demonstrating SDK usage patterns
+
 ## GitHub Actions Workflows
 
 - `lint.yaml` — golangci-lint on Go code
