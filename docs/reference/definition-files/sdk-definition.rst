@@ -18,13 +18,23 @@ Filename convention
 When :ref:`crafting and publishing a regular SDK <tut_craft_sdks>`,
 the name of the SDK definition file must be :file:`sdkcraft.yaml` or :file:`.sdkcraft.yaml`.
 
-In-project SDKs are defined using :file:`sdk.yaml` or :file:`meta/sdk.yaml`
+When an SDK is built from the definition file,
+the resulting package contains the SDK metadata in :file:`sdk.yaml`.
+The difference is that the :file:`sdkcraft.yaml` file
+is used at build time by |sdk_markup|,
+while the :file:`sdk.yaml` file
+is used at runtime by |ws_markup|.
+
+Accordingly,
+in-project SDKs are defined using :file:`sdk.yaml` or :file:`meta/sdk.yaml`
 and stored in :file:`.workshop/<NAME>/`.
-These definitions don't support |sdk_markup| build-time features,
+Because these SDKs are defined in-place rather than built,
+they don't support |sdk_markup| build-time features,
 like :samp:`build-base`, :samp:`platforms` or :samp:`parts`.
 
 When :ref:`sketching a local SDK <tut_sketch_sdks>`,
-the SDK definition file is named :file:`sdk.yaml` and stored under :file:`$XDG_DATA_HOME/workshop/`.
+the SDK definition file is also named :file:`sdk.yaml`
+and stored under :file:`$XDG_DATA_HOME/workshop/`.
 |ws_markup| ignores other files in this directory,
 but hooks can be defined inline.
 Like in-project SDKs,

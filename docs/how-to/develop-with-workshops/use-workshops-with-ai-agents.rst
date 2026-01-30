@@ -44,11 +44,12 @@ Worktrees help isolate and track different agents' runs and outcomes
 while sharing the same project directory and the workshops in it.
 
 Note that the :program:`claude-code` and :program:`copilot-cli` SDKs
-will prompt for login credentials on their first run.
-Both agents support token-based API authentication via environment variables,
+will prompt for login credentials on their first run;
+you should have a browser window open with the respective account signed in.
+Alternatively,
+the agents support token-based API authentication via environment variables,
 which allows you to skip the login steps below;
 refer to their respective documentation and runtime help for details.
-
 
 Agent prompts
 -------------
@@ -147,10 +148,10 @@ Create a workshop definition file in the project root:
        claude --model $CLAUDE_MODEL --dangerously-skip-permissions "$@"
 
      copilot-auto: |
-       copilot --model $COPILOT_MODEL --allow-all-tools --allow-all-paths --allow-all-urls --silent --prompt "$@"
+       copilot --model $COPILOT_MODEL --yolo --silent --prompt "$@"
 
      copilot: |
-       copilot --model $COPILOT_MODEL --allow-all-tools --allow-all-paths --allow-all-urls --interactive "$@"
+       copilot --model $COPILOT_MODEL --yolo --interactive "$@"
 
 
 The definition adds the two SDKs,

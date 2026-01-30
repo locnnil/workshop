@@ -140,8 +140,8 @@ instead of reverting the workshop to its previous state,
      then run "workshop refresh --continue blank".
      To abort and revert, run "workshop refresh --abort blank"
 
-To help determine what went wrong, use the :command:`workshop changes` and
-:command:`workshop tasks` commands discussed above.
+To help determine what went wrong, use the :command:`workshop changes` and
+:command:`workshop tasks` commands discussed above.
 
 Next, you can shell into the workshop to debug and possibly fix it:
 
@@ -168,6 +168,54 @@ Otherwise, undo the changes with the :option:`!--abort` option:
 
 The effect will be the same as if you hadn't used :option:`!--wait-on-error`:
 the workshop will revert to its previous state.
+
+
+Isolate problematic SDKs
+------------------------
+
+When a workshop uses multiple SDKs
+and has issues during :command:`workshop refresh` or :command:`workshop launch`,
+it can be difficult to determine which SDK is causing the problem.
+
+Start by testing each SDK in isolation before combining them;
+this helps narrow down compatibility issues,
+integration problems,
+or SDK-specific bugs.
+
+If the workshop fails only when multiple SDKs are used together,
+the issue may stem from interactions between them.
+To isolate the culprit,
+comment out SDKs one by one in the workshop definition
+and refresh the workshop after each change.
+
+When the issue reappears,
+the cause is likely the SDK you just re-enabled,
+or its interaction with other SDKs.
+Investigate it using the :command:`workshop tasks` command
+to view detailed error information.
+
+
+SDK-installed software versions
+-------------------------------
+
+Components installed via SDKs
+cannot be updated using their regular mechanisms.
+SDKs are mounted read-only inside workshops,
+so regular update commands won't affect the SDK-provided files,
+likely failing instead.
+
+SDK definitions identify possible base systems
+and are usually versioned after the software they install;
+different SDK versions may be published via different channels.
+
+To update any components provided by an SDK,
+refresh the workshop with :command:`workshop refresh`.
+This pulls the latest version of each SDK from its configured channel
+and installs the updated SDK components.
+
+To switch to a different version,
+update the channel in the workshop definition,
+then refresh the workshop to apply the change.
 
 
 List and suppress warnings
@@ -213,6 +261,7 @@ Explanation:
 Reference:
 
 - :ref:`ref_workshop_changes`
+- :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_okay`
 - :ref:`ref_workshop_refresh`
 - :ref:`ref_workshop_tasks`

@@ -381,7 +381,7 @@ such as configuration settings or temporary data that shouldn't be lost.
 For these cases,
 you would create :file:`save-state` and :file:`restore-state` hooks.
 
-During a :command:`workshop refresh` operation:
+During a :command:`workshop refresh` operation:
 
 - The :file:`save-state` hook runs *before* the workshop is refreshed,
   saving the state of the SDK to :envvar:`$SDK_STATE_DIR`.

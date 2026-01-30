@@ -39,20 +39,6 @@ then ensure it runs.
 .. @artefact workshopd
 .. @artefact workshop (CLI)
 
-Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
-
-.. code-block:: console
-
-   $ sudo snap login
-   $ sudo snap install --classic workshop
-
-
-.. warning::
-
-   If this command fails, you may need an invitation;
-   contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
-
 
 Prerequisites
 ~~~~~~~~~~~~~
@@ -93,6 +79,24 @@ To refresh an existing installation:
    is enabled and running.
    Again, refer to LXD documentation
    and your distribution's manuals for guidance.
+
+
+Installation
+~~~~~~~~~~~~
+
+Authenticate to the Snap Store and install the snap
+using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+
+.. code-block:: console
+
+   $ sudo snap login
+   $ sudo snap install --classic workshop
+
+
+.. warning::
+
+   If this command fails, you may need an invitation;
+   contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
 
 
 .. _tut_define_launch:
@@ -377,7 +381,7 @@ to serve as our workspace.
 
 First, let's put our example workshop to practical use;
 download a simple AI model *inside the workshop*
-using the :command:`workshop exec` command.
+using the :command:`workshop exec` command.
 We'll use the :samp:`tinyllama` model, which is small and quick to download:
 
 .. @artefact workshop exec

@@ -159,7 +159,7 @@ Aggressive cleanup
 ------------------
 
 If previous steps haven't resolved the issue,
-or if :command:`workshop list` still shows remnants,
+or if :command:`workshop list` still shows remnants,
 the most aggressive cleanup method is to completely purge the |ws_markup| snap.
 This executes the snap's :samp:`remove` hook,
 which is designed to clean up all associated data and resources.
