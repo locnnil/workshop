@@ -136,16 +136,12 @@ html_context = {
 slug = ''
 
 
-html_baseurl = "https://canonical-workshop.readthedocs-hosted.com/"
-
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
 
 # When configured with RTD variables, check for RTD environment so manual runs succeed:
 
-if 'READTHEDOCS_VERSION' in os.environ:
-    version = os.environ["READTHEDOCS_VERSION"]
-    sitemap_url_scheme = '{version}{link}'
-else:
-    sitemap_url_scheme = 'MANUAL/{link}'
+version = os.environ.get("READTHEDOCS_VERSION", "latest")
+sitemap_url_scheme = '{link}'
 
 # Template and asset locations
 
