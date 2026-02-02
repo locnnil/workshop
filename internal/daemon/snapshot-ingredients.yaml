@@ -1,0 +1,61 @@
+# When updating this file, please carefully consider whether the snapshot
+# format revision number needs to be bumped. This file is used by the
+# apiSuite.TestSnapshotIngredients test. It records the types Workshop uses
+# interally to define or describe workshops. Field types may be omitted if
+# they're irrelevant to the snapshot format. Changes to this file may indicate
+# a need to expand the other snapshot format tests.
+File:
+  Name: string
+  Base: string
+  Sdks: '[]workshop.SdkRecord'
+  Actions:
+  Connections:
+SdkRecord:
+  Name: string
+  Channel: string
+  Source: sdk.Source
+  Plugs:
+  Slots:
+Workshop:
+  Backend:
+  Project: workshop.Project
+  File: '*workshop.File'
+  Name: string
+  Image: workshop.BaseImage
+  Running: bool
+  Sdks: map[string]workshop.SdkInstallation
+  Profiles:
+BaseImage:
+  Name: string
+  Fingerprint: string
+SdkInstallation:
+  Setup: sdk.Setup
+  InstallOrder: int
+  InstallTime: time.Time
+Setup:
+  Name: string
+  Channel: string
+  Source: sdk.Source
+  Revision: sdk.Revision
+  Sha3_384: string
+FakeWorkshopBackend:
+  Workshops: map[string]map[string]*fakebackend.FakeWorkshop
+  StashedWorkshops: map[string]map[string]*fakebackend.FakeWorkshop
+  Volumes:
+  SdkVolumes:
+  ExecCallback:
+  ExecCalls:
+  WorkshopFsCallback:
+  WorkshopFsCalls:
+  GetBaseCallback:
+  DownloadBaseCallback:
+  DownloadBaseCalls:
+  AttachVolumeCalls:
+  LaunchOrRebuildCalls:
+  SnapshotCalls:
+  SnapshotCallback:
+  BaseDir:
+FakeWorkshop:
+  Workshop: '*workshop.Workshop'
+  Devices: map[string]map[string]string
+  WorkshopFilesystem:

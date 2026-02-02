@@ -12,7 +12,7 @@ execute: |
   try_area='/home/ubuntu/.local/share/workshop/try/test-sdk-basic'
   sudo -u ubuntu mkdir -p "$try_area"
   sudo -u ubuntu cp "$store_area/latest/stable/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
-  echo fakehash | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
+  echo 50aae25a070e742e9ea72a4bd3ed419f5a0a34391e294c4b619ed5659b041b7bfc872c4070811e4fba4084bcf15d8fe8 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
   sudo -u ubuntu cp "$store_area/latest/stable/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
 
   workshop_exec launch
@@ -36,7 +36,7 @@ execute: |
 
   echo "Check SDKs in try area can be updated"
   sudo -u ubuntu cp "$store_area/latest/edge/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
-  echo fakehash2 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
+  echo fccdbd97fa7d51053e0e6a9db8e3fc81bbce19aaa4d578072b9bb53527b45a80f30781c97c9fb830670b9141fdf8df19 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
   sudo -u ubuntu cp "$store_area/latest/edge/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
 
   workshop_exec refresh

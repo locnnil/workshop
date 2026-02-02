@@ -1173,6 +1173,7 @@ runcmd:
 		"security.nesting":               "true",
 		"user.user-data":                 cloudInitConfig,
 		"user.network-config":            cloudInitNetwork,
+		"user.workshop.format-revision":  SnapshotFormatRevision.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
 		"user.workshop.file":             string(f),

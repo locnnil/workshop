@@ -23,6 +23,8 @@ var (
 	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
 	ConfigWorkshopSdk             = "user.workshop.sdk"
 	ConfigWorkshopSnapshotType    = "user.workshop.snapshot-type"
+	ConfigWorkshopSnapshotFormat  = "user.workshop.format-revision"
+	ConfigWorkshopSha3_384        = "user.workshop.sha3-384"
 	ConfigProjectPathDevice       = "workshop.project"
 	ConfigStateStorageDevice      = "workshop.state-storage"
 )
