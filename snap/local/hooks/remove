@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 # Allow the script to run without snap.
 if [ -n "$SNAP" ]; then

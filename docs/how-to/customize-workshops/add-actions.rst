@@ -41,7 +41,7 @@ from the :ref:`tut_sketch_sdks` tutorial section:
      lint: |
        golangci-lint run --out-format=colored-line-number -c .golangci.yaml
      shellcheck: |
-       git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck
+       git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck --check-sourced --external-sources
 
 
 Unlike changes in SDK layout or base,
