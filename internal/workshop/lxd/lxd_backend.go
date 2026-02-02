@@ -31,7 +31,6 @@ import (
 
 const (
 	storagePool           = "workshop"
-	storagePoolDriver     = "zfs"
 	storagePoolMinimalGiB = 5
 
 	networkName = "workshopbr0"
@@ -41,7 +40,22 @@ const (
 var (
 	checkNvidiaRuntime  = checkNvidia
 	startCommandTimeout = 1 * time.Minute
+	storagePoolDriver   = "zfs"
 )
+
+// isWSL checks if we're running on Windows Subsystem for Linux
+func isWSL() bool {
+	var utsname unix.Utsname
+	if err := unix.Uname(&utsname); err != nil {
+		return false
+	}
+	data := utsname.Release[:]
+	if idx := bytes.IndexByte(data, 0); idx >= 0 {
+		data = data[:idx]
+	}
+	version := strings.ToLower(string(data))
+	return strings.Contains(version, "microsoft") || strings.Contains(version, "wsl2")
+}
 
 type volumeGuard struct {
 	c       chan struct{}
@@ -71,6 +85,10 @@ func init() {
 	volumeGuardsLock.Lock()
 	defer volumeGuardsLock.Unlock()
 	volumeGuards = make(map[string]*volumeGuard)
+
+	if isWSL() {
+		storagePoolDriver = "btrfs"
+	}
 
 	syscheck.RegisterCheck(checkServerCapabilities)
 }
@@ -150,10 +168,10 @@ func checkVersion(version string) error {
 }
 
 func checkStorage(drivers []api.ServerStorageDriverInfo) error {
-	isZfs := func(driver api.ServerStorageDriverInfo) bool {
-		return driver.Name == "zfs"
+	hasDriver := func(driver api.ServerStorageDriverInfo) bool {
+		return driver.Name == storagePoolDriver
 	}
-	if slices.ContainsFunc(drivers, isZfs) {
+	if slices.ContainsFunc(drivers, hasDriver) {
 		return nil
 	}
 
@@ -161,7 +179,7 @@ func checkStorage(drivers []api.ServerStorageDriverInfo) error {
 	//  Error: Error loading "zfs" module: Failed to run: modprobe -b zfs:
 	//  exit status 1 (modprobe: FATAL: Module zfs not found ...)
 	// We keep the first part for consistency, the rest doesn't add much.
-	return errors.New(`suitable storage backend not found: error loading "zfs" module`)
+	return fmt.Errorf(`suitable storage backend not found: error loading %q module`, storagePoolDriver)
 }
 
 func checkServerCapabilities() error {
@@ -244,7 +262,7 @@ func New() (*Backend, error) {
 			logger.Noticef("On Backend.New: set storage pool to the minimal size: %dGiB", storagePoolMinimalGiB)
 		}
 	} else if pools[idx].Driver != storagePoolDriver {
-		return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q", storagePool, pools[idx].Driver)
+		return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q (expected %q)", storagePool, pools[idx].Driver, storagePoolDriver)
 	}
 
 	networks, err := conn.GetNetworks()
@@ -1056,7 +1074,7 @@ users:
 apt:
   conf: |
     # Installed by workshop
-    
+
     # Don't automatically install recommended packages
     APT::Install-Recommends "0";
 

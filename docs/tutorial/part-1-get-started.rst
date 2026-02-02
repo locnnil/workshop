@@ -80,6 +80,8 @@ To refresh an existing installation:
    Again, refer to LXD documentation
    and your distribution's manuals for guidance.
 
+   |ws_markup| is compatible with Windows Subsystem for Linux (WSL2).
+   On WSL, |ws_markup| automatically uses Btrfs instead of ZFS for storage.
 
 Installation
 ~~~~~~~~~~~~
