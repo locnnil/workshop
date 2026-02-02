@@ -79,7 +79,8 @@ understanding the events that trigger them can help you with troubleshooting.
 When you define an SDK,
 its hooks should be placed in the :file:`hooks/` subdirectory
 next to the :ref:`definition <exp_sdk_definition>`;
-|sdk_markup| validates and packages them along with the :file:`.yaml` file.
+|sdk_markup| lints them with `ShellCheck <https://www.shellcheck.net/>`_
+and packages them along with the :file:`.yaml` file.
 
 
 .. _exp_workshopctl:
