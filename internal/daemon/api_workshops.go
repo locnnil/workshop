@@ -31,6 +31,7 @@ type actionOpts struct {
 	Mode string `json:"mode"`
 	// Supported refresh options: "update", "restore".
 	RefreshOption string `json:"refresh-option"`
+	Verbose       bool   `json:"verbose"`
 }
 
 type workshopReq struct {
@@ -518,10 +519,12 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		case "launch":
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+			change.Set("verbose", reqData.Options.Verbose)
 			manifests, taskset, err = launch(r.Context(), wsmgr, &reqData, projectId)
 		case "refresh":
 			change = newWorkshopChange(st, "refresh", user, projectId, reqData.Action, reqData.Names)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
+			change.Set("verbose", reqData.Options.Verbose)
 			manifests, taskset, err = refresh(r.Context(), wsmgr, &reqData, projectId)
 		case "start":
 			change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)

@@ -116,7 +116,7 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		mode = "abort"
 	}
 
-	changeId, err := cli.Launch(project.Id, av, mode)
+	changeId, err := cli.Launch(project.Id, av, mode, c.verbose)
 	if err != nil {
 		return err
 	}

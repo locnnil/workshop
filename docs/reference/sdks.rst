@@ -499,6 +499,12 @@ in the :file:`/project/` directory.
 
 A hook can signal an error by returning a non-zero exit code;
 a zero code indicates success.
+The options :samp:`errexit` and :samp:`pipefail`
+are set by default,
+so most commands which return a non-zero exit code
+cause the hook to exit with the same code.
+If :option:`!--verbose` is passed to :command:`workshop launch` or :command:`workshop refresh`,
+the option :samp:`xtrace` is also set.
 
 .. note::
 

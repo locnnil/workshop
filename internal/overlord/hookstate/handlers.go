@@ -44,17 +44,42 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	var verbose bool
+	st.Lock()
+	err = task.Change().Get("verbose", &verbose)
+	st.Unlock()
+	if errors.Is(err, state.ErrNoState) {
+		verbose = false
+	} else if err != nil {
+		return err
+	}
+
 	hookPath := sdk.SdkHookPath(hook.Sdk, hook.Type())
+
+	command := []string{"bash", "-o", "errexit", "-o", "pipefail"}
+	if verbose {
+		command = append(command, "-o", "xtrace")
+	}
+	if hook.HookType == SetupProject {
+		runAsUser := []string{
+			"sudo",
+			"--user=#" + workshop.User.Uid,
+			"--group=#" + workshop.User.Gid,
+			"--preserve-env",
+			"--",
+			"bash",
+			"-l",
+			"-c",
+			`exec -- "$0" "$@"`,
+		}
+		command = append(runAsUser, command...)
+	}
+	command = append(command, hookPath)
 
 	execArgs := &workshop.ExecArgs{
 		UserId:  0,
 		GroupId: 0,
-		Command: []string{
-			"bash",
-			"-eo",
-			"pipefail",
-			hookPath,
-		},
+		Command: command,
 		Environment: map[string]string{
 			"SDK": sdk.SdkDir(hook.Sdk),
 		},
@@ -97,22 +122,7 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		execArgs.Environment["SDK_STATE_DIR"] = filepath.Join(where, "sdk", hook.Sdk)
 	}
 
-	switch hook.HookType {
-	case SetupProject:
-		execArgs.Command = []string{
-			"sudo",
-			"-u",
-			"#" + workshop.User.Uid,
-			"-g",
-			"#" + workshop.User.Gid,
-			"--preserve-env",
-			"--",
-			"bash",
-			"-elo",
-			"pipefail",
-			hookPath,
-		}
-
+	if hook.HookType == SetupProject {
 		uid, gid, err := osutil.UidGid(&workshop.User)
 		if err != nil {
 			return err
@@ -126,10 +136,9 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		xdgRuntimeDir := filepath.Join(dirs.XdgRuntimeDirBase, workshop.User.Uid)
 		execArgs.Environment["XDG_RUNTIME_DIR"] = xdgRuntimeDir
 		execArgs.Environment["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + filepath.Join(xdgRuntimeDir, "bus")
-		return h.executeHook(ctx, task, w, &hook, execArgs)
-	default:
-		return h.executeHook(ctx, task, w, &hook, execArgs)
 	}
+
+	return h.executeHook(ctx, task, w, &hook, execArgs)
 }
 
 type HookLogKey string
