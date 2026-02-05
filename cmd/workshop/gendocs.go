@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"log"
 	"os"
 
@@ -31,10 +30,6 @@ func (c *CmdDocs) Command() *cobra.Command {
 
 func filePrepender(filename string) string {
 	return ""
-}
-
-func linkHandler(name, ref string) string {
-	return fmt.Sprintf(":ref:`%s <%s>`", name, ref)
 }
 
 func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
@@ -68,7 +63,6 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 		docDir,
 		td,
 		filePrepender,
-		linkHandler,
 	)
 	if err != nil {
 		log.Fatalf("failed to generate documentation: %v", err)
