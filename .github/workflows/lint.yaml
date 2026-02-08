@@ -37,7 +37,7 @@ jobs:
 
       - name: shellcheck
         run: |
-          git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck --external-sources
+          git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck --check-sourced --external-sources
           snapd-testing-tools/utils/spread-shellcheck tests/integration
 
       - name: Print error message
