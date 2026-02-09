@@ -140,8 +140,6 @@ jobs:
           - **Redirects fixed:** ${{ steps.pr_meta.outputs.count }}
           - **Redirect codes processed:** ${{ steps.pr_meta.outputs.codes }}
 
-          ## Changes
-
           EOF
 
           cat "$TEMP_DIR/redirect_fixes_summary.md" >> "$TEMP_DIR/redirect_fixes_pr_body.md"
