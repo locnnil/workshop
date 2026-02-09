@@ -94,6 +94,11 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=None,
         help="Directory for summaries and manifests (default: create a unique temp dir).",
     )
+    parser.add_argument(
+        "--allow-cross-domain",
+        action="store_true",
+        help="Allow updates when redirects change domains.",
+    )
     return parser.parse_args(argv)
 
 
@@ -377,6 +382,7 @@ def write_summary(
     warnings: List[str],
     verification_failures: List[str],
     redirect_codes: set[str],
+    parsed_entries: List[RedirectEntry],
 ) -> None:
     summary_path = output_dir / SUMMARY_FILE
     files_modified = {str(change.file_path) for change in changes}
@@ -404,6 +410,23 @@ def write_summary(
             relative_path = change.file_path.relative_to(docs_dir)
             lines.append(
                 f"| {relative_path} | {change.line_no} | {change.old_url} | {change.new_url} |\n"
+            )
+        lines.append("\n")
+
+    if parsed_entries:
+        lines.extend(
+            [
+                "## Linkcheck status map\n",
+                "| File | Line | Status | Linkcheck line |\n",
+                "| --- | ---: | --- | --- |\n",
+            ]
+        )
+        for entry in parsed_entries:
+            relative_path = entry.file_path.relative_to(docs_dir)
+            status = entry.status_code or "unknown"
+            raw = entry.raw_line.replace("|", "\\|")
+            lines.append(
+                f"| {relative_path} | {entry.line_no} | {status} | {raw} |\n"
             )
         lines.append("\n")
 
@@ -473,6 +496,7 @@ def main() -> int:
     log(f"Max redirects: {args.max_redirects}")
     log(f"Dry run: {args.dry_run}")
     log(f"Verify links: {args.verify}")
+    log(f"Allow cross-domain: {args.allow_cross_domain}")
 
     if not docs_dir.exists():
         log(f"Docs directory not found: {docs_dir}")
@@ -506,6 +530,7 @@ def main() -> int:
             warnings=warnings,
             verification_failures=[],
             redirect_codes=redirect_codes,
+            parsed_entries=entries,
         )
         return 2
 
@@ -518,7 +543,9 @@ def main() -> int:
         if entry.file_path.suffix not in ALLOWED_EXTENSIONS:
             skipped.append(f"Unsupported file type: {entry.raw_line}")
             continue
-        if not same_domain(entry.old_url, entry.new_url):
+        if not args.allow_cross_domain and not same_domain(
+            entry.old_url, entry.new_url
+        ):
             skipped.append(f"Domain changed: {entry.raw_line}")
             continue
         updated_url = preserve_query_fragment(entry.old_url, entry.new_url)
@@ -545,6 +572,7 @@ def main() -> int:
             warnings=warnings,
             verification_failures=[],
             redirect_codes=redirect_codes,
+            parsed_entries=entries,
         )
         return 2
 
@@ -577,6 +605,7 @@ def main() -> int:
             warnings=warnings,
             verification_failures=[],
             redirect_codes=redirect_codes,
+            parsed_entries=entries,
         )
         return 1
 
@@ -589,6 +618,7 @@ def main() -> int:
             warnings=warnings,
             verification_failures=[],
             redirect_codes=redirect_codes,
+            parsed_entries=entries,
         )
         return 2
     log(f"Applied changes: {len(all_changes)}")
@@ -617,6 +647,7 @@ def main() -> int:
         warnings=warnings,
         verification_failures=verification_failures,
         redirect_codes=redirect_codes,
+        parsed_entries=entries,
     )
 
     if verification_failures:
