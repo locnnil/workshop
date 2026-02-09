@@ -126,7 +126,7 @@ func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av 
 		}
 	}
 
-	changeId, err := cli.Refresh(project.Id, av, mode, option)
+	changeId, err := cli.Refresh(project.Id, av, mode, option, c.verbose)
 	if err != nil {
 		return nil, err
 	}

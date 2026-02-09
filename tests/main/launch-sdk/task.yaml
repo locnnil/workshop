@@ -3,9 +3,12 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check workshop can be launched with a basic SDK"
-  workshop_exec launch
+  workshop_exec launch --verbose
   workshop_exec list | MATCH "$(pwd)[[:space:]]*ws-basic[[:space:]]*Ready[[:space:]]*-"
-  
+
+  # Check setup-base is run using bash -x
+  workshop_exec tasks | MATCH "\\+ echo 'setup-base ran successfully\!'\$"
+
   # Ensure there is one installed SDK that was provided in the workshop definition
   workshop_exec info | yq ".sdks | length == 1"
   workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH "latest/stable"

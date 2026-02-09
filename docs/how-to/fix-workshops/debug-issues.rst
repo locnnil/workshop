@@ -46,6 +46,9 @@ Suppose something goes wrong during :command:`workshop refresh`:
      Refresh aborted
 
 
+To show more details, try :command:`workshop refresh --verbose`;
+you can also use :option:`!--verbose` with :command:`workshop launch`.
+
 To see the *tasks*, or individual actions,
 during the latest *change*, which is essentially a major workshop update,
 run :command:`workshop tasks` without arguments:

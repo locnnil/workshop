@@ -15,6 +15,7 @@ type WorkshopActionOptions struct {
 	Mode string `json:"mode,omitempty"`
 	// Supported refresh options: "update", "restore".
 	RefreshOption string `json:"refresh-option,omitempty"`
+	Verbose       bool   `json:"verbose,omitzero"`
 }
 
 type WorkshopActionSetup struct {
@@ -72,23 +73,25 @@ func (client *Client) doWorkshopAction(projectId string, action *WorkshopActionS
 	return client.doAsync("POST", "/v1/projects/"+projectId+"/workshops", nil, nil, &body)
 }
 
-func (client *Client) Launch(projectId string, names []string, mode string) (changeId string, err error) {
+func (client *Client) Launch(projectId string, names []string, mode string, verbose bool) (changeId string, err error) {
 	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "launch",
 		Names:  names,
 		Options: &WorkshopActionOptions{
-			Mode: mode,
+			Mode:    mode,
+			Verbose: verbose,
 		},
 	})
 }
 
-func (client *Client) Refresh(projectId string, names []string, mode string, option string) (changeId string, err error) {
+func (client *Client) Refresh(projectId string, names []string, mode string, option string, verbose bool) (changeId string, err error) {
 	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "refresh",
 		Names:  names,
 		Options: &WorkshopActionOptions{
 			Mode:          mode,
 			RefreshOption: option,
+			Verbose:       verbose,
 		},
 	})
 }
