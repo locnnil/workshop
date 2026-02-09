@@ -31,6 +31,7 @@ DEFAULT_REDIRECT_CODES = {"301", "308"}
 SUMMARY_FILE = "redirect_fixes_summary.md"
 MANIFEST_FILE = "redirect_fixes_manifest.json"
 DEFAULT_TEMP_DIR = "/tmp/workshop-linkcheck-fixes"
+USER_AGENT = "workshop-linkcheck-fixer/1.0"
 
 
 @dataclass(frozen=True)
@@ -97,7 +98,11 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 
 
 def parse_redirect_codes(value: str) -> set[str]:
-    codes = {code.strip() for code in value.split(",") if code.strip()}
+    codes = {
+        code.strip()
+        for code in value.split(",")
+        if code.strip() and code.strip().isdigit() and len(code.strip()) == 3
+    }
     return codes or set(DEFAULT_REDIRECT_CODES)
 
 
@@ -116,7 +121,7 @@ def read_linkcheck_text(docs_dir: Path) -> str:
     output_path = find_linkcheck_output(docs_dir)
     if output_path:
         log(f"Using linkcheck output file: {output_path}")
-        return output_path.read_text(encoding="utf-8")
+        return output_path.read_text(encoding="utf-8", errors="replace")
     if not sys.stdin.isatty():
         log("Reading linkcheck output from stdin.")
         return sys.stdin.read()
@@ -155,7 +160,19 @@ def extract_urls(text: str) -> Optional[Tuple[str, str]]:
     )
     if not match:
         return None
-    return match.group("old"), match.group("new")
+    return sanitize_url(match.group("old")), sanitize_url(match.group("new"))
+
+
+def sanitize_url(url: str) -> str:
+    return url.rstrip(".,;)")
+
+
+def build_request(url: str, method: str) -> urllib.request.Request:
+    return urllib.request.Request(
+        url,
+        method=method,
+        headers={"User-Agent": USER_AGENT},
+    )
 
 
 def determine_status_code(url: str, timeout: float = 5.0) -> Optional[str]:
@@ -164,11 +181,18 @@ def determine_status_code(url: str, timeout: float = 5.0) -> Optional[str]:
             return None
 
     opener = urllib.request.build_opener(NoRedirect)
-    request = urllib.request.Request(url, method="HEAD")
+    request = build_request(url, method="HEAD")
     try:
         with opener.open(request, timeout=timeout) as response:
             return str(response.status)
     except urllib.error.HTTPError as exc:
+        if exc.code in {405, 403}:
+            try:
+                with opener.open(build_request(url, method="GET"), timeout=timeout) as response:
+                    return str(response.status)
+            except urllib.error.HTTPError as fallback_exc:
+                if fallback_exc.code:
+                    return str(fallback_exc.code)
         if exc.code:
             return str(exc.code)
     except Exception:
@@ -249,11 +273,17 @@ def same_domain(old_url: str, new_url: str) -> bool:
 
 
 def verify_url(url: str, timeout: float = 5.0) -> Optional[str]:
-    request = urllib.request.Request(url, method="HEAD")
+    request = build_request(url, method="HEAD")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return str(response.status)
     except urllib.error.HTTPError as exc:
+        if exc.code in {405, 403}:
+            try:
+                with urllib.request.urlopen(build_request(url, method="GET"), timeout=timeout) as response:
+                    return str(response.status)
+            except urllib.error.HTTPError as fallback_exc:
+                return f"HTTP {fallback_exc.code}"
         return f"HTTP {exc.code}"
     except Exception as exc:
         return str(exc)
@@ -266,7 +296,14 @@ def apply_changes_to_file(
 ) -> Tuple[List[ChangeRecord], List[str]]:
     errors: List[str] = []
     applied_changes: List[ChangeRecord] = []
-    lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    if not file_path.exists():
+        errors.append(f"File not found: {file_path}")
+        return applied_changes, errors
+    try:
+        lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+    except Exception as exc:
+        errors.append(f"Failed to read {file_path}: {exc}")
+        return applied_changes, errors
 
     for entry in changes:
         if entry.line_no < 1 or entry.line_no > len(lines):
@@ -330,6 +367,7 @@ def apply_changes_to_file(
 
 
 def write_summary(
+    docs_dir: Path,
     output_dir: Path,
     changes: List[ChangeRecord],
     skipped: List[str],
@@ -430,13 +468,18 @@ def main() -> int:
         log(f"Docs directory not found: {docs_dir}")
         return 1
 
+    if not output_dir.exists():
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            log(f"Failed to create temp directory {output_dir}: {exc}")
+            return 1
+
     try:
         linkcheck_text = read_linkcheck_text(docs_dir)
     except Exception as exc:
         log(str(exc))
         return 1
-
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     entries, warnings = parse_redirect_lines(
         linkcheck_text.splitlines(),
@@ -446,6 +489,7 @@ def main() -> int:
     log(f"Redirect entries parsed: {len(entries)}")
     if not entries:
         write_summary(
+            docs_dir,
             output_dir,
             changes=[],
             skipped=[],
@@ -484,6 +528,7 @@ def main() -> int:
 
     if not filtered_entries:
         write_summary(
+            docs_dir,
             output_dir,
             changes=[],
             skipped=skipped,
@@ -515,6 +560,7 @@ def main() -> int:
         for error in errors:
             log(error)
         write_summary(
+            docs_dir,
             output_dir,
             changes=all_changes,
             skipped=skipped,
@@ -526,6 +572,7 @@ def main() -> int:
 
     if not all_changes:
         write_summary(
+            docs_dir,
             output_dir,
             changes=[],
             skipped=skipped,
@@ -540,7 +587,7 @@ def main() -> int:
     if args.verify and not args.dry_run:
         for change in all_changes:
             status = verify_url(change.new_url)
-            if status and not status.startswith(("2", "3")):
+            if status and not status.startswith(("2", "3")) and "HTTP 401" not in status and "HTTP 403" not in status:
                 verification_failures.append(
                     f"{change.new_url} ({status})"
                 )
@@ -548,6 +595,7 @@ def main() -> int:
 
     write_manifest(docs_dir, output_dir, all_changes, redirect_codes, verification_failures)
     write_summary(
+        docs_dir,
         output_dir,
         changes=all_changes,
         skipped=skipped,
