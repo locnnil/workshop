@@ -124,7 +124,12 @@ def read_linkcheck_text(docs_dir: Path) -> str:
         return output_path.read_text(encoding="utf-8", errors="replace")
     if not sys.stdin.isatty():
         log("Reading linkcheck output from stdin.")
-        return sys.stdin.read()
+        stdin_data = sys.stdin.read()
+        if stdin_data.strip():
+            return stdin_data
+        raise FileNotFoundError(
+            "linkcheck output not found; run 'make linkcheck' or pipe output to stdin"
+        )
     raise FileNotFoundError(
         "linkcheck output not found; run 'make linkcheck' or pipe output to stdin"
     )
