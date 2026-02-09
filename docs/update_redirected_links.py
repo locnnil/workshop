@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -30,7 +31,6 @@ ALLOWED_EXTENSIONS = {".rst", ".md", ".txt"}
 DEFAULT_REDIRECT_CODES = {"301", "308"}
 SUMMARY_FILE = "redirect_fixes_summary.md"
 MANIFEST_FILE = "redirect_fixes_manifest.json"
-DEFAULT_TEMP_DIR = "/tmp/workshop-linkcheck-fixes"
 USER_AGENT = "workshop-linkcheck-fixer/1.0"
 
 
@@ -91,8 +91,8 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--temp-dir",
-        default=DEFAULT_TEMP_DIR,
-        help="Directory for summaries and manifests (default: /tmp/workshop-linkcheck-fixes).",
+        default=None,
+        help="Directory for summaries and manifests (default: create a unique temp dir).",
     )
     return parser.parse_args(argv)
 
@@ -458,12 +458,17 @@ def write_manifest(
 def main() -> int:
     args = parse_args()
     docs_dir = Path(args.docs_dir).resolve()
-    output_dir = Path(args.temp_dir).resolve()
+    if args.temp_dir:
+        output_dir = Path(args.temp_dir).resolve()
+        temp_dir_source = "explicit"
+    else:
+        output_dir = Path(tempfile.mkdtemp(prefix="workshop-linkcheck-fixes-"))
+        temp_dir_source = "auto"
     redirect_codes = parse_redirect_codes(args.redirect_codes)
 
     log("Starting redirect update run.")
     log(f"Docs directory: {docs_dir}")
-    log(f"Temp directory: {output_dir}")
+    log(f"Temp directory ({temp_dir_source}): {output_dir}")
     log(f"Redirect codes: {', '.join(sorted(redirect_codes))}")
     log(f"Max redirects: {args.max_redirects}")
     log(f"Dry run: {args.dry_run}")
