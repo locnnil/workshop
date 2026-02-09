@@ -48,7 +48,7 @@ project,
 ultimately sharing it with such tools as
 `Snapcraft <https://documentation.ubuntu.com/snapcraft/>`_
 and
-`Charmcraft <https://juju.is/docs/sdk/charmcraft/>`_,
+`Charmcraft <https://documentation.ubuntu.com/charmcraft/stable/>`_,
 so general approaches that work for any of those will apply here.
 
 Aside from not yet allowing :samp:`stage-packages` and :samp:`stage-snaps`,
