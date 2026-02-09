@@ -89,7 +89,7 @@ The easiest way to report a security issue is through GitHub, filing a private
 security report with a description of the issue, affected versions, the steps to
 reproduce the issue, and, if known, ways of mitigating it. See [Privately
 reporting a security
-vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+vulnerability](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-a-vulnerability/privately-reporting-a-security-vulnerability)
 for instructions.
 
 Our GitHub admins will be notified of the issue and will work with you to

@@ -20,9 +20,9 @@ with your existing GitHub Actions workflows.
 .. @artefact SDK
 
 This guide explains how to use a workshop as a `just-in-time runner
-<https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-just-in-time-runners>`_
+<https://docs.github.com/en/actions/reference/security/secure-use#using-just-in-time-runners>`_
 for `GitHub workflow jobs
-<https://docs.github.com/en/actions/concepts/workflows-and-actions/about-workflows>`_
+<https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows>`_
 using the :samp:`github-runner` SDK.
 
 Running jobs locally makes a few things easier:

@@ -59,7 +59,7 @@ for a given base, plugin, source and so on.
 
 A detailed explanation is available in the corresponding Craft Parts
 `documentation section
-<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/explanation/>`_.
+<https://canonical-craft-parts.readthedocs-hosted.com/latest/explanation/>`_.
 
 
 See also
