@@ -1,0 +1,181 @@
+name: Fix redirected links
+
+on:
+  workflow_dispatch:
+    inputs:
+      redirect_codes:
+        description: "Comma-separated HTTP redirect codes to process"
+        required: false
+        default: "301,308"
+        type: string
+      max_redirects:
+        description: "Maximum redirects to fix per run"
+        required: false
+        default: 3
+        type: number
+      verify_links:
+        description: "Verify updated links are reachable"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fix-redirects:
+    runs-on: ubuntu-latest
+    env:
+      DOCS_DIR: docs
+      TEMP_DIR: /tmp/workshop-linkcheck-fixes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Ensure clean working tree
+        run: |
+          if git status --porcelain | grep -q .; then
+            echo "Working tree is dirty before running the script."
+            git status --porcelain
+            exit 1
+          fi
+
+      - name: Install documentation dependencies
+        run: |
+          cd "$DOCS_DIR"
+          make install
+
+      - name: Run linkcheck
+        run: |
+          set -o pipefail
+          cd "$DOCS_DIR"
+          make linkcheck 2>&1 | tee ../linkcheck-output.txt
+
+      - name: Run redirect fixer
+        id: redirect_fixer
+        run: |
+          set -o pipefail
+          args=(--docs-dir "$DOCS_DIR" --temp-dir "$TEMP_DIR" --redirect-codes "${{ inputs.redirect_codes }}" --max-redirects "${{ inputs.max_redirects }}")
+          if [ "${{ inputs.verify_links }}" = "false" ]; then
+            args+=(--no-verify)
+          fi
+          python "$DOCS_DIR/update_redirected_links.py" "${args[@]}" 2>&1 | tee workflow-log.txt
+          exit_code=${PIPESTATUS[0]}
+          if [ "$exit_code" -eq 2 ]; then
+            echo "no_redirects=true" >> "$GITHUB_OUTPUT"
+            echo "No redirects found to fix."
+            exit 0
+          fi
+          if [ "$exit_code" -ne 0 ]; then
+            exit "$exit_code"
+          fi
+          echo "no_redirects=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check for changes
+        id: git_changes
+        if: steps.redirect_fixer.outputs.no_redirects != 'true'
+        run: |
+          if git status --porcelain | grep -q .; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare PR metadata
+        id: pr_meta
+        if: steps.git_changes.outputs.has_changes == 'true'
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = Path(os.environ.get("TEMP_DIR", "/tmp/workshop-linkcheck-fixes")) / "redirect_fixes_manifest.json"
+          data = json.loads(manifest.read_text(encoding="utf-8"))
+          changes = data.get("changes", [])
+          redirect_codes = ",".join(data.get("redirect_codes", []))
+          failures = len(data.get("verification_failures", []))
+          files_modified = len({change["file"] for change in changes})
+          count = len(changes)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+            handle.write(f"count={count}\n")
+            handle.write(f"files={files_modified}\n")
+            handle.write(f"codes={redirect_codes}\n")
+            handle.write(f"failures={failures}\n")
+          PY
+
+      - name: Set branch name
+        id: branch_name
+        if: steps.git_changes.outputs.has_changes == 'true'
+        run: |
+          echo "branch=docs/linkcheck-fixes-$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Build PR body
+        if: steps.git_changes.outputs.has_changes == 'true'
+        run: |
+          verification_check="[x]"
+          verification_note=""
+          if [ "${{ steps.pr_meta.outputs.failures }}" -ne 0 ]; then
+            verification_check="[ ]"
+            verification_note="\n\nVerification failures were detected."
+          fi
+          if [ "${{ inputs.verify_links }}" = "false" ]; then
+            verification_check="[ ]"
+            verification_note="\n\nVerification was disabled for this run."
+          fi
+
+          cat <<EOF > "$TEMP_DIR/redirect_fixes_pr_body.md"
+          This PR automatically fixes redirected links detected by \`make linkcheck\`.
+
+          ## Summary
+          - **Files modified:** ${{ steps.pr_meta.outputs.files }}
+          - **Redirects fixed:** ${{ steps.pr_meta.outputs.count }}
+          - **Redirect codes processed:** ${{ steps.pr_meta.outputs.codes }}
+
+          ## Changes
+
+          EOF
+
+          cat "$TEMP_DIR/redirect_fixes_summary.md" >> "$TEMP_DIR/redirect_fixes_pr_body.md"
+
+          cat <<EOF >> "$TEMP_DIR/redirect_fixes_pr_body.md"
+
+          ## Verification
+
+          - ${verification_check} All updated links verified reachable
+          - [ ] \`make linkcheck\` passes on this branch
+          ${verification_note}
+
+          ---
+          *Automated by linkcheck redirect fixer workflow*
+          EOF
+
+      - name: Create pull request
+        if: steps.git_changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "docs: Fix redirected links from linkcheck"
+          committer: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          branch: "${{ steps.branch_name.outputs.branch }}"
+          title: "docs: Fix ${{ steps.pr_meta.outputs.count }} redirected links found by linkcheck"
+          body-path: "/tmp/workshop-linkcheck-fixes/redirect_fixes_pr_body.md"
+          labels: "documentation, automated"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linkcheck-redirect-fixes
+          path: |
+            linkcheck-output.txt
+            workflow-log.txt
+            /tmp/workshop-linkcheck-fixes/redirect_fixes_summary.md
