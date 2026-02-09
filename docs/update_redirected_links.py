@@ -188,7 +188,9 @@ def determine_status_code(url: str, timeout: float = 5.0) -> Optional[str]:
     except urllib.error.HTTPError as exc:
         if exc.code in {405, 403}:
             try:
-                with opener.open(build_request(url, method="GET"), timeout=timeout) as response:
+                with opener.open(
+                    build_request(url, method="GET"), timeout=timeout
+                ) as response:
                     return str(response.status)
             except urllib.error.HTTPError as fallback_exc:
                 if fallback_exc.code:
@@ -280,7 +282,9 @@ def verify_url(url: str, timeout: float = 5.0) -> Optional[str]:
     except urllib.error.HTTPError as exc:
         if exc.code in {405, 403}:
             try:
-                with urllib.request.urlopen(build_request(url, method="GET"), timeout=timeout) as response:
+                with urllib.request.urlopen(
+                    build_request(url, method="GET"), timeout=timeout
+                ) as response:
                     return str(response.status)
             except urllib.error.HTTPError as fallback_exc:
                 return f"HTTP {fallback_exc.code}"
@@ -300,16 +304,16 @@ def apply_changes_to_file(
         errors.append(f"File not found: {file_path}")
         return applied_changes, errors
     try:
-        lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+        lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines(
+            keepends=True
+        )
     except Exception as exc:
         errors.append(f"Failed to read {file_path}: {exc}")
         return applied_changes, errors
 
     for entry in changes:
         if entry.line_no < 1 or entry.line_no > len(lines):
-            errors.append(
-                f"Line {entry.line_no} out of range for {file_path}"
-            )
+            errors.append(f"Line {entry.line_no} out of range for {file_path}")
             continue
         target_line = lines[entry.line_no - 1]
         if entry.old_url in target_line:
@@ -330,9 +334,7 @@ def apply_changes_to_file(
             continue
 
         occurrences = [
-            index
-            for index, line in enumerate(lines, start=1)
-            if entry.old_url in line
+            index for index, line in enumerate(lines, start=1) if entry.old_url in line
         ]
         if len(occurrences) == 1:
             index = occurrences[0]
@@ -351,13 +353,9 @@ def apply_changes_to_file(
             )
         else:
             if any(entry.new_url in line for line in lines):
-                log(
-                    f"URL already updated in {file_path} for {entry.old_url}"
-                )
+                log(f"URL already updated in {file_path} for {entry.old_url}")
                 continue
-            errors.append(
-                f"URL not found uniquely in {file_path} for {entry.old_url}"
-            )
+            errors.append(f"URL not found uniquely in {file_path} for {entry.old_url}")
 
     if not dry_run and applied_changes:
         temp_path = file_path.with_suffix(file_path.suffix + ".tmp")
@@ -390,11 +388,13 @@ def write_summary(
     ]
 
     if changes:
-        lines.extend([
-            "## Changes\n",
-            "| File | Line | Old URL | New URL |\n",
-            "| --- | ---: | --- | --- |\n",
-        ])
+        lines.extend(
+            [
+                "## Changes\n",
+                "| File | Line | Old URL | New URL |\n",
+                "| --- | ---: | --- | --- |\n",
+            ]
+        )
         for change in changes:
             relative_path = change.file_path.relative_to(docs_dir)
             lines.append(
@@ -587,13 +587,18 @@ def main() -> int:
     if args.verify and not args.dry_run:
         for change in all_changes:
             status = verify_url(change.new_url)
-            if status and not status.startswith(("2", "3")) and "HTTP 401" not in status and "HTTP 403" not in status:
-                verification_failures.append(
-                    f"{change.new_url} ({status})"
-                )
+            if (
+                status
+                and not status.startswith(("2", "3"))
+                and "HTTP 401" not in status
+                and "HTTP 403" not in status
+            ):
+                verification_failures.append(f"{change.new_url} ({status})")
         log(f"Verification failures: {len(verification_failures)}")
 
-    write_manifest(docs_dir, output_dir, all_changes, redirect_codes, verification_failures)
+    write_manifest(
+        docs_dir, output_dir, all_changes, redirect_codes, verification_failures
+    )
     write_summary(
         docs_dir,
         output_dir,
