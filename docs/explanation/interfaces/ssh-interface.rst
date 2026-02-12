@@ -9,6 +9,8 @@
 SSH interface
 =============
 
+.. @artefact ssh interface
+
 The SSH interface
 provides access to the host system's SSH agent
 from inside the workshop,
@@ -90,8 +92,10 @@ To check if the interface is connected:
      ssh-agent  ws/ssh-sdk:ssh-agent  ws/system:ssh-agent  manual
 
 
-So the host's SSH identities and configuration
+This means the host's SSH identities and configuration
 are available inside the workshop:
+
+.. @artefact workshop shell
 
 .. code-block:: console
 

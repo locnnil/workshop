@@ -8,6 +8,8 @@
 Mount interface
 ===============
 
+.. @artefact mount interface
+
 The mount interface securely exposes filesystem locations
 on the host (via the :ref:`system SDK <exp_system_sdk>` only) or in the workshop
 by mounting them inside the workshop.
