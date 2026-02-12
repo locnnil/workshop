@@ -70,8 +70,10 @@ jobs:
           if [ "${{ inputs.verify_links }}" = "false" ]; then
             args+=(--no-verify)
           fi
+          set +e
           python "$DOCS_DIR/update_redirected_links.py" "${args[@]}" 2>&1 | tee workflow-log.txt
           exit_code=${PIPESTATUS[0]}
+          set -e
           if [ "$exit_code" -eq 2 ]; then
             echo "no_redirects=true" >> "$GITHUB_OUTPUT"
             echo "No redirects found to fix."
