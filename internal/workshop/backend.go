@@ -226,7 +226,7 @@ type Backend interface {
 	UninstallSdk(ctx context.Context, name, sk string) error
 
 	// Execute a command in a given workshop. The client should differentiate
-	// between the errors that occured during the execution but not related to
+	// between the errors that occurred during the execution but not related to
 	// the command (i.e. the workshop does not exist) and the errors that were
 	// produced by the command itself (i.e. return code != 0). If the latter, an
 	// instance of ErrExec with the status code will be returned.

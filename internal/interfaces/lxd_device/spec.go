@@ -139,7 +139,7 @@ func (s *Specification) SetDesktop(desktop workshop.Desktop) error {
 func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 	s.Profile.Gpu = &gpu
 
-	// The default workshop user must be able to acces the GPU device.
+	// The default workshop user must be able to access the GPU device.
 	// Workshop assigns the GPU devices to workshop.workshop. A more
 	// traditional way here would be to add dri devices to the video/render
 	// groups, but it requires an additional workshop exec to find out the

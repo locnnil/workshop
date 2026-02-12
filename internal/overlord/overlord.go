@@ -267,7 +267,7 @@ func (o *Overlord) loadState(statePath string, restartHandler restart.Handler, b
 	if os.Getpid() == 1 {
 		curBootID, err = randutil.RandomKernelUUID()
 		if err != nil {
-			return nil, fmt.Errorf("fatal: cannot generate psuedo boot-id: %w", err)
+			return nil, fmt.Errorf("fatal: cannot generate pseudo boot-id: %w", err)
 		}
 	}
 

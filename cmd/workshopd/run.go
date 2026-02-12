@@ -63,7 +63,7 @@ func (c *cmdRun) Command() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&c.CreateDirs, "create-dirs", false, sharedRunEnterOptsHelp["create-dirs"])
-	cmd.Flags().String(c.HTTP, "http", sharedRunEnterOptsHelp["http"])
+	cmd.Flags().StringVar(&c.HTTP, "http", "", sharedRunEnterOptsHelp["http"])
 	cmd.Flags().BoolVar(&c.Verbose, "verbose", false, sharedRunEnterOptsHelp["verbose"])
 
 	return cmd

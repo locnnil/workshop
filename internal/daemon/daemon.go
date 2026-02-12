@@ -108,7 +108,7 @@ type userState struct{}
 // A ResponseFunc handles one of the individual verbs for a method
 type ResponseFunc func(*Command, *http.Request, *userState) Response
 
-// A Command routes a request to an individual per-verb ResponseFUnc
+// A Command routes a request to an individual per-verb ResponseFunc
 type Command struct {
 	Path       string
 	PathPrefix string
@@ -743,7 +743,7 @@ func (d *Daemon) RebootIsMissing(st *state.State) error {
 	}
 	st.Set("daemon-system-restart-tentative", nTentative)
 	d.state = st
-	logger.Noticef("workshop was restarted while a system restart was expected, workshop will try to schedule and wait for a system restart again (tenative %d/%d)", nTentative, rebootMaxTentatives)
+	logger.Noticef("workshop was restarted while a system restart was expected, workshop will try to schedule and wait for a system restart again (tentative %d/%d)", nTentative, rebootMaxTentatives)
 	return errExpectedReboot
 }
 

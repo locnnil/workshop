@@ -303,7 +303,7 @@ func (m *InterfaceManager) batchDisconnectTasks(p workshop.Project, workshop, sd
 	var prev *state.Task
 	for _, ref := range refs {
 		task := m.state.NewTask("disconnect",
-			fmt.Sprintf("Disconnnect %q from %q", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
+			fmt.Sprintf("Disconnect %q from %q", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 		task.Set("plug", ref.PlugRef)
 		task.Set("slot", ref.SlotRef)
 		if conn := conns[ref.ID()]; conn != nil && conn.Undesired {

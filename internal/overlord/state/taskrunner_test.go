@@ -92,7 +92,7 @@ func ensureChange(c *C, r *state.TaskRunner, sb *stateBackend, chg *state.Change
 //
 //	<task>:was-<status>    - set task status before calling ensure (must be sensible)
 //	<task>:(do|undo)-block - block handler until task tomb dies
-//	<task>:(do|undo)-retry - return from handler with with state.Retry
+//	<task>:(do|undo)-retry - return from handler with state.Retry
 //	<task>:(do|undo)-error - return from handler with an error
 //	<task>:...:1,2         - one of the above, and add task to lanes 1 and 2
 //	chg:abort              - call abort on the change

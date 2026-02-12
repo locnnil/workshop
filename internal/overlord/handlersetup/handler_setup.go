@@ -66,7 +66,7 @@ func OnDo(handler state.HandlerFunc) state.HandlerFunc {
 
 				mode, moderr := conflict.ParseMode(setup.Mode)
 				if moderr != nil {
-					return fmt.Errorf("internal error: unkown change mode: %s", setup.Mode)
+					return fmt.Errorf("internal error: unknown change mode: %s", setup.Mode)
 				}
 
 				if mode == conflict.ChangeWaitOnError {
