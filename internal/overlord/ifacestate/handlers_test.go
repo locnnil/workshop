@@ -1412,7 +1412,7 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestUndoDisconnect(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", []sdk.Meta{consumer, producer})
+	s.launchWorkshop(c, "ws", []sdk.Meta{consumerManyPlugs, producer})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1463,7 +1463,7 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectUndesiredSuccess(c *check.C) 
 	// Setup
 	s.launchWorkshop(c, "ws", []sdk.Meta{consumer, producer})
 	repo := s.mgr.Repository()
-	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
 	conn := map[string]any{
