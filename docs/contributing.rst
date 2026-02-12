@@ -669,7 +669,7 @@ CI/CD
 
 Multiple
 `GitHub Actions
-<https://docs.github.com/en/actions/get-started/understanding-github-actions>`_
+<https://docs.github.com/en/actions/get-started/understand-github-actions>`_
 workflows,
 defined in the ``.github/workflows/`` directory,
 automate testing, building, documentation, and release processes.

@@ -48,7 +48,7 @@ project,
 ultimately sharing it with such tools as
 `Snapcraft <https://documentation.ubuntu.com/snapcraft/>`_
 and
-`Charmcraft <https://juju.is/docs/sdk/charmcraft/>`_,
+`Charmcraft <https://documentation.ubuntu.com/charmcraft/stable/>`_,
 so general approaches that work for any of those will apply here.
 
 Aside from not yet allowing :samp:`stage-packages` and :samp:`stage-snaps`,
@@ -59,7 +59,7 @@ for a given base, plugin, source and so on.
 
 A detailed explanation is available in the corresponding Craft Parts
 `documentation section
-<https://canonical-craft-parts.readthedocs-hosted.com/en/latest/explanation/>`_.
+<https://canonical-craft-parts.readthedocs-hosted.com/latest/explanation/>`_.
 
 
 See also

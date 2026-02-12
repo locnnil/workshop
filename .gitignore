@@ -18,6 +18,7 @@ coverage.out
 # docs
 gendocs
 docs-gendocs
+linkcheck-output.txt
 
 # sentitive files
 *.crt

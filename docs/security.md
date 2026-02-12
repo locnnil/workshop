@@ -25,7 +25,7 @@ to work and securely confines the SDK build process to a container.
 
 Packaged SDKs are uploaded to the SDK Store. Currently, it's implemented using
 [GCP](https://console.cloud.google.com/storage/browser/sdkstore), so access is
-managed by [GCP IAM](https://cloud.google.com/security/products/iam).
+managed by [GCP IAM](https://docs.cloud.google.com/iam/docs).
 
 ## Isolation
 
@@ -89,7 +89,7 @@ The easiest way to report a security issue is through GitHub, filing a private
 security report with a description of the issue, affected versions, the steps to
 reproduce the issue, and, if known, ways of mitigating it. See [Privately
 reporting a security
-vulnerability](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+vulnerability](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-a-vulnerability/privately-reporting-a-security-vulnerability)
 for instructions.
 
 Our GitHub admins will be notified of the issue and will work with you to

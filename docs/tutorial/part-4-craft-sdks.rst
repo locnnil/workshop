@@ -223,7 +223,7 @@ This defines how the Ollama daemon should run:
 
    For in-depth details,
    refer to the `Parts
-   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/parts/>`_
+   <https://canonical-craft-parts.readthedocs-hosted.com/latest/common/craft-parts/explanation/parts/>`_
    section in Craft Parts documentation.
 
 
@@ -526,7 +526,7 @@ the SDK is installed from the try area when you launch the workshop:
    For a detailed explanation of the build process,
    see the respective Craft Parts
    `documentation section
-   <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/lifecycle/>`_.
+   <https://canonical-craft-parts.readthedocs-hosted.com/latest/common/craft-parts/explanation/lifecycle/>`_.
 
 
 .. _tut_sdkcraft_publish:
