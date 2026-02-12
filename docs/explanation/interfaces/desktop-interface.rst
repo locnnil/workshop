@@ -20,6 +20,43 @@ the SDK publisher allows the workshop to utilize the host's display
 which can be useful for various SDK-specific tasks
 such as building graphical applications or using editors without remote support.
 
+
+.. _exp_desktop_plug:
+
+Desktop interface plug
+----------------------
+
+An essential element here is the desktop interface plug,
+which is declared in the SDK definition.
+
+Its structure includes just the name of the plug and the interface;
+both must be set to :samp:`desktop`.
+
+Defining the plug in an SDK
+allows the workshops using this SDK to access the host's display,
+which can be useful for various SDK-specific tasks
+such as building graphical applications or using editors without remote support.
+
+
+.. _exp_desktop_slot:
+
+Desktop interface slot
+----------------------
+
+To let SDKs in a workshop access the host's display,
+|ws_markup| provides a desktop interface slot
+that multiple desktop interface plugs can access.
+
+When the SDK is installed at run-time during launch and refresh operations,
+|ws_markup| checks that the plug targeting the slot
+passes :ref:`validation <exp_interfaces_validation>`;
+if it does,
+it can be connected.
+
+
+Connection
+----------
+
 The interface isn't connected automatically at launch and refresh
 for security reasons.
 The :command:`workshop connect` and :command:`workshop disconnect` commands
