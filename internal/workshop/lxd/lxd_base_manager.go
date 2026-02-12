@@ -307,10 +307,10 @@ var (
 )
 
 // handleLaunchUpdate parses a LXD create instance operation metadata and
-// reports the opeartion's progress if available. The LXD metadata is
-// inconsistent between operations that handleLaunchUpdate accomodates by
+// reports the operation's progress if available. The LXD metadata is
+// inconsistent between operations that handleLaunchUpdate accommodates by
 // looking for specific progress labels. NOTE: There is no guarantee that the
-// LXD's progress reporting formant won't change; this meta data parser is valid
+// LXD's progress reporting format won't change; this meta data parser is valid
 // for LXD 6.5.
 func handleImageUpdate(opmeta map[string]any, imsize int) *downloadUpdate {
 	upd, ok := opmeta["download_progress"].(string)

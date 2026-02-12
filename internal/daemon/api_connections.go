@@ -396,7 +396,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 
 			if !a.Forget {
 				// Ensure the connection exists if it is not going to be
-				// forgotten (if forget is true the conenction may present only
+				// forgotten (if forget is true the connection may present only
 				// in the state and not in the repository).
 				_, err = repo.Connection(connRef)
 				if err != nil {

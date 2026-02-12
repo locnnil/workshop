@@ -49,7 +49,7 @@ func DpkgArchitecture() string {
 	return string(arch)
 }
 
-// dpkgArchFromGoArch maps a go architecture string to the coresponding
+// dpkgArchFromGoArch maps a go architecture string to the corresponding
 // Debian equivalent architecture string.
 //
 // E.g. the go "386" architecture string maps to the ubuntu "i386"

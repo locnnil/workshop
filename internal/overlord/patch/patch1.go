@@ -40,7 +40,7 @@ func patch1(s *state.State) error {
 	// it cannot be used to improve the patch in an incompatible way.
 
 	// Be *very* careful when importing code from elsewhere to help
-	// with state setting here. The actual code elsehwere will always
+	// with state setting here. The actual code elsewhere will always
 	// reflect the most recent patch level at tip, but the patch here
 	// needs to move between patch versions OLD and OLD+1, and both
 	// of those will get old and out of sync with tip.
