@@ -297,7 +297,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 }
 
 func (m *InterfaceManager) batchDisconnectTasks(p workshop.Project, workshop, sdkName string,
-	conns map[string]*schema.ConnState, refs []*interfaces.ConnRef) *state.TaskSet {
+	refs []*interfaces.ConnRef) *state.TaskSet {
 	ts := state.NewTaskSet()
 
 	var prev *state.Task
@@ -306,9 +306,6 @@ func (m *InterfaceManager) batchDisconnectTasks(p workshop.Project, workshop, sd
 			fmt.Sprintf("Disconnnect %q from %q", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 		task.Set("plug", ref.PlugRef)
 		task.Set("slot", ref.SlotRef)
-		if conn := conns[ref.ID()]; conn != nil && conn.Undesired {
-			continue
-		}
 		task.Set("forget", true)
 
 		if prev != nil {
@@ -365,17 +362,12 @@ func (m *InterfaceManager) doDisconnectInterfaces(task *state.Task, tomb *tomb.T
 		chg.Set("remounts", remounts)
 	}
 
-	conns, err := getConns(m.state)
-	if err != nil {
-		return err
-	}
-
 	connections, err := m.repo.Connections(project.ProjectId, w, s)
 	if err != nil {
 		return err
 	}
 
-	ts := m.batchDisconnectTasks(*project, w, s, conns, connections)
+	ts := m.batchDisconnectTasks(*project, w, s, connections)
 
 	handlersetup.InjectTasks(task, ts)
 	m.state.EnsureBefore(0)
