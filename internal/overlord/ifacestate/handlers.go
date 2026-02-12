@@ -297,7 +297,7 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 }
 
 func (m *InterfaceManager) batchDisconnectTasks(p workshop.Project, workshop, sdkName string,
-	conns map[string]*schema.ConnState, refs []*interfaces.ConnRef) *state.TaskSet {
+	refs []*interfaces.ConnRef) *state.TaskSet {
 	ts := state.NewTaskSet()
 
 	var prev *state.Task
@@ -306,9 +306,6 @@ func (m *InterfaceManager) batchDisconnectTasks(p workshop.Project, workshop, sd
 			fmt.Sprintf("Disconnnect %q from %q", ref.PlugRef.ShortRef(), ref.SlotRef.ShortRef()))
 		task.Set("plug", ref.PlugRef)
 		task.Set("slot", ref.SlotRef)
-		if conn := conns[ref.ID()]; conn != nil && conn.Undesired {
-			continue
-		}
 		task.Set("forget", true)
 
 		if prev != nil {
@@ -365,17 +362,12 @@ func (m *InterfaceManager) doDisconnectInterfaces(task *state.Task, tomb *tomb.T
 		chg.Set("remounts", remounts)
 	}
 
-	conns, err := getConns(m.state)
-	if err != nil {
-		return err
-	}
-
 	connections, err := m.repo.Connections(project.ProjectId, w, s)
 	if err != nil {
 		return err
 	}
 
-	ts := m.batchDisconnectTasks(*project, w, s, conns, connections)
+	ts := m.batchDisconnectTasks(*project, w, s, connections)
 
 	handlersetup.InjectTasks(task, ts)
 	m.state.EnsureBefore(0)
@@ -495,7 +487,7 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 
 	rev.Add(func() {
 		err := m.repo.Disconnect(cref.PlugRef.ProjectId, cref.PlugRef.Workshop, cref.PlugRef.Sdk, cref.PlugRef.Name,
-			cref.SlotRef.ProjectId, cref.PlugRef.Workshop, cref.SlotRef.Sdk, cref.SlotRef.Name)
+			cref.SlotRef.ProjectId, cref.SlotRef.Workshop, cref.SlotRef.Sdk, cref.SlotRef.Name)
 		if err != nil {
 			logger.Noticef("On doConnect: Cannot revert connection %q", cref.ID())
 		}
@@ -757,6 +749,17 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 		return err
 	}
 
+	rev := revert.New()
+	defer rev.Fail()
+
+	rev.Add(func() {
+		err1 := m.repo.Disconnect(cref.PlugRef.ProjectId, cref.PlugRef.Workshop, cref.PlugRef.Sdk, cref.PlugRef.Name,
+			cref.SlotRef.ProjectId, cref.SlotRef.Workshop, cref.SlotRef.Sdk, cref.SlotRef.Name)
+		if err1 != nil {
+			logger.Noticef("On undoDisconnect: Cannot revert connection %q", cref.ID())
+		}
+	})
+
 	for _, ref := range []sdk.Ref{c.Plug.Sdk().Ref(), c.Slot.Sdk().Ref()} {
 		ctx, cancel := handlersetup.BackendContext(tomb, user, ref.ProjectId)
 		defer cancel()
@@ -769,6 +772,8 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 
 	conns[cref.ID()] = &oldconn
 	setConns(st, conns)
+
+	rev.Success()
 	return nil
 }
 

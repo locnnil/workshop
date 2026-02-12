@@ -1412,7 +1412,7 @@ func (s *interfaceHandlersSuite) TestDisconnectForgetAuto(c *check.C) {
 
 func (s *interfaceHandlersSuite) TestUndoDisconnect(c *check.C) {
 	// Setup
-	s.launchWorkshop(c, "ws", []sdk.Meta{consumer, producer})
+	s.launchWorkshop(c, "ws", []sdk.Meta{consumerManyPlugs, producer})
 	repo := s.mgr.Repository()
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
@@ -1463,7 +1463,7 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectUndesiredSuccess(c *check.C) 
 	// Setup
 	s.launchWorkshop(c, "ws", []sdk.Meta{consumer, producer})
 	repo := s.mgr.Repository()
-	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerManyPlugs.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
 	s.state.Lock()
 	conn := map[string]any{
@@ -1510,6 +1510,66 @@ func (s *interfaceHandlersSuite) TestUndoDisconnectUndesiredSuccess(c *check.C) 
 	c.Assert(conns, check.DeepEquals, conn)
 
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestUndoDisconnectSetupFailure(c *check.C) {
+	// Setup
+	s.launchWorkshop(c, "ws", []sdk.Meta{consumer, producer})
+	repo := s.mgr.Repository()
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, producer.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
+	s.state.Lock()
+	s.state.Set("conns", map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/producer:slot": map[string]any{
+			"interface": "mock-network",
+			"auto":      false,
+		},
+	})
+	s.state.Unlock()
+
+	// Make Setup() fail during undoDisconnect.
+	s.secBackend.SetupCallback = func(ctx context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
+		conns, err := repo.Connections(sdkRef.ProjectId, sdkRef.Workshop, sdkRef.Sdk)
+		if err != nil {
+			return err
+		}
+
+		if len(conns) > 0 {
+			return fmt.Errorf("setup failed on reconnect")
+		}
+		return nil
+	}
+
+	chg := s.disconnectChange(c, "ws", false)
+	s.state.Lock()
+	terr := s.state.NewTask("error-trigger", "...")
+	terr.WaitAll(state.NewTaskSet(chg.Tasks()...))
+	chg.AddTask(terr)
+	s.state.Unlock()
+
+	// Execute
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.ErrorMatches, "(?s).*error-trigger task.*")
+
+	// Validate
+	cons, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
+	c.Assert(err, check.IsNil)
+	c.Assert(cons, check.HasLen, 0)
+
+	prods, err := repo.Connections(s.prj.ProjectId, "ws", "producer")
+	c.Assert(err, check.IsNil)
+	c.Assert(prods, check.HasLen, 0)
+
+	var conns map[string]any
+	err = s.state.Get("conns", &conns)
+	c.Assert(err, check.IsNil)
+	c.Assert(conns, check.HasLen, 0)
+
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 3)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
