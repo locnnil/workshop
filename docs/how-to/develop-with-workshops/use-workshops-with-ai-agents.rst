@@ -17,13 +17,28 @@ to work in sandboxed environments over a shared project repository,
 thus addressing security and privacy concerns
 while enabling a degree of creativity in your workflows.
 
+Today, developer teams routinely delegate multi-step tasks to agents,
+run different models for planning and implementation,
+and coordinate fleets of agents across branches or repos.
+In practice,
+each agent and model comes with its own execution model,
+sandbox mode,
+and approval policies,
+so |ws_markup| as a consistent container boundary is a safer baseline
+than relying on every tool to self-sandbox correctly.
+
 This guide demonstrates how to run heterogeneous AI coding SDKs
-in separate Git worktrees,
-comparing their outputs
-and synthesizing the best approach in a few different ways
-over a shared codebase.
-It walks through two scenarios
-that build a Rubik's cube renderer with 3D visualization:
+in separate Git worktrees over a shared codebase.
+Using Git worktrees is a best practice recommended by
+`Anthropic <https://code.claude.com/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees>`__,
+`OpenAI <https://developers.openai.com/codex/app/worktrees/>`__,
+and
+`Cursor <https://cursor.com/blog/agent-best-practices#native-worktree-support>`__.
+
+The guide walks through two scenarios
+that build a minimal Flask app with a few HTTP routes.
+Each scenario compares agent outputs
+and synthesizes the optimal approach in different ways:
 
 - Scenario 1: Parallel exploration.
   Run :program:`claude-code` and :program:`copilot-cli` on the same task,
@@ -59,7 +74,7 @@ and initialize a Git repository:
 
 .. code-block:: console
 
-   $ mkdir rubik-project && cd rubik-project
+   $ mkdir flask-project && cd flask-project
    $ git init
 
 
@@ -75,32 +90,33 @@ to store our agent prompts instead:
    $ mkdir prompts
 
 
-Create the shared prompt for initial parallel exploration:
+Create the shared prompt for initial parallel exploration
+that builds a minimal Flask app:
 
-.. dropdown:: prompts/rubik-shared.txt
+.. dropdown:: prompts/flask-shared.txt
 
-   .. literalinclude:: ../../examples/prompts/rubik-shared.txt
+   .. literalinclude:: ../../examples/prompts/flask-shared.txt
 
 
 Add the synthesis prompt:
 
-.. dropdown:: prompts/rubik-synthesis.txt
+.. dropdown:: prompts/flask-synthesis.txt
 
-   .. literalinclude:: ../../examples/prompts/rubik-synthesis.txt
+   .. literalinclude:: ../../examples/prompts/flask-synthesis.txt
 
 
 Create the architect prompt for Scenario 2 (relies on the shared prompt above):
 
-.. dropdown:: prompts/rubik-architect.txt
+.. dropdown:: prompts/flask-architect.txt
 
-   .. literalinclude:: ../../examples/prompts/rubik-architect.txt
+   .. literalinclude:: ../../examples/prompts/flask-architect.txt
 
 
 Follow up with the coder prompt (also relies on the shared prompt above):
 
-.. dropdown:: prompts/rubik-coder.txt
+.. dropdown:: prompts/flask-coder.txt
 
-   .. literalinclude:: ../../examples/prompts/rubik-coder.txt
+   .. literalinclude:: ../../examples/prompts/flask-coder.txt
 
 
 Commit the prompts
@@ -134,11 +150,6 @@ Create a workshop definition file in the project root:
        channel: all/edge
      - name: copilot-cli
        channel: all/edge
-       plugs:
-         desktop:
-           interface: desktop
-         gpu:
-           interface: gpu
 
    actions:
      claude-auto: |
@@ -155,20 +166,18 @@ Create a workshop definition file in the project root:
 
 
 The definition adds the two SDKs,
-grafting :samp:`gpu` and :samp:`desktop` plugs to the second one
-(that choice is arbitrary).
-
-These plugs enable GUI and 3D visualization;
-unlike :samp:`gpu`,
-:samp:`desktop` requires manual connection after launch.
-Both plug types are singletons, so they only need to occur once per workshop.
+keeping them isolated from your host system
+while they work against your shared codebase.
 
 The :samp:`actions` section defines shell commands
 that encapsulate the complexity of running different agents
 with their specific options and idioms;
 note that all safeguards are disabled
 because the workshop acts as a shared sandbox,
-so there's no need to manage per-agent policies.
+so there's no need to manage per-agent policies
+or have these agents installed on your host.
+Even with :samp:`--yolo` or :samp:`--dangerously-skip-permissions`,
+any changes done by an agent remain contained inside the workshop.
 
 Save the definition and add it to :file:`.gitignore`,
 along with the :samp:`.lock` pattern:
@@ -205,12 +214,11 @@ Each agent runs over its own Git worktree,
 which allows them to operate in parallel without interfering with each other.
 
 However, the agents can and should share the workshop,
-so launch it and connect the :samp:`desktop` plug:
+so launch it:
 
 .. code-block:: console
 
    $ workshop launch
-   $ workshop connect agent-dev/copilot-cli:desktop
 
 
 .. note::
@@ -238,10 +246,10 @@ and the worktree as the working directory:
 
    $ workshop exec -- claude login  # First time only
    $ workshop run --env CLAUDE_MODEL=sonnet -w /project/claude -- \
-       claude-auto "Follow the instructions in ./prompts/rubik-shared.txt"
+       claude-auto "Follow the instructions in ./prompts/flask-shared.txt"
 
 
-The agent generates a (presumably) complete Rubik's cube renderer.
+The agent generates a (presumably) complete Flask app.
 
 In a regular development workflow,
 you would iterate over the shared codebase here,
@@ -269,7 +277,7 @@ and the new worktree as the working directory:
 
    $ workshop exec -- copilot  # First time only: login
    $ workshop run --env COPILOT_MODEL=gpt-5.1-codex -w /project/copilot -- \
-     copilot-auto "Follow the instructions in ./prompts/rubik-shared.txt"
+       copilot-auto "Follow the instructions in ./prompts/flask-shared.txt"
 
 
 In a regular development workflow,
@@ -288,13 +296,13 @@ where a third run will compare and join both implementations:
 
 
 Run the :samp:`claude-code` agent in interactive mode
-with a smarter model and the synthesis prompt,
+with a smarter model and the architect prompt,
 supplying the worktree as the working directory:
 
 .. code-block:: console
 
    $ workshop run --env CLAUDE_MODEL=opus -w /project/synthesis -- \
-       claude "Follow the instructions in ./prompts/rubik-synthesis.txt"
+       claude "Follow the instructions in ./prompts/flask-synthesis.txt"
 
 
 The synthesis agent walks through both implementations interactively,
@@ -302,9 +310,9 @@ asking questions:
 
 .. code-block:: text
 
-   Q: Implementation A structures the code in a single module,
-      while Implementation B separates concerns across multiple modules.
-      Which architecture do you prefer?
+   Q: Implementation A keeps everything in :file:`app.py`,
+      while Implementation B splits out helpers.
+      Which layout do you prefer?
 
    A: option B
 
@@ -344,7 +352,7 @@ supplying the worktree as the working directory:
 .. code-block:: console
 
    $ workshop run --env CLAUDE_MODEL=opus -w /project/design -- \
-       claude "Follow the instructions in ./prompts/rubik-architect.txt"
+       claude "Follow the instructions in ./prompts/flask-architect.txt"
 
 
 The agent eventually creates several planning documents in the worktree.
@@ -371,7 +379,7 @@ supplying the worktree as the working directory:
 .. code-block:: console
 
    $ workshop run --env COPILOT_MODEL=gemini-3-pro-preview -w /project/implementation -- \
-     copilot-auto "Follow the instructions in ./prompts/rubik-coder.txt"
+       copilot-auto "Follow the instructions in ./prompts/flask-coder.txt"
 
 
 The coder agent reads the planning documents,
@@ -385,6 +393,12 @@ often switching between the design and implementation worktrees.
 
 Conclusion
 ----------
+
+The scenarios above demonstrate |ws_markup| usage with one example.
+For your own projects,
+adapt the scenarios to your orchestration needs.
+Treat them as a starting point,
+not a template that must fit every use case.
 
 |ws_markup| provides a versatile environment
 for development workflows that involve multiple complex tools such as AI agents.
