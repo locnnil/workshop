@@ -497,13 +497,15 @@ func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) 
 	s.workshopLock.Lock()
 	defer s.workshopLock.Unlock()
 
-	wp := s.StashedWorkshops[projectId]["stash-"+name]
-	if wp == nil {
+	stash := s.StashedWorkshops[projectId]["stash-"+name]
+	if stash == nil {
 		return fmt.Errorf("stashed workshop %q not found", name)
 	}
+
+	wp := copyWorkshop(stash)
 	wp.Name = name
-	s.Workshops[projectId][name] = wp
 	wp.Running = true
+	s.Workshops[projectId][name] = wp
 
 	return nil
 }
@@ -521,21 +523,25 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	if wp == nil {
 		return workshop.ErrWorkshopNotLaunched
 	}
+	wp.Running = false
 
 	if s.StashedWorkshops[projectId] == nil {
 		s.StashedWorkshops[projectId] = make(map[string]*FakeWorkshop)
 	}
-	wp.Running = false
 
+	stash := copyWorkshop(wp)
+	stash.Name = "stash-" + name
+	s.StashedWorkshops[projectId][stash.Name] = stash
+	return nil
+}
+
+func copyWorkshop(wp *FakeWorkshop) *FakeWorkshop {
 	wcpy := *wp.Workshop
-	stashed := *wp
-	stashed.Workshop = &wcpy
-	stashed.Name = "stash-" + name
 	wcpy.Sdks = maps.Clone(wcpy.Sdks)
 	wcpy.Profiles = maps.Clone(wcpy.Profiles)
-
-	s.StashedWorkshops[projectId][stashed.Name] = &stashed
-	return nil
+	result := *wp
+	result.Workshop = &wcpy
+	return &result
 }
 
 func (s *FakeWorkshopBackend) userProject(ctx context.Context) (string, string, error) {
