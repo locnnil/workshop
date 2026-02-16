@@ -16,7 +16,6 @@ system:
     create-workshop: 1
     start-workshop: 1
     install-sdk: 1
-    register-sdk: 1
     run-hook: 1
   fs-calls: 4
   exec-calls: []
@@ -33,7 +32,6 @@ test-sdk-3:
     create-workshop: 1
     start-workshop: 1
     install-sdk: 2
-    register-sdk: 2
     run-hook: 2
     snapshot-sdk: 1
   fs-calls: 7
@@ -52,7 +50,6 @@ test-sdk-2:
     create-workshop: 1
     start-workshop: 1
     install-sdk: 3
-    register-sdk: 3
     run-hook: 3
     snapshot-sdk: 2
   fs-calls: 10
@@ -73,7 +70,6 @@ test-sdk:
     create-workshop: 1
     start-workshop: 1
     install-sdk: 4
-    register-sdk: 4
     run-hook: 4
     snapshot-sdk: 3
   fs-calls: 13
@@ -96,5 +92,4 @@ sketch:
     rebuild-workshop: 1
     start-workshop: 1
     install-sdk: 5
-    register-sdk: 5
     run-hook: 1

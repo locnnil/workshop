@@ -240,23 +240,9 @@ func (f *FakeWorkshopBackend) rebuildWorkshop(ctx context.Context, file *worksho
 		return fmt.Errorf("devices must be detached before rebuilding workshop: %s", names)
 	}
 
-	// Sanity check for intact SDKs.
+	// Sanity check.
 	if !snapshot.IsBase() && ws.Image != snapshot.Image {
 		return fmt.Errorf("%q SDK is intact but base image has changed", snapshot.Sdks[0].Name)
-	}
-	sdks := ws.SdksByInstallOrder()
-	for i, sk := range snapshot.Sdks {
-		if i >= len(sdks) || sk != sdk.SetupId(sdks[i].Setup) {
-			return fmt.Errorf("%q SDK is intact but doesn't match installed version", sk.Name)
-		}
-	}
-
-	// Remove SDKs.
-	slices.Reverse(sdks)
-	for _, setup := range sdks {
-		if err := f.UninstallSdk(ctx, ws.Name, setup.Name); err != nil {
-			return err
-		}
 	}
 
 	ws.File = file
@@ -265,29 +251,18 @@ func (f *FakeWorkshopBackend) rebuildWorkshop(ctx context.Context, file *worksho
 }
 
 func (f *FakeWorkshopBackend) RemoveWorkshop(ctx context.Context, name string) error {
-	user, projectId, err := f.userProject(ctx)
+	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
 
-	prj := f.project(user, projectId)
-
 	f.workshopLock.Lock()
-	wp, ok := f.Workshops[prj.ProjectId][name]
+	_, ok := f.Workshops[projectId][name]
+	delete(f.Workshops[projectId], name)
 	f.workshopLock.Unlock()
 	if !ok {
 		return workshop.ErrWorkshopNotLaunched
 	}
-
-	for _, sk := range wp.Sdks {
-		if err := f.UninstallSdk(ctx, name, sk.Name); err != nil {
-			return err
-		}
-	}
-
-	f.workshopLock.Lock()
-	delete(f.Workshops[prj.ProjectId], name)
-	f.workshopLock.Unlock()
 	return nil
 }
 
