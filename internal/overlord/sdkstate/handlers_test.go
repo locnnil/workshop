@@ -249,6 +249,149 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	c.Assert(sdkInfo.Slots, check.HasLen, 0)
 }
 
+func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	testSdk := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "test",
+			Channel:  "latest/stable",
+			Revision: sdk.R(1),
+			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: sdkYaml,
+	}
+	s.mockSdk(c, testSdk)
+
+	t1 := s.state.NewTask("install-sdk", "test")
+	t1.Set("sdk", testSdk.Name)
+	t2 := s.state.NewTask("register-sdk", "test")
+	t2.Set("sdk", testSdk.Name)
+	t2.WaitFor(t1)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1, t2)
+	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
+	chg.AddTask(t2)
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Check(chg.Err(), check.Equals, nil)
+
+	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 2)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.NotNil)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.NotNil)
+}
+
+func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	testSdk := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "test-broken",
+			Channel:  "latest/stable",
+			Revision: sdk.R(2),
+			Sha3_384: "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
+		},
+		SdkYAML: sdkYamlViolatesPolicy,
+	}
+	s.mockSdk(c, testSdk)
+
+	t1 := s.state.NewTask("install-sdk", "...")
+	t1.Set("sdk", testSdk.Name)
+	t2 := s.state.NewTask("register-sdk", "test-broken")
+	t2.Set("sdk", testSdk.Name)
+	t2.WaitFor(t1)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1, t2)
+	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
+	chg.AddTask(t2)
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		s.se.Ensure()
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation not allowed by "slot" slot rule of interface "ssh-agent".*`)
+
+	// not in the fs (removed)
+	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	defer wfs.Close()
+	_, err = wfs.Stat(sdk.SdkDir("test-broken"))
+	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
+
+	// not in the SDK list (unlinked)
+	wp, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, ok := wp.Sdks["test-broken"]
+	c.Check(ok, check.Equals, false)
+
+	// not in the repo (removed)
+	c.Check(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Check(s.repo.Slots(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+}
+
+func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	newSdk := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "test",
+			Channel:  "latest/stable",
+			Revision: sdk.R(1),
+			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: sdkYaml,
+	}
+	s.mockSdk(c, newSdk)
+	t1 := s.state.NewTask("install-sdk", "...")
+	t1.Set("sdk", newSdk.Name)
+	register := s.state.NewTask("register-sdk", "test")
+	register.Set("sdk", newSdk.Name)
+	register.WaitFor(t1)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, register, t1)
+
+	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.AddTask(register)
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*"test" SDK has bad plugs or slots: plug, plug2 \(unknown interface "test-interface"\).*`)
+
+	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
+}
+
 func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -291,6 +434,58 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	c.Check(s.backend.Volumes, check.HasLen, 1)
 	volume := s.backend.Volumes[sdk.VolumeName(newSdk.Name, newSdk.Revision)]
 	c.Check(volume.Mounts, check.HasLen, 0)
+}
+
+func (s *sdkStateSuite) TestDoUnregisterSdk(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	newSdk := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "test",
+			Channel:  "latest/stable",
+			Revision: sdk.R(1),
+			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: sdkYaml,
+	}
+	s.mockSdk(c, newSdk)
+	t1 := s.state.NewTask("install-sdk", "...")
+	t1.Set("sdk", newSdk.Name)
+	register := s.state.NewTask("register-sdk", "test")
+	register.Set("sdk", newSdk.Name)
+	register.WaitFor(t1)
+
+	terr := s.state.NewTask("error-trigger", "provoking total undo")
+	terr.WaitFor(register)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, register, t1)
+
+	chg.Set("user", "testuser")
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.AddTask(register)
+	chg.AddTask(terr)
+	chg.AddTask(t1)
+
+	s.state.Unlock()
+	for i := 0; i < 6; i = i + 1 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*provoking total undo \(error out\)`)
+
+	props, err := s.backend.Workshop(s.ctx, "ws")
+	c.Assert(err, check.IsNil)
+	_, ok := props.Sdks["test"]
+	c.Check(ok, check.Equals, false)
+	c.Check(register.Status(), check.Equals, state.UndoneStatus)
+
+	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
+	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
 }
 
 func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
@@ -417,201 +612,6 @@ func (s *sdkStateSuite) TestRetrieveUpdatedSdk(c *check.C) {
 	c.Check(sdks[0], check.Equals, oldSdks[0])
 	c.Check(sdks[1], check.Equals, newSdk)
 	c.Check(sdks[2], check.Equals, oldSdks[2])
-}
-
-func (s *sdkStateSuite) TestDoRegisterSdkSuccess(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-
-	testSdk := sdk.Meta{
-		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
-		},
-		SdkYAML: sdkYaml,
-	}
-	s.mockSdk(c, testSdk)
-
-	t1 := s.state.NewTask("install-sdk", "test")
-	t1.Set("sdk", testSdk.Name)
-	t2 := s.state.NewTask("register-sdk", "test")
-	t2.Set("sdk", testSdk.Name)
-	t2.WaitFor(t1)
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t1, t2)
-	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
-	chg.AddTask(t2)
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		c.Check(s.se.Ensure(), check.IsNil)
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Check(chg.Err(), check.Equals, nil)
-
-	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 2)
-	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.NotNil)
-	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.NotNil)
-}
-
-func (s *sdkStateSuite) TestDoRegisterSdkFailedPolicyCheck(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-
-	testSdk := sdk.Meta{
-		Setup: sdk.Setup{
-			Name:     "test-broken",
-			Channel:  "latest/stable",
-			Revision: sdk.R(2),
-			Sha3_384: "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
-		},
-		SdkYAML: sdkYamlViolatesPolicy,
-	}
-	s.mockSdk(c, testSdk)
-
-	t1 := s.state.NewTask("install-sdk", "...")
-	t1.Set("sdk", testSdk.Name)
-	t2 := s.state.NewTask("register-sdk", "test-broken")
-	t2.Set("sdk", testSdk.Name)
-	t2.WaitFor(t1)
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, t1, t2)
-	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
-	chg.AddTask(t2)
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		s.se.Ensure()
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*installation not allowed by "slot" slot rule of interface "ssh-agent".*`)
-
-	// not in the fs (removed)
-	wfs, err := s.backend.WorkshopFs(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	defer wfs.Close()
-	_, err = wfs.Stat(sdk.SdkDir("test-broken"))
-	c.Check(osutil.IsDirNotExist(err), check.Equals, true)
-
-	// not in the SDK list (unlinked)
-	wp, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	_, ok := wp.Sdks["test-broken"]
-	c.Check(ok, check.Equals, false)
-
-	// not in the repo (removed)
-	c.Check(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
-	c.Check(s.repo.Slots(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
-}
-
-func (s *sdkStateSuite) TestDoUnregisterSdk(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
-
-	newSdk := sdk.Meta{
-		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
-		},
-		SdkYAML: sdkYaml,
-	}
-	s.mockSdk(c, newSdk)
-	t1 := s.state.NewTask("install-sdk", "...")
-	t1.Set("sdk", newSdk.Name)
-	register := s.state.NewTask("register-sdk", "test")
-	register.Set("sdk", newSdk.Name)
-	register.WaitFor(t1)
-
-	terr := s.state.NewTask("error-trigger", "provoking total undo")
-	terr.WaitFor(register)
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, register, t1)
-
-	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
-	chg.AddTask(register)
-	chg.AddTask(terr)
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		c.Check(s.se.Ensure(), check.IsNil)
-		s.se.Wait()
-	}
-	s.state.Lock()
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*provoking total undo \(error out\)`)
-
-	props, err := s.backend.Workshop(s.ctx, "ws")
-	c.Assert(err, check.IsNil)
-	_, ok := props.Sdks["test"]
-	c.Check(ok, check.Equals, false)
-	c.Check(register.Status(), check.Equals, state.UndoneStatus)
-
-	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
-	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
-	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
-}
-
-func (s *sdkStateSuite) TestDoRegisterSdkBadInterfacesFound(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	newSdk := sdk.Meta{
-		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
-		},
-		SdkYAML: sdkYaml,
-	}
-	s.mockSdk(c, newSdk)
-	t1 := s.state.NewTask("install-sdk", "...")
-	t1.Set("sdk", newSdk.Name)
-	register := s.state.NewTask("register-sdk", "test")
-	register.Set("sdk", newSdk.Name)
-	register.WaitFor(t1)
-
-	chg := s.state.NewChange("sample", "...")
-	setWorkshopProject("ws", s.project, register, t1)
-
-	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
-	chg.AddTask(register)
-	chg.AddTask(t1)
-
-	s.state.Unlock()
-	for i := 0; i < 6; i = i + 1 {
-		c.Check(s.se.Ensure(), check.IsNil)
-		s.se.Wait()
-	}
-	s.state.Lock()
-
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*"test" SDK has bad plugs or slots: plug, plug2 \(unknown interface "test-interface"\).*`)
-
-	c.Assert(s.repo.Plugs(s.project.ProjectId, "ws", "test"), check.HasLen, 0)
-	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug"), check.IsNil)
-	c.Assert(s.repo.Plug(s.project.ProjectId, "ws", "test", "plug2"), check.IsNil)
 }
 
 func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
