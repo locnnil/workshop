@@ -452,17 +452,6 @@ func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Conte
 		return fmt.Errorf("context key project-id not found")
 	}
 
-	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
-	if err != nil {
-		return err
-	}
-
-	// Do nothing if the instance is already in the desired state
-	if (inst.StatusCode == api.Running && action == "start") ||
-		(inst.StatusCode == api.Stopped && action == "stop") {
-		return nil
-	}
-
 	req := api.InstanceStatePut{
 		Action:  action,
 		Timeout: timeout,
@@ -471,12 +460,28 @@ func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Conte
 		Force: timeout == 0,
 	}
 
-	op, err := conn.UpdateInstanceState(inst.Name, req, etag)
-	if err != nil {
-		return err
+	op, err := conn.UpdateInstanceState(InstanceName(name, projectId), req, "")
+	if err == nil {
+		err = op.WaitContext(ctx)
+	}
+	if isAlready(err, action) {
+		err = nil
+	}
+	return err
+}
+
+func isAlready(err error, action string) bool {
+	if err == nil {
+		return false
 	}
 
-	return op.WaitContext(ctx)
+	if action == "start" && err.Error() == "The instance is already running" {
+		return true
+	}
+	if action == "stop" && err.Error() == "The instance is already stopped" {
+		return true
+	}
+	return false
 }
 
 func (s *Backend) StartWorkshop(ctx context.Context, name string) error {
@@ -569,13 +574,10 @@ func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, nam
 	}
 	if err := s.updateInstanceState(conn, ctx, name, "stop", timeout); err != nil && force {
 		logger.Noticef("On stopWorkshop: failed to stop %q workshop: %v", name, err)
+		return s.updateInstanceState(conn, ctx, name, "stop", 0)
 	} else {
 		return err
 	}
-	if err := s.updateInstanceState(conn, ctx, name, "stop", 0); err != nil && err.Error() != "The instance is already stopped" {
-		return err
-	}
-	return nil
 }
 
 func (s *Backend) setAutoStart(conn lxd.InstanceServer, ctx context.Context, name string, autostart bool) error {

@@ -818,6 +818,23 @@ func (f *wsOps) TestLxdBackendWorkshopStartFailed(c *check.C) {
 	c.Check(w.Running, check.Equals, false)
 }
 
+func (f *wsOps) TestLxdBackendWorkshopStartStopIdempotent(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	err := f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Check(err, check.IsNil)
+
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Check(err, check.IsNil)
+
+	err = f.bd.StartWorkshop(f.ctx, "test")
+	c.Check(err, check.IsNil)
+
+	err = f.bd.StartWorkshop(f.ctx, "test")
+	c.Check(err, check.IsNil)
+}
+
 func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
 	image, err := f.bd.GetBase(f.ctx, "ubuntu@24.04")
 	c.Assert(err, check.IsNil)
