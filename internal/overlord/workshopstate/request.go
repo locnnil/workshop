@@ -742,8 +742,8 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 	}
 
 	taskset := []*state.TaskSet{}
-	for _, name := range workshops {
-		remove := remove(w.state, name, project)
+	for _, wp := range workshops {
+		remove := remove(w.state, wp, project)
 		taskset = append(taskset, remove)
 	}
 	return taskset, nil
