@@ -501,10 +501,12 @@ func (s *FakeWorkshopBackend) UnstashWorkshop(ctx context.Context, name string) 
 	if stash == nil {
 		return fmt.Errorf("stashed workshop %q not found", name)
 	}
+	if wp := s.Workshops[projectId][name]; wp != nil && wp.Running {
+		return fmt.Errorf("cannot unstash running %q workshop", name)
+	}
 
 	wp := copyWorkshop(stash)
 	wp.Name = name
-	wp.Running = true
 	s.Workshops[projectId][name] = wp
 
 	return nil
@@ -523,7 +525,9 @@ func (s *FakeWorkshopBackend) StashWorkshop(ctx context.Context, name string) er
 	if wp == nil {
 		return workshop.ErrWorkshopNotLaunched
 	}
-	wp.Running = false
+	if wp.Running {
+		return fmt.Errorf("cannot stash running %q workshop", name)
+	}
 
 	if s.StashedWorkshops[projectId] == nil {
 		s.StashedWorkshops[projectId] = make(map[string]*FakeWorkshop)

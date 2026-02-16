@@ -278,9 +278,6 @@ func mergeOptions(req, source, target map[string]string) map[string]string {
 }
 
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
-	rev := revert.New()
-	defer rev.Fail()
-
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return fmt.Errorf("context key project-id not found")
@@ -292,20 +289,13 @@ func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	}
 	defer conn.Disconnect()
 
-	if err := s.stopWorkshop(conn, ctx, name, true); err != nil {
-		return err
-	}
-
-	rev.Add(func() {
-		if rerr := s.startWorkshop(conn, ctx, name); rerr != nil {
-			logger.Noticef("On StashWorkshop: Cannot restart %q workshop after failed stash operation: %v", name, rerr)
-		}
-	})
-
 	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
 	if err != nil {
 		return err
 	}
+
+	rev := revert.New()
+	defer rev.Fail()
 
 	// Backup the workshop's SDK snapshots, modifying the instance name and
 	// snapshot type to distinguish the backups from the originals.
@@ -386,11 +376,7 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 	stash := instanceStashName(name, projectId)
 	// Avoid restoring the option which we added when stashing.
 	config := map[string]string{workshop.ConfigWorkshopSnapshotType: ""}
-	if err := s.copyInstance(snapshotConn, conn, stash, instance, true, config); err != nil {
-		return err
-	}
-
-	return s.startWorkshop(conn, ctx, name)
+	return s.copyInstance(snapshotConn, conn, stash, instance, true, config)
 }
 
 // Find snapshot names for all SDKs in the given workshop or stash.

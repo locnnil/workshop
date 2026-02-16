@@ -128,6 +128,18 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	preStash := f.workshopMetadata(c, "test")
 	c.Check(preStash.addresses, check.Not(check.HasLen), 0)
 
+	// Stop workshop.
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
+
+	// Validate metadata changes.
+	stopped := f.workshopMetadata(c, "test")
+	config := maps.Clone(stopped.config)
+	c.Check(config["boot.autostart"], check.Equals, "false")
+	config["boot.autostart"] = "true"
+	c.Check(config, check.DeepEquals, preStash.config)
+	c.Check(stopped.devices, check.DeepEquals, preStash.devices)
+
 	// Stash workshop.
 	err = f.bd.StashWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
@@ -138,11 +150,8 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 	// Validate metadata changes.
 	postStash := f.workshopMetadata(c, "test")
-	config := maps.Clone(postStash.config)
-	c.Check(config["boot.autostart"], check.Equals, "false")
-	config["boot.autostart"] = "true"
-	c.Check(config, check.DeepEquals, preStash.config)
-	c.Check(postStash.devices, check.DeepEquals, preStash.devices)
+	c.Check(postStash.config, check.DeepEquals, stopped.config)
+	c.Check(postStash.devices, check.DeepEquals, stopped.devices)
 
 	stash := f.stashMetadata(c, "test")
 	config = maps.Clone(postStash.config)
@@ -173,6 +182,8 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 
 	// Unstash workshop.
 	err = f.bd.UnstashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+	err = f.bd.StartWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 
 	// Validate workshop metadata.
@@ -323,10 +334,12 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
 	// Execute
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
 	err = f.bd.StashWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
 
 	// Validate
-	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	snapshots = f.listSnapshots(c, "test", true)
@@ -488,6 +501,8 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	c.Check(snapshots, testutil.DeepUnsortedMatches, []string{"test-sdk-1", "test-sdk-2"})
 
 	// Validate
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
 	err = f.bd.RemoveWorkshop(f.ctx, "test")
 	c.Assert(err, check.IsNil)
 	_, err = f.bd.Workshop(f.ctx, "test")

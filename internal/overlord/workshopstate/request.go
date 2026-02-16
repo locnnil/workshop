@@ -446,6 +446,10 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 	disconnect := disconnectSdks(st, plan.IntactOrRemove())
 	addTaskSet(disconnect)
 
+	stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", file.Name))
+	stop.Set("force", true)
+	addTaskSet(state.NewTaskSet(stop))
+
 	// Remove SDKs from interfaces repository. If refresh fails, the SDKs will be returned
 	// to the repository after restoring the stashed workshop (with the SDKs installed).
 	unregister := unregisterSdks(st, plan.IntactOrRemove())
@@ -773,6 +777,14 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	addTaskSet(state.NewTaskSet(discard))
+
+	if w.Running {
+		// It's safe to stop if the workshop isn't running, but we
+		// don't want to start it if the Change is undone.
+		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", w.Name))
+		stop.Set("force", true)
+		addTaskSet(state.NewTaskSet(stop))
+	}
 
 	unregister := unregisterSdks(st, sdks)
 	addTaskSet(unregister)

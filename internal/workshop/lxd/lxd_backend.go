@@ -918,11 +918,6 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 	}
 	defer conn.Disconnect()
 
-	// ignore possible errors (e.g. container is already stopped)
-	if err = s.stopWorkshop(conn, ctx, name, true); err != nil {
-		logger.Noticef("On RemoveWorkshop: failed to stop %q workshop: %v", name, err)
-	}
-
 	snapshots, err := s.snapshotNames(snapshotConn, projectId, name, "sdk")
 	if err != nil {
 		logger.Noticef("On RemoveWorkshop: failed to find SDK snapshots for %q workshop: %v", name, err)
