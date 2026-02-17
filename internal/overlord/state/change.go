@@ -866,7 +866,7 @@ func (c *Change) CheckTaskDependencies() error {
 		msg.WriteString("dependency cycle involving tasks [")
 		for i, id := range unsatisfiedTasks {
 			t := taskByID[id]
-			msg.WriteString(fmt.Sprintf("%v:%v", t.id, t.kind))
+			fmt.Fprintf(&msg, "%v:%v", t.id, t.kind)
 			if i < len(unsatisfiedTasks)-1 {
 				msg.WriteRune(' ')
 			}
