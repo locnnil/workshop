@@ -55,12 +55,11 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
 	runner.AddHandler("install-sdk", OnDo(manager.doInstallSdk), OnUndo(manager.doUninstallSdk))
-	runner.AddHandler("register-sdk", OnDo(manager.doRegisterSdk), OnUndo(manager.doUnregisterSdk))
-	runner.AddHandler("unregister-sdk", OnDo(manager.doUnregisterSdk), OnUndo(manager.doRegisterSdk))
+	runner.AddHandler("uninstall-sdk", OnDo(manager.doUninstallSdk), OnUndo(manager.doInstallSdk))
 	runner.AddHandler("snapshot-sdk", OnDo(manager.doSnapshotSdk), nil)
 
-	runner.AddCleanup("unregister-sdk", manager.doDeleteUnusedSdkVolumes)
 	runner.AddCleanup("install-sdk", manager.doDeleteUnusedSdkVolumes)
+	runner.AddCleanup("uninstall-sdk", manager.doDeleteUnusedSdkVolumes)
 
 	return manager
 }

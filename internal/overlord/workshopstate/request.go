@@ -94,9 +94,6 @@ func installSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 		install := sdkstate.Install(st, setup.Name)
 		addTask(install)
 
-		register := sdkstate.Register(st, setup.Name)
-		addTask(register)
-
 		hook := hookstate.Hook(st, setup.Name, 0, hookstate.SetupBase)
 		addTask(hook)
 
@@ -123,9 +120,6 @@ func reinstallSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	for _, setup := range sdks {
 		install := sdkstate.Install(st, setup.Name)
 		addTask(install)
-
-		register := sdkstate.Register(st, setup.Name)
-		addTask(register)
 	}
 	return all
 }
@@ -446,10 +440,17 @@ func refresh(st *state.State, project workshop.Project, plan *refreshPlan, file 
 	disconnect := disconnectSdks(st, plan.IntactOrRemove())
 	addTaskSet(disconnect)
 
-	// Remove SDKs from interfaces repository. If refresh fails, the SDKs will be returned
-	// to the repository after restoring the stashed workshop (with the SDKs installed).
-	unregister := unregisterSdks(st, plan.IntactOrRemove())
-	addTaskSet(unregister)
+	stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", file.Name))
+	stop.Set("force", true)
+	addTaskSet(state.NewTaskSet(stop))
+
+	// Unmount SDKs and remove plugs and slots from interfaces repository.
+	// In normal circumstances we only need to update the repository. The
+	// SDKs will be implicitly unmounted when rebuilding the workshop. But
+	// the repository is lost when the daemon restarts. It's easier to
+	// reconstruct if we keep it in sync with the installed SDKs.
+	uninstall := uninstallSdks(st, plan.IntactOrRemove())
+	addTaskSet(uninstall)
 
 	stash := st.NewTask("stash-workshop", fmt.Sprintf("Stash previous %q workshop", file.Name))
 	addTaskSet(state.NewTaskSet(stash))
@@ -544,19 +545,19 @@ func autoconnectSdks(st *state.State, w string, sdks []sdk.Setup) *state.TaskSet
 	return autoconnectSet
 }
 
-func unregisterSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
+func uninstallSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
 	prev := (*state.Task)(nil)
-	unregisterSet := state.NewTaskSet()
+	uninstallSet := state.NewTaskSet()
 	for _, s := range sdks {
-		unregister := sdkstate.Unregister(st, s)
-		unregisterSet.AddTask(unregister)
+		uninstall := sdkstate.Uninstall(st, s)
+		uninstallSet.AddTask(uninstall)
 
 		if prev != nil {
-			unregister.WaitFor(prev)
+			uninstall.WaitFor(prev)
 		}
-		prev = unregister
+		prev = uninstall
 	}
-	return unregisterSet
+	return uninstallSet
 }
 
 func disconnectSdks(st *state.State, sdks []sdk.Setup) *state.TaskSet {
@@ -742,8 +743,8 @@ func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projec
 	}
 
 	taskset := []*state.TaskSet{}
-	for _, name := range workshops {
-		remove := remove(w.state, name, project)
+	for _, wp := range workshops {
+		remove := remove(w.state, wp, project)
 		taskset = append(taskset, remove)
 	}
 	return taskset, nil
@@ -774,8 +775,16 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
 	addTaskSet(state.NewTaskSet(discard))
 
-	unregister := unregisterSdks(st, sdks)
-	addTaskSet(unregister)
+	if w.Running {
+		// It's safe to stop if the workshop isn't running, but we
+		// don't want to start it if the Change is undone.
+		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", w.Name))
+		stop.Set("force", true)
+		addTaskSet(state.NewTaskSet(stop))
+	}
+
+	uninstall := uninstallSdks(st, sdks)
+	addTaskSet(uninstall)
 
 	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
 	addTaskSet(state.NewTaskSet(remove))

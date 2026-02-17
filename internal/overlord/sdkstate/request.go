@@ -24,17 +24,11 @@ func Install(st *state.State, sdk string) *state.Task {
 	return install
 }
 
-func Register(st *state.State, sdk string) *state.Task {
-	register := st.NewTask("register-sdk", fmt.Sprintf("Register %q SDK plugs and slots", sdk))
-	register.Set("sdk", sdk)
-	return register
-}
-
-func Unregister(st *state.State, setup sdk.Setup) *state.Task {
-	unregister := st.NewTask("unregister-sdk", fmt.Sprintf("Unregister %q SDK plugs and slots", setup.Name))
-	unregister.Set("sdk", setup.Name)
-	unregister.Set("sdk-setup", setup)
-	return unregister
+func Uninstall(st *state.State, setup sdk.Setup) *state.Task {
+	uninstall := st.NewTask("uninstall-sdk", fmt.Sprintf("Uninstall %q SDK", setup.Name))
+	uninstall.Set("sdk", setup.Name)
+	uninstall.Set("sdk-setup", setup)
+	return uninstall
 }
 
 func Snapshot(st *state.State, sdk string) *state.Task {

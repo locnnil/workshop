@@ -1,6 +1,7 @@
 package sdkstate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/workshop"
@@ -24,15 +26,15 @@ func SdkSetup(task *state.Task, w string) (sdk.Setup, error) {
 	st.Lock()
 	defer st.Unlock()
 
-	// Some tasks, notably unregister-sdk, store the sdk.Setup directly,
-	// since it isn't stored anywhere else. Note that the unregister-sdk
+	// Some tasks, notably uninstall-sdk, store the sdk.Setup directly,
+	// since it isn't stored anywhere else. Note that the uninstall-sdk
 	// handler only needs the SDK name, but the cleanup handler needs more.
 	var setup sdk.Setup
 	if err := task.Get("sdk-setup", &setup); err == nil {
 		return setup, nil
 	}
 
-	// Tasks like install-sdk and register-sdk can reuse the sdk.Setup
+	// Tasks like install-sdk can reuse the sdk.Setup
 	// from the launch or refresh Change.
 	var sk string
 	if err := task.Get("sdk", &sk); err != nil {
@@ -168,7 +170,29 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	return m.backend.InstallSdk(ctx, w, sdkSetup)
+	rev := revert.New()
+	defer rev.Fail()
+
+	if err := m.backend.InstallSdk(ctx, w, sdkSetup); err != nil {
+		return err
+	}
+	cleanupCtx := context.WithoutCancel(ctx)
+	rev.Add(func() {
+		cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
+		defer cancel()
+
+		if reverr := m.backend.UninstallSdk(cleanupCtx, w, sdkSetup.Name); reverr != nil {
+			logger.Noticef("On doInstallSdk: cannot uninstall %q SDK on cleanup: %v", sdkSetup.Name, reverr)
+		}
+	})
+
+	// add SDK's plugs and slots
+	if err := m.registerSdk(ctx, w, sdkSetup.Name); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
 }
 
 func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -185,23 +209,31 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	return m.backend.UninstallSdk(ctx, w, sk)
+	rev := revert.New()
+	defer rev.Fail()
+
+	if err := m.repo.RemoveSdk(project.ProjectId, w, sk); err != nil {
+		return err
+	}
+	cleanupCtx := context.WithoutCancel(ctx)
+	rev.Add(func() {
+		cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
+		defer cancel()
+
+		if reverr := m.registerSdk(cleanupCtx, w, sk); reverr != nil {
+			logger.Noticef("On doUninstallSdk: cannot re-register %q SDK on cleanup: %v", sk, reverr)
+		}
+	})
+
+	if err := m.backend.UninstallSdk(ctx, w, sk); err != nil {
+		return err
+	}
+
+	rev.Success()
+	return nil
 }
 
-func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {
-	user, project, w, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	sk, err := sdkName(task)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
-	defer cancel()
-
+func (m *SdkManager) registerSdk(ctx context.Context, w, sk string) error {
 	wp, err := m.backend.Workshop(ctx, w)
 	if err != nil {
 		return err
@@ -220,22 +252,7 @@ func (m *SdkManager) doRegisterSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	// add SDK's plugs and slots
 	return m.repo.AddSdk(info)
-}
-
-func (m *SdkManager) doUnregisterSdk(task *state.Task, tomb *tomb.Tomb) error {
-	_, project, w, err := UserProjectWorkshop(task)
-	if err != nil {
-		return err
-	}
-
-	sk, err := sdkName(task)
-	if err != nil {
-		return err
-	}
-
-	return m.repo.RemoveSdk(project.ProjectId, w, sk)
 }
 
 func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
@@ -273,9 +290,9 @@ type SdkVolumeCooldownTimeKey string
 // defined by the sdkVolumeCooldownTime constant.
 //
 // There are multiple scenarios when this cleanup is triggered:
-//   - A workshop was removed and an SDK volume was detached from it (unregister-sdk task)
+//   - A workshop was removed and an SDK volume was detached from it (uninstall-sdk task)
 //   - An SDK volume was detached during a refresh change,
-//     and is no longer used by any other workshop (unregister-sdk or, if refresh failed, install-sdk task)
+//     and is no longer used by any other workshop (uninstall-sdk or, if refresh failed, install-sdk task)
 //   - A workshop launch failed (install-sdk task)
 func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb) error {
 	user, prj, w, err := UserProjectWorkshop(task)
@@ -318,7 +335,7 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		return fmt.Errorf("new cooldown start time for %q SDK volume: %v", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), task.ReadyTime())
 	} else {
 		// Imagine the situation when a change with multiple tasks that use this
-		// volume is in progress. Every unregister-sdk task will initiate a
+		// volume is in progress. Every uninstall-sdk task will initiate a
 		// cleanup after the change is ready. All cleanups are unarranged and
 		// can run concurrently. We need to ensure that only one of them will
 		// continue to track the volume cooldown time.

@@ -88,12 +88,11 @@ this time supplying the change ID as the argument:
      Done          28ms  Run hook "save-state" for "go" SDK
      Done          31ms  Disconnect interfaces of "go" SDK
      Done          29ms  Disconnect interfaces of "system" SDK
-     Undone        35ms  Unregister "go" SDK plugs and slots
+     Undone        35ms  Uninstall "go" SDK
      Undone        48ms  Stash previous "dev-volatile" workshop
      Undone        52ms  Restore "dev-volatile" workshop from "system" snapshot
      Undone        41ms  Start "dev-volatile" workshop
      Undone        67ms  Install "go" SDK
-     Undone        33ms  Register "go" SDK plugs and slots
      Error      1m12.5s  Run hook "setup-base" for "go" SDK
      Hold             -  Snapshot "go" SDK installation
      Hold             -  Mount project directory
