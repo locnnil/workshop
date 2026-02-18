@@ -929,7 +929,7 @@ func (s *Backend) RemoveWorkshop(ctx context.Context, name string) (err error) {
 		}
 	}
 
-	op, err := conn.DeleteInstance(InstanceName(name, projectId))
+	op, err := conn.DeleteInstance(InstanceName(name, projectId), false)
 	if err != nil {
 		return err
 	}
