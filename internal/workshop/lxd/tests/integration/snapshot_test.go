@@ -261,7 +261,7 @@ func (s *snapshotSuite) snapshotFormat(c *check.C, name string, snapshot worksho
 	snapshotName := s.snapshotName(c, snapshotConn, name, sk)
 	defer func() {
 		// TODO: move to main test once backend gets a RemoveSnapshot API.
-		op, err := snapshotConn.DeleteInstance(snapshotName)
+		op, err := snapshotConn.DeleteInstance(snapshotName, false)
 		c.Assert(err, check.IsNil)
 		c.Assert(op.Wait(), check.IsNil)
 	}()

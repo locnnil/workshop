@@ -545,7 +545,7 @@ func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
 }
 
 func (s *Backend) deleteSnapshot(snapshotConn lxd.InstanceServer, snapshot string) error {
-	op, err := snapshotConn.DeleteInstance(snapshot)
+	op, err := snapshotConn.DeleteInstance(snapshot, false)
 	if err == nil {
 		err = op.Wait()
 	}
