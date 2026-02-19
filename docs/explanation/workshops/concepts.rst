@@ -200,9 +200,10 @@ These plugs and slots can be defined in two ways:
 - Grafted by the workshop:
   A workshop definition can add plugs or slots to an SDK it references.
   This is done within an SDK's entry in the :file:`workshop.yaml` file.
-  Grafting allows for customizing or extending an SDK's capabilities locally,
-  without modifying the original SDK;
-  this reduces the need to run manual commands after starting the workshop.
+  Grafting extends an SDK's capabilities locally,
+  possibly without the SDK publisher's involvement or expectation;
+  the user can add interface elements that the publisher didn't anticipate,
+  reducing the need for manual post-launch configuration.
 
 
 The :samp:`connections` section of the definition can explicitly link
