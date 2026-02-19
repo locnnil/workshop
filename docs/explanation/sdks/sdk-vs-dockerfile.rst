@@ -114,6 +114,29 @@ the :samp:`setup-base` :ref:`hook <exp_sdk_hooks>`
 is responsible for building the workshop,
 but other hooks add extra functionality with run-time events and health checks.
 
+A related Docker pattern applies :samp:`USER`
+to switch from root to a non-root user,
+followed by :samp:`RUN` instructions for user-level setup:
+
+.. code-block:: docker
+
+   # System setup as root (≈ setup-base)
+   RUN apt-get update && apt-get install -y ...
+
+   # Switch to non-root user and set up the project (≈ setup-project)
+   USER appuser
+   WORKDIR /home/appuser
+   RUN pip install --user ...
+
+In |ws_markup|,
+this maps to the :samp:`setup-project` :ref:`hook <exp_sdk_hooks>`,
+which inherently runs as the :samp:`workshop` user.
+Unlike :samp:`setup-base`,
+:samp:`setup-project` runs after interfaces are connected
+and the :file:`/project/` directory is mounted,
+so it can leverage available hardware
+and install project-specific dependencies.
+
 
 .. _exp_content_sharing:
 
@@ -310,7 +333,11 @@ Important Dockerfile instructions are mapped to |sdk_markup| as follows:
      - :samp:`setup-base` :ref:`hook <exp_sdk_hooks>`
 
    * - :samp:`RUN`
-     - :samp:`setup-base` :ref:`hook <exp_sdk_hooks>`
+     - :samp:`setup-base`,
+       :samp:`setup-project` :ref:`hooks <exp_sdk_hooks>`
+
+   * - :samp:`USER`
+     - :samp:`setup-project` :ref:`hook <exp_sdk_hooks>`
 
    * - :samp:`VOLUME`
      - :ref:`mount interface <exp_mount_interface>`
