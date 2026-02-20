@@ -16,6 +16,8 @@ github.com/canonical/gencodo v0.2.0 h1:7HhSQHHqy3QW05/OVplMmiqaT5tR2F6vDMGMUamim
 github.com/canonical/gencodo v0.2.0/go.mod h1:iFgUBc4HQSDhwR/tTAwYG25KJPqr8RbO8bbIjXKNL+I=
 github.com/canonical/lxd v0.0.0-20260217182459-b8a1ae1bf0ec h1:wvaq339haw90whjuIniKJI2p4p3Mk9o1D3i1cJHofDQ=
 github.com/canonical/lxd v0.0.0-20260217182459-b8a1ae1bf0ec/go.mod h1:l5Whq4UDh+sBkslG1SK7Dd5n28fqBWRyalXuILogt7g=
+github.com/canonical/lxd v0.0.0-20260219161221-545c2b86f836 h1:Gmo5BFd3BzCV1mKmcjXE5shPrmt1ctdR+jo5ZGAMdmY=
+github.com/canonical/lxd v0.0.0-20260219161221-545c2b86f836/go.mod h1:l5Whq4UDh+sBkslG1SK7Dd5n28fqBWRyalXuILogt7g=
 github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b h1:Da2fardddn+JDlVEYtrzBLTtyzoyU3nIS0Cf0GvjmwU=
 github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b/go.mod h1:upTK9n6rlqITN9rCN69hdreI37dRDFUk2thlGGD5Cg8=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

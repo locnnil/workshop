@@ -62,8 +62,11 @@ func CleanupLxdProject(c *check.C, client lxd.InstanceServer, project string) {
 		c.Check(err, check.IsNil)
 	}
 
-	err = cli.DeleteProject(project, false)
+	op, err := cli.DeleteProject(project, false)
 	c.Check(err, check.IsNil)
+	if c.Check(err, check.IsNil) {
+		c.Check(op.Wait(), check.IsNil)
+	}
 }
 
 func CreateTestContext(username, projectId string) context.Context {

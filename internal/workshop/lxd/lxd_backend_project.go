@@ -72,7 +72,17 @@ func initLxdProject(conn lxd.InstanceServer, project, username string) error {
 
 	rev := revert.New()
 	defer rev.Fail()
-	rev.Add(func() { _ = conn.DeleteProject(project, false) })
+	rev.Add(func() {
+		op, err := conn.DeleteProject(project, false)
+		if err != nil {
+			logger.Noticef("cannot delete project %q: %v", project, err)
+		} else {
+			err = op.Wait()
+			if err != nil {
+				logger.Noticef("cannot wait for project %q deletion: %v", project, err)
+			}
+		}
+	})
 
 	snapshots, err := lxdSnapshotsProjectName(username)
 	if err != nil {
