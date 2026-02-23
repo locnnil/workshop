@@ -564,7 +564,7 @@ the workshop user can
 in the workshop definition,
 extending an SDK's capabilities
 without the publisher's involvement.
-This makes plug and slot management a collaborative effort:
+This makes plug and slot management a shared effort:
 SDK authors define the standard capabilities,
 and users augment them to fit their project's needs.
 

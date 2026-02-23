@@ -514,15 +514,15 @@ Build commands
 ~~~~~~~~~~~~~~
 
 Normally, a :samp:`RUN` instruction in a Dockerfile
-translates to the :samp:`setup-base` :ref:`hook <exp_sdk_hooks>` in an SDK
-pretty well.
+translates to the :samp:`setup-base` and :samp:`setup-project`
+:ref:`hooks <exp_sdk_hooks>` in an SDK pretty well.
 Here, the steps to
 `set up keys <https://github.com/osrf/docker_images/blob/7f98ddd88d872299c45b60c8bcd70d4eb6665222/ros/rolling/ubuntu/noble/ros-core/Dockerfile#L19>`_,
 then `configure the repos <https://github.com/osrf/docker_images/blob/7f98ddd88d872299c45b60c8bcd70d4eb6665222/ros/rolling/ubuntu/noble/ros-core/Dockerfile#L29>`_
 and `install the packages <https://github.com/osrf/docker_images/blob/7f98ddd88d872299c45b60c8bcd70d4eb6665222/ros/rolling/ubuntu/noble/ros-core/Dockerfile#L38>`_
 largely stay the same.
 
-However, :samp:`setup-base` runs with the project directory already mounted,
+However, :samp:`setup-project` runs with the project directory already mounted,
 so any steps that rely on the contents of the project itself
 can be implemented with the same hook.
 In particular, this enables the ROS 2 SDK
