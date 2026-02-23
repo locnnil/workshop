@@ -134,7 +134,7 @@ providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
 
 For demonstration purposes, assume we want to work with AI models using the
-`Ollama <https://freegpt.ai/>`__ platform.
+`Ollama <https://ollama.com/>`__ platform.
 To do this, let's use the :samp:`ollama` SDK,
 which provides a local AI model server.
 

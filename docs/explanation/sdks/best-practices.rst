@@ -557,6 +557,17 @@ It offers several advantages:
 - Allows workshop users to mix and match compatible SDKs
 - Avoids the complexity of dependency management with a fallback mechanism
 
+Both examples above assume SDK publishers ship the required plugs and slots.
+When they don't,
+the workshop user can
+:ref:`graft <exp_workshop_definition_connections>` the missing elements
+in the workshop definition,
+extending an SDK's capabilities
+without the publisher's involvement.
+This makes plug and slot management a shared effort:
+SDK authors define the standard capabilities,
+and users augment them to fit their project's needs.
+
 
 See also
 --------

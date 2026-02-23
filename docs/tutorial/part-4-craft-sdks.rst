@@ -514,11 +514,13 @@ To use them in a workshop, add a prefix: :samp:`try-<NAME>`:
 
 
 A :samp:`channel` is not needed here;
-the SDK is installed from the try area when you launch the workshop:
+the SDK is installed from the try area when you launch the workshop;
+the options :option:`!--verbose` and :option:`!--wait-on-error`
+help debug any issues that may arise during launch or refresh:
 
 .. code-block:: console
 
-   $ workshop launch
+   $ workshop launch --verbose --wait-on-error
 
 
 .. note::
