@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.37.0
 	github.com/adrg/xdg v0.4.0
 	github.com/canonical/gencodo v0.2.0
-	github.com/canonical/lxd v0.0.0-20260217182459-b8a1ae1bf0ec
+	github.com/canonical/lxd v0.0.0-20260219161221-545c2b86f836
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.1
 	github.com/pkg/term v1.1.0
