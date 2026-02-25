@@ -2,6 +2,7 @@ project: workshop
 path: /workshop
 environment:
   LXD_CHANNEL: $(HOST:printf %s "${LXD_CHANNEL:-6/stable}")
+  LXD_CUSTOM_SNAP: $(HOST:printf %s "${LXD_CUSTOM_SNAP-}")
   PATH: $PATH:~/go/bin
   PROJECT_PATH: /workshop
   TESTSLIB: $PROJECT_PATH/tests/lib
