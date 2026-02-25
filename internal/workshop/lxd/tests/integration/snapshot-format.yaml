@@ -203,8 +203,6 @@ snapshot:
     user.workshop.snapshot-type: sdk
   description: ''
   devices:
-    cache.apt:
-      type: none
     root:
       path: /
       pool: workshop
@@ -219,12 +217,6 @@ snapshot:
       user.sdk.install-order: '2'
       user.sdk.is-volume: 'false'
       user.sdk.sha3-384: 'dc00101dfd688cdc058e31d3b82e680df123f85935f741fabcb8f0dfd29d80612f131db8487621abad7ee856223bede1'
-    workshop.network:
-      type: none
-    workshop.socket:
-      type: none
-    workshop.workshopctl:
-      type: none
   ephemeral: false
   profiles: []
   stateful: false

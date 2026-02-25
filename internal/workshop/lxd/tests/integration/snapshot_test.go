@@ -184,6 +184,18 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 
 	// Validate snapshot metadata.
 	sdkSnapshot := s.snapshotFormat(c, wf.Name, snapshot)
+
+	conn, err := s.bd.LxdClient(s.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+	newApi := conn.HasExtension("instance_refresh_config")
+	if !newApi {
+		for _, name := range []string{"cache.apt", "workshop.network", "workshop.socket", "workshop.workshopctl"} {
+			c.Check(sdkSnapshot.Devices[name], check.DeepEquals, map[string]string{"type": "none"})
+			delete(sdkSnapshot.Devices, name)
+		}
+	}
+
 	c.Check(sdkSnapshot, testutil.JsonEquals, format["snapshot"])
 }
 
@@ -295,13 +307,16 @@ func (s *snapshotSuite) snapshotFormat(c *check.C, name string, snapshot worksho
 }
 
 func (s *snapshotSuite) snapshotName(c *check.C, snapshotConn lxd.InstanceServer, w, sk string) string {
-	filters := []string{
-		"config.user.workshop.project-id=" + s.project.ProjectId,
-		"config.user.workshop.name=" + w,
-		"config.user.workshop.snapshot-type=sdk",
-		"config.user.workshop.sdk=" + sk,
+	args := lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters: []string{
+			"config.user.workshop.project-id=" + s.project.ProjectId,
+			"config.user.workshop.name=" + w,
+			"config.user.workshop.snapshot-type=sdk",
+			"config.user.workshop.sdk=" + sk,
+		},
 	}
-	snapshots, err := snapshotConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := snapshotConn.GetInstances(args)
 	c.Assert(err, check.IsNil)
 	c.Assert(snapshots, check.HasLen, 1)
 	return snapshots[0].Name
