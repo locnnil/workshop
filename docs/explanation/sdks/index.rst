@@ -11,12 +11,34 @@ SDKs
 .. @artefact SDK
 
 These topics cover the many aspects of defining and using SDKs
-with |ws_markup| and |sdk_markup|:
+with |ws_markup| and |sdk_markup|.
+
+
+Understanding SDKs
+------------------
+
+SDKs are packages of software dependencies
+distributed through the SDK Store or defined locally.
+These articles explain what SDKs are,
+how they encapsulate functionality,
+and how their internal structure is organised:
 
 .. toctree::
    :maxdepth: 1
 
    concepts
+   Parts <parts>
+
+
+SDK design
+----------
+
+When you are creating SDKs, it helps to understand
+how they compare to traditional container approaches
+and what design patterns lead to maintainable, reusable packages:
+
+.. toctree::
+   :maxdepth: 1
+
    SDKs versus Dockerfiles <sdk-vs-dockerfile>
    Design best practices <best-practices>
-   Parts <parts>
