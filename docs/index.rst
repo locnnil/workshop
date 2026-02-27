@@ -19,6 +19,7 @@
    reference/index
    explanation/index
    Release notes <release-notes/index>
+   Security <security>
    Contribution <contributing>
 
 

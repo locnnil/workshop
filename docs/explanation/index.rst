@@ -80,8 +80,4 @@ Security considerations
 
 This overview discusses the security aspects of |ws_markup| and |sdk_markup|,
 such as isolation, privileges, relevant risks, and interface mechanics.
-
-.. toctree::
-   :maxdepth: 1
-
-   Security <../security>
+See :ref:`Security policy <security>`.

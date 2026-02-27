@@ -4,6 +4,8 @@
                  including privilege management and container technology.
 ```
 
+(security)=
+
 # Security policy
 
 This is an overview of security considerations for Workshop and SDKcraft.
