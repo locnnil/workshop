@@ -19,7 +19,7 @@ cairocffi==1.7.1
     # via cairosvg
 cairosvg==2.8.2
     # via sphinxcontrib-svg2pdfconverter
-canonical-sphinx==0.5.2
+canonical-sphinx==0.6.0
     # via -r starter-pack-temp/docs/requirements.txt
 certifi==2026.1.4
     # via requests
