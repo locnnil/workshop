@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -19,6 +20,7 @@ const (
 )
 
 var sftpStatusError = regexp.MustCompile(`^sftp: (.*) \([^()]*\)$`)
+var dirNotEmptyError = regexp.MustCompile(`^([a-z]*) .*: directory not empty$`)
 var fileExistsError = regexp.MustCompile(`^([a-z]*) .*: file exists$`)
 
 func NewSftpFs(client *sftp.Client, umask os.FileMode) Fs {
@@ -222,6 +224,10 @@ func maybePathError(op, path string, err error) error {
 
 	if match = fileExistsError.FindStringSubmatch(message); match != nil {
 		return &os.PathError{Op: match[1], Path: path, Err: os.ErrExist}
+	}
+
+	if match = dirNotEmptyError.FindStringSubmatch(message); match != nil {
+		return &os.PathError{Op: match[1], Path: path, Err: syscall.ENOTEMPTY}
 	}
 
 	return errors.New(message)
