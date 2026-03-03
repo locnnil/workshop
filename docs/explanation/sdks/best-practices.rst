@@ -170,7 +170,6 @@ because they specifically address data persistence and sharing needs.
 The :samp:`uv` SDK demonstrates this by mounting :file:`/home/workshop/.cache/uv`
 to preserve package caches across workshop life-cycle,
 improving performance for `workshop refresh`:
-improving performance for repeated operations:
 
 .. code-block:: yaml
    :caption: uv/sdkcraft.yaml
