@@ -22,8 +22,7 @@ execute: |
   ## Start sketching
 
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  1/^hooks:$/a
-    setup-project: |
+  1/^    # uv sync$/c
       source /var/lib/workshop/sdk/jupyter/venv/bin/activate
       pip install jupyter-console requests
   .
@@ -33,7 +32,7 @@ execute: |
   workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
   workshop_exec exec nimble -- ollama pull tinyllama
-  workshop_exec exec nimble -- sh -c "cat run-ollama.py | /var/lib/workshop/sdk/jupyter/venv/bin/jupyter console --simple-prompt"
+  workshop_exec exec nimble -- /var/lib/workshop/sdk/jupyter/venv/bin/python /project/run-ollama.py
 
 
   ## Stash and restore
