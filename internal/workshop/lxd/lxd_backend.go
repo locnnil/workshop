@@ -1044,21 +1044,6 @@ func checkNvidia() (bool, error) {
 	return nvidiaRuntime, nil
 }
 
-// The following 'write-files' and 'runcmd' sections are for the desktop
-// interface. These create a systemd path/service unit pair to copy the
-// Xauthority cookie to /tmp when we mount it in the workshop. This is done to
-// work around file mount ordering complications with lxc and the requirements
-// on the Xauthority cookie for snapd, namely:
-//  1. Snapd requires the Xauth cookie to be in a directory visible to snaps,
-//     however there is a special case for /tmp in which snapd will migrate
-//     the cookie for us, guaranteeing it's visibility.
-//  2. Snapd explicitly checks the provided cookie for symlinks, this means
-//     that we can only make a copy of the cookie
-//  2. Mounts in dynamic filesystems (ie. /tmp) are genreally advised against
-//     for LXD
-//
-// Although these will be present within every workshop, path units utilise
-// inotify and as such add effectively zero overhead to a workshop launch/start.
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, baseFingerprint string) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
@@ -1082,30 +1067,6 @@ apt:
     APT::Get::Assume-Yes "1";
 write_files:
 - content: |
-    # Managed by workshop, do not remove
-    [Unit]
-    Description=Required for x11 support
-
-    [Path]
-    PathModified=/var/lib/workshop/run/Xauthority/.Xauthority
-    Unit=xauth-copy.service
-
-    [Install]
-    WantedBy=multi-user.target
-  path: /etc/systemd/system/xauth-watch.path
-- content: |
-    # Managed by workshop, do not remove
-    [Unit]
-    Description=Required for x11 support; copies Xauthority to /tmp
-
-    [Service]
-    Type=oneshot
-    ExecStart=/bin/bash -c '[ ! -f /var/lib/workshop/run/Xauthority/.Xauthority ] || install --mode 600 --owner workshop --group workshop --target-directory /tmp /var/lib/workshop/run/Xauthority/.Xauthority'
-
-    [Install]
-    WantedBy=multi-user.target
-  path: /etc/systemd/system/xauth-copy.service
-- content: |
     # Workaround for https://bugs.launchpad.net/snapd/+bug/2104066
     [Service]
     Environment=SNAPD_STANDBY_WAIT=1m
@@ -1125,8 +1086,6 @@ runcmd:
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
   - systemctl daemon-reload
-  - systemctl enable --now xauth-copy.service
-  - systemctl enable --now xauth-watch.path
   - systemctl restart snapd.service
   # Required to load above DHCP config.
   - networkctl reload

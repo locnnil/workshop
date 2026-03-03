@@ -320,7 +320,7 @@ func writeMountProfile(fs fsutil.Fs, mounts io.WriterTo) error {
 	return fs.AtomicWriteTo(mounts, "/etc/fstab", 0644)
 }
 
-func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
+func runCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error {
 	c := api.InstanceExecPost{
 		Command:     cmd,
 		Interactive: false,
@@ -350,7 +350,7 @@ func runMountCommand(conn lxd.InstanceServer, pid, w string, cmd []string) error
 }
 
 func unmount(conn lxd.InstanceServer, pid, w string, where string) error {
-	return runMountCommand(conn, pid, w, []string{"umount", where})
+	return runCommand(conn, pid, w, []string{"umount", where})
 }
 
 // 'systemd-fstab-generator' is responsible for creating mount entries from
@@ -359,10 +359,10 @@ func unmount(conn lxd.InstanceServer, pid, w string, where string) error {
 // newly-creaed units by restarting a downstream target (ie. local-fs) see:
 // https://www.freedesktop.org/software/systemd/man/latest/systemd.special.html
 func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
-	if err := runMountCommand(conn, pid, w, []string{"systemctl", "daemon-reload"}); err != nil {
+	if err := runCommand(conn, pid, w, []string{"systemctl", "daemon-reload"}); err != nil {
 		return err
 	}
-	return runMountCommand(conn, pid, w, []string{"systemctl", "restart", "local-fs.target"})
+	return runCommand(conn, pid, w, []string{"systemctl", "restart", "local-fs.target"})
 }
 
 func setupSshAgent(fs fsutil.Fs, prev, next *workshop.SshAgent) error {
@@ -393,12 +393,12 @@ func removeSshAgent(fs fsutil.Fs, prev *workshop.SshAgent) error {
 	return fs.RemoveIfExists(script)
 }
 
-func setupDesktop(fs fsutil.Fs, user *user.User, env map[string]string, prev, next *workshop.Desktop) error {
+func setupDesktop(conn lxd.InstanceServer, fs fsutil.Fs, user *user.User, env map[string]string, pid, w string, prev, next *workshop.Desktop) error {
 	if prev.Equal(next) {
 		return nil
 	}
 	if next == nil {
-		return removeDesktop(fs, prev)
+		return removeDesktop(conn, fs, pid, w, prev)
 	}
 
 	script := "/etc/profile.d/workshop-desktop.sh"
@@ -409,17 +409,27 @@ func setupDesktop(fs fsutil.Fs, user *user.User, env map[string]string, prev, ne
 	}
 
 	envVars := desktopEnvironment(user, env, *next)
-	return fs.AtomicWriteTo(envScript(envVars), script, 0644)
+	if err := fs.AtomicWriteTo(envScript(envVars), script, 0644); err != nil {
+		return err
+	}
+
+	if envVars["XAUTHORITY"] == "" {
+		return nil
+	}
+	if err := setupXauthority(conn, fs, pid, w); err != nil {
+		logger.Noticef("cannot watch Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
+		_ = removeXauthority(conn, fs, pid, w)
+	}
+	return nil
 }
 
-func removeDesktop(fs fsutil.Fs, prev *workshop.Desktop) error {
+func removeDesktop(conn lxd.InstanceServer, fs fsutil.Fs, pid, w string, prev *workshop.Desktop) error {
 	if prev == nil {
 		return nil
 	}
 
-	script := "/etc/profile.d/workshop-desktop.sh"
-	err := fs.RemoveIfExists(script)
-	err2 := fs.RemoveIfExists("/tmp/.Xauthority")
+	err := fs.RemoveIfExists("/etc/profile.d/workshop-desktop.sh")
+	err2 := removeXauthority(conn, fs, pid, w)
 	return cmp.Or(err, err2)
 }
 
@@ -461,9 +471,10 @@ func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Des
 	// is the responsibility of the interface manager.
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
-		envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		if err := x11.MigrateXauthority(user, xauth); err != nil {
 			logger.Noticef("cannot migrate Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
+		} else {
+			envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		}
 	}
 
@@ -483,6 +494,133 @@ func (e envScript) WriteTo(w io.Writer) (int64, error) {
 		}
 	}
 	return n, nil
+}
+
+const (
+	unitDir = "/etc/systemd/system"
+
+	watchXauthorityPath = `# Managed by workshop, do not remove
+[Unit]
+Description=Watch mounted Xauthority file (required for X11 support)
+Before=watch-xauthority.service
+Wants=watch-xauthority.service
+
+[Path]
+PathChanged=/var/lib/workshop/run/Xauthority/.Xauthority
+
+[Install]
+WantedBy=multi-user.target
+`
+
+	watchXauthorityService = `# Managed by workshop, do not remove
+[Unit]
+Description=Copy mounted Xauthority file to /tmp (required for X11 support)
+ConditionPathExists=/var/lib/workshop/run/Xauthority/.Xauthority
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/install --mode 600 --owner workshop --group workshop --target-directory /tmp /var/lib/workshop/run/Xauthority/.Xauthority
+`
+
+	watchXauthorityConf = `# Managed by workshop, do not remove
+[Unit]
+Before=watch-xauthority.path
+Wants=watch-xauthority.path
+`
+)
+
+// Create a systemd path/service unit pair to copy the Xauthority cookie to
+// /tmp when we mount it in the workshop. This is done to work around file
+// mount ordering complications with lxc and the requirements on the
+// Xauthority cookie for snapd, namely:
+//  1. Snapd requires the Xauth cookie to be in a directory visible to snaps,
+//     however there is a special case for /tmp in which snapd will migrate the
+//     cookie for us, guaranteeing it's visibility.
+//  2. Snapd explicitly checks the provided cookie for symlinks, this means
+//     that we can only make a copy of the cookie
+//  2. Mounts in dynamic filesystems (ie. /tmp) are generally advised
+//     against for LXD
+//
+// Since we create these units before the Xauthority cookie is mounted, we
+// trigger the path unit by overriding the future mount unit. This is difficult
+// due to https://github.com/systemd/systemd/issues/8587; we avoid the issue
+// entirely by not mentioning the mount unit in the other unit files. However,
+// we still suffer from the issue (or a related one) when the workshop is
+// restarted. To restart the path unit on reboots (without starting it now),
+// we manually create a symlink to it in multi-user.target.wants/.
+func setupXauthority(conn lxd.InstanceServer, fs fsutil.Fs, pid, w string) error {
+	if err := fs.MkdirAll(filepath.Join(unitDir, "multi-user.target.wants"), 0755); err != nil {
+		return err
+	}
+	if err := createUnit(fs, watchXauthorityService, "watch-xauthority.service"); err != nil {
+		return err
+	}
+	if err := createUnit(fs, watchXauthorityPath, "watch-xauthority.path"); err != nil {
+		return err
+	}
+	if err := installUnit(fs, "watch-xauthority.path", "multi-user.target"); err != nil {
+		return err
+	}
+	if err := fs.MkdirAll(filepath.Join(unitDir, "var-lib-workshop-run-Xauthority.mount.d"), 0755); err != nil {
+		return err
+	}
+	override := filepath.Join("var-lib-workshop-run-Xauthority.mount.d", "watch-xauthority.conf")
+	if err := createUnit(fs, watchXauthorityConf, override); err != nil {
+		return err
+	}
+	if err := runCommand(conn, pid, w, []string{"systemctl", "daemon-reload"}); err != nil {
+		return err
+	}
+	// We expect the new unit to be stopped, but it's possible that the
+	// previous disconnect failed to stop it. In that case, when the
+	// Xauthority directory is mounted, systemd will not restart the unit.
+	// Stopping it prevents that scenario and is a no-op in the usual case.
+	if err := runCommand(conn, pid, w, []string{"systemctl", "stop", "watch-xauthority.path"}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func removeXauthority(conn lxd.InstanceServer, fs fsutil.Fs, pid, w string) error {
+	// We should only ignore the "Unit watch-xauthority.path not loaded"
+	// error, but the exit status (5) is undocumented and we don't have
+	// easy access to stderr. It's OK to leave it running here since path
+	// units have very little overhead, as long as we restart it when the
+	// desktop interface reconnects.
+	if err := runCommand(conn, pid, w, []string{"systemctl", "stop", "watch-xauthority.path"}); err != nil {
+		logger.Debugf("removeXauthority: %v", err)
+	}
+
+	var err error
+	override := filepath.Join("var-lib-workshop-run-Xauthority.mount.d", "watch-xauthority.conf")
+	err = cmp.Or(err, removeUnit(fs, override))
+	if err2 := fs.RemoveIfExists(filepath.Join(unitDir, "var-lib-workshop-run-Xauthority.mount.d")); !errors.Is(err2, syscall.ENOTEMPTY) {
+		err = cmp.Or(err, err2)
+	}
+	err = cmp.Or(err, uninstallUnit(fs, "watch-xauthority.path", "multi-user.target"))
+	err = cmp.Or(err, removeUnit(fs, "watch-xauthority.path"))
+	err = cmp.Or(err, removeUnit(fs, "watch-xauthority.service"))
+	err = cmp.Or(err, runCommand(conn, pid, w, []string{"systemctl", "daemon-reload"}))
+	err = cmp.Or(err, fs.RemoveIfExists("/tmp/.Xauthority"))
+
+	return err
+}
+
+func createUnit(fs fsutil.Fs, content, path string) error {
+	return fs.AtomicWriteTo(strings.NewReader(content), filepath.Join(unitDir, path), 0644)
+}
+
+func removeUnit(fs fsutil.Fs, path string) error {
+	return fs.RemoveIfExists(filepath.Join(unitDir, path))
+}
+
+func installUnit(fs fsutil.Fs, path, target string) error {
+	return fs.Symlink(filepath.Join(unitDir, path), filepath.Join(unitDir, target+".wants", filepath.Base(path)))
+}
+
+func uninstallUnit(fs fsutil.Fs, path, target string) error {
+	return fs.RemoveIfExists(filepath.Join(unitDir, target+".wants", filepath.Base(path)))
 }
 
 func sftpFs(conn lxd.InstanceServer, pid, w string) (fsutil.Fs, error) {
@@ -570,11 +708,11 @@ func setupProfile(conn lxd.InstanceServer, user *user.User, env map[string]strin
 		}
 	})
 
-	if err := setupDesktop(fs, user, env, prev.Desktop, next.Desktop); err != nil {
+	if err := setupDesktop(conn, fs, user, env, sdkRef.ProjectId, sdkRef.Workshop, prev.Desktop, next.Desktop); err != nil {
 		return nil, err
 	}
 	rev.Add(func() {
-		if reverr := setupDesktop(fs, user, env, next.Desktop, prev.Desktop); reverr != nil {
+		if reverr := setupDesktop(conn, fs, user, env, sdkRef.ProjectId, sdkRef.Workshop, next.Desktop, prev.Desktop); reverr != nil {
 			logger.Noticef("On setupProfile: cannot undo desktop interface changes: %v", reverr)
 		}
 	})
@@ -604,7 +742,7 @@ func cleanupProfile(conn lxd.InstanceServer, sdkRef sdk.Ref) error {
 	defer fs.Close()
 
 	err = removeMounts(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Mounts)
-	err2 := removeDesktop(fs, prof.Desktop)
+	err2 := removeDesktop(conn, fs, sdkRef.ProjectId, sdkRef.Workshop, prof.Desktop)
 	err3 := removeSshAgent(fs, prof.Agent)
 	return cmp.Or(err, err2, err3)
 }

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"io"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -151,6 +152,14 @@ func (s *sftpSuite) TestChtimes(c *check.C) {
 func (s *sftpSuite) TestRemove(c *check.C) {
 	err := s.fs.Remove("notexist")
 	c.Assert(err, check.ErrorMatches, `remove notexist: file does not exist`)
+}
+
+func (s *sftpSuite) TestRemoveNotEmpty(c *check.C) {
+	c.Assert(s.fs.Mkdir("testdir", os.ModePerm), check.IsNil)
+	c.Assert(s.fs.WriteFile("testdir/testfile", nil, 0644), check.IsNil)
+
+	err := s.fs.Remove("testdir")
+	c.Assert(err, testutil.ErrorIs, syscall.ENOTEMPTY)
 }
 
 func (s *sftpSuite) TestRemoveAll(c *check.C) {
