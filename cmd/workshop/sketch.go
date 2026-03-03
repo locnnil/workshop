@@ -90,40 +90,30 @@ type SketchFile struct {
 	Hooks map[string]string `yaml:"hooks,omitempty"`
 }
 
-var sketchTemplate = `# Sketch SDK for %s
-# Sketch SDK provides local customization of this specific workshop.
-
-# To read more about the sketch SDK and its syntax, see:
-# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
+var sketchTemplate = `# For details: https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
 hooks:
-  # EXAMPLE: setup-base runs once at workshop launch; use it to install some packages.
-  # setup-base: |
+  # Use 'setup-base' to customize the base image 
+  setup-base: |
     # apt-get update
-    # apt-get install PACKAGE...
-    # snap install SNAP...
-  # EXAMPLE: setup-project runs after connecting plugs and slots; use it to install the project environment.
-  # setup-project: |
-    # go mod download
+    # apt-get install build-essential
+
+  # Use 'setup-project' for project-specific logic, after plugs and slots are connected
+  setup-project: |
     # uv sync
-  # EXAMPLE: check-health runs after entire SDK setup completes; run "workshopctl set-health okay" if OK.
-  # check-health: |
-    # if CHECK_HEALTH_COMMAND ; then
-    #   workshopctl set-health okay
-    # else
-    #   workshopctl set-health --code=installation-failed error "Installation failed"
-    # fi
+
+
 plugs:
-  # EXAMPLE: forward your SSH agent into the workshop, enabling "git push" inside the workshop.
-  # ssh-agent:
-  #   interface: ssh-agent
-  # EXAMPLE: expose well-known config file locations to the workshop
-  # vs-code-settings:
+  # Use this to mount a host directory to the workshop
+  # models:
   #   interface: mount
-  #   workshop-target: /home/workshop/.config/Code/User
+  #   workshop-target: /home/workshop/models
+
+
 slots:
-  # EXAMPLE: expose SDK services to the host
-  # dashboard:
+  # Use this to expose a port, then add a corresponding system SDK plug.
+  # More details: https://canonical-workshop.readthedocs-hosted.com/latest/how-to/customize-workshops/forward-ports/
+  # my-web-server:
   #   interface: tunnel
   #   endpoint: 8080
 `
@@ -514,7 +504,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return nil
 	}
 
-	if err = editSketchSdk(sketchdir, wp.Path); err != nil {
+	if err = editSketchSdk(sketchdir); err != nil {
 		return fmt.Errorf("cannot sketch: %w", err)
 	}
 
@@ -530,15 +520,14 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func editSketchSdk(sketchdir, workshopFile string) error {
+func editSketchSdk(sketchdir string) error {
 	content, err := os.ReadFile(filepath.Join(sketchdir, "sdk.yaml"))
 	if errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(sketchdir, 0755); err != nil {
 			return err
 		}
 
-		// Format sketch SDK template header.
-		content = fmt.Appendf(nil, sketchTemplate, workshopFile)
+		content = []byte(sketchTemplate)
 	} else if err != nil {
 		return err
 	}
