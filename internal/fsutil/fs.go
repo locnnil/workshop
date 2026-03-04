@@ -230,6 +230,35 @@ func (f Fs) AtomicWriteTo(source io.WriterTo, target string, perm os.FileMode) e
 	return nil
 }
 
+// SymlinkForce creates a symlink `new` pointing to `old`. If `new` already
+// exists it is atomically overwritten.
+func (f Fs) SymlinkForce(old, new string) error {
+	rev := revert.New()
+	defer rev.Fail()
+
+	prefix := new + "."
+	suffix := "~"
+
+	for range 10000 {
+		name := prefix + nextRandom() + suffix
+		if err := f.Symlink(old, name); errors.Is(err, os.ErrExist) {
+			continue
+		} else if err != nil {
+			return err
+		}
+
+		rev.Add(func() { _ = f.Remove(name) })
+
+		if err := f.Rename(name, new); err != nil {
+			return err
+		}
+
+		rev.Success()
+		return nil
+	}
+	return &os.PathError{Op: "symlink", Path: prefix + "*" + suffix, Err: os.ErrExist}
+}
+
 // ReadFile reads the named file and returns the contents.
 func (f Fs) ReadFile(path string) ([]byte, error) {
 	file, err := f.Open(path)

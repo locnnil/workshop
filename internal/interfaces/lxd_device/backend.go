@@ -616,7 +616,7 @@ func removeUnit(fs fsutil.Fs, path string) error {
 }
 
 func installUnit(fs fsutil.Fs, path, target string) error {
-	return fs.Symlink(filepath.Join(unitDir, path), filepath.Join(unitDir, target+".wants", filepath.Base(path)))
+	return fs.SymlinkForce(filepath.Join(unitDir, path), filepath.Join(unitDir, target+".wants", filepath.Base(path)))
 }
 
 func uninstallUnit(fs fsutil.Fs, path, target string) error {
