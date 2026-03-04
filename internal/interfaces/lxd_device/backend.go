@@ -534,10 +534,10 @@ Wants=watch-xauthority.path
 // Xauthority cookie for snapd, namely:
 //  1. Snapd requires the Xauth cookie to be in a directory visible to snaps,
 //     however there is a special case for /tmp in which snapd will migrate the
-//     cookie for us, guaranteeing it's visibility.
+//     cookie for us, guaranteeing its visibility.
 //  2. Snapd explicitly checks the provided cookie for symlinks, this means
 //     that we can only make a copy of the cookie
-//  2. Mounts in dynamic filesystems (ie. /tmp) are generally advised
+//  3. Mounts in dynamic filesystems (ie. /tmp) are generally advised
 //     against for LXD
 //
 // Since we create these units before the Xauthority cookie is mounted, we
