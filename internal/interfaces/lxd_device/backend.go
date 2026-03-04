@@ -413,7 +413,7 @@ func setupDesktop(conn lxd.InstanceServer, fs fsutil.Fs, user *user.User, env ma
 		return err
 	}
 
-	if envVars["XAUTHORITY"] == "" {
+	if env["XAUTHORITY"] == "" {
 		return nil
 	}
 	if err := setupXauthority(conn, fs, pid, w); err != nil {
@@ -471,10 +471,9 @@ func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Des
 	// is the responsibility of the interface manager.
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
+		envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		if err := x11.MigrateXauthority(user, xauth); err != nil {
 			logger.Noticef("cannot migrate Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
-		} else {
-			envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		}
 	}
 
