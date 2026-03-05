@@ -53,12 +53,8 @@ jobs:
       - name: Set LXD storage size
         run: |
           lxc storage set default volume.size=32GB
-      - name: Override LXD channel
-        run: |
-          cat <<EOF >>tests/lib/.env
-          LXD_CHANNEL='6/candidate'
-          EOF
       - name: Run spread
         run: |
           mkdir ${{ github.workspace }}.cover
+          export LXD_CHANNEL='6/candidate'
           spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}

@@ -256,8 +256,10 @@ func fullInstance(c *check.C, conn lxd.InstanceServer, name string) *api.Instanc
 }
 
 func includeWhenCopying(key string) bool {
-	suffix, found := strings.CutPrefix(key, "volatile.")
-	return !found || slices.Contains([]string{"base_image", "last_state.idmap"}, suffix)
+	if !strings.HasPrefix(key, "volatile.") {
+		return true
+	}
+	return slices.Contains(api.InstanceRemoteCopyConfigKeyPolicy.Immutable, key)
 }
 
 func ipAddresses(inst *api.InstanceFull) []string {
@@ -288,12 +290,15 @@ func (f *wsOps) listSnapshots(c *check.C, name string, stash bool) []string {
 		snapshotType = "stash-sdk"
 	}
 
-	filters := []string{
-		"config.user.workshop.project-id=" + f.project.ProjectId,
-		"config.user.workshop.name=" + name,
-		"config.user.workshop.snapshot-type=" + snapshotType,
+	args := lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters: []string{
+			"config.user.workshop.project-id=" + f.project.ProjectId,
+			"config.user.workshop.name=" + name,
+			"config.user.workshop.snapshot-type=" + snapshotType,
+		},
 	}
-	snapshots, err := conn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := conn.GetInstances(args)
 	c.Assert(err, check.IsNil)
 
 	names := make([]string, 0, len(snapshots))

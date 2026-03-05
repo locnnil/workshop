@@ -886,21 +886,23 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 	p := projects[user][idx]
 
 	// Get all the running workshops for this project.
-	instances, err := conn.GetInstances(api.InstanceTypeContainer)
+	args := lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters:      []string{"config.user.workshop.project-id=" + p.ProjectId},
+	}
+	instances, err := conn.GetInstances(args)
 	if err != nil {
 		return nil, err
 	}
 
 	var workshops []*workshop.Workshop
 	for _, i := range instances {
-		if i.Config[workshop.ConfigProjectId] == p.ProjectId {
-			ws, err := s.loadWorkshop(conn, &i, p)
-			if err != nil {
-				logger.Debugf("Workshop Backend on ProjectsWorkshops: %v", err)
-				continue
-			}
-			workshops = append(workshops, ws)
+		ws, err := s.loadWorkshop(conn, &i, p)
+		if err != nil {
+			logger.Debugf("Workshop Backend on ProjectsWorkshops: %v", err)
+			continue
 		}
+		workshops = append(workshops, ws)
 	}
 
 	return workshops, nil

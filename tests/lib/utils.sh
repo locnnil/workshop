@@ -4,17 +4,15 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/retry.sh"
 
-# Allow CI jobs to override environment.
-LXD_CHANNEL='6/stable'
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    . "$SCRIPT_DIR/.env"
-fi
-
 function setup_lxd() {
-    if snap list lxd >/dev/null; then
-        retry 5 snap refresh --channel="$LXD_CHANNEL" lxd
-    else
+    if ! snap list lxd >/dev/null; then
         retry 5 snap install --channel="$LXD_CHANNEL" lxd
+    elif [ -z "${LXD_CUSTOM_SNAP}" ]; then
+        retry 5 snap refresh --channel="$LXD_CHANNEL" lxd
+    fi
+    if [ -n "${LXD_CUSTOM_SNAP}" ]; then
+        (cd -- "$PROJECT_PATH" && snap install --dangerous "${LXD_CUSTOM_SNAP}")
+        snap alias lxd.lxc lxc
     fi
     lxd waitready --timeout=180
 

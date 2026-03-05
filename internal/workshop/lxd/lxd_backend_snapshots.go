@@ -39,16 +39,12 @@ const (
 
 // Classifies options by key. Based on LXD's InstanceIncludeWhenCopying.
 func optionDomain(key string) configDomain {
-	if strings.HasPrefix(key, "image.") {
+	switch {
+	case strings.HasPrefix(key, "image."):
 		return sharedProperty
-	}
-
-	suffix, found := strings.CutPrefix(key, "volatile.")
-	if !found {
+	case !strings.HasPrefix(key, "volatile."):
 		return customOption
-	}
-	switch suffix {
-	case "base_image", "last_state.idmap":
+	case slices.Contains(api.InstanceRemoteCopyConfigKeyPolicy.Immutable, key):
 		return sharedProperty
 	default:
 		return uniqueProperty
@@ -85,18 +81,36 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		return err
 	}
 
-	// Override all writable attributes. The snapshot is essentially a base
-	// image but is stored more efficiently. Config options and devices are
-	// reconstructed from scratch during launch and refresh.
-	config := configOverrides(projectId, name, sk, digest, snapshot.Image, inst.Config)
-	devices, err := deviceOverrides(inst.Devices)
-	if err != nil {
+	newApi := snapshotConn.HasExtension("instance_refresh_config")
+
+	if inst.Config == nil {
+		inst.Config = map[string]string{}
+	}
+	config := map[string]string{
+		"security.protection.start":            "true",
+		workshop.ConfigProjectId:               projectId,
+		workshop.ConfigWorkshopName:            name,
+		workshop.ConfigWorkshopBase:            snapshot.Image.Name,
+		workshop.ConfigWorkshopBaseFingerprint: snapshot.Image.Fingerprint,
+		workshop.ConfigWorkshopSnapshotType:    "sdk",
+		workshop.ConfigWorkshopSnapshotFormat:  SnapshotFormatRevision.String(),
+		workshop.ConfigWorkshopSha3_384:        digest,
+		workshop.ConfigWorkshopSdk:             sk,
+	}
+	mergeConfig(inst.Config, nil, config, newApi)
+
+	if inst.Devices == nil {
+		inst.Devices = map[string]map[string]string{}
+	}
+	if err := mergeDevices(inst.Devices, snapshot.Sdks, name, newApi); err != nil {
 		return err
 	}
+
+	// Reset everything that isn't explicitly specified.
 	inst.SetWritable(api.InstancePut{
 		Architecture: inst.Architecture,
-		Config:       config,
-		Devices:      devices,
+		Config:       inst.Config,
+		Devices:      inst.Devices,
 		Profiles:     []string{},
 	})
 
@@ -110,49 +124,6 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		return err
 	}
 	return rop.Wait()
-}
-
-func configOverrides(pid, name, sk, digest string, image workshop.BaseImage, config map[string]string) map[string]string {
-	// LXD will handle the options it owns. We remove all options set by
-	// Workshop, except for a handful that identify the snapshot. We also
-	// add security.protection.start to prevent it from starting.
-	overrides := map[string]string{
-		"security.protection.start":            "true",
-		workshop.ConfigProjectId:               pid,
-		workshop.ConfigWorkshopName:            name,
-		workshop.ConfigWorkshopBase:            image.Name,
-		workshop.ConfigWorkshopBaseFingerprint: image.Fingerprint,
-		workshop.ConfigWorkshopSnapshotType:    "sdk",
-		workshop.ConfigWorkshopSnapshotFormat:  SnapshotFormatRevision.String(),
-		workshop.ConfigWorkshopSha3_384:        digest,
-		workshop.ConfigWorkshopSdk:             sk,
-	}
-	for k := range config {
-		if _, ok := overrides[k]; !ok && optionDomain(k) == customOption {
-			overrides[k] = ""
-		}
-	}
-	return overrides
-}
-
-func deviceOverrides(devices map[string]map[string]string) (map[string]map[string]string, error) {
-	// There's no easy way to remove these, so we make do by setting them
-	// to {"type": "none"}. For SDKs we remember all metadata which might
-	// affect the snapshot.
-	overrides := make(map[string]map[string]string, len(devices))
-	none := map[string]string{"type": "none"}
-	for key, device := range devices {
-		s, err := maybeSdkInstallation(key, device)
-		if err != nil {
-			return nil, err
-		}
-		if s != nil {
-			overrides[key] = sdkToSnapshotDevice(s.InstallOrder, sdk.SetupId(s.Setup))
-		} else if key != "root" {
-			overrides[key] = none
-		}
-	}
-	return overrides, nil
 }
 
 // Generates a random suffix for the SDK, to avoid clashing with SDK snapshots
@@ -182,21 +153,12 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 	if err != nil {
 		return err
 	}
-	// Snapshots should only contain the requested devices and SDK mounts.
-	for key, device := range snapshot.Devices {
-		installOrder, s, err := maybeSdkId(key, device)
-		if err != nil {
-			return err
-		}
-		if s != nil {
-			if 0 < installOrder && installOrder <= len(sdks) && sdks[installOrder-1] == *s {
-				// SDK will be reinstalled as a separate task.
-				continue
-			}
-			return fmt.Errorf("internal error: snapshot %q has unexpected %q SDK", snapshot.Name, s.Name)
-		} else if _, ok := req.Devices[key]; !ok {
-			return fmt.Errorf("internal error: snapshot %q has unexpected device %q", snapshot.Name, key)
-		}
+
+	inst, _, err := conn.GetInstance(req.Name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		inst = &api.Instance{}
+	} else if err != nil {
+		return err
 	}
 
 	// Remove the newer snapshots, as LXD would do. This is not necessary
@@ -209,72 +171,110 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		}
 	}
 
-	overrides := overrideSnapshot(*snapshot, req.InstancePut)
+	newApi := conn.HasExtension("instance_refresh_config")
+
+	if snapshot.Config == nil {
+		snapshot.Config = map[string]string{}
+	}
+	var config map[string]string
+	if !newApi {
+		// The old API handles config options inconsistently. This
+		// computes the form required for UpdateInstance.
+		config = maps.Clone(snapshot.Config)
+		mergeConfig(config, inst.Config, req.Config, true)
+	}
+	mergeConfig(snapshot.Config, inst.Config, req.Config, newApi)
+
+	req.Architecture = snapshot.Architecture
+	req.Config = snapshot.Config
+	// Ensure LXD doesn't copy profiles from the snapshot.
+	if req.Profiles == nil {
+		req.Profiles = []string{}
+	}
+	snapshot.SetWritable(req.InstancePut)
+
 	args := lxd.InstanceCopyArgs{
 		Name:         req.Name,
 		InstanceOnly: true,
 		Refresh:      true,
 	}
-	rop, err := conn.CopyInstance(snapshotConn, overrides, &args)
+	rop, err := conn.CopyInstance(snapshotConn, *snapshot, &args)
 	if err != nil {
 		return err
 	}
-	if err = rop.Wait(); err != nil {
+	if err := rop.Wait(); err != nil {
 		return err
+	}
+
+	if newApi {
+		return nil
 	}
 
 	// If the workshop already existed, it still has the old config options
 	// and devices. If it did not exist, the config and devices are mostly
 	// correct, but we still need to remove placeholder SDK devices.
-	inst, etag, err := conn.GetInstance(req.Name)
-	if err != nil {
-		return err
-	}
-	req.Config = mergeOptions(req.Config, snapshot.Config, inst.Config)
-	req.Architecture = inst.Architecture
-	op, err := conn.UpdateInstance(req.Name, req.InstancePut, etag)
+	req.Config = config
+	op, err := conn.UpdateInstance(req.Name, req.InstancePut, "")
 	if err != nil {
 		return err
 	}
 	return op.Wait()
 }
 
-func overrideSnapshot(snapshot api.Instance, req api.InstancePut) api.Instance {
-	// Set all requested options and remove snapshot options that aren't
-	// managed by LXD.
-	req.Config = maps.Clone(req.Config)
-	for k := range snapshot.Config {
-		if _, ok := req.Config[k]; !ok && optionDomain(k) == customOption {
-			req.Config[k] = ""
+func mergeConfig(source, target, config map[string]string, newApi bool) {
+	if newApi {
+		maps.DeleteFunc(source, func(k, v string) bool {
+			return optionDomain(k) != sharedProperty
+		})
+	} else {
+		// Omit options managed by LXD, to let it decide what to do.
+		maps.DeleteFunc(source, func(k, v string) bool {
+			return optionDomain(k) != customOption
+		})
+		// Tell LXD to remove all custom options.
+		for k := range source {
+			source[k] = ""
 		}
 	}
-	// Ensure LXD doesn't copy profiles from the snapshot.
-	if req.Profiles == nil {
-		req.Profiles = []string{}
+
+	for k, v := range target {
+		if optionDomain(k) == uniqueProperty {
+			source[k] = v
+		}
 	}
-	req.Architecture = snapshot.Architecture
-	snapshot.SetWritable(req)
-	return snapshot
+
+	maps.Copy(source, config)
 }
 
-func mergeOptions(req, source, target map[string]string) map[string]string {
-	// Start with requested options.
-	result := maps.Clone(req)
-	// Next, add LXD-managed options we want to preserve from the workshop.
-	// Ideally some of these probably shouldn't be preserved. See
-	// https://github.com/canonical/lxd/issues/16667.
-	for k, v := range target {
-		if _, ok := result[k]; !ok && optionDomain(k) == uniqueProperty {
-			result[k] = v
+func mergeDevices(source map[string]map[string]string, sdks []sdk.Id, w string, newApi bool) error {
+	if newApi {
+		maps.DeleteFunc(source, func(k string, v map[string]string) bool {
+			return k != "root"
+		})
+	} else {
+		none := map[string]string{"type": "none"}
+		for key, device := range source {
+			s, err := maybeSdkInstallation(key, device)
+			if err != nil {
+				return err
+			}
+			if s != nil {
+				idx := s.InstallOrder - 1
+				if idx < 0 || len(sdks) <= idx || sdks[idx].Name != s.Name {
+					return fmt.Errorf("internal error: %q workshop has unexpected %q SDK", w, s.Name)
+				}
+				delete(source, key)
+			} else if key != "root" {
+				source[key] = none
+			}
 		}
 	}
-	// Finally, copy the remaining LXD-managed options from the snapshot.
-	for k, v := range source {
-		if _, ok := result[k]; !ok && optionDomain(k) == sharedProperty {
-			result[k] = v
-		}
+
+	for i, sk := range sdks {
+		source[workshop.SdkDeviceName(sk.Name)] = sdkToSnapshotDevice(i+1, sk)
 	}
-	return result
+
+	return nil
 }
 
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
@@ -381,12 +381,15 @@ func (s *Backend) UnstashWorkshop(ctx context.Context, name string) error {
 
 // Find snapshot names for all SDKs in the given workshop or stash.
 func (s *Backend) snapshotNames(snapshotConn lxd.InstanceServer, pid, w string, kind string) ([]string, error) {
-	filters := []string{
-		"config.user.workshop.project-id=" + pid,
-		"config.user.workshop.name=" + w,
-		"config.user.workshop.snapshot-type=" + kind,
+	args := lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters: []string{
+			"config.user.workshop.project-id=" + pid,
+			"config.user.workshop.name=" + w,
+			"config.user.workshop.snapshot-type=" + kind,
+		},
 	}
-	snapshots, err := snapshotConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := snapshotConn.GetInstances(args)
 	if err != nil {
 		return nil, err
 	}
@@ -400,12 +403,15 @@ func (s *Backend) snapshotNames(snapshotConn lxd.InstanceServer, pid, w string, 
 
 // Find snapshot name for the given SDK and any subsequent SDKs.
 func (s *Backend) snapshotNamesAfter(snapshotConn lxd.InstanceServer, pid, w, sk string) (string, []string, error) {
-	filters := []string{
-		"config.user.workshop.project-id=" + pid,
-		"config.user.workshop.name=" + w,
-		"config.user.workshop.snapshot-type=sdk",
+	args := lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters: []string{
+			"config.user.workshop.project-id=" + pid,
+			"config.user.workshop.name=" + w,
+			"config.user.workshop.snapshot-type=sdk",
+		},
 	}
-	snapshots, err := snapshotConn.GetInstancesWithFilter(api.InstanceTypeContainer, filters)
+	snapshots, err := snapshotConn.GetInstances(args)
 	if err != nil {
 		return "", nil, err
 	}
@@ -453,19 +459,48 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		return err
 	}
 
-	// Set the config and device overrides. LXD will copy most other
-	// options from the source instance, but it will omit options which are
-	// unique to the source instance, like MAC addresses and UUIDs.
+	dstInst, _, err := dst.GetInstance(dstName)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		dstInst = &api.Instance{}
+	} else if err != nil {
+		return err
+	}
+
+	if srcInst.Config == nil {
+		srcInst.Config = map[string]string{}
+	}
+	maps.DeleteFunc(srcInst.Config, func(k, v string) bool {
+		return optionDomain(k) == uniqueProperty
+	})
+	for k, v := range dstInst.Config {
+		if optionDomain(k) == uniqueProperty {
+			srcInst.Config[k] = v
+		}
+	}
+	for k, v := range config {
+		if v == "" {
+			delete(srcInst.Config, k)
+		} else {
+			srcInst.Config[k] = v
+		}
+	}
+
+	newApi := dst.HasExtension("instance_refresh_config")
+
 	req := *srcInst
-	req.Config = config
-	req.Devices = nil
+	if !newApi {
+		// Set the config and device overrides. LXD will copy most other
+		// options from the source instance, but it will omit options which are
+		// unique to the source instance, like MAC addresses and UUIDs.
+		req.Config = config
+		req.Devices = nil
+	}
 
 	args := lxd.InstanceCopyArgs{
 		Name:         dstName,
 		InstanceOnly: true,
 		Refresh:      refresh,
 	}
-
 	rop, err := dst.CopyInstance(src, req, &args)
 	if err != nil {
 		return err
@@ -474,46 +509,17 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		return err
 	}
 
-	if !refresh {
+	if newApi || dstInst.Name == "" {
 		// LXD created a new instance with copied config and devices.
 		return nil
 	}
 
 	// Otherwise, LXD replaced an existing instance's root disk, and it's
 	// our job to copy the config and devices.
-	dstInst, etag, err := dst.GetInstance(dstName)
-	if err != nil {
-		return err
-	}
+	req.Config = srcInst.Config
+	req.Devices = srcInst.Devices
 
-	// Remove all options that aren't unique to the target. The ones we do
-	// want to set are added below. Ideally, we should also remove some
-	// unique ones. See https://github.com/canonical/lxd/issues/16667.
-	maps.DeleteFunc(dstInst.Config, func(k, v string) bool { return optionDomain(k) != uniqueProperty })
-
-	// Add all options from the source, except ones unique to the target.
-	maps.DeleteFunc(srcInst.Config, func(k, v string) bool { return optionDomain(k) == uniqueProperty })
-	if dstInst.Config == nil {
-		dstInst.Config = srcInst.Config
-	} else {
-		maps.Copy(dstInst.Config, srcInst.Config)
-	}
-
-	// Process config overrides.
-	if dstInst.Config == nil {
-		dstInst.Config = map[string]string{}
-	}
-	for k, v := range config {
-		if v == "" {
-			delete(dstInst.Config, k)
-		} else {
-			dstInst.Config[k] = v
-		}
-	}
-
-	dstInst.Devices = srcInst.Devices
-
-	op, err := dst.UpdateInstance(dstName, dstInst.Writable(), etag)
+	op, err := dst.UpdateInstance(dstName, req.Writable(), "")
 	if err != nil {
 		return err
 	}
