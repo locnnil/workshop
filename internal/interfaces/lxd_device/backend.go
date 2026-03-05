@@ -413,7 +413,7 @@ func setupDesktop(conn lxd.InstanceServer, fs fsutil.Fs, user *user.User, env ma
 		return err
 	}
 
-	if envVars["XAUTHORITY"] == "" {
+	if env["XAUTHORITY"] == "" {
 		return nil
 	}
 	if err := setupXauthority(conn, fs, pid, w); err != nil {
@@ -471,10 +471,9 @@ func desktopEnvironment(user *user.User, env map[string]string, dev workshop.Des
 	// is the responsibility of the interface manager.
 	xauth := env["XAUTHORITY"]
 	if xauth != "" {
+		envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		if err := x11.MigrateXauthority(user, xauth); err != nil {
 			logger.Noticef("cannot migrate Xauthority file for user %s, X11 applications may not work: %v", user.Username, err)
-		} else {
-			envVars["XAUTHORITY"] = "/tmp/.Xauthority"
 		}
 	}
 
@@ -535,10 +534,10 @@ Wants=watch-xauthority.path
 // Xauthority cookie for snapd, namely:
 //  1. Snapd requires the Xauth cookie to be in a directory visible to snaps,
 //     however there is a special case for /tmp in which snapd will migrate the
-//     cookie for us, guaranteeing it's visibility.
+//     cookie for us, guaranteeing its visibility.
 //  2. Snapd explicitly checks the provided cookie for symlinks, this means
 //     that we can only make a copy of the cookie
-//  2. Mounts in dynamic filesystems (ie. /tmp) are generally advised
+//  3. Mounts in dynamic filesystems (ie. /tmp) are generally advised
 //     against for LXD
 //
 // Since we create these units before the Xauthority cookie is mounted, we
@@ -616,7 +615,7 @@ func removeUnit(fs fsutil.Fs, path string) error {
 }
 
 func installUnit(fs fsutil.Fs, path, target string) error {
-	return fs.Symlink(filepath.Join(unitDir, path), filepath.Join(unitDir, target+".wants", filepath.Base(path)))
+	return fs.SymlinkForce(filepath.Join(unitDir, path), filepath.Join(unitDir, target+".wants", filepath.Base(path)))
 }
 
 func uninstallUnit(fs fsutil.Fs, path, target string) error {

@@ -140,6 +140,14 @@ func (n *nameCollisionFs) OpenFile(path string, flag int, perm os.FileMode) (fsu
 	return n.FsBackend.OpenFile(path, flag, perm)
 }
 
+func (n *nameCollisionFs) Symlink(path, link string) error {
+	if n.collisions > 0 {
+		n.collisions--
+		return os.ErrExist
+	}
+	return n.FsBackend.Symlink(path, link)
+}
+
 func (f *fsSuite) TestCreateTemp(c *check.C) {
 	file, err := f.fs.CreateTemp("", "test.*.png", 0666)
 	c.Assert(err, check.IsNil)
@@ -234,6 +242,50 @@ func (f *fsSuite) TestAtomicWriteRenameFailed(c *check.C) {
 
 	c.Check(f.path, testutil.DirEquals, []string{"drwxrwxr-x file"})
 	c.Check(filepath.Join(f.path, "file"), testutil.DirEquals, []string{})
+}
+
+func (f *fsSuite) TestSymlinkForce(c *check.C) {
+	err := f.fs.SymlinkForce("one", "link")
+	c.Assert(err, check.IsNil)
+	target, err := f.fs.Readlink("link")
+	c.Assert(err, check.IsNil)
+	c.Check(target, check.Equals, filepath.Join(f.path, "one"))
+	c.Check(f.path, testutil.DirEquals, []string{"Lrwxrwxrwx link"})
+
+	err = f.fs.SymlinkForce("two", "link")
+	c.Assert(err, check.IsNil)
+	target, err = f.fs.Readlink("link")
+	c.Assert(err, check.IsNil)
+	c.Check(target, check.Equals, filepath.Join(f.path, "two"))
+	c.Check(f.path, testutil.DirEquals, []string{"Lrwxrwxrwx link"})
+}
+
+func (f *fsSuite) TestSymlinkForceNoDirectory(c *check.C) {
+	err := f.fs.SymlinkForce("three", "dir/link")
+	c.Check(err, testutil.ErrorIs, os.ErrNotExist)
+	c.Check(f.path, testutil.DirEquals, []string{})
+}
+
+func (f *fsSuite) TestSymlinkForceRenameFailed(c *check.C) {
+	c.Assert(f.fs.Mkdir("link", os.ModePerm), check.IsNil)
+	err := f.fs.SymlinkForce("four", "link")
+	c.Check(err, testutil.ErrorIs, os.ErrExist)
+	c.Check(f.path, testutil.DirEquals, []string{"drwxrwxr-x link"})
+}
+
+func (f *fsSuite) TestSymlinkForceCollisions(c *check.C) {
+	fs := fsutil.Fs{FsBackend: &nameCollisionFs{f.fs.FsBackend, 5}}
+	err := fs.SymlinkForce("five", "link")
+	c.Assert(err, check.IsNil)
+	target, err := f.fs.Readlink("link")
+	c.Assert(err, check.IsNil)
+	c.Check(target, check.Equals, filepath.Join(f.path, "five"))
+	c.Check(f.path, testutil.DirEquals, []string{"Lrwxrwxrwx link"})
+
+	fs = fsutil.Fs{FsBackend: &nameCollisionFs{f.fs.FsBackend, 10000}}
+	err = fs.SymlinkForce("six", "clash")
+	c.Assert(err, check.ErrorMatches, `symlink clash\.\*~: file already exists`)
+	c.Check(f.path, testutil.DirEquals, []string{"Lrwxrwxrwx link"})
 }
 
 func (f *fsSuite) TestReadFileNoDirectory(c *check.C) {
