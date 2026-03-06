@@ -197,12 +197,11 @@ func (m *workshopSketch) mockSketchesHappyPath(c *check.C, resp string) {
 	})
 }
 
-func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
+func (m *workshopSketch) TestSketchSdkDefaultTemplateSuccess(c *check.C) {
 	cmd := &CmdSketch{root: &CmdRoot{}}
 
 	m.mockSketchHappyRefreshPath(c, "ws", "wait-on-error")
 
-	sketchContent := fmt.Sprintf(sketchTemplate, "/home/project/.workshop/ws.yaml")
 	restore := MockTextEditor(func(inPath string, inContent []byte) ([]byte, error) {
 		if inPath != "" {
 			c.Assert(writeSketchSdk(inPath, inContent), check.IsNil)
@@ -215,8 +214,9 @@ func (m *workshopSketch) TestSketchSdkMetaOnlySuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	current := workshop.SketchSdkCurrent(m.userDataDir, m.prjId, "ws")
-	c.Assert(filepath.Join(current, "sdk.yaml"), testutil.FileEquals, sketchContent)
-	c.Assert(filepath.Join(current, "hooks"), testutil.FileAbsent)
+	c.Assert(filepath.Join(current, "sdk.yaml"), testutil.FileEquals, sketchTemplate)
+	c.Assert(filepath.Join(current, "hooks", "setup-base"), testutil.FileEquals, "# apt-get update\n# apt-get install build-essential\n")
+	c.Assert(filepath.Join(current, "hooks", "setup-project"), testutil.FileEquals, "# uv sync\n")
 }
 
 func (m *workshopSketch) TestSketchSdkSuccess(c *check.C) {

@@ -35,35 +35,35 @@ func (c *CmdSketch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "sketch-sdk [--stash|--restore|--eject|--remove] [<WORKSHOP>]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Edit the sketch SDK and graft it onto the workshop",
-		Long: `
-This opens the "sketch" SDK definition in the default text editor,
-enabling rapid experiments and tweaks at the SDK level.
-
-Saving the definition and exiting the editor causes a refresh,
-which installs the configured "sketch" SDK in the workshop.
+		Short: "Customize a workshop",
+		Long: `The command opens the sketch SDK template in the default text editor.
+Add customizations by editing the template, then save and exit 
+the editor to apply the changes to the workshop.
 
 The "--stash" and "--restore" options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
-The "--eject" option moves the SDK definition into the project directory,
-so it can be added to multiple workshops or shared with others.
-The "--remove" option removes the SDK permanently.
+
+To make these customizations persistent,
+run "workshop sketch-sdk --eject".
+This saves the SDK definition under .workshop/ in the project directory,
+so it can be committed to your repository.
+
+The sketch SDK is intended for experiments and prototyping iterations.
 
 Notes:
+- You can only have one sketch SDK per workshop at a time.
 
-- The "sketch" SDK doesn't appear in the workshop definition
-  and cannot include build-time data such as parts.
-
-- In addition to hooks, the "sketch" SDK can use interfaces
-  by defining plugs and slots.
+- Run "workshop info" to list all SDKs currently installed
+  in the workshop, including the sketch SDK if present.
 `,
 		Example: `
 Edit the sketch SDK definition for the "nimble" workshop
 and apply it after saving by automatically refreshing the workshop:
 $ workshop sketch-sdk nimble
 
-The name is optional if the project has only one workshop:
-$ workshop sketch-sdk
+Save the sketch SDK for the "nimble" workshop
+as a project SDK named "tools":
+$ workshop sketch-sdk nimble --eject --name tools
 
 Stash the sketch SDK, temporarily reverting the changes in the workshop:
 $ workshop sketch-sdk nimble --stash`,
@@ -90,40 +90,30 @@ type SketchFile struct {
 	Hooks map[string]string `yaml:"hooks,omitempty"`
 }
 
-var sketchTemplate = `# Sketch SDK for %s
-# Sketch SDK provides local customization of this specific workshop.
-
-# To read more about the sketch SDK and its syntax, see:
-# https://canonical-workshop.readthedocs-hosted.com/en/latest/explanation/sdks/sdks/#sketch-sdk
+var sketchTemplate = `# For details: https://canonical-workshop.readthedocs-hosted.com/latest/explanation/sdks/sdks/#sketch-sdk
 name: sketch
 hooks:
-  # EXAMPLE: setup-base runs once at workshop launch; use it to install some packages.
-  # setup-base: |
+  # Use 'setup-base' to customize the base image
+  setup-base: |
     # apt-get update
-    # apt-get install PACKAGE...
-    # snap install SNAP...
-  # EXAMPLE: setup-project runs after connecting plugs and slots; use it to install the project environment.
-  # setup-project: |
-    # go mod download
+    # apt-get install build-essential
+
+  # Use 'setup-project' for project-specific logic, after plugs and slots are connected
+  setup-project: |
     # uv sync
-  # EXAMPLE: check-health runs after entire SDK setup completes; run "workshopctl set-health okay" if OK.
-  # check-health: |
-    # if CHECK_HEALTH_COMMAND ; then
-    #   workshopctl set-health okay
-    # else
-    #   workshopctl set-health --code=installation-failed error "Installation failed"
-    # fi
+
+
 plugs:
-  # EXAMPLE: forward your SSH agent into the workshop, enabling "git push" inside the workshop.
-  # ssh-agent:
-  #   interface: ssh-agent
-  # EXAMPLE: expose well-known config file locations to the workshop
-  # vs-code-settings:
+  # Use this configuration to mount a host directory to the workshop
+  # models:
   #   interface: mount
-  #   workshop-target: /home/workshop/.config/Code/User
+  #   workshop-target: /home/workshop/models
+
+
 slots:
-  # EXAMPLE: expose SDK services to the host
-  # dashboard:
+  # Use this configuration to expose a port, then add a corresponding system SDK plug
+  # More details: https://canonical-workshop.readthedocs-hosted.com/latest/how-to/customize-workshops/forward-ports/
+  # my-web-server:
   #   interface: tunnel
   #   endpoint: 8080
 `
@@ -514,7 +504,7 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 		return nil
 	}
 
-	if err = editSketchSdk(sketchdir, wp.Path); err != nil {
+	if err = editSketchSdk(sketchdir); err != nil {
 		return fmt.Errorf("cannot sketch: %w", err)
 	}
 
@@ -530,15 +520,14 @@ func (c *CmdSketch) Run(cmd *cobra.Command, av []string) error {
 	return nil
 }
 
-func editSketchSdk(sketchdir, workshopFile string) error {
+func editSketchSdk(sketchdir string) error {
 	content, err := os.ReadFile(filepath.Join(sketchdir, "sdk.yaml"))
 	if errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(sketchdir, 0755); err != nil {
 			return err
 		}
 
-		// Format sketch SDK template header.
-		content = fmt.Appendf(nil, sketchTemplate, workshopFile)
+		content = []byte(sketchTemplate)
 	} else if err != nil {
 		return err
 	}
@@ -621,7 +610,7 @@ func (c *CmdSketches) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "sketches",
 		Args:  cobra.ExactArgs(0),
-		Short: "List sketches",
+		Short: "List project sketch SDKs",
 		Long: `
 This command enumerates all sketches in the project, printing a compact list:
 

@@ -39,8 +39,8 @@ func (c *CmdRoot) Command() *cobra.Command {
 			Title: "Create new workshops; start, stop, update or delete existing ones:",
 		},
 		&cobra.Group{
-			ID:    "warnings",
-			Title: "List and acknowledge warnings:",
+			ID:    "sketch",
+			Title: "Customize a workshop:",
 		},
 		&cobra.Group{
 			ID:    "explore-troubleshoot",
@@ -59,8 +59,8 @@ func (c *CmdRoot) Command() *cobra.Command {
 			Title: "Run commands inside a workshop:",
 		},
 		&cobra.Group{
-			ID:    "sketch",
-			Title: "Sketch SDKs under a workshop:",
+			ID:    "warnings",
+			Title: "List and acknowledge warnings:",
 		},
 		&cobra.Group{
 			ID:    "misc",

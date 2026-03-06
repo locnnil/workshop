@@ -26,8 +26,7 @@ execute: |
 
   echo "Add setup-base"
   sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
-  1/^hooks:$/a
-    setup-base: |
+  1/^    # apt-get update$/c
       mkdir -p /home/workshop/ws-sketch-test
   .
   wq
