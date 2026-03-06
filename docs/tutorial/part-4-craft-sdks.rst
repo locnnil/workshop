@@ -305,14 +305,8 @@ that run at different stages of the workshop's lifecycle,
 preparing the SDK for use or preserving its state during updates.
 
 Under :file:`ollama/`,
-create a subdirectory
-named :file:`hooks/`:
-
-.. code-block:: console
-
-   $ mkdir hooks/
-   $ cd hooks/
-
+there is a subdirectory
+named :file:`hooks/`.
 This directory stores all the hooks for an SDK.
 
 
@@ -323,7 +317,7 @@ Build: setup base, project
 .. @artefact setup-project
 
 Under :file:`ollama/hooks/`,
-create a file
+edit the file
 named :file:`setup-base`:
 
 .. code-block:: shell
@@ -339,7 +333,7 @@ and is typically used to install system packages
 and configure the environment.
 
 In the same directory,
-create a file named :file:`setup-project`
+edit the file named :file:`setup-project`
 for Ollama-specific setup:
 
 .. code-block:: shell
