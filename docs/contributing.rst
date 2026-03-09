@@ -94,9 +94,9 @@ The messages rarely, if ever, state the type of the commit
 (e.g., ``fix``, ``feat``, etc.);
 these are used for branch naming, for example:
 
-- ``canonical/feat/workspace-start``
-- ``canonical/fix/spread-tests-github``
-- ``canonical/chore/update-lxd``
+- ``feat/workspace-start``
+- ``fix/spread-tests-github``
+- ``chore/update-lxd``
 
 
 Commits that focus on docs must use the ``Doc:`` type prefix
