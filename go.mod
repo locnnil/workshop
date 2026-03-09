@@ -19,6 +19,7 @@ require (
 	golang.org/x/sys v0.41.0
 	google.golang.org/api v0.160.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+	gopkg.in/httprequest.v1 v1.2.1
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -32,6 +33,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
+	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/zitadel/logging v0.7.0 // indirect
@@ -47,6 +49,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260217215200-42d3e9bedb6d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260217215200-42d3e9bedb6d // indirect
+	gopkg.in/errgo.v1 v1.0.0 // indirect
 )
 
 require (
