@@ -332,10 +332,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 			Type:        api.SourceTypeImage,
 			Fingerprint: snapshot.Image.Fingerprint,
 		}
-		if err := s.launchOrRebuildFromImage(conn, snapshotConn, req); err != nil {
-			return err
-		}
-		return s.patchInstance(ctx, file.Name, file.Base)
+		return s.launchOrRebuildFromImage(conn, snapshotConn, req)
 	}
 
 	return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
@@ -401,49 +398,6 @@ func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer
 		return err
 	}
 	return op.Wait()
-}
-
-//go:embed snap-confine.old
-var snapConfineOld []byte
-
-//go:embed snap-confine.new
-var snapConfineNew []byte
-
-// Workaround https://bugs.launchpad.net/snapd/+bug/2127244. As of 20251017,
-// ubuntu:22.04 images contain snapd 2.71, which use a new AppArmor version
-// (at least 4.0). When the host has a recent kernel (e.g. 6.14.0-33-generic),
-// AppArmor denies access to /run/systemd/journal/stdout. This prevents some
-// systemd services which log to stdout from starting, since the snapd apt
-// package uses an old Go runtime (versions 1.21 and later redirect standard
-// file descriptors to /dev/null if they are closed). This affects the seeded
-// LXD snap, and snapd refuses to operate until the LXD snap can be installed.
-// For us this manifests as `systemctl is-system-running` remaining in
-// "starting" forever, and the workshop will never start. This workaround
-// applies the patch from https://github.com/canonical/snapd/pull/16131.
-func (s *Backend) patchInstance(ctx context.Context, name, base string) error {
-	if base != "ubuntu@22.04" {
-		return nil
-	}
-
-	fs, err := s.WorkshopFs(ctx, name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	content, err := fs.ReadFile("/etc/apparmor.d/usr.lib.snapd.snap-confine.real")
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	if !slices.Equal(content, snapConfineOld) {
-		return nil
-	}
-
-	return fs.AtomicWriteTo(bytes.NewReader(snapConfineNew), "/etc/apparmor.d/usr.lib.snapd.snap-confine.real", 0644)
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, timeout int) error {
