@@ -13,11 +13,11 @@ import (
 )
 
 type SdkVolume struct {
-	Name      string     `json:"name"`
-	Version   string     `json:"version,omitempty"`
-	Revision  string     `json:"revision"`
-	BuildTime *time.Time `json:"build-time,omitempty"`
-	Size      uint64     `json:"size,omitempty"`
+	Name     string     `json:"name"`
+	Version  string     `json:"version,omitempty"`
+	Revision string     `json:"revision"`
+	BuiltAt  *time.Time `json:"built-at,omitempty"`
+	Size     uint64     `json:"size,omitempty"`
 }
 
 type SdkInstalled struct {
@@ -79,11 +79,11 @@ func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
 		}
 
 		entries = append(entries, SdkVolume{
-			Name:      info.Name,
-			Version:   info.Version,
-			Revision:  s.Revision.String(),
-			BuildTime: info.BuildTime,
-			Size:      s.Size,
+			Name:     info.Name,
+			Version:  info.Version,
+			Revision: s.Revision.String(),
+			BuiltAt:  info.BuiltAt,
+			Size:     s.Size,
 		})
 	}
 	return entries, nil
@@ -135,11 +135,11 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 
 				full.Installed = append(full.Installed, SdkInstalled{
 					SdkVolume: SdkVolume{
-						Name:      info.Name,
-						Version:   info.Version,
-						Revision:  s.Revision.String(),
-						BuildTime: info.BuildTime,
-						Size:      s.Size,
+						Name:     info.Name,
+						Version:  info.Version,
+						Revision: s.Revision.String(),
+						BuiltAt:  info.BuiltAt,
+						Size:     s.Size,
 					},
 					Workshop:    winfo.Name,
 					ProjectPath: winfo.Project.Path,

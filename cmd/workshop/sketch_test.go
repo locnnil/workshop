@@ -34,13 +34,13 @@ var mockWorkshopWithSdksReady = `{"type":"sync","status-code":200,"status":"OK",
       "version":"1.8.0",
       "channel":"latest/edge",
       "revision":"1",
-      "build-time":"2017-02-19T17:23:05.592623Z",
-      "install-time":"2017-03-22T09:01:00.0Z"
+      "built-at":"2017-02-19T17:23:05.592623Z",
+      "installed-at":"2017-03-22T09:01:00.0Z"
     },{
       "name":"sketch",
       "source":"/home/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
       "revision":"x1",
-      "install-time":"2017-03-22T09:01:00.0Z"
+      "installed-at":"2017-03-22T09:01:00.0Z"
     }],
     "path":"/home/project/.workshop/ws.yaml"
 }}`
@@ -56,13 +56,13 @@ var mockWorkshopWithSdksWaiting = `{"type":"sync","status-code":200,"status":"OK
       "version":"1.8.0",
       "channel":"latest/edge",
       "revision":"1",
-      "build-time":"2017-02-19T17:23:05.592623Z",
-      "install-time":"2017-03-22T09:01:00.0Z"
+      "built-at":"2017-02-19T17:23:05.592623Z",
+      "installed-at":"2017-03-22T09:01:00.0Z"
     },{
       "name":"sketch",
       "source":"/home/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
       "revision":"x2",
-      "install-time":"2017-03-22T09:01:00.0Z"
+      "installed-at":"2017-03-22T09:01:00.0Z"
     }],
     "path":"/home/project/.workshop/ws.yaml"
 }}`
@@ -77,7 +77,7 @@ var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK
             "name":"sketch",
             "source":"/home/.local/share/workshop/id/42424242/ws/sdk/sketch/current",
             "revision":"x1",
-            "install-time":"2017-03-22T09:01:00.0Z"
+            "installed-at":"2017-03-22T09:01:00.0Z"
         }]
         },{
         "name":"nosketch",
@@ -93,7 +93,7 @@ var mockWorkshopsListWithSketch = `{"type":"sync","status-code":200,"status":"OK
             "name":"sketch",
             "source":"/home/.local/share/workshop/id/42424242/both/sdk/sketch/current",
             "revision":"x3",
-            "install-time":"2017-03-22T09:01:00.0Z"
+            "installed-at":"2017-03-22T09:01:00.0Z"
         }]
         },{
         "name":"none",

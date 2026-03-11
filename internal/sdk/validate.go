@@ -32,8 +32,8 @@ func Validate(sdk *Info) error {
 		return fmt.Errorf("invalid SDK architecture %q; supported architectures: %s", sdk.Arch, arches)
 	}
 
-	if sdk.BuildTime != nil && sdk.BuildTime.Location() != time.UTC {
-		return fmt.Errorf("invalid SDK build time %q: must be UTC", sdk.BuildTime.Format(time.RFC3339))
+	if sdk.BuiltAt != nil && sdk.BuiltAt.Location() != time.UTC {
+		return fmt.Errorf("invalid SDK build time %q: must be UTC", sdk.BuiltAt.Format(time.RFC3339))
 	}
 
 	for plugName, plug := range sdk.Plugs {

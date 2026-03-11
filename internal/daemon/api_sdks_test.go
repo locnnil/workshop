@@ -100,18 +100,18 @@ summary: ROS2 SDK
 	opHigh := time.Date(2024, 11, 20, 0, 0, 0, 0, time.UTC).UTC().Round(0)
 	c.Assert(result, testutil.DeepUnsortedMatches, []sdkstate.SdkVolume{
 		{
-			Name:      "ollama",
-			Version:   "1.0-053c828",
-			Revision:  "82",
-			BuildTime: &olBuild,
-			Size:      109 * 1024 * 1024,
+			Name:     "ollama",
+			Version:  "1.0-053c828",
+			Revision: "82",
+			BuiltAt:  &olBuild,
+			Size:     109 * 1024 * 1024,
 		},
 		{
-			Name:      "openvino",
-			Version:   "2.1-084c8c8",
-			Revision:  "85",
-			BuildTime: &opHigh,
-			Size:      112 * 1024 * 1024,
+			Name:     "openvino",
+			Version:  "2.1-084c8c8",
+			Revision: "85",
+			BuiltAt:  &opHigh,
+			Size:     112 * 1024 * 1024,
 		},
 		{
 			Name:     "openvino",
@@ -248,11 +248,11 @@ sdkcraft-started-at: 2024-11-25T00:00:00Z
 			Workshop:    "nav2",
 			Channel:     "latest/stable",
 			SdkVolume: sdkstate.SdkVolume{
-				Name:      "openvino",
-				Version:   "2.1-084c8c8",
-				Revision:  "85",
-				BuildTime: &d20,
-				Size:      112 * 1024 * 1024,
+				Name:     "openvino",
+				Version:  "2.1-084c8c8",
+				Revision: "85",
+				BuiltAt:  &d20,
+				Size:     112 * 1024 * 1024,
 			},
 		},
 		{
@@ -260,11 +260,11 @@ sdkcraft-started-at: 2024-11-25T00:00:00Z
 			Workshop:    "lerobot",
 			Channel:     "latest/edge",
 			SdkVolume: sdkstate.SdkVolume{
-				Name:      "openvino",
-				Version:   "2.0",
-				Revision:  "82",
-				BuildTime: &d25,
-				Size:      101 * 1024 * 1024,
+				Name:     "openvino",
+				Version:  "2.0",
+				Revision: "82",
+				BuiltAt:  &d25,
+				Size:     101 * 1024 * 1024,
 			},
 		},
 	})

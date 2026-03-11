@@ -50,7 +50,7 @@ type SdkInstallation struct {
 	sdk.Setup
 	// 1-based index of SDK installation (0 is reserved for the base).
 	InstallOrder int       `json:"install-order"`
-	InstallTime  time.Time `json:"install-time"`
+	InstalledAt  time.Time `json:"installed-at"`
 }
 
 func SdkDeviceName(sk string) string {

@@ -47,7 +47,7 @@ type apiSuite struct {
 
 	workshopDir string
 	user        *user.User
-	installTime time.Time
+	installedAt time.Time
 	project     workshop.Project
 	ctx         context.Context
 
@@ -89,8 +89,8 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
-	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
-	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
+	s.installedAt = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installedAt }, &workshop.InstallTimeNow)
 
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)

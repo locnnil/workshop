@@ -31,7 +31,7 @@ BaseImage:
 SdkInstallation:
   Setup: sdk.Setup
   InstallOrder: int
-  InstallTime: time.Time
+  InstalledAt: time.Time
 Setup:
   Name: string
   Channel: string

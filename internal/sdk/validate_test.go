@@ -118,7 +118,7 @@ architecture: '8086'
 	c.Check(err, check.ErrorMatches, `invalid SDK architecture "8086"; supported architectures: amd64, arm64, armhf, i386, powerpc, ppc64, ppc64el, riscv64, s390x`)
 }
 
-func (s *ValidateSuite) TestSdkBuildTimeNotUTC(c *check.C) {
+func (s *ValidateSuite) TestSdkBuiltAtNotUTC(c *check.C) {
 	info, err := sdk.ReadSdkInfo([]byte(`name: foo
 base: ubuntu@24.04
 sdkcraft-started-at: '2025-01-09T15:26:13.702403+13:00'

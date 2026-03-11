@@ -417,7 +417,7 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	installation := workshop.SdkInstallation{
 		Setup:        setup,
 		InstallOrder: maxInstallOrder + 1,
-		InstallTime:  workshop.InstallTimeNow(),
+		InstalledAt:  workshop.InstallTimeNow(),
 	}
 	device, err := sdkToLxdDisk(installation, mount)
 	if err != nil {
@@ -456,11 +456,11 @@ func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string
 	}
 	device["user.sdk.source"] = string(source)
 
-	installTime, err := sk.InstallTime.MarshalText()
+	installedAt, err := sk.InstalledAt.MarshalText()
 	if err != nil {
 		return nil, err
 	}
-	device["user.sdk.install-time"] = string(installTime)
+	device["user.sdk.installed-at"] = string(installedAt)
 
 	return device, nil
 }
@@ -489,7 +489,12 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 	if err := s.Revision.UnmarshalText([]byte(device["user.sdk.revision"])); err != nil {
 		return nil, err
 	}
-	if err := s.InstallTime.UnmarshalText([]byte(device["user.sdk.install-time"])); err != nil {
+	installedAt := device["user.sdk.installed-at"]
+	if installedAt == "" {
+		// TODO: remove this after a short transition period.
+		installedAt = device["user.sdk.install-time"]
+	}
+	if err := s.InstalledAt.UnmarshalText([]byte(installedAt)); err != nil {
 		return nil, err
 	}
 

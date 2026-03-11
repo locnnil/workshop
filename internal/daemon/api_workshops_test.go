@@ -545,13 +545,13 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 			{
 				Name:        "system",
 				Revision:    system.SystemSdkRevision.String(),
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				InstalledAt: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 			},
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
 				Revision:    "1",
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				InstalledAt: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 			},
 		},
 	}, {
@@ -562,7 +562,7 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 		Sdks: []*SdkInfo{{
 			Name:        "system",
 			Revision:    system.SystemSdkRevision.String(),
-			InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+			InstalledAt: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 		}},
 	}})
 
@@ -667,7 +667,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				{
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
-					InstallTime: s.installTime,
+					InstalledAt: s.installedAt,
 					Tunnels: []*Tunnel{
 						{
 							Plug: sdk.PlugRef{
@@ -693,8 +693,8 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Version:     "0.1.2",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build1,
-					InstallTime: s.installTime,
+					BuiltAt:     &build1,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
@@ -733,8 +733,8 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Version:     "20200401.3f3a63f",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build2,
-					InstallTime: s.installTime,
+					BuiltAt:     &build2,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource2,
@@ -821,8 +821,8 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 					Version:     "20200401.3f3a63f",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build2,
-					InstallTime: s.installTime,
+					BuiltAt:     &build2,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
@@ -839,15 +839,15 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				{
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
-					InstallTime: s.installTime,
+					InstalledAt: s.installedAt,
 				},
 				{
 					Name:        "test-sdk",
 					Version:     "0.1.2",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build1,
-					InstallTime: s.installTime,
+					BuiltAt:     &build1,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
@@ -1160,7 +1160,7 @@ line 1: cannot unmarshal !!seq into string`,
 	c.Assert(sdkInfo.Name, check.Equals, sdk.System.String())
 	c.Assert(sdkInfo.Version, check.Equals, "")
 	c.Assert(sdkInfo.Type, check.Equals, sdk.System)
-	c.Assert(sdkInfo.BuildTime, check.IsNil)
+	c.Assert(sdkInfo.BuiltAt, check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
@@ -1835,7 +1835,7 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 			sk.Sha3_384 = w.Sdks[sk.Name].Sha3_384
 			c.Check(sk.Sha3_384, check.Not(check.Equals), "")
 			c.Assert(w.Sdks[sk.Name].Setup, check.DeepEquals, sk)
-			c.Check(w.Sdks[sk.Name].InstallTime, check.Equals, s.installTime)
+			c.Check(w.Sdks[sk.Name].InstalledAt, check.Equals, s.installedAt)
 		}
 
 		repo := s.d.overlord.InterfaceManager().Repository()

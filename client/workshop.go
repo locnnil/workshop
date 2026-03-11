@@ -44,8 +44,8 @@ type Sdk struct {
 	Channel     string       `json:"channel"`
 	Source      string       `json:"source"`
 	Revision    string       `json:"revision"`
-	BuildTime   time.Time    `json:"build-time"`
-	InstallTime time.Time    `json:"install-time"`
+	BuiltAt     time.Time    `json:"built-at"`
+	InstalledAt time.Time    `json:"installed-at"`
 	Health      *HealthCheck `json:"health-check,omitempty"`
 	Mounts      []*Mount     `json:"mounts,omitempty"`
 	Tunnels     []*Tunnel    `json:"tunnels,omitempty"`

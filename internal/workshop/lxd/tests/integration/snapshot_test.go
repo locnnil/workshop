@@ -250,10 +250,10 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 
 	for _, sk := range snapshot.Sdks {
 		device := inst.Devices[workshop.SdkDeviceName(sk.Name)]
-		var installTime time.Time
-		c.Assert(installTime.UnmarshalText([]byte(device["user.sdk.install-time"])), check.IsNil)
-		c.Check(installTime.IsZero(), check.Equals, false)
-		delete(device, "user.sdk.install-time")
+		var installedAt time.Time
+		c.Assert(installedAt.UnmarshalText([]byte(device["user.sdk.installed-at"])), check.IsNil)
+		c.Check(installedAt.IsZero(), check.Equals, false)
+		delete(device, "user.sdk.installed-at")
 
 		if _, ok := device["pool"]; !ok {
 			delete(device, "source")

@@ -52,8 +52,8 @@ type SdkInfo struct {
 	Channel     string           `json:"channel,omitempty"`
 	Source      string           `json:"source,omitempty"`
 	Revision    string           `json:"revision"`
-	BuildTime   *time.Time       `json:"build-time,omitempty"`
-	InstallTime time.Time        `json:"install-time,omitempty"`
+	BuiltAt     *time.Time       `json:"built-at,omitempty"`
+	InstalledAt time.Time        `json:"installed-at,omitzero"`
 	Health      *HealthCheckInfo `json:"health-check,omitempty"`
 	Mounts      []*Mount         `json:"mounts,omitempty"`
 	Tunnels     []*Tunnel        `json:"tunnels,omitempty"`
@@ -151,7 +151,7 @@ func workshopToInfo(username string, w *workshop.Workshop, health healthstate.He
 			Channel:     sk.Channel,
 			Source:      source,
 			Revision:    sk.Revision.String(),
-			InstallTime: sk.InstallTime,
+			InstalledAt: sk.InstalledAt,
 			Health:      healthInfo,
 		})
 	}
@@ -212,8 +212,8 @@ func workshopToInfoFull(ctx context.Context, username string, w *workshop.Worksh
 			Channel:     sk.Channel,
 			Source:      source,
 			Revision:    sk.Revision.String(),
-			BuildTime:   sk.BuildTime,
-			InstallTime: w.Sdks[sk.Name].InstallTime,
+			BuiltAt:     sk.BuiltAt,
+			InstalledAt: w.Sdks[sk.Name].InstalledAt,
 			Health:      healthInfo,
 			Mounts:      mntInfos,
 			Tunnels:     tunnelInfos,
