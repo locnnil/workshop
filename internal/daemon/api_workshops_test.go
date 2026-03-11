@@ -1190,7 +1190,7 @@ func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", "test-sdk", "training"), check.Not(check.IsNil))
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", "test-sdk", "training"), check.NotNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
@@ -1707,7 +1707,7 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", "test-sdk-2", "training"), check.Not(check.IsNil))
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", "test-sdk-2", "training"), check.NotNil)
 
 	conns, err := repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk")
 	c.Assert(err, check.IsNil)
