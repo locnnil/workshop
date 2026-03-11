@@ -5,7 +5,7 @@ execute: |
   # Switch to real store for vscode-remote SDK
 
   stop_sdk_store
-  snap set workshop store.url=""
+  snap set workshop gcs.url=""
   snap restart workshop
   sleep 5  # Wait for daemon to restart
 
@@ -28,7 +28,7 @@ execute: |
 
   # Restore fake store
 
-  snap set workshop store.url=http://localhost:8080/storage/v1/
+  snap set workshop gcs.url=http://localhost:8080/storage/v1/
   snap restart workshop
   sleep 5
   start_sdk_store

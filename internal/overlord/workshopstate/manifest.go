@@ -127,7 +127,7 @@ func (a *artifactFinder) launchOrRefreshManifests(ctx context.Context, names []s
 		action = "refresh"
 	}
 
-	sto := sdk.StoreService(a.state)
+	sto := sdk.GcsStoreService(a.state)
 
 	rev := revert.New()
 	defer rev.Fail()
@@ -233,7 +233,7 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 	return &Manifest{File: wp.File, Image: wp.Image, Sdks: installed}, nil
 }
 
-func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {
+func (a *artifactFinder) findStoreSdks(sto sdk.GcsStore, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {
 	acts := make([]sdk.SdkAction, 0, len(file.Sdks))
 	for _, sd := range file.Sdks {
 		if sd.Source != sdk.StoreSource {

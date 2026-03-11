@@ -115,7 +115,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		meta, err = system.RetrieveSystemSdk(rec, reporter)
 	} else {
 		st.Lock()
-		store := sdk.StoreService(st)
+		store := sdk.GcsStoreService(st)
 		st.Unlock()
 
 		meta, err = store.DownloadSdk(ctx, rec, reporter)

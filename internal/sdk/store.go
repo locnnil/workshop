@@ -28,40 +28,40 @@ type SdkAction struct {
 	Channel   string
 }
 
-type cachedStoreKey struct{}
+type cachedGcsStoreKey struct{}
 
-// ReplaceStore replaces the store used by the manager.
-func ReplaceStore(state *state.State, store Store) {
+// ReplaceGcsStore replaces the GCS store used by the manager.
+func ReplaceGcsStore(state *state.State, store GcsStore) {
 	state.Lock()
-	state.Cache(cachedStoreKey{}, store)
+	state.Cache(cachedGcsStoreKey{}, store)
 	state.Unlock()
 }
 
-func cachedStore(st *state.State) Store {
-	sdkStore := st.Cached(cachedStoreKey{})
+func cachedGcsStore(st *state.State) GcsStore {
+	sdkStore := st.Cached(cachedGcsStoreKey{})
 	if sdkStore == nil {
 		return nil
 	}
-	return sdkStore.(Store)
+	return sdkStore.(GcsStore)
 }
 
-// Store returns the store service provided by the optional device context or
-// the one used by the snapstate package if the former has no
+// GcsStoreService returns the store service provided by the optional device
+// context or the one used by the snapstate package if the former has no
 // override.
-func StoreService(st *state.State) Store {
-	if cachedStore := cachedStore(st); cachedStore != nil {
-		return cachedStore
+func GcsStoreService(st *state.State) GcsStore {
+	if store := cachedGcsStore(st); store != nil {
+		return store
 	}
 	panic("internal error: needing the store before managers have initialized it")
 }
 
-type Store interface {
+type GcsStore interface {
 	SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error)
 	DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)
 }
 
-func NewFakeStore() *FakeStore {
-	return &FakeStore{
+func NewFakeGcsStore() *FakeGcsStore {
+	return &FakeGcsStore{
 		ActionCalls: make([]TestActionCall, 0),
 	}
 }
@@ -74,7 +74,7 @@ type TestDownloadCall struct {
 	Setup Setup
 }
 
-type FakeStore struct {
+type FakeGcsStore struct {
 	ActionCalls []TestActionCall
 
 	downloadLock  sync.Mutex
@@ -84,7 +84,7 @@ type FakeStore struct {
 	DownloadCallback func(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)
 }
 
-func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]Meta, error)) func() {
+func (f *FakeGcsStore) SetActionCallback(fa func(ctx context.Context, actions []SdkAction) ([]Meta, error)) func() {
 	old := f.ActionCallback
 	f.ActionCallback = fa
 	return func() {
@@ -92,7 +92,7 @@ func (f *FakeStore) SetActionCallback(fa func(ctx context.Context, actions []Sdk
 	}
 }
 
-func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)) func() {
+func (f *FakeGcsStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error)) func() {
 	old := f.DownloadCallback
 	f.DownloadCallback = fa
 	return func() {
@@ -100,7 +100,7 @@ func (f *FakeStore) SetDownloadCallback(fa func(ctx context.Context, setup Setup
 	}
 }
 
-func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error) {
+func (f *FakeGcsStore) SdkAction(ctx context.Context, actions []SdkAction) ([]Meta, error) {
 	f.ActionCalls = append(f.ActionCalls, TestActionCall{
 		Actions: actions,
 	})
@@ -110,7 +110,7 @@ func (f *FakeStore) SdkAction(ctx context.Context, actions []SdkAction) ([]Meta,
 	return nil, nil
 }
 
-func (f *FakeStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error) {
+func (f *FakeGcsStore) DownloadSdk(ctx context.Context, setup Setup, report *progress.Reporter) (*Meta, error) {
 	f.downloadLock.Lock()
 	defer f.downloadLock.Unlock()
 	f.DownloadCalls = append(f.DownloadCalls, TestDownloadCall{

@@ -406,7 +406,7 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 }
 
 func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
-	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
+	sdk.ReplaceGcsStore(s.state, sdk.NewFakeGcsStore())
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -468,8 +468,8 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 // after SdkAction but before DownloadSdk. Should be able to remove when we
 // switch over to the real Store.
 func (s *sdkStateSuite) TestRetrieveUpdatedSdk(c *check.C) {
-	store := sdk.NewFakeStore()
-	sdk.ReplaceStore(s.state, store)
+	store := sdk.NewFakeGcsStore()
+	sdk.ReplaceGcsStore(s.state, store)
 
 	s.state.Lock()
 	defer s.state.Unlock()

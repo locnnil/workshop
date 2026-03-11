@@ -1,7 +1,7 @@
 #!/bin/sh
 
-SDK_STORE_URL=$(snapctl get store.url)
-export SDK_STORE_URL
+GCS_STORE_URL=$(snapctl get gcs.url)
+export GCS_STORE_URL
 
 WORKSHOP_IMAGE_SERVER=$(snapctl get workshop.image.server.url)
 export WORKSHOP_IMAGE_SERVER
