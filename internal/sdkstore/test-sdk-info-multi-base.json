@@ -1,0 +1,546 @@
+{
+  "name": "test-sdk-info-multi-base",
+  "package-id": "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+  "metadata": {
+    "description": "Short description",
+    "license": "LGPL-3.0",
+    "publisher": {
+      "display-name": "Jonathan Conder",
+      "id": "YnyjkYo9nA6AlXsTKnpxrCGxNZgmSdmu",
+      "username":"usso-jeconder",
+      "validation":"unproven"
+    },
+    "summary": "Test SDK which supports multiple bases and architectures",
+    "title": "Custom title"
+  },
+  "channel-map": [
+    {
+      "channel": {
+        "name": "latest/stable",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "20.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:48:34.474879Z",
+        "risk": "stable",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:16:19.894258Z",
+        "download": {
+          "sha3-384": "f0ed20952899d915e1796cadf28b9b03894c5e70a0900ac07e869fc6e5c35b11ace2374eab7ffb70bc7f9120aedb3d67",
+          "size": 466,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_1.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "amd64",
+            "channel": "20.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 1,
+        "sdk-yaml": {
+          "architecture": "amd64",
+          "base": "ubuntu@20.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:13:46.850996Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.2"
+        },
+        "version": "0.2"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/stable",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "22.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:48:44.327082Z",
+        "risk": "stable",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:16:31.917435Z",
+        "download": {
+          "sha3-384": "59606df612d0290225f427935ac300437542a3c3024c52a0fb2bc5ae486ff801855f571ab8ecfe5f14f16b051d97673e",
+          "size": 464,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_2.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "amd64",
+            "channel": "22.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 2,
+        "sdk-yaml": {
+          "architecture": "amd64",
+          "base": "ubuntu@22.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:14:01.728232Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.2"
+        },
+        "version": "0.2"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/stable",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "24.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:48:51.554637Z",
+        "risk": "stable",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:16:42.684241Z",
+        "download": {
+          "sha3-384": "4a571977571287d12a0de8efd0fb9bdd63d57bf733a79ed191914e95db3718dcc976450b2da4d3831782fd5747031b66",
+          "size": 463,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_3.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "amd64",
+            "channel": "24.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 3,
+        "sdk-yaml": {
+          "architecture": "amd64",
+          "base": "ubuntu@24.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:14:16.910778Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.2"
+        },
+        "version": "0.2"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "20.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:49:09.397396Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:49:07.605786Z",
+        "download": {
+          "sha3-384": "79b3bb7b80a2c575748dda0c97a8d947ee567cef1ea5ac7e5cf9ddf8a32032e19be461bd9374188b5b0b1fbef59b4120",
+          "size": 486,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_4.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "amd64",
+            "channel": "20.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 4,
+        "sdk-yaml": {
+          "architecture": "amd64",
+          "base": "ubuntu@20.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:31:44.177639Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "arm64",
+          "channel": "20.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:49:37.506334Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:49:33.890123Z",
+        "download": {
+          "sha3-384": "c17e31dd829abb3914c09b6e5d45b3b84c960232310c643987659b939204d11b474f1f9e1c04c829b65494e3056301e3",
+          "size": 468,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_7.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "arm64",
+            "channel": "20.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 7,
+        "sdk-yaml": {
+          "architecture": "arm64",
+          "base": "ubuntu@20.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:32:09.984597Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "riscv64",
+          "channel": "20.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:50:09.178916Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:50:05.426185Z",
+        "download": {
+          "sha3-384": "03ac4741a33fbce17646dc4e8acb691bf2131a814234de08ce376ca88af3d995cc52e37609d5efe51e16f40fcd763d8d",
+          "size": 469,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_10.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "riscv64",
+            "channel": "20.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 10,
+        "sdk-yaml": {
+          "architecture": "riscv64",
+          "base": "ubuntu@20.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:32:52.730823Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "22.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:49:18.751516Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:49:14.930412Z",
+        "download": {
+          "sha3-384": "5c17154e8881e275abc908456aad707c9fe824ed37639789499fbad7b271a5a87442e6ec8071aeb8a2656c0a3f02dc62",
+          "size": 481,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_5.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "amd64",
+            "channel": "22.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 5,
+        "sdk-yaml": {
+          "architecture": "amd64",
+          "base": "ubuntu@22.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:31:53.381455Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "arm64",
+          "channel": "22.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:49:48.030485Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:49:43.827456Z",
+        "download": {
+          "sha3-384": "649083022dfa1e0cbbd84a862ed6f699817abe5138fe369d861433cb20fc3a3a31032793a42a28222c0b1a3b1b7eb545",
+          "size": 463,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_8.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "arm64",
+            "channel": "22.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 8,
+        "sdk-yaml": {
+          "architecture": "arm64",
+          "base": "ubuntu@22.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:32:27.432551Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "riscv64",
+          "channel": "22.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:50:16.955362Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:50:15.292817Z",
+        "download": {
+          "sha3-384": "68f2f2519184122b91e6adf7538fd0dd77a6116892ef7ab345e7c5bd629ca49ebce6a6eb3de9b355686cad9c13cb814c",
+          "size": 468,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_11.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "riscv64",
+            "channel": "22.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 11,
+        "sdk-yaml": {
+          "architecture": "riscv64",
+          "base": "ubuntu@22.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:33:07.546695Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "24.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:49:28.111011Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:49:24.736009Z",
+        "download": {
+          "sha3-384": "2c8cf78cd0468d548af2c59378e07751cc1e04644e598f9bb324eb8c42773e68f8cc1fa6f76035b37a2c42877969756a",
+          "size": 473,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_6.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "amd64",
+            "channel": "24.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 6,
+        "sdk-yaml": {
+          "architecture": "amd64",
+          "base": "ubuntu@24.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:32:01.959553Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "arm64",
+          "channel": "24.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-10T23:49:57.942362Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T23:49:53.081669Z",
+        "download": {
+          "sha3-384": "6c25fd9a2653a2ab6ca97a42590ef140c6088baf85211f36cd575a93a4ea07f78a3ad4a6b3c4d9ba7a79d6edc880e64f",
+          "size": 457,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_9.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "arm64",
+            "channel": "24.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 9,
+        "sdk-yaml": {
+          "architecture": "arm64",
+          "base": "ubuntu@24.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-10T23:32:43.817115Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3"
+        },
+        "version": "0.3"
+      }
+    },
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "riscv64",
+          "channel": "24.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-11T00:13:19.621866Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-11T00:13:15.679272Z",
+        "download": {
+          "sha3-384": "6e4067003e140090d017872a8a730a1205679d388efde0e2eff6ac4e89e639593ae0f4665f361bb52d704e8ec670be06",
+          "size": 480,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_13.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "riscv64",
+            "channel": "24.04",
+            "name": "ubuntu"
+          }
+        ],
+        "revision": 13,
+        "sdk-yaml": {
+          "architecture": "riscv64",
+          "base": "ubuntu@24.04",
+          "contact": ["contact@example.com", "https://example.com/contact"],
+          "description": "Short description",
+          "issues": ["issues@example.com", "https://example.com/issues"],
+          "license": "LGPL-3.0",
+          "name": "test-sdk-info-multi-base",
+          "sdkcraft-started-at": "2026-03-11T00:10:49.646904Z",
+          "source-code": "https://example.com/source-code",
+          "summary": "Test SDK which supports multiple bases and architectures",
+          "title": "Custom title",
+          "version": "0.3.1"
+        },
+        "version": "0.3.1"
+      }
+    }
+  ]
+}

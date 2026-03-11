@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type ErrorResponse struct {
+	ErrorList APIErrors `json:"error-list,omitempty"`
+}
+
 // APIError represents the error from the Store API.
 type APIError struct {
 	Code    APIErrorCode  `json:"code"`

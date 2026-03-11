@@ -44,9 +44,29 @@ func basePath(base *url.URL) path.Path {
 }
 
 // Client represents the client side of an SDK store.
-type Client struct{}
+type Client struct {
+	*infoClient
+}
 
 // NewClient creates a new SDK Store client from the supplied configuration.
 func NewClient(config Config) *Client {
-	return &Client{}
+	baseURL := config.URL
+	if baseURL == nil {
+		baseURL, _ = url.Parse(DefaultServerURL)
+	}
+
+	httpClient := config.HTTPClient
+	if httpClient == nil {
+		httpClient = DefaultHTTPClient()
+	}
+
+	base := basePath(baseURL)
+	infoPath := base.JoinPath("info")
+
+	apiRequester := newAPIRequester(httpClient)
+	restClient := newHTTPRESTClient(apiRequester)
+
+	return &Client{
+		infoClient: newInfoClient(infoPath, restClient),
+	}
 }

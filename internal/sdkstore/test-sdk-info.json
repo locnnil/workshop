@@ -1,0 +1,57 @@
+{
+  "name": "test-sdk-info",
+  "package-id": "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
+  "metadata": {
+    "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
+    "license": "GPL-3.0",
+    "publisher": {
+      "display-name": "Jonathan Conder",
+      "id": "YnyjkYo9nA6AlXsTKnpxrCGxNZgmSdmu",
+      "username":"usso-jeconder",
+      "validation":"unproven"
+    },
+    "summary": "Test SDK which supports all bases and architectures",
+    "title": "test-sdk-info"
+  },
+  "channel-map": [
+    {
+      "channel": {
+        "name": "latest/edge",
+        "platform": {
+          "architecture": "all",
+          "channel": "all",
+          "name": "all"
+        },
+        "released-at": "2026-03-10T06:23:47.372123Z",
+        "risk": "edge",
+        "track": "latest"
+      },
+      "revision": {
+        "created-at": "2026-03-10T06:23:16.908418Z",
+        "download": {
+          "sha3-384": "cf722fc841c72cf53c4b2db88608589efb173fa2a50837ae6f07597ead85e6e30f36a85e98df9ba78d941b3c9e15ab3d",
+          "size": 677,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e_1.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "all",
+            "channel": "all",
+            "name": "all"
+          }
+        ],
+        "revision": 1,
+        "sdk-yaml": {
+          "architecture": "all",
+          "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
+          "license": "GPL-3.0",
+          "name": "test-sdk-info",
+          "sdkcraft-started-at": "2026-03-10T06:22:30.544271Z",
+          "summary": "Test SDK which supports all bases and architectures",
+          "version": "0.1"
+        },
+        "version": "0.1"
+      }
+    }
+  ]
+}

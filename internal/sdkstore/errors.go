@@ -5,10 +5,19 @@ package sdkstore
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/sdkstore/transport"
 )
+
+type SdkNotFoundError struct {
+	Name string
+}
+
+func (e *SdkNotFoundError) Error() string {
+	return fmt.Sprintf("%q SDK not found", e.Name)
+}
 
 // Handle some of the basic error messages.
 func handleBasicAPIErrors(list transport.APIErrors) error {
