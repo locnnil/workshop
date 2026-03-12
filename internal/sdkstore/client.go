@@ -4,7 +4,9 @@
 package sdkstore
 
 import (
+	"fmt"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/canonical/workshop/internal/https"
@@ -36,6 +38,18 @@ type Config struct {
 	// HTTPClient represents the HTTP client to use for all API
 	// requests. If nil, use the default HTTP client.
 	HTTPClient https.HTTPClient
+}
+
+func EnvConfig() (Config, error) {
+	var storeURL *url.URL
+	if custom := os.Getenv("SDK_STORE_URL"); custom != "" {
+		var err error
+		storeURL, err = url.Parse(custom)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid SDK_STORE_URL: %w", err)
+		}
+	}
+	return Config{URL: storeURL}, nil
 }
 
 // basePath returns the base configuration path for speaking to the server API.

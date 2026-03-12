@@ -111,8 +111,10 @@ type sdkYaml struct {
 	Base        string            `yaml:"base"`
 	Arch        string            `yaml:"architecture"`
 	Version     string            `yaml:"version,omitempty"`
+	Title       string            `yaml:"title"`
 	Summary     string            `yaml:"summary"`
 	Description string            `yaml:"description"`
+	License     string            `yaml:"license"`
 	Type        string            `yaml:"type"`
 	BuiltAt     *timeutil.TimeUTC `yaml:"sdkcraft-started-at,omitempty"`
 	Plugs       map[string]any    `yaml:"plugs,omitempty"`
@@ -152,8 +154,10 @@ type Info struct {
 	Channel     string
 	Source      Source
 	BuiltAt     *time.Time
+	Title       string
 	Summary     string
 	Description string
+	License     string
 
 	Plugs     map[string]*PlugInfo
 	PlugBinds map[string]PlugRef
@@ -271,8 +275,10 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Version:       sdkYaml.Version,
 		Type:          Type(sdkYaml.Type),
 		BuiltAt:       (*time.Time)(sdkYaml.BuiltAt),
+		Title:         sdkYaml.Title,
 		Summary:       sdkYaml.Summary,
 		Description:   sdkYaml.Description,
+		License:       sdkYaml.License,
 		Plugs:         make(map[string]*PlugInfo),
 		PlugBinds:     make(map[string]PlugRef),
 		Slots:         make(map[string]*SlotInfo),

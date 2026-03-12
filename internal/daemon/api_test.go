@@ -43,6 +43,7 @@ type apiSuite struct {
 	d          *Daemon
 	b          *fakebackend.FakeWorkshopBackend
 	secBackend *ifacetest.TestSecurityBackend
+	store      *sdk.FakeStore
 	gcsStore   *sdk.FakeGcsStore
 
 	workshopDir string
@@ -80,6 +81,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		ProjectId: "b8639dea",
 	}
 
+	s.store = sdk.NewFakeStore()
 	s.gcsStore = &sdk.FakeGcsStore{}
 	retrieveSystemSdk := func(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
 		return s.gcsStore.DownloadSdk(context.TODO(), setup, report)
@@ -147,11 +149,13 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	d, err := New(&Options{Dir: s.workshopDir})
 	c.Assert(err, check.IsNil)
 
+	sdk.ReplaceStore(d.state, s.store)
+	sdk.ReplaceGcsStore(d.state, s.gcsStore)
+
 	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()
 	s.d = d
 
-	sdk.ReplaceGcsStore(s.d.state, s.gcsStore)
 	return d
 }
 

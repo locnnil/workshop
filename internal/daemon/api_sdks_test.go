@@ -1,6 +1,9 @@
 package daemon
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,7 +13,10 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdkstore"
+	"github.com/canonical/workshop/internal/sdkstore/transport"
 	"github.com/canonical/workshop/internal/testutil"
+	"github.com/canonical/workshop/internal/timeutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -175,6 +181,68 @@ func (s *apiSuite) importSdkVolume(c *check.C, meta sdk.Meta, size uint64) {
 func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 	s.daemon(c)
 
+	stableReleased := time.Date(2026, 3, 10, 23, 48, 34, 474879000, time.UTC)
+	stableUploaded := time.Date(2026, 3, 10, 23, 45, 32, 474879000, time.UTC)
+	edgeReleased := time.Date(2026, 1, 10, 23, 48, 34, 474879000, time.UTC)
+	edgeUploaded := time.Date(2026, 1, 10, 23, 45, 32, 474879000, time.UTC)
+
+	restore := s.store.SetInfoCallback(func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error) {
+		if name != "openvino" {
+			return transport.InfoResponse{}, &sdkstore.SdkNotFoundError{Name: name}
+		}
+
+		return transport.InfoResponse{
+			Name:      "openvino",
+			PackageID: "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
+			Metadata: transport.InfoMetadata{
+				Description: "Accelerated toolkit",
+				License:     "Apache-2.0",
+				Publisher: transport.Publisher{
+					ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+					Username:    "hunter2",
+					DisplayName: "Hunter Two",
+					Validation:  "unproven",
+				},
+			},
+			ChannelMap: []transport.InfoChannelMap{{
+				Channel: transport.Channel{
+					Name: "latest/stable",
+					Platform: transport.Platform{
+						Name:         "ubuntu",
+						Channel:      "20.04",
+						Architecture: "amd64",
+					},
+					ReleasedAt: timeutil.TimeUTC(stableReleased),
+				},
+				Revision: transport.InfoRevision{
+					CreatedAt: (*timeutil.TimeUTC)(&stableUploaded),
+					Download:  transport.Download{Size: 1234},
+					Revision:  85,
+					Version:   "2.1-084c8c8",
+					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-20T00:00:00+00:00"}`),
+				},
+			}, {
+				Channel: transport.Channel{
+					Name: "latest/edge",
+					Platform: transport.Platform{
+						Name:         "ubuntu",
+						Channel:      "20.04",
+						Architecture: "amd64",
+					},
+					ReleasedAt: timeutil.TimeUTC(edgeReleased),
+				},
+				Revision: transport.InfoRevision{
+					CreatedAt: (*timeutil.TimeUTC)(&edgeUploaded),
+					Download:  transport.Download{Size: 4321},
+					Revision:  82,
+					Version:   "2.0",
+					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-25T00:00:00+00:00"}`),
+				},
+			}},
+		}, nil
+	})
+	defer restore()
+
 	// Create two workshops in the same project.
 	s.createWFile(c, "nav2", "name: nav2\nbase: ubuntu@20.04\n")
 	s.createWFile(c, "lerobot", "name: lerobot\nbase: ubuntu@20.04\n")
@@ -199,7 +267,7 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 		SdkYAML: `name: openvino
 version: 2.1-084c8c8
 summary: Intel OpenVINO toolkit
-description: Accelerated toolkit
+description: Latest release
 sdkcraft-started-at: 2024-11-20T00:00:00+00:00
 `,
 	}
@@ -236,17 +304,50 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 	full, ok := rsp.Result.(*sdkstate.SdkFullInfo)
 	c.Assert(ok, check.Equals, true)
 
-	c.Assert(full.Name, check.Equals, "openvino")
-	c.Assert(full.Summary, check.Not(check.Equals), "")
-	c.Assert(full.Description, check.Not(check.Equals), "")
+	c.Check(full.Name, check.Equals, "openvino")
+	c.Check(full.PackageID, check.Equals, "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e")
+	c.Check(full.Title, check.Equals, "")
+	c.Check(full.Summary, check.Not(check.Equals), "")
+	c.Check(full.Description, check.Equals, "Accelerated toolkit")
+	c.Check(full.License, check.Equals, "Apache-2.0")
+	c.Check(full.Publisher, check.DeepEquals, &sdkstate.StoreAccount{
+		ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+		Username:    "hunter2",
+		DisplayName: "Hunter Two",
+		Validation:  "unproven",
+	})
 
-	d20 := time.Date(2024, 11, 20, 0, 0, 0, 0, time.UTC).UTC().Round(0)
-	d25 := time.Date(2024, 11, 25, 0, 0, 0, 0, time.UTC).UTC().Round(0)
-	c.Assert(full.Installed, testutil.DeepUnsortedMatches, []sdkstate.SdkInstalled{
+	d20 := time.Date(2024, 11, 20, 0, 0, 0, 0, time.UTC)
+	d25 := time.Date(2024, 11, 25, 0, 0, 0, 0, time.UTC)
+
+	c.Check(full.Channels, testutil.DeepUnsortedMatches, []sdkstate.SdkRevision{{
+		Channel:      "latest/stable",
+		Revision:     "85",
+		BuiltAt:      &d20,
+		UploadedAt:   &stableUploaded,
+		ReleasedAt:   stableReleased,
+		Version:      "2.1-084c8c8",
+		Base:         "ubuntu@20.04",
+		Arch:         "amd64",
+		DownloadSize: 1234,
+	}, {
+		Channel:      "latest/edge",
+		Revision:     "82",
+		BuiltAt:      &d25,
+		UploadedAt:   &edgeUploaded,
+		ReleasedAt:   edgeReleased,
+		Version:      "2.0",
+		Base:         "ubuntu@20.04",
+		Arch:         "amd64",
+		DownloadSize: 4321,
+	}})
+
+	c.Check(full.Installed, testutil.DeepUnsortedMatches, []sdkstate.SdkInstalled{
 		{
 			ProjectPath: s.project.Path,
 			Workshop:    "nav2",
 			Channel:     "latest/stable",
+			Arch:        "all",
 			SdkVolume: sdkstate.SdkVolume{
 				Name:     "openvino",
 				Version:  "2.1-084c8c8",
@@ -259,6 +360,7 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 			ProjectPath: s.project.Path,
 			Workshop:    "lerobot",
 			Channel:     "latest/edge",
+			Arch:        "all",
 			SdkVolume: sdkstate.SdkVolume{
 				Name:     "openvino",
 				Version:  "2.0",
@@ -270,7 +372,224 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 	})
 }
 
-func (s *apiSuite) TestSdkInfoGetInvalidMetadata(c *check.C) {
+func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
+	s.daemon(c)
+
+	stableReleased := time.Date(2026, 3, 10, 23, 48, 34, 474879000, time.UTC)
+	stableUploaded := time.Date(2026, 3, 10, 23, 45, 32, 474879000, time.UTC)
+
+	restore := s.store.SetInfoCallback(func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error) {
+		if name != "openvino" {
+			return transport.InfoResponse{}, &sdkstore.SdkNotFoundError{Name: name}
+		}
+
+		return transport.InfoResponse{
+			Name:      "openvino",
+			PackageID: "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
+			Metadata: transport.InfoMetadata{
+				Description: "Accelerated toolkit",
+				License:     "Apache-2.0",
+				Publisher: transport.Publisher{
+					ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+					Username:    "hunter2",
+					DisplayName: "Hunter Two",
+					Validation:  "unproven",
+				},
+			},
+			ChannelMap: []transport.InfoChannelMap{{
+				Channel: transport.Channel{
+					Name: "latest/stable",
+					Platform: transport.Platform{
+						Name:         "ubuntu",
+						Channel:      "20.04",
+						Architecture: "amd64",
+					},
+					ReleasedAt: timeutil.TimeUTC(stableReleased),
+				},
+				Revision: transport.InfoRevision{
+					CreatedAt: (*timeutil.TimeUTC)(&stableUploaded),
+					Download:  transport.Download{Size: 1234},
+					Revision:  85,
+					Version:   "2.1-084c8c8",
+					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-20T00:00:00+00:00"}`),
+				},
+			}},
+		}, nil
+	})
+	defer restore()
+
+	s.vars = map[string]string{"name": "openvino"}
+	req, err := s.createSdksRequest("GET", "/v1/sdks/openvino")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1GetSdkInfo(apiCmd("/v1/sdks/{name}"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	full, ok := rsp.Result.(*sdkstate.SdkFullInfo)
+	c.Assert(ok, check.Equals, true)
+
+	c.Check(full.Name, check.Equals, "openvino")
+	c.Check(full.PackageID, check.Equals, "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e")
+	c.Check(full.Title, check.Equals, "")
+	c.Check(full.Summary, check.Equals, "")
+	c.Check(full.Description, check.Equals, "Accelerated toolkit")
+	c.Check(full.License, check.Equals, "Apache-2.0")
+	c.Check(full.Publisher, check.DeepEquals, &sdkstate.StoreAccount{
+		ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+		Username:    "hunter2",
+		DisplayName: "Hunter Two",
+		Validation:  "unproven",
+	})
+
+	d20 := time.Date(2024, 11, 20, 0, 0, 0, 0, time.UTC)
+
+	c.Check(full.Channels, check.DeepEquals, []sdkstate.SdkRevision{{
+		Channel:      "latest/stable",
+		Revision:     "85",
+		BuiltAt:      &d20,
+		UploadedAt:   &stableUploaded,
+		ReleasedAt:   stableReleased,
+		Version:      "2.1-084c8c8",
+		Base:         "ubuntu@20.04",
+		Arch:         "amd64",
+		DownloadSize: 1234,
+	}})
+
+	c.Check(full.Installed, check.HasLen, 0)
+}
+
+func (s *apiSuite) TestSdkInfoLocalOnly(c *check.C) {
+	s.daemon(c)
+
+	s.createWFile(c, "nav2", "name: nav2\nbase: ubuntu@20.04\n")
+	wf := &workshop.File{Name: "nav2", Base: "ubuntu@20.04"}
+	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	c.Assert(s.b.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot), check.IsNil)
+
+	// Add SDK setup with channels so the endpoint can report channels.
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:     "openvino",
+			Channel:  "latest/stable",
+			Source:   sdk.StoreSource,
+			Revision: sdk.R(85),
+			Sha3_384: "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
+		},
+		SdkYAML: `name: openvino
+version: 2.1-084c8c8
+summary: Intel OpenVINO toolkit
+description: Latest release
+sdkcraft-started-at: 2024-11-20T00:00:00+00:00
+`,
+	}
+	s.importSdkVolume(c, meta, 112*1024*1024)
+	c.Assert(s.b.InstallSdk(s.ctx, "nav2", meta.Setup), check.IsNil)
+
+	s.vars = map[string]string{"name": "openvino"}
+	req, err := s.createSdksRequest("GET", "/v1/sdks/openvino")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1GetSdkInfo(apiCmd("/v1/sdks/{name}"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	full, ok := rsp.Result.(*sdkstate.SdkFullInfo)
+	c.Assert(ok, check.Equals, true)
+
+	c.Check(full.Name, check.Equals, "openvino")
+	c.Check(full.PackageID, check.Equals, "")
+	c.Check(full.Title, check.Equals, "")
+	c.Check(full.Summary, check.Not(check.Equals), "")
+	c.Check(full.Description, check.Not(check.Equals), "")
+	c.Check(full.License, check.Equals, "")
+	c.Check(full.Publisher, check.IsNil)
+
+	c.Check(full.Channels, check.HasLen, 0)
+
+	d20 := time.Date(2024, 11, 20, 0, 0, 0, 0, time.UTC)
+
+	c.Check(full.Installed, check.DeepEquals, []sdkstate.SdkInstalled{
+		{
+			ProjectPath: s.project.Path,
+			Workshop:    "nav2",
+			Channel:     "latest/stable",
+			Arch:        "all",
+			SdkVolume: sdkstate.SdkVolume{
+				Name:     "openvino",
+				Version:  "2.1-084c8c8",
+				Revision: "85",
+				BuiltAt:  &d20,
+				Size:     112 * 1024 * 1024,
+			},
+		},
+	})
+}
+
+func (s *apiSuite) TestSdkInfoStoreDown(c *check.C) {
+	s.daemon(c)
+
+	restore := s.store.SetInfoCallback(func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error) {
+		return transport.InfoResponse{}, errors.New("destination unreachable")
+	})
+	defer restore()
+
+	s.vars = map[string]string{"name": "openvino"}
+	req, err := s.createSdksRequest("GET", "/v1/sdks/openvino")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1GetSdkInfo(apiCmd("/v1/sdks/{name}"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Check(rsp.Status, check.Equals, http.StatusInternalServerError)
+	c.Check(rsp.Result.(*errorResult).Message, check.Equals, "destination unreachable")
+}
+
+func (s *apiSuite) TestSdkInfoInvalidStoreMetadata(c *check.C) {
+	s.daemon(c)
+
+	stableReleased := time.Date(2026, 3, 10, 23, 48, 34, 474879000, time.UTC)
+
+	restore := s.store.SetInfoCallback(func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error) {
+		if name != "bad" {
+			return transport.InfoResponse{}, &sdkstore.SdkNotFoundError{Name: name}
+		}
+
+		return transport.InfoResponse{
+			Name: "bad",
+			ChannelMap: []transport.InfoChannelMap{{
+				Channel: transport.Channel{
+					Name: "latest/stable",
+					Platform: transport.Platform{
+						Name:         "ubuntu",
+						Channel:      "20.04",
+						Architecture: "amd64",
+					},
+					ReleasedAt: timeutil.TimeUTC(stableReleased),
+				},
+				Revision: transport.InfoRevision{
+					Revision: 42,
+					SdkYAML:  json.RawMessage(`[`),
+				},
+			}},
+		}, nil
+	})
+	defer restore()
+
+	s.vars = map[string]string{"name": "bad"}
+	req, err := s.createSdksRequest("GET", "/v1/sdks/bad")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1GetSdkInfo(apiCmd("/v1/sdks/{name}"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Check(rsp.Status, check.Equals, http.StatusInternalServerError)
+	c.Check(rsp.Result.(*errorResult).Message, check.Equals, `invalid "bad" SDK (42) metadata: yaml: line 1: did not find expected node content`)
+}
+
+func (s *apiSuite) TestSdkInfoGetInvalidLocalMetadata(c *check.C) {
 	s.daemon(c)
 
 	s.createWFile(c, "ws", "name: ws\nbase: ubuntu@20.04\n")

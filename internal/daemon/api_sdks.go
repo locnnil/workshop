@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/canonical/workshop/internal/workshop"
+	"github.com/canonical/workshop/internal/sdkstore"
 )
 
 func v1GetSdks(c *Command, r *http.Request, _ *userState) Response {
@@ -26,10 +26,11 @@ func v1GetSdkInfo(c *Command, r *http.Request, _ *userState) Response {
 	mgr := c.d.overlord.SdkManager()
 
 	sk, err := mgr.Sdk(r.Context(), name)
+	var sdkErr *sdkstore.SdkNotFoundError
+	if errors.As(err, &sdkErr) {
+		return statusNotFound("%w", sdkErr)
+	}
 	if err != nil {
-		if errors.Is(err, workshop.ErrVolumeNotFound) {
-			return statusNotFound("%q SDK volume not found", name)
-		}
 		return statusInternalError("%w", err)
 	}
 
