@@ -109,7 +109,7 @@ type HealthState struct {
 // operations in progress for the workshop. The state must be locked.
 func WorkshopHealth(st *state.State, ws *workshop.Workshop) HealthState {
 	var healthState = HealthState{
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 	}
 
 	// Check the project directory exists.
@@ -207,7 +207,7 @@ func (h *healthHandler) Before() error {
 	// (the health is set already if it is a retry)
 	if errors.Is(err, state.ErrNoState) {
 		h.context.Set("health", HealthCheck{
-			Timestamp:   time.Now(),
+			Timestamp:   time.Now().UTC(),
 			Sdk:         h.context.Sdk(),
 			CheckResult: CheckUnknown,
 		})

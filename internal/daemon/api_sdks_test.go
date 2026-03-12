@@ -30,7 +30,7 @@ func (s *apiSuite) TestSdksGetOk(c *check.C) {
 		SdkYAML: `name: ollama
 version: 1.0-053c828
 summary: Large language model runtime
-sdkcraft-started-at: 2024-11-25T00:00:00Z
+sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 `,
 	}
 	s.importSdkVolume(c, meta, 109*1024*1024)
@@ -44,7 +44,7 @@ sdkcraft-started-at: 2024-11-25T00:00:00Z
 		SdkYAML: `name: openvino
 version: 2.1-084c8c8
 summary: Intel OpenVINO toolkit
-sdkcraft-started-at: 2024-11-20T00:00:00Z
+sdkcraft-started-at: 2024-11-20T00:00:00+00:00
 `,
 	}
 	s.importSdkVolume(c, meta, 112*1024*1024)
@@ -200,7 +200,7 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 version: 2.1-084c8c8
 summary: Intel OpenVINO toolkit
 description: Accelerated toolkit
-sdkcraft-started-at: 2024-11-20T00:00:00Z
+sdkcraft-started-at: 2024-11-20T00:00:00+00:00
 `,
 	}
 	s.importSdkVolume(c, meta, 112*1024*1024)
@@ -218,7 +218,7 @@ sdkcraft-started-at: 2024-11-20T00:00:00Z
 version: 2.0
 summary: Intel OpenVINO toolkit (legacy)
 description: Legacy release
-sdkcraft-started-at: 2024-11-25T00:00:00Z
+sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 `,
 	}
 	s.importSdkVolume(c, meta, 101*1024*1024)

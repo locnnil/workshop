@@ -648,7 +648,7 @@ func (b *FakeWorkshopBackend) InstallSdk(ctx context.Context, name string, setup
 	wp.Sdks[setup.Name] = workshop.SdkInstallation{
 		Setup:        setup,
 		InstallOrder: len(wp.Sdks) + 1,
-		InstalledAt:  workshop.InstallTimeNow(),
+		InstalledAt:  workshop.InstallTimeNow().UTC(),
 	}
 
 	usr, env, err := osutil.UserAndEnv(user)

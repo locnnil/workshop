@@ -13,6 +13,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/metautil"
+	"github.com/canonical/workshop/internal/timeutil"
 )
 
 type Meta struct {
@@ -106,16 +107,16 @@ func SetupId(setup Setup) Id {
 }
 
 type sdkYaml struct {
-	Name        string         `yaml:"name"`
-	Base        string         `yaml:"base"`
-	Arch        string         `yaml:"architecture"`
-	Version     string         `yaml:"version,omitempty"`
-	Summary     string         `yaml:"summary"`
-	Description string         `yaml:"description"`
-	Type        string         `yaml:"type"`
-	BuiltAt     *time.Time     `yaml:"sdkcraft-started-at,omitempty"`
-	Plugs       map[string]any `yaml:"plugs,omitempty"`
-	Slots       map[string]any `yaml:"slots,omitempty"`
+	Name        string            `yaml:"name"`
+	Base        string            `yaml:"base"`
+	Arch        string            `yaml:"architecture"`
+	Version     string            `yaml:"version,omitempty"`
+	Summary     string            `yaml:"summary"`
+	Description string            `yaml:"description"`
+	Type        string            `yaml:"type"`
+	BuiltAt     *timeutil.TimeUTC `yaml:"sdkcraft-started-at,omitempty"`
+	Plugs       map[string]any    `yaml:"plugs,omitempty"`
+	Slots       map[string]any    `yaml:"slots,omitempty"`
 }
 
 type Type string
@@ -269,7 +270,7 @@ func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 		Arch:          sdkYaml.Arch,
 		Version:       sdkYaml.Version,
 		Type:          Type(sdkYaml.Type),
-		BuiltAt:       sdkYaml.BuiltAt,
+		BuiltAt:       (*time.Time)(sdkYaml.BuiltAt),
 		Summary:       sdkYaml.Summary,
 		Description:   sdkYaml.Description,
 		Plugs:         make(map[string]*PlugInfo),

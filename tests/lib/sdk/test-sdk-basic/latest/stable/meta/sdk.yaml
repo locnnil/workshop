@@ -7,4 +7,4 @@ summary: test-sdk-basic SDK
 description: |
   test-sdk-basic SDK
 
-sdkcraft-started-at: "2025-04-03T02:01:00.123456Z"
+sdkcraft-started-at: "2025-04-03T02:01:00.123456+00:00"

@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/canonical/workshop/internal/arch"
 )
@@ -30,10 +29,6 @@ func Validate(sdk *Info) error {
 	if !slices.Contains([]string{"", "all"}, sdk.Arch) && !slices.Contains(arch.AllowedArchitectures, sdk.Arch) {
 		arches := strings.Join(arch.AllowedArchitectures, ", ")
 		return fmt.Errorf("invalid SDK architecture %q; supported architectures: %s", sdk.Arch, arches)
-	}
-
-	if sdk.BuiltAt != nil && sdk.BuiltAt.Location() != time.UTC {
-		return fmt.Errorf("invalid SDK build time %q: must be UTC", sdk.BuiltAt.Format(time.RFC3339))
 	}
 
 	for plugName, plug := range sdk.Plugs {

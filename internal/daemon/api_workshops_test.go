@@ -374,7 +374,7 @@ title: title
 version: '0.1.2'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+sdkcraft-started-at: '2020-04-22T19:12:07.903032+00:00'
 plugs:
   data:
     interface: mount
@@ -389,7 +389,7 @@ title: title
 version: '0.1.3'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+sdkcraft-started-at: '2020-04-22T19:12:07.903032+00:00'
 plugs:
   ssh-agent:
     interface: ssh-agent
@@ -403,7 +403,7 @@ title: title
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+sdkcraft-started-at: '2020-05-03T22:05:35.811829+00:00'
 plugs:
   photos:
     interface: mount
@@ -426,7 +426,7 @@ base: ubuntu@22.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+sdkcraft-started-at: '2020-05-03T22:05:35.811829+00:00'
 plugs:
   photos:
     interface: mount
@@ -446,7 +446,7 @@ base: ubuntu@22.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+sdkcraft-started-at: '2020-05-03T22:05:35.811829+00:00'
 `
 )
 

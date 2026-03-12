@@ -19,6 +19,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/timeutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -417,7 +418,7 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	installation := workshop.SdkInstallation{
 		Setup:        setup,
 		InstallOrder: maxInstallOrder + 1,
-		InstalledAt:  workshop.InstallTimeNow(),
+		InstalledAt:  workshop.InstallTimeNow().UTC(),
 	}
 	device, err := sdkToLxdDisk(installation, mount)
 	if err != nil {
@@ -456,7 +457,7 @@ func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string
 	}
 	device["user.sdk.source"] = string(source)
 
-	installedAt, err := sk.InstalledAt.MarshalText()
+	installedAt, err := timeutil.TimeUTC(sk.InstalledAt).MarshalText()
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +495,8 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 		// TODO: remove this after a short transition period.
 		installedAt = device["user.sdk.install-time"]
 	}
-	if err := s.InstalledAt.UnmarshalText([]byte(installedAt)); err != nil {
+	installedUTC := (*timeutil.TimeUTC)(&s.InstalledAt)
+	if err := installedUTC.UnmarshalText([]byte(installedAt)); err != nil {
 		return nil, err
 	}
 
