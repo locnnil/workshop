@@ -6,6 +6,8 @@ import (
 
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
+	"github.com/canonical/workshop/internal/sdkstore"
+	"github.com/canonical/workshop/internal/sdkstore/transport"
 )
 
 type StoreAction int
@@ -26,6 +28,69 @@ type SdkAction struct {
 	Name      string
 	Base      string
 	Channel   string
+}
+
+type cachedStoreKey struct{}
+
+// ReplaceStore replaces the SDK store used by the manager.
+func ReplaceStore(state *state.State, store Store) {
+	state.Lock()
+	state.Cache(cachedStoreKey{}, store)
+	state.Unlock()
+}
+
+func cachedStore(st *state.State) Store {
+	sdkStore := st.Cached(cachedStoreKey{})
+	if sdkStore == nil {
+		return nil
+	}
+	return sdkStore.(Store)
+}
+
+// StoreService returns the active store service.
+func StoreService(st *state.State) Store {
+	if store := cachedStore(st); store != nil {
+		return store
+	}
+	panic("internal error: needing the store before managers have initialized it")
+}
+
+type Store interface {
+	Info(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
+}
+
+func NewFakeStore() *FakeStore {
+	return &FakeStore{}
+}
+
+type FakeStore struct {
+	lock sync.Mutex
+
+	InfoCalls    []string
+	InfoCallback func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
+}
+
+func (f *FakeStore) SetInfoCallback(info func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)) func() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	old := f.InfoCallback
+	f.InfoCallback = info
+	return func() {
+		f.InfoCallback = old
+	}
+}
+
+func (f *FakeStore) Info(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error) {
+	f.lock.Lock()
+	f.InfoCalls = append(f.InfoCalls, name)
+	info := f.InfoCallback
+	f.lock.Unlock()
+
+	if info == nil {
+		return transport.InfoResponse{}, &sdkstore.SdkNotFoundError{Name: name}
+	}
+	return info(ctx, name, options...)
 }
 
 type cachedGcsStoreKey struct{}
