@@ -656,17 +656,22 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 
 	userDataDir := workshop.UserDataRootDir(user.HomeDir, env)
 
-	var entries []string
+	var entries []*stashInfo
 	for _, wp := range wps {
 		entry := stashEntry(userDataDir, wp, p)
 		if entry != nil {
-			entries = append(entries, strings.Join(entry, "\t"))
+			entries = append(entries, entry)
 		}
 	}
-
-	if entries != nil {
-		fmt.Fprintln(w, "Project\tWorkshop\tRev\tNotes")
-		fmt.Fprintln(w, strings.Join(entries, "\n"))
+	maxRev := len("REV")
+	for _, entry := range entries {
+		maxRev = max(maxRev, len(entry.rev))
+	}
+	if len(entries) > 0 {
+		fmt.Fprintf(w, "PROJECT\tWORKSHOP\t%*s\tNOTES\n", maxRev, "REV")
+	}
+	for _, entry := range entries {
+		fmt.Fprintf(w, "%s\t%s\t%*s\t%s\n", entry.project, entry.workshop, maxRev, entry.rev, entry.notes)
 	}
 
 	w.Flush()
@@ -674,7 +679,14 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) []string {
+type stashInfo struct {
+	project  string
+	workshop string
+	rev      string
+	notes    string
+}
+
+func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) *stashInfo {
 	rev := "-"
 	notes := ""
 	exists := false
@@ -700,5 +712,5 @@ func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) [
 		return nil
 	}
 
-	return []string{cmdutil.ContractHome(p.Path), w.Name, rev, notes}
+	return &stashInfo{cmdutil.ContractHome(p.Path), w.Name, rev, notes}
 }

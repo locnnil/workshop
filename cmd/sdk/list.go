@@ -59,22 +59,21 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 	})
 
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
-	maxSize := 0
+	maxRev := len("REV")
+	maxSize := len("SIZE")
 	for _, sdk := range sdks {
-		szl := len(units.GetByteSizeString(int64(sdk.Size), 2))
-		if szl > maxSize {
-			maxSize = szl
-		}
+		maxRev = max(maxRev, len(sdk.Revision))
+		maxSize = max(maxSize, len(units.GetByteSizeString(sdk.Size, 2)))
 	}
-
-	fmt.Fprintf(w, "Name\tVersion\tRev\t%*s\n", maxSize, "Size")
+	fmt.Fprintf(w, "NAME\tVERSION\t%*s\t%*s\n", maxRev, "REV", maxSize, "SIZE")
 	for _, sdk := range sdks {
 		version := sdk.Version
 		if version == "" {
 			version = "-"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%*s\n", sdk.Name, version, sdk.Revision, maxSize, units.GetByteSizeString(int64(sdk.Size), 2))
+		size := units.GetByteSizeString(sdk.Size, 2)
+		fmt.Fprintf(w, "%s\t%s\t%*s\t%*s\n", sdk.Name, version, maxRev, sdk.Revision, maxSize, size)
 	}
 
 	return w.Flush()

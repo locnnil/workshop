@@ -241,7 +241,7 @@ func (s *warningSuite) TestListWithWarnings(c *check.C) {
 	}
 
 	c.Check(s.Stdout(), check.Equals, `
-Project        Workshop  Status  Notes
+PROJECT        WORKSHOP  STATUS  NOTES
 /home/project  ws        Off     -
 `[1:])
 	c.Check(s.Stderr(), check.Equals, "WARNING: There are 2 new warnings. See \"workshop warnings\".\n")

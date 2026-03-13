@@ -101,7 +101,7 @@ func (m *workshopInfo) TestWorkshopListFilesOnly(c *check.C) {
 
 	err := cmd.runList()
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `Project        Workshop  Status  Notes
+	c.Assert(m.stdout.String(), check.Matches, `PROJECT        WORKSHOP  STATUS  NOTES
 /home/project  as-1      Off     -
 /home/project  ws        Off     -
 `)
@@ -131,7 +131,7 @@ func (m *workshopInfo) TestWorkshopList(c *check.C) {
 
 	err := cmd.runList()
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `Project        Workshop  Status  Notes
+	c.Assert(m.stdout.String(), check.Matches, `PROJECT        WORKSHOP  STATUS  NOTES
 /home/project  as-1      Ready   -
 /home/project  ws        Error   missing-project
 /home/project  ds-1      Off     -
@@ -169,7 +169,7 @@ func (m *workshopInfo) TestWorkshopListGlobal(c *check.C) {
 	cmd.global = true
 	err := cmd.runList()
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `Project          Workshop  Status  Notes
+	c.Assert(m.stdout.String(), check.Matches, `PROJECT          WORKSHOP  STATUS  NOTES
 /home/project-1  as-1      Ready   -
 /home/project-1  ws        Error   missing-project
 /home/project-2  ws        Ready   -

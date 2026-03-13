@@ -65,26 +65,27 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	if len(chngs) > 0 {
-		w := tabWriter()
-		fmt.Fprintf(w, "ID\tStatus\tSpawn\tReady\tSummary\n")
-
-		for _, chg := range chngs {
-			spawnTime := timeutil.Human(chg.SpawnTime)
-			readyTime := timeutil.Human(chg.ReadyTime)
-			if chg.ReadyTime.IsZero() {
-				readyTime = "-"
-			}
-
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-				chg.ID,
-				chg.Status,
-				spawnTime,
-				readyTime,
-				chg.Summary)
-		}
-		w.Flush()
+	if len(chngs) == 0 {
+		return nil
 	}
+
+	w := tabWriter()
+	fmt.Fprintf(w, "ID\tSTATUS\tSPAWN\tREADY\tSUMMARY\n")
+	for _, chg := range chngs {
+		spawnTime := timeutil.Human(chg.SpawnTime)
+		readyTime := timeutil.Human(chg.ReadyTime)
+		if chg.ReadyTime.IsZero() {
+			readyTime = "-"
+		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			chg.ID,
+			chg.Status,
+			spawnTime,
+			readyTime,
+			chg.Summary)
+	}
+	w.Flush()
 
 	return nil
 }

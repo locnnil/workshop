@@ -75,7 +75,7 @@ func (c *CmdList) runList() error {
 	w := tabWriter()
 	var header sync.Once
 	printHeader := func() {
-		fmt.Fprintf(w, "Project\tWorkshop\tStatus\tNotes\n")
+		fmt.Fprintf(w, "PROJECT\tWORKSHOP\tSTATUS\tNOTES\n")
 	}
 
 	if !c.global {

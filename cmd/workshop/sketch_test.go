@@ -831,11 +831,13 @@ func (m *workshopSketch) TestSketchesOK(c *check.C) {
 	err := cmd.Run(nil, nil)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`Project +Workshop  Rev  Notes
-%s  ws        x1   current
-%s  nosketch  -    stashed
-%s  both      x3   current,stashed
-`, m.prjDir, m.prjDir, m.prjDir))
+	maxProject := max(len("PROJECT"), len(m.prjDir))
+	want := fmt.Sprintf(`%-*s  WORKSHOP  REV  NOTES
+%-*s  ws         x1  current
+%-*s  nosketch    -  stashed
+%-*s  both       x3  current,stashed
+`, maxProject, "PROJECT", maxProject, m.prjDir, maxProject, m.prjDir, maxProject, m.prjDir)
+	c.Assert(m.stdout.String(), check.Equals, want)
 }
 
 func (m *workshopSketch) TestSketchesEmpty(c *check.C) {

@@ -79,60 +79,50 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		change = changes[len(changes)-1]
 	}
 
-	if change != nil {
-		tasks := change.Tasks
-
-		slices.SortFunc(tasks, func(a, b *client.Task) int {
-			if a.SpawnTime.Before(b.SpawnTime) {
-				return -1
-			} else if a.SpawnTime.After(b.SpawnTime) {
-				return 1
-			}
-			return 0
-		})
-
-		if len(tasks) > 0 {
-			w := tabWriter()
-
-			maxDur := len("Duration")
-			for _, tsk := range tasks {
-				dur := len(tsk.DoingTime.Round(time.Millisecond).String())
-				if dur > maxDur {
-					maxDur = dur
-				}
-			}
-
-			fmt.Fprintf(w, "Status\t%*s\tSummary\n", maxDur, "Duration")
-
-			for _, tsk := range tasks {
-				duration := tsk.DoingTime.Round(time.Millisecond).String()
-				if tsk.DoingTime == 0 {
-					duration = "-"
-				}
-
-				fmt.Fprintf(w, "%s\t%*s\t%s\n",
-					tsk.Status,
-					maxDur,
-					duration,
-					tsk.Summary)
-			}
-			w.Flush()
-
-			for _, tsk := range tasks {
-				if len(tsk.Log) == 0 {
-					continue
-				}
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, line)
-				fmt.Fprintln(os.Stdout, tsk.Summary)
-				fmt.Fprintln(os.Stdout)
-				for _, line := range tsk.Log {
-					fmt.Fprintln(os.Stdout, line)
-				}
-			}
-		}
-	} else {
+	if change == nil {
 		return fmt.Errorf("change with id %q not found", av[0])
+	}
+
+	tasks := change.Tasks
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	slices.SortFunc(tasks, func(a, b *client.Task) int {
+		return a.SpawnTime.Compare(b.SpawnTime)
+	})
+
+	maxDur := len("DURATION")
+	for _, tsk := range tasks {
+		maxDur = max(maxDur, len(tsk.DoingTime.Round(time.Millisecond).String()))
+	}
+	w := tabWriter()
+	fmt.Fprintf(w, "STATUS\t%*s\tSUMMARY\n", maxDur, "DURATION")
+	for _, tsk := range tasks {
+		duration := tsk.DoingTime.Round(time.Millisecond).String()
+		if tsk.DoingTime == 0 {
+			duration = "-"
+		}
+
+		fmt.Fprintf(w, "%s\t%*s\t%s\n",
+			tsk.Status,
+			maxDur,
+			duration,
+			tsk.Summary)
+	}
+	w.Flush()
+
+	for _, tsk := range tasks {
+		if len(tsk.Log) == 0 {
+			continue
+		}
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, line)
+		fmt.Fprintln(os.Stdout, tsk.Summary)
+		fmt.Fprintln(os.Stdout)
+		for _, line := range tsk.Log {
+			fmt.Fprintln(os.Stdout, line)
+		}
 	}
 
 	return nil

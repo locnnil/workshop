@@ -74,8 +74,8 @@ func (s *sdkSuite) TestList(c *check.C) {
 	cmd.SetArgs([]string{"list"})
 	c.Assert(cmd.Execute(), check.IsNil)
 
-	c.Check(s.Stdout(), check.Equals, `Name    Version  Rev    Size
-ollama  1.0-053  82       0B
-ros2    -        5    1.05MB
+	c.Check(s.Stdout(), check.Equals, `NAME    VERSION  REV    SIZE
+ollama  1.0-053   82      0B
+ros2    -          5  1.05MB
 `)
 }

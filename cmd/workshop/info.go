@@ -153,78 +153,77 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 
 	if len(workshop.Sdks) > 0 {
 		fmt.Fprintf(w, "sdks:\n")
-		for _, sk := range workshop.Sdks {
-			fmt.Fprintf(w, "  %s:\n", sk.Name)
+	}
+	for _, sk := range workshop.Sdks {
+		fmt.Fprintf(w, "  %s:\n", sk.Name)
 
-			tracking := sk.Channel
-			revision, err := sdk.ParseRevision(sk.Revision)
-			if err == nil && revision.Local() {
-				tracking = cmdutil.ContractHome(sk.Source)
-				if sk.BuiltAt.IsZero() {
-					sk.BuiltAt = sk.InstalledAt
-				}
+		tracking := sk.Channel
+		revision, err := sdk.ParseRevision(sk.Revision)
+		if err == nil && revision.Local() {
+			tracking = cmdutil.ContractHome(sk.Source)
+			if sk.BuiltAt.IsZero() {
+				sk.BuiltAt = sk.InstalledAt
 			}
+		}
 
-			// Tracking info is always the same for the system SDK. Omit it to
-			// highlight the difference between it and a regular type SDK.
-			if !sdk.IsSystem(sk.Name) {
-				fmt.Fprintf(w, "    tracking:\t%s\n", escape(tracking))
-			}
+		// Tracking info is always the same for the system SDK. Omit it to
+		// highlight the difference between it and a regular type SDK.
+		if !sdk.IsSystem(sk.Name) {
+			fmt.Fprintf(w, "    tracking:\t%s\n", escape(tracking))
+		}
 
-			var builtAt string
-			if !sk.BuiltAt.IsZero() {
-				builtAt = "\t" + sk.BuiltAt.Format(time.DateOnly)
-			}
-			var version string
-			if sk.Version != "" {
-				version = "\t" + sk.Version
-			}
-			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, builtAt, sk.Revision)
-			if sk.Health != nil {
-				fmt.Fprintf(w, "    message:\t%s\n", escape(sk.Health.Message))
-			}
+		var builtAt string
+		if !sk.BuiltAt.IsZero() {
+			builtAt = "\t" + sk.BuiltAt.Format(time.DateOnly)
+		}
+		var version string
+		if sk.Version != "" {
+			version = "\t" + sk.Version
+		}
+		fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, builtAt, sk.Revision)
+		if sk.Health != nil {
+			fmt.Fprintf(w, "    message:\t%s\n", escape(sk.Health.Message))
+		}
 
-			if len(sk.Mounts) > 0 {
-				fmt.Fprintf(w, "    mounts:\n")
-				slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
-				for _, mount := range sk.Mounts {
-					hostSource := string(escape(cmdutil.ContractHome(mount.HostSource)))
-					shortened := shortenDefaultPath(mount.HostSource, xdg, esc)
-					if shortened != mount.HostSource {
-						link := &url.URL{Scheme: "file", Host: hostname, Path: mount.HostSource}
-						hostSource = esc.MakeLink(shortened, link, hostSource)
-					}
-					if mount.HostSource != "" {
-						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-						fmt.Fprintf(w, "        host-source:\t%s\n", hostSource)
-						fmt.Fprintf(w, "        workshop-target:\t%s\n", escape(mount.WorkshopTarget))
-						continue
-					}
-					if mount.WorkshopSource != "" {
-						fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
-						fmt.Fprintf(w, "        workshop-source:\t%s\n", escape(mount.WorkshopSource))
-						fmt.Fprintf(w, "        workshop-target:\t%s\n", escape(mount.WorkshopTarget))
-						continue
-					}
-				}
+		if len(sk.Mounts) > 0 {
+			fmt.Fprintf(w, "    mounts:\n")
+		}
+		slices.SortFunc(sk.Mounts, func(a, b *client.Mount) int { return cmp.Compare(a.Plug.Name, b.Plug.Name) })
+		for _, mount := range sk.Mounts {
+			hostSource := string(escape(cmdutil.ContractHome(mount.HostSource)))
+			shortened := shortenDefaultPath(mount.HostSource, xdg, esc)
+			if shortened != mount.HostSource {
+				link := &url.URL{Scheme: "file", Host: hostname, Path: mount.HostSource}
+				hostSource = esc.MakeLink(shortened, link, hostSource)
 			}
+			if mount.HostSource != "" {
+				fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
+				fmt.Fprintf(w, "        host-source:\t%s\n", hostSource)
+				fmt.Fprintf(w, "        workshop-target:\t%s\n", escape(mount.WorkshopTarget))
+				continue
+			}
+			if mount.WorkshopSource != "" {
+				fmt.Fprintf(w, "      %s:\n", mount.Plug.Name)
+				fmt.Fprintf(w, "        workshop-source:\t%s\n", escape(mount.WorkshopSource))
+				fmt.Fprintf(w, "        workshop-target:\t%s\n", escape(mount.WorkshopTarget))
+				continue
+			}
+		}
 
-			if len(sk.Tunnels) > 0 {
-				fmt.Fprintf(w, "    tunnels:\n")
-				slices.SortFunc(sk.Tunnels, func(a, b *client.Tunnel) int {
-					return cmp.Compare(a.Plug.Name, b.Plug.Name)
-				})
-				for _, tunnel := range sk.Tunnels {
-					fmt.Fprintf(w, "      %s:\n", tunnel.Plug.Name)
-					fmt.Fprintf(w, "        from:\t%s\n", escape(formatEndpoint(tunnel.From)))
-					fmt.Fprintf(w, "        to:\t%s\n", escape(formatEndpoint(tunnel.To)))
-				}
-			}
+		if len(sk.Tunnels) > 0 {
+			fmt.Fprintf(w, "    tunnels:\n")
+		}
+		slices.SortFunc(sk.Tunnels, func(a, b *client.Tunnel) int {
+			return cmp.Compare(a.Plug.Name, b.Plug.Name)
+		})
+		for _, tunnel := range sk.Tunnels {
+			fmt.Fprintf(w, "      %s:\n", tunnel.Plug.Name)
+			fmt.Fprintf(w, "        from:\t%s\n", escape(formatEndpoint(tunnel.From)))
+			fmt.Fprintf(w, "        to:\t%s\n", escape(formatEndpoint(tunnel.To)))
 		}
 	}
 
 	w.Flush()
-
 	return nil
 }
 
