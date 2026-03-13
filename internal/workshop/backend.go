@@ -257,8 +257,8 @@ func cachedBackend(st *state.State) Backend {
 // the one used by the snapstate package if the former has no
 // override.
 func WorkshopBackend(st *state.State) Backend {
-	if cachedStore := cachedBackend(st); cachedStore != nil {
-		return cachedStore
+	if backend := cachedBackend(st); backend != nil {
+		return backend
 	}
 	panic("internal error: needing the store before managers have initialized it")
 }

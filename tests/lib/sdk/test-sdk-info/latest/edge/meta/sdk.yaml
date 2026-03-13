@@ -7,4 +7,4 @@ summary: test-sdk-info summary
 description: |
   test-sdk-info description
 
-sdkcraft-started-at: "2025-07-03T02:01:00.123456Z"
+sdkcraft-started-at: "2025-07-03T02:01:00.123456+00:00"

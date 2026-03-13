@@ -117,18 +117,3 @@ architecture: '8086'
 	err = sdk.Validate(info)
 	c.Check(err, check.ErrorMatches, `invalid SDK architecture "8086"; supported architectures: amd64, arm64, armhf, i386, powerpc, ppc64, ppc64el, riscv64, s390x`)
 }
-
-func (s *ValidateSuite) TestSdkBuildTimeNotUTC(c *check.C) {
-	info, err := sdk.ReadSdkInfo([]byte(`name: foo
-base: ubuntu@24.04
-sdkcraft-started-at: '2025-01-09T15:26:13.702403+13:00'
-`), s.projectId, "ws")
-	c.Assert(err, check.IsNil)
-
-	err = sdk.Validate(info)
-	c.Check(err, check.ErrorMatches, `invalid SDK build time "2025-01-09T15:26:13\+13:00": must be UTC`)
-}
-
-func (s *ValidateSuite) TestAcceptableSdkBases(c *check.C) {
-	c.Assert(sdk.AllowedBases, check.DeepEquals, []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"})
-}

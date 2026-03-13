@@ -31,9 +31,9 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 				Workshop:    "ci",
 				Channel:     "latest/stable",
 				SdkVolume: client.SdkVolume{
-					Revision:  "85",
-					BuildTime: &d1,
-					Size:      109 * 1024 * 1024,
+					Revision: "85",
+					BuiltAt:  &d1,
+					Size:     109 * 1024 * 1024,
 				},
 			},
 			{
@@ -41,9 +41,9 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 				Workshop:    "dev",
 				Channel:     "latest/edge",
 				SdkVolume: client.SdkVolume{
-					Revision:  "82",
-					BuildTime: &d2,
-					Size:      102 * 1024 * 1024,
+					Revision: "82",
+					BuiltAt:  &d2,
+					Size:     102 * 1024 * 1024,
 				},
 			},
 		},

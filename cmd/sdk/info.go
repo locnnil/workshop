@@ -89,7 +89,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	for _, it := range info.Installed {
 		project := cmdutil.ContractHome(it.ProjectPath)
 		channel := cmdutil.EmptyDash(it.Channel)
-		date := formatDate(it.BuildTime)
+		date := formatDate(it.BuiltAt)
 		fmt.Fprintf(w, "  %s:\t%s\t%s\t%s\t(%s)\t%s\n",
 			project, it.Workshop, channel, date, it.Revision, units.GetByteSizeString(int64(it.Size), 2))
 	}

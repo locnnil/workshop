@@ -88,7 +88,7 @@ function setup_workshop() {
     snap install --dangerous --classic /workshop/tests/*.snap
 
     if [ "$use_real_store" != "true" ]; then
-        snap set workshop store.url=http://localhost:8080/storage/v1/
+        snap set workshop gcs.url=http://localhost:8080/storage/v1/
         start_sdk_store
     fi
 

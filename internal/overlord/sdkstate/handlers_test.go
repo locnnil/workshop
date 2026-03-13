@@ -42,7 +42,7 @@ type sdkStateSuite struct {
 	ctx         context.Context
 	user        *user.User
 	project     workshop.Project
-	installTime time.Time
+	installedAt time.Time
 
 	restoreUserLookup  func()
 	restoreUserEnv     func()
@@ -158,8 +158,8 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	s.se.AddManager(s.sdkmgr)
 	s.se.AddManager(s.runner)
 
-	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
-	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
+	s.installedAt = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installedAt }, &workshop.InstallTimeNow)
 
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Sdks: []workshop.SdkRecord{
 		{Name: "test", Channel: "latest/stable"},
@@ -247,7 +247,7 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	props, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(props.Sdks["test"].Setup, check.DeepEquals, newSdk.Setup)
-	c.Check(props.Sdks["test"].InstallTime, check.Equals, s.installTime)
+	c.Check(props.Sdks["test"].InstalledAt, check.Equals, s.installedAt)
 
 	sdkInfo, err := props.SdkInfo(s.ctx, "test")
 	c.Assert(err, check.IsNil)
@@ -406,7 +406,7 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 }
 
 func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
-	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
+	sdk.ReplaceGcsStore(s.state, sdk.NewFakeGcsStore())
 
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -468,8 +468,8 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 // after SdkAction but before DownloadSdk. Should be able to remove when we
 // switch over to the real Store.
 func (s *sdkStateSuite) TestRetrieveUpdatedSdk(c *check.C) {
-	store := sdk.NewFakeStore()
-	sdk.ReplaceStore(s.state, store)
+	store := sdk.NewFakeGcsStore()
+	sdk.ReplaceGcsStore(s.state, store)
 
 	s.state.Lock()
 	defer s.state.Unlock()

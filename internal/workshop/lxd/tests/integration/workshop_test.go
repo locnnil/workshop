@@ -367,7 +367,7 @@ base: ubuntu@20.04
 version: '0.1.2'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+sdkcraft-started-at: '2020-04-22T19:12:07.903032+00:00'
 `
 
 func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {

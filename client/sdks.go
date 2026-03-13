@@ -4,11 +4,11 @@ import "time"
 
 // SdkVolume represents SDK volume summary returned by the daemon.
 type SdkVolume struct {
-	Name      string     `json:"name"`
-	Version   string     `json:"version,omitempty"`
-	Revision  string     `json:"revision"`
-	BuildTime *time.Time `json:"build-time,omitempty"`
-	Size      uint64     `json:"size,omitempty"`
+	Name     string     `json:"name"`
+	Version  string     `json:"version,omitempty"`
+	Revision string     `json:"revision"`
+	BuiltAt  *time.Time `json:"built-at,omitempty"`
+	Size     uint64     `json:"size,omitempty"`
 }
 
 type SdkInstalled struct {

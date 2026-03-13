@@ -374,7 +374,7 @@ title: title
 version: '0.1.2'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+sdkcraft-started-at: '2020-04-22T19:12:07.903032+00:00'
 plugs:
   data:
     interface: mount
@@ -389,7 +389,7 @@ title: title
 version: '0.1.3'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-04-22T19:12:07.903032Z'
+sdkcraft-started-at: '2020-04-22T19:12:07.903032+00:00'
 plugs:
   ssh-agent:
     interface: ssh-agent
@@ -403,7 +403,7 @@ title: title
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+sdkcraft-started-at: '2020-05-03T22:05:35.811829+00:00'
 plugs:
   photos:
     interface: mount
@@ -426,7 +426,7 @@ base: ubuntu@22.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+sdkcraft-started-at: '2020-05-03T22:05:35.811829+00:00'
 plugs:
   photos:
     interface: mount
@@ -446,7 +446,7 @@ base: ubuntu@22.04
 version: '20200401.3f3a63f'
 summary: summary
 description: SDK
-sdkcraft-started-at: '2020-05-03T22:05:35.811829Z'
+sdkcraft-started-at: '2020-05-03T22:05:35.811829+00:00'
 `
 )
 
@@ -488,8 +488,8 @@ var apiSuiteSdks = map[string]sdk.Meta{
 func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
 	s.createWFile(c, name, yaml)
 
-	defer s.store.SetActionCallback(storeAction)()
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetActionCallback(storeAction)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch"}`, name))
 	s.vars = map[string]string{"id": s.project.ProjectId}
@@ -545,13 +545,13 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 			{
 				Name:        "system",
 				Revision:    system.SystemSdkRevision.String(),
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				InstalledAt: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 			},
 			{
 				Name:        "test-sdk",
 				Channel:     "latest/stable",
 				Revision:    "1",
-				InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+				InstalledAt: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 			},
 		},
 	}, {
@@ -562,7 +562,7 @@ func (s *apiSuite) TestGetWorkshops(c *check.C) {
 		Sdks: []*SdkInfo{{
 			Name:        "system",
 			Revision:    system.SystemSdkRevision.String(),
-			InstallTime: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
+			InstalledAt: time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC),
 		}},
 	}})
 
@@ -667,7 +667,7 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 				{
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
-					InstallTime: s.installTime,
+					InstalledAt: s.installedAt,
 					Tunnels: []*Tunnel{
 						{
 							Plug: sdk.PlugRef{
@@ -693,8 +693,8 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Version:     "0.1.2",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build1,
-					InstallTime: s.installTime,
+					BuiltAt:     &build1,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
@@ -733,8 +733,8 @@ func (s *apiSuite) TestGetWorkshopInfo(c *check.C) {
 					Version:     "20200401.3f3a63f",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build2,
-					InstallTime: s.installTime,
+					BuiltAt:     &build2,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource2,
@@ -821,8 +821,8 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 					Version:     "20200401.3f3a63f",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build2,
-					InstallTime: s.installTime,
+					BuiltAt:     &build2,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
@@ -839,15 +839,15 @@ func (s *apiSuite) TestGetWorkshopInfoSomePlugsBound(c *check.C) {
 				{
 					Name:        "system",
 					Revision:    system.SystemSdkRevision.String(),
-					InstallTime: s.installTime,
+					InstalledAt: s.installedAt,
 				},
 				{
 					Name:        "test-sdk",
 					Version:     "0.1.2",
 					Channel:     "latest/stable",
 					Revision:    "1",
-					BuildTime:   &build1,
-					InstallTime: s.installTime,
+					BuiltAt:     &build1,
+					InstalledAt: s.installedAt,
 					Mounts: []*Mount{
 						{
 							HostSource:     testSDKSource,
@@ -905,7 +905,7 @@ type expectedResp struct {
 }
 
 func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected []*expectedResp) {
-	defer s.store.SetActionCallback(storeAction)()
+	defer s.gcsStore.SetActionCallback(storeAction)()
 
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	requests := []*http.Request{}
@@ -1096,7 +1096,7 @@ func (s *apiSuite) TestLaunchWorkshopBasic(c *check.C) {
 	// Setup
 	s.createWFile(c, "basic", basic)
 	s.createWFile(c, "basic-invalid", basic_invalid)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic", "basic", "basic"],"action":"launch"}`),
@@ -1160,7 +1160,7 @@ line 1: cannot unmarshal !!seq into string`,
 	c.Assert(sdkInfo.Name, check.Equals, sdk.System.String())
 	c.Assert(sdkInfo.Version, check.Equals, "")
 	c.Assert(sdkInfo.Type, check.Equals, sdk.System)
-	c.Assert(sdkInfo.BuildTime, check.IsNil)
+	c.Assert(sdkInfo.BuiltAt, check.IsNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
@@ -1169,7 +1169,7 @@ func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "workshopslot", workshopslot)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopslot"],"action":"launch"}`),
@@ -1190,7 +1190,7 @@ func (s *apiSuite) TestLaunchWorkshopWithSlotOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", "test-sdk", "training"), check.Not(check.IsNil))
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopslot", "test-sdk", "training"), check.NotNil)
 }
 
 func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
@@ -1199,7 +1199,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
 		return fmt.Errorf(`cannot assign profile to "manysdks"`)
@@ -1252,7 +1252,7 @@ func (s *apiSuite) TestSnapshotFormat(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 	s.createWFile(c, "manysdks", manysdks_diverse)
 
 	s.mockTrySdk(c, "test-sdk-2", "test-sdk-2_all.sdk", testsdk2)
@@ -1504,7 +1504,7 @@ func (s *apiSuite) TestLaunchWorkshopPlugBindsSuccess(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "somebound", somebound)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["somebound"],"action":"launch"}`),
@@ -1540,7 +1540,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoMasterPlug(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "masterunknown", masterunknown)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["masterunknown"],"action":"launch"}`),
@@ -1565,7 +1565,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugNoSlavePlug(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "slaveunknown", slaveunknown)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["slaveunknown"],"action":"launch"}`),
@@ -1590,7 +1590,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "bindincompatible", bindincompatible)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["bindincompatible"],"action":"launch"}`),
@@ -1616,7 +1616,7 @@ func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "workshopplug", workshopplug)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopplug"],"action":"launch"}`),
@@ -1650,7 +1650,7 @@ func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "workshopplugbound", workshopplugbound)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopplugbound"],"action":"launch"}`),
@@ -1686,7 +1686,7 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
@@ -1707,7 +1707,7 @@ func (s *apiSuite) TestWorkshopConnectionsOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", "test-sdk-2", "training"), check.Not(check.IsNil))
+	c.Assert(repo.Slot(s.project.ProjectId, "workshopconns", "test-sdk-2", "training"), check.NotNil)
 
 	conns, err := repo.Connections(s.project.ProjectId, "workshopconns", "test-sdk")
 	c.Assert(err, check.IsNil)
@@ -1741,7 +1741,7 @@ func (s *apiSuite) TestWorkshopConnectionsUnknownPlug(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "workshopbrokenconn", workshopbrokenconn)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopbrokenconn"],"action":"launch"}`),
@@ -1774,7 +1774,7 @@ func (s *apiSuite) TestWorkshopConnectionsPlugIsBoundTo(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "connsplugbound", connsplugbound)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["connsplugbound"],"action":"launch"}`),
@@ -1835,7 +1835,7 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 			sk.Sha3_384 = w.Sdks[sk.Name].Sha3_384
 			c.Check(sk.Sha3_384, check.Not(check.Equals), "")
 			c.Assert(w.Sdks[sk.Name].Setup, check.DeepEquals, sk)
-			c.Check(w.Sdks[sk.Name].InstallTime, check.Equals, s.installTime)
+			c.Check(w.Sdks[sk.Name].InstalledAt, check.Equals, s.installedAt)
 		}
 
 		repo := s.d.overlord.InterfaceManager().Repository()
@@ -1993,7 +1993,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 	s.createWFile(c, "basic", basic)
 	s.createWFile(c, "manysdks", manysdks)
 	s.createWFile(c, "somebound", somebound)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic", "manysdks", "somebound"],"action":"launch"}`),
@@ -2117,7 +2117,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -2199,7 +2199,7 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2285,7 +2285,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2360,7 +2360,7 @@ func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2453,7 +2453,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2539,7 +2539,7 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownloadWithSaveRestore)()
+	defer s.gcsStore.SetDownloadCallback(storeDownloadWithSaveRestore)()
 
 	// Launch
 	requests := []*bytes.Buffer{
@@ -2678,7 +2678,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 	s.mockTrySdk(c, "test-sdk", "test-sdk_all.sdk", testsdk)
 	s.mockTrySdk(c, "test-sdk-2", "test-sdk-2_all_ubuntu@22.04.sdk", testsdk2)
 	s.createWFile(c, "manysdks", manysdks_try)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2791,7 +2791,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 	s.mockProjectSdk(c, "test-sdk", testsdk)
 	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "manysdks", manysdks_project)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2901,7 +2901,7 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -2980,7 +2980,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3061,7 +3061,7 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3135,7 +3135,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks_plugadded)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3214,7 +3214,7 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 	defer func() { _ = s.d.Overlord().Stop() }()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3292,7 +3292,7 @@ func (s *apiSuite) TestRefreshRestore(c *check.C) {
 	defer func() { _ = s.d.Overlord().Stop() }()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3371,7 +3371,7 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 	defer func() { _ = s.d.Overlord().Stop() }()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3453,7 +3453,7 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 	defer func() { _ = s.d.Overlord().Stop() }()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	oldGetBase := s.b.GetBaseCallback
 	s.b.GetBaseCallback = func(ctx context.Context, base string) (workshop.BaseImage, error) {
@@ -3551,7 +3551,7 @@ func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
 	defer func() { _ = s.d.Overlord().Stop() }()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks_system)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3626,7 +3626,7 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 	// Setup
 	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
 	s.createWFile(c, "basic", basic_refreshed)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -3692,7 +3692,7 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -3772,7 +3772,7 @@ func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -3807,7 +3807,7 @@ func (s *apiSuite) TestRefreshContinue(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
 	s.secBackend.RemoveCallback = func(sdkName string) error {
@@ -3872,7 +3872,7 @@ func (s *apiSuite) TestRefreshAbort(c *check.C) {
 	s.d.Overlord().Loop()
 	defer s.d.Overlord().Stop()
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
 	s.secBackend.RemoveCallback = func(sdkName string) error {
@@ -4140,7 +4140,7 @@ func (s *apiSuite) TestValidateSdkInfo(c *check.C) {
 	s.mockTrySdk(c, "test-sdk-2", "test-sdk-2_all.sdk", testsdk2_invalid)
 	s.createWFile(c, "manysdks", manysdks_try)
 	s.createWFile(c, "wrongbase", wrongbase)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -4209,7 +4209,7 @@ func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 	defer s.d.Overlord().Stop()
 
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
 	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
@@ -4254,7 +4254,7 @@ func (s *apiSuite) TestLaunchWorkshopContinueSuccess(c *check.C) {
 	defer s.d.Overlord().Stop()
 
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
 	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
@@ -4299,7 +4299,7 @@ func (s *apiSuite) TestLaunchWorkshopNoRefreshInProgress(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -4335,7 +4335,7 @@ func (s *apiSuite) TestLaunchWorkshopChangeAbort(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
 	s.secBackend.SetupCallback = func(context context.Context, sdkRef sdk.Ref, repo *interfaces.Repository) error {
@@ -4381,7 +4381,7 @@ func (s *apiSuite) TestRefreshPartialOK(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "manysdks", manysdks)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -4499,7 +4499,7 @@ func (s *apiSuite) TestRefreshConflictChange(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	var errOnce sync.Once
 	s.secBackend.RemoveCallback = func(sdkName string) error {
@@ -4563,7 +4563,7 @@ func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Install test-sdk-2 first.
 	s.createWFile(c, "manysdks", manysdks_reversed)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
@@ -4625,7 +4625,7 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -4676,7 +4676,7 @@ func (s *apiSuite) TestStopWorkshop(c *check.C) {
 	defer s.d.Overlord().Stop()
 	// Setup
 	s.createWFile(c, "basic", basic)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
@@ -4713,7 +4713,7 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"launch"}`),
@@ -4745,7 +4745,7 @@ func (s *apiSuite) TestRemoveWorkshopNotFound(c *check.C) {
 
 	// Setup
 	s.createWFile(c, "workshopconns", workshopconns)
-	defer s.store.SetDownloadCallback(storeDownload)()
+	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["workshopconns"],"action":"remove"}`),

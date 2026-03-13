@@ -114,7 +114,7 @@ func (c *healthCommand) Execute([]string) error {
 
 	health := &healthstate.HealthCheck{
 		Sdk:         ctx.Sdk(),
-		Timestamp:   time.Now(),
+		Timestamp:   time.Now().UTC(),
 		CheckResult: status,
 		Message:     c.Message,
 		Code:        c.Code,

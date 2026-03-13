@@ -1,4 +1,4 @@
-package store_test
+package gcsstore_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	store "github.com/canonical/workshop/internal/fakestore"
+	"github.com/canonical/workshop/internal/gcsstore"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -38,8 +38,8 @@ var testSdkNoBase = `name: test-sdk
 `
 
 func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
-	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
-		var s = store.StoreSdk{
+	r := gcsstore.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (gcsstore.StoreSdk, error) {
+		var s = gcsstore.StoreSdk{
 			Name:     "test-sdk",
 			Channel:  channel,
 			Revision: sdk.Revision{N: 123},
@@ -50,7 +50,7 @@ func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 	defer r()
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
-	store := store.New()
+	store := gcsstore.New()
 	acts := []sdk.SdkAction{{
 		ProjectId: "24242424",
 		Workshop:  "test-workshop",
@@ -66,8 +66,8 @@ func (s *storeSuite) TestSdkActionInstallOK(c *check.C) {
 }
 
 func (s *storeSuite) TestSdkActionInstallNoBase(c *check.C) {
-	r := store.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (store.StoreSdk, error) {
-		var s = store.StoreSdk{
+	r := gcsstore.FakeSdkStoreInfo(func(ctx context.Context, name, channel string) (gcsstore.StoreSdk, error) {
+		var s = gcsstore.StoreSdk{
 			Name:     "test-sdk",
 			Channel:  channel,
 			Revision: sdk.Revision{N: 123},
@@ -78,7 +78,7 @@ func (s *storeSuite) TestSdkActionInstallNoBase(c *check.C) {
 	defer r()
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
-	store := store.New()
+	store := gcsstore.New()
 	acts := []sdk.SdkAction{{
 		ProjectId: "24242424",
 		Workshop:  "test-workshop",

@@ -43,11 +43,11 @@ type apiSuite struct {
 	d          *Daemon
 	b          *fakebackend.FakeWorkshopBackend
 	secBackend *ifacetest.TestSecurityBackend
-	store      *sdk.FakeStore
+	gcsStore   *sdk.FakeGcsStore
 
 	workshopDir string
 	user        *user.User
-	installTime time.Time
+	installedAt time.Time
 	project     workshop.Project
 	ctx         context.Context
 
@@ -80,17 +80,17 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 		ProjectId: "b8639dea",
 	}
 
-	s.store = &sdk.FakeStore{}
+	s.gcsStore = &sdk.FakeGcsStore{}
 	retrieveSystemSdk := func(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
-		return s.store.DownloadSdk(context.TODO(), setup, report)
+		return s.gcsStore.DownloadSdk(context.TODO(), setup, report)
 	}
 	s.restoreRetrieve = system.FakeRetrieveSystemSdk(retrieveSystemSdk)
 
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
 
-	s.installTime = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
-	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installTime }, &workshop.InstallTimeNow)
+	s.installedAt = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
+	s.restoreTime = testutil.FakeFunc(func() time.Time { return s.installedAt }, &workshop.InstallTimeNow)
 
 	// will be called when project is created
 	s.restoreProjectId = testutil.FakeFunc(func() (string, error) { return s.project.ProjectId, nil }, &workshop.NewProjectId)
@@ -151,7 +151,7 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	d.addRoutes()
 	s.d = d
 
-	sdk.ReplaceStore(s.d.state, s.store)
+	sdk.ReplaceGcsStore(s.d.state, s.gcsStore)
 	return d
 }
 

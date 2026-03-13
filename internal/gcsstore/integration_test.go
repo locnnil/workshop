@@ -1,6 +1,6 @@
 //go:build integration
 
-package store_test
+package gcsstore_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/dirs"
-	store "github.com/canonical/workshop/internal/fakestore"
+	"github.com/canonical/workshop/internal/gcsstore"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
@@ -26,7 +26,7 @@ type storeIntegration struct {
 var _ = check.Suite(&storeIntegration{})
 
 func (f *storeIntegration) SetUpTest(c *check.C) {
-	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
+	c.Assert(os.Setenv("GCS_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
 	f.oldRoot = dirs.BaseDir
 	f.oldCache = dirs.CacheDir
 	dirs.SetRootDir(c.MkDir())
@@ -35,13 +35,13 @@ func (f *storeIntegration) SetUpTest(c *check.C) {
 }
 
 func (f *storeIntegration) TearDownTest(c *check.C) {
-	c.Assert(os.Unsetenv("SDK_STORE_URL"), check.IsNil)
+	c.Assert(os.Unsetenv("GCS_STORE_URL"), check.IsNil)
 	dirs.SetCacheDir(f.oldCache)
 	dirs.SetRootDir(f.oldRoot)
 }
 
 func (f *storeIntegration) TestStoreDownloadOK(c *check.C) {
-	s := store.New()
+	s := gcsstore.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
 	result, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.IsNil)
@@ -55,7 +55,7 @@ func (f *storeIntegration) TestStoreDownloadOK(c *check.C) {
 }
 
 func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
-	s := store.New()
+	s := gcsstore.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
 	done, total := 0, 0
 	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
@@ -71,7 +71,7 @@ func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 }
 
 func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
-	s := store.New()
+	s := gcsstore.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
 	prev := setup
 	prev.Revision = sdk.R(5)
@@ -92,7 +92,7 @@ func (f *storeIntegration) TestStoreDownloadCleanupPrevious(c *check.C) {
 }
 
 func (f *storeIntegration) TestStoreDownloadNotfound(c *check.C) {
-	s := store.New()
+	s := gcsstore.New()
 	setup := sdk.Setup{Name: "test-sdk-unknown", Channel: "latest/stable", Revision: sdk.R(1)}
 	_, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.ErrorMatches, `SDK not found in "latest/stable"`)
@@ -106,7 +106,7 @@ func (f *storeIntegration) TestStoreDownloadLocksSDKForExclusiveAccess(c *check.
 	m, r := logger.MockLogger()
 	defer r()
 
-	s := store.New()
+	s := gcsstore.New()
 	setup := sdk.Setup{
 		Name:     "test-sdk-basic",
 		Channel:  "latest/stable",
@@ -145,12 +145,12 @@ func (*failingReader) Read(p []byte) (n int, err error) {
 func (*failingReader) Close() error { return nil }
 
 func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
-	r := store.FakeSdkStoreSdkReader(func(ctx context.Context, setup sdk.Setup) (*store.SdkReader, error) {
-		return &store.SdkReader{ReadCloser: &failingReader{}, Revision: setup.Revision}, nil
+	r := gcsstore.FakeSdkStoreSdkReader(func(ctx context.Context, setup sdk.Setup) (*gcsstore.SdkReader, error) {
+		return &gcsstore.SdkReader{ReadCloser: &failingReader{}, Revision: setup.Revision}, nil
 	})
 	defer r()
 
-	s := store.New()
+	s := gcsstore.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.Revision{N: 55}}
 	_, err := s.DownloadSdk(context.Background(), setup, nil)
 	c.Assert(err, check.NotNil)
@@ -160,7 +160,7 @@ func (f *storeIntegration) TestStoreDownloadRemoveUnfinished(c *check.C) {
 func (s *storeIntegration) TestSdkActionInstallStoreError(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
-	store := store.New()
+	store := gcsstore.New()
 	acts := []sdk.SdkAction{{
 		ProjectId: "24242424",
 		Workshop:  "test-workshop",
@@ -178,8 +178,8 @@ func (f *storeIntegration) TestSdkActionTimeout(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 
 	// Deliberately set to malformed address
-	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8181/storage/v1/"), check.IsNil)
-	s := store.New()
+	c.Assert(os.Setenv("GCS_STORE_URL", "http://localhost:8181/storage/v1/"), check.IsNil)
+	s := gcsstore.New()
 	acts := []sdk.SdkAction{{
 		ProjectId: "24242424",
 		Workshop:  "test-workshop",
@@ -191,7 +191,7 @@ func (f *storeIntegration) TestSdkActionTimeout(c *check.C) {
 	_, err := s.SdkAction(context.Background(), acts)
 
 	// Restore address for remaining tests
-	c.Assert(os.Setenv("SDK_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
+	c.Assert(os.Setenv("GCS_STORE_URL", "http://localhost:8080/storage/v1/"), check.IsNil)
 
 	c.Assert(err, check.ErrorMatches, `(?s).*cannot connect to store.*`)
 }

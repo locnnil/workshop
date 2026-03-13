@@ -160,8 +160,8 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 			revision, err := sdk.ParseRevision(sk.Revision)
 			if err == nil && revision.Local() {
 				tracking = cmdutil.ContractHome(sk.Source)
-				if sk.BuildTime.IsZero() {
-					sk.BuildTime = sk.InstallTime
+				if sk.BuiltAt.IsZero() {
+					sk.BuiltAt = sk.InstalledAt
 				}
 			}
 
@@ -171,15 +171,15 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 				fmt.Fprintf(w, "    tracking:\t%s\n", escape(tracking))
 			}
 
-			var buildTime string
-			if !sk.BuildTime.IsZero() {
-				buildTime = "\t" + sk.BuildTime.Format(time.DateOnly)
+			var builtAt string
+			if !sk.BuiltAt.IsZero() {
+				builtAt = "\t" + sk.BuiltAt.Format(time.DateOnly)
 			}
 			var version string
 			if sk.Version != "" {
 				version = "\t" + sk.Version
 			}
-			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, buildTime, sk.Revision)
+			fmt.Fprintf(w, "    installed:%s%s\t(%s)\n", version, builtAt, sk.Revision)
 			if sk.Health != nil {
 				fmt.Fprintf(w, "    message:\t%s\n", escape(sk.Health.Message))
 			}

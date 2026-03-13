@@ -11,7 +11,7 @@ execute: |
   rm -rf cover
   mkdir cover
 
-  go test -cover "$SPREAD_PATH"/internal/fakestore/ -timeout=30m -tags=integration -check.v -check.f storeIntegration -coverpkg=github.com/canonical/workshop/internal/fakestore -args -test.gocoverdir="$PWD"/cover
+  go test -cover "$SPREAD_PATH"/internal/gcsstore/ -timeout=30m -tags=integration -check.v -check.f storeIntegration -coverpkg=github.com/canonical/workshop/internal/gcsstore -args -test.gocoverdir="$PWD"/cover
 
 artifacts:
   - cover

@@ -68,9 +68,9 @@ func (s *manifestSuite) SetUpTest(c *check.C) {
 	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
-	store := sdk.NewFakeStore()
+	store := sdk.NewFakeGcsStore()
 	store.SetActionCallback(s.storeAction)
-	sdk.ReplaceStore(s.state, store)
+	sdk.ReplaceGcsStore(s.state, store)
 }
 
 func (s *manifestSuite) TearDownTest(c *check.C) {

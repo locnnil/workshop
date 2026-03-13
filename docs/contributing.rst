@@ -380,7 +380,7 @@ adding ``/storage/v1/`` as the path:
 
 .. code-block:: console
 
-   sudo snap set workshop store.url=http://localhost:8080/storage/v1/
+   sudo snap set workshop gcs.url=http://localhost:8080/storage/v1/
    sudo snap restart workshop
 
 
@@ -394,7 +394,7 @@ To go back to the default store:
 
 .. code-block:: console
 
-   sudo snap set workshop store.url=""
+   sudo snap set workshop gcs.url=""
 
 
 Workshop will now use the default URL.

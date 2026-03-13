@@ -330,15 +330,15 @@ plugs:
 `},
 	})
 	// Plug() correctly finds plugs
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "a"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "b"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "c"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "a"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "b"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "c"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "a"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "b"), Not(IsNil))
-	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "c"), Not(IsNil))
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "a"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "b"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-xx", "xx", "c"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "a"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "b"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-yy", "yy", "c"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "a"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "b"), NotNil)
+	c.Assert(s.testRepo.Plug(s.projectId, "ws-zz_instance", "zz", "c"), NotNil)
 }
 
 // Tests for Repository.RemovePlug()
@@ -369,7 +369,7 @@ func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
 	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", it is still connected`)
 	// The plug is still there
 	slot := s.testRepo.Plug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
-	c.Assert(slot, Not(IsNil))
+	c.Assert(slot, NotNil)
 }
 
 // Tests for Repository.AllPlugs()
@@ -663,7 +663,7 @@ func (s *RepositorySuite) TestRemoveSlotSuccedsWhenSlotExistsAndDisconnected(c *
 func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotDoesntExist(c *C) {
 	// Removing a slot that doesn't exist returns an appropriate error
 	err := s.testRepo.RemoveSlot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, Not(IsNil))
+	c.Assert(err, NotNil)
 	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from sdk "producer", no such slot`)
 }
 
@@ -680,7 +680,7 @@ func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotIsConnected(c *C) {
 	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from sdk "producer", it is still connected`)
 	// The slot is still there
 	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(slot, Not(IsNil))
+	c.Assert(slot, NotNil)
 }
 
 // Tests for Repository.Connect()
