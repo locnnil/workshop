@@ -13,7 +13,8 @@ import (
 )
 
 type CmdList struct {
-	root *CmdRoot
+	root      *CmdRoot
+	noHeaders bool
 }
 
 func (c *CmdList) Command() *cobra.Command {
@@ -35,6 +36,8 @@ Notes:
 		Args: cobra.NoArgs,
 		RunE: c.Run,
 	}
+
+	cmd.PersistentFlags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
 
 	return cmd
 }
@@ -59,13 +62,18 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 	})
 
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
-	maxRev := len("REV")
-	maxSize := len("SIZE")
+	var maxRev, maxSize int
+	if !c.noHeaders {
+		maxRev = len("REV")
+		maxSize = len("SIZE")
+	}
 	for _, sdk := range sdks {
 		maxRev = max(maxRev, len(sdk.Revision))
 		maxSize = max(maxSize, len(units.GetByteSizeString(sdk.Size, 2)))
 	}
-	fmt.Fprintf(w, "NAME\tVERSION\t%*s\t%*s\n", maxRev, "REV", maxSize, "SIZE")
+	if !c.noHeaders {
+		fmt.Fprintf(w, "NAME\tVERSION\t%*s\t%*s\n", maxRev, "REV", maxSize, "SIZE")
+	}
 	for _, sdk := range sdks {
 		version := sdk.Version
 		if version == "" {

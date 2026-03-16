@@ -13,7 +13,8 @@ import (
 )
 
 type CmdTasks struct {
-	root *CmdRoot
+	root      *CmdRoot
+	noHeaders bool
 }
 
 func (c *CmdTasks) Command() *cobra.Command {
@@ -46,6 +47,8 @@ $ workshop tasks`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.complete,
 	}
+
+	cmd.PersistentFlags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
 
 	return cmd
 }
@@ -99,12 +102,17 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		return a.SpawnTime.Compare(b.SpawnTime)
 	})
 
-	maxDur := len("DURATION")
+	var maxDur int
+	if !c.noHeaders {
+		maxDur = len("DURATION")
+	}
 	for _, tsk := range tasks {
 		maxDur = max(maxDur, len(tsk.DoingTime.Round(time.Millisecond).String()))
 	}
 	w := tabWriter()
-	fmt.Fprintf(w, "STATUS\t%*s\tSUMMARY\n", maxDur, "DURATION")
+	if !c.noHeaders {
+		fmt.Fprintf(w, "STATUS\t%*s\tSUMMARY\n", maxDur, "DURATION")
+	}
 	for _, tsk := range tasks {
 		duration := tsk.DoingTime.Round(time.Millisecond).String()
 		if tsk.DoingTime == 0 {

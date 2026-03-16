@@ -821,14 +821,14 @@ func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchesOK(c *check.C) {
-	cmd := &CmdSketches{root: &CmdRoot{}}
-
 	m.mockSketchesHappyPath(c, mockWorkshopsListWithSketch)
 	m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 	m.mockMinimalSketchSdk(c, "nosketch", false, []byte(simpleSketchMeta))
 	m.mockMinimalSketchSdk(c, "both", false, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, nil)
+	cmd := (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"sketches"})
+	err := cmd.Execute()
 	c.Assert(err, check.IsNil)
 
 	maxProject := max(len("PROJECT"), len(m.prjDir))
@@ -838,6 +838,21 @@ func (m *workshopSketch) TestSketchesOK(c *check.C) {
 %-*s  both       x3  current,stashed
 `, maxProject, "PROJECT", maxProject, m.prjDir, maxProject, m.prjDir, maxProject, m.prjDir)
 	c.Assert(m.stdout.String(), check.Equals, want)
+	m.ResetStdStreams()
+
+	m.mockSketchesHappyPath(c, mockWorkshopsListWithSketch)
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"sketches", "--no-headers"})
+	err = cmd.Execute()
+	c.Assert(err, check.IsNil)
+
+	want = fmt.Sprintf(`%s  ws        x1  current
+%s  nosketch   -  stashed
+%s  both      x3  current,stashed
+`, m.prjDir, m.prjDir, m.prjDir)
+	c.Assert(m.stdout.String(), check.Equals, want)
+	m.ResetStdStreams()
 }
 
 func (m *workshopSketch) TestSketchesEmpty(c *check.C) {

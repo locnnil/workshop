@@ -11,7 +11,8 @@ import (
 )
 
 type CmdChanges struct {
-	root *CmdRoot
+	root      *CmdRoot
+	noHeaders bool
 }
 
 func (c *CmdChanges) Command() *cobra.Command {
@@ -51,6 +52,8 @@ $ workshop changes`,
 		RunE: c.Run,
 	}
 
+	cmd.PersistentFlags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
+
 	return cmd
 }
 
@@ -70,7 +73,9 @@ func (c *CmdChanges) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	w := tabWriter()
-	fmt.Fprintf(w, "ID\tSTATUS\tSPAWN\tREADY\tSUMMARY\n")
+	if !c.noHeaders {
+		fmt.Fprintf(w, "ID\tSTATUS\tSPAWN\tREADY\tSUMMARY\n")
+	}
 	for _, chg := range chngs {
 		spawnTime := timeutil.Human(chg.SpawnTime)
 		readyTime := timeutil.Human(chg.ReadyTime)

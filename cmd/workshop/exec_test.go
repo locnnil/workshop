@@ -78,7 +78,7 @@ func (m *workshopExec) TestWorkshopActions(c *check.C) {
 	err := cmd.Run(cmd.Command(), nil)
 	c.Assert(err, check.IsNil)
 	c.Check(m.stdout.String(), check.Equals, "")
-	m.stdout.Reset()
+	m.ResetStdStreams()
 	c.Check(n, check.Equals, 3)
 
 	err = cmd.Run(cmd.Command(), []string{"ws"})

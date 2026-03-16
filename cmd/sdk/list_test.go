@@ -78,4 +78,14 @@ func (s *sdkSuite) TestList(c *check.C) {
 ollama  1.0-053   82      0B
 ros2    -          5  1.05MB
 `)
+	s.ResetStdStreams()
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"list", "--no-headers"})
+	c.Assert(cmd.Execute(), check.IsNil)
+
+	c.Check(s.Stdout(), check.Equals, `ollama  1.0-053  82      0B
+ros2    -         5  1.05MB
+`)
+	s.ResetStdStreams()
 }

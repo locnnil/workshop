@@ -275,7 +275,7 @@ func (m *workshopInfo) TestWorkshopInfoWithSdkMountsXdgSet(c *check.C) {
 
 	cmd.Color = "always"
 	cmd.Unicode = "always"
-	m.stdout.Reset()
+	m.ResetStdStreams()
 
 	err = cmd.Run(cmd.Command(), []string{workshop})
 	c.Assert(err, check.IsNil)

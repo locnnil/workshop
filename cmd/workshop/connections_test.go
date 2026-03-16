@@ -198,12 +198,12 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *check.C) {
 	s.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
 		n++
 		switch n {
-		case 1, 3:
+		case 1, 3, 5:
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
 			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, s.prjId, s.prjDir)
 			fmt.Fprintln(w, r)
-		case 2, 4:
+		case 2, 4, 6:
 			c.Check(r.Method, check.Equals, "GET")
 			c.Check(r.URL.Path, check.Equals, "/v1/connections")
 			c.Check(r.URL.Query(), check.DeepEquals, query)
@@ -216,9 +216,10 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *check.C) {
 			})
 		}
 	})
-	cmd := &CmdConnections{root: &CmdRoot{}}
-	err := cmd.Run(cmd.Command(), []string{"foo"})
-	c.Check(err, check.IsNil)
+	cmd := (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"connections", "foo"})
+	err := cmd.Execute()
+	c.Assert(err, check.IsNil)
 	c.Assert(s.Stdout(), check.Equals, "")
 	c.Assert(s.Stderr(), check.Equals, "")
 
@@ -235,13 +236,25 @@ func (s *connectionsSuite) TestConnectionsNoneConnectedSlots(c *check.C) {
 			},
 		},
 	}
-	err = cmd.Run(cmd.Command(), []string{"foo"})
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"connections", "foo"})
+	err = cmd.Execute()
 	c.Assert(err, check.IsNil)
 	expectedStdout := "" +
 		"INTERFACE  PLUG  SLOT                                 NOTES\n" +
 		"leds       -     leds-provider/provider:capslock-led  -\n"
 	c.Assert(s.Stdout(), check.Equals, expectedStdout)
 	c.Assert(s.Stderr(), check.Equals, "")
+	s.ResetStdStreams()
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"connections", "--no-headers", "foo"})
+	err = cmd.Execute()
+	c.Assert(err, check.IsNil)
+	expectedStdout = "leds  -   leds-provider/provider:capslock-led  -\n"
+	c.Assert(s.Stdout(), check.Equals, expectedStdout)
+	c.Assert(s.Stderr(), check.Equals, "")
+	s.ResetStdStreams()
 }
 
 func (s *connectionsSuite) TestConnectionsSomeConnected(c *check.C) {

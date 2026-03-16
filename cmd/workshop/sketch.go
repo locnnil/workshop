@@ -603,7 +603,8 @@ func writeHooks(sdkdir string, file SketchFile) error {
 }
 
 type CmdSketches struct {
-	root *CmdRoot
+	root      *CmdRoot
+	noHeaders bool
 }
 
 func (c *CmdSketches) Command() *cobra.Command {
@@ -627,6 +628,8 @@ List the sketches in the current project directory:
 $ workshop sketches`,
 		RunE: c.Run,
 	}
+
+	cmd.PersistentFlags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
 
 	return cmd
 }
@@ -663,11 +666,14 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 			entries = append(entries, entry)
 		}
 	}
-	maxRev := len("REV")
+	var maxRev int
+	if !c.noHeaders {
+		maxRev = len("REV")
+	}
 	for _, entry := range entries {
 		maxRev = max(maxRev, len(entry.rev))
 	}
-	if len(entries) > 0 {
+	if !c.noHeaders && len(entries) > 0 {
 		fmt.Fprintf(w, "PROJECT\tWORKSHOP\t%*s\tNOTES\n", maxRev, "REV")
 	}
 	for _, entry := range entries {

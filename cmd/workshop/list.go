@@ -15,8 +15,9 @@ import (
 )
 
 type CmdList struct {
-	root   *CmdRoot
-	global bool
+	root      *CmdRoot
+	global    bool
+	noHeaders bool
 }
 
 func (c *CmdList) Command() *cobra.Command {
@@ -54,6 +55,7 @@ $ workshop list --global`,
 	}
 
 	cmd.Flags().BoolVar(&c.global, "global", false, "List workshops from all projects in the system.")
+	cmd.Flags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
 
 	return cmd
 }
@@ -75,7 +77,9 @@ func (c *CmdList) runList() error {
 	w := tabWriter()
 	var header sync.Once
 	printHeader := func() {
-		fmt.Fprintf(w, "PROJECT\tWORKSHOP\tSTATUS\tNOTES\n")
+		if !c.noHeaders {
+			fmt.Fprintf(w, "PROJECT\tWORKSHOP\tSTATUS\tNOTES\n")
+		}
 	}
 
 	if !c.global {

@@ -15,8 +15,9 @@ import (
 )
 
 type CmdConnections struct {
-	root *CmdRoot
-	all  bool
+	root      *CmdRoot
+	all       bool
+	noHeaders bool
 }
 
 func (c *CmdConnections) Command() *cobra.Command {
@@ -49,6 +50,7 @@ $ workshop connections`,
 	}
 
 	cmd.Flags().BoolVar(&c.all, "all", false, "Include disconnected plugs in the output.")
+	cmd.Flags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
 
 	return cmd
 }
@@ -202,7 +204,9 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 	sort.Sort(byConnectionData(annotatedConns))
 
 	w := tabWriter()
-	fmt.Fprintln(w, i18n.G("INTERFACE\tPLUG\tSLOT\tNOTES"))
+	if !c.noHeaders {
+		fmt.Fprintln(w, i18n.G("INTERFACE\tPLUG\tSLOT\tNOTES"))
+	}
 	for _, note := range annotatedConns {
 		// find the plug that the current connection is bound to
 		idx := slices.IndexFunc(annotatedConns, func(c connection) bool { return c.plug != "" && note.bind != "" && c.plug == note.bind })
