@@ -179,7 +179,7 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 	ClientConfig.BaseURL = srv.URL
 
 	cmd := (&CmdRoot{}).Command()
-	cmd.SetArgs([]string{"info", "openvino"})
+	cmd.SetArgs([]string{"info", "openvino", "--arch=all"})
 	c.Assert(cmd.Execute(), check.IsNil)
 
 	maxProject := max(len("PROJECT"), len(nav), len(lerobot))
@@ -210,6 +210,121 @@ INSTALLED
 `, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, "")
 
 	c.Check(s.Stdout(), check.Equals, want)
+	s.ResetStdStreams()
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"info", "openvino", "--arch=amd64"})
+	c.Assert(cmd.Execute(), check.IsNil)
+
+	want = fmt.Sprintf(`name:       openvino
+publisher:  Intel**
+license:    Apache-2.0
+
+Longer description
+can be multiline.
+
+CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+  CHANNEL           VERSION      BUILD       BASE          REV      SIZE
+  latest/stable     2.1-084c8c8  2024-11-25  ubuntu@22.04   88  123.46kB
+                                             ubuntu@20.04   85      123B
+  latest/candidate  ^                                           
+  latest/beta       ^                                           
+  latest/edge       2.0          2024-11-20  all            91   12.35MB
+
+INSTALLED
+  %-*s  WORKSHOP  CHANNEL        VERSION      BASE          REV
+  %-*s  dev       latest/edge    2.0          all            82
+  %-*s  ci        latest/stable  2.1-084c8c8  ubuntu@20.04   85
+  %-*s  dev       latest/stable  2.1-084c8c8  ubuntu@20.04   85
+`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, "")
+
+	c.Check(s.Stdout(), check.Equals, want)
+	s.ResetStdStreams()
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"info", "openvino", "--arch=riscv64"})
+	c.Assert(cmd.Execute(), check.IsNil)
+
+	maxProject = max(len("PROJECT"), len(lerobot))
+	want = fmt.Sprintf(`name:       openvino
+publisher:  Intel**
+license:    Apache-2.0
+
+Longer description
+can be multiline.
+
+CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+  CHANNEL           VERSION      BUILD       BASE          REV     SIZE
+  latest/stable     2.2-c8c8084  2024-11-27  ubuntu@22.04   90  12.35MB
+                    2.1-084c8c8  2024-11-25  ubuntu@20.04   87  12.35kB
+  latest/candidate  ^                                           
+  latest/beta       ^                                           
+  latest/edge       2.0          2024-11-20  all            91  12.35MB
+
+INSTALLED
+  %-*s  WORKSHOP  CHANNEL      VERSION  BASE  REV
+  %-*s  dev       latest/edge  2.0      all    82
+`, maxProject, "PROJECT", maxProject, lerobot)
+
+	c.Check(s.Stdout(), check.Equals, want)
+	s.ResetStdStreams()
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"info", "openvino", "--arch=all", "--base=ubuntu@22.04"})
+	c.Assert(cmd.Execute(), check.IsNil)
+
+	want = fmt.Sprintf(`name:       openvino
+publisher:  Intel**
+license:    Apache-2.0
+
+Longer description
+can be multiline.
+
+CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+  CHANNEL           VERSION      BUILD       ARCH     REV      SIZE
+  latest/stable     2.1-084c8c8  2024-11-25  amd64     88  123.46kB
+                                             arm64     89    1.23MB
+                    2.2-c8c8084  2024-11-27  riscv64   90   12.35MB
+  latest/candidate  ^                                      
+  latest/beta       ^                                      
+  latest/edge       2.0          2024-11-20  all       91   12.35MB
+
+INSTALLED
+  %-*s  WORKSHOP  CHANNEL      VERSION  ARCH  REV
+  %-*s  dev       latest/edge  2.0      all    82
+`, maxProject, "PROJECT", maxProject, lerobot)
+
+	c.Check(s.Stdout(), check.Equals, want)
+	s.ResetStdStreams()
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"info", "openvino", "--arch=amd64", "--base=ubuntu@20.04"})
+	c.Assert(cmd.Execute(), check.IsNil)
+
+	maxProject = max(len("PROJECT"), len(nav), len(lerobot))
+	want = fmt.Sprintf(`name:       openvino
+publisher:  Intel**
+license:    Apache-2.0
+
+Longer description
+can be multiline.
+
+CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+  CHANNEL           VERSION      BUILD       REV     SIZE
+  latest/stable     2.1-084c8c8  2024-11-25   85     123B
+  latest/candidate  ^                             
+  latest/beta       ^                             
+  latest/edge       2.0          2024-11-20   91  12.35MB
+
+INSTALLED
+  %-*s  WORKSHOP  CHANNEL        VERSION      REV
+  %-*s  dev       latest/edge    2.0           82
+  %-*s  ci        latest/stable  2.1-084c8c8   85
+  %-*s  dev       latest/stable  2.1-084c8c8   85
+`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, "")
+
+	c.Check(s.Stdout(), check.Equals, want)
+	s.ResetStdStreams()
 }
 
 func (s *sdkSuite) TestInfoUnverifiedPublisher(c *check.C) {

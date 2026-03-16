@@ -1,5 +1,14 @@
-name:     test-sdk-info
-summary:  test-sdk-info summary
-description: |
-  test-sdk-info description
-installed:
+name:       test-sdk-info
+publisher:  Jonathan Conder (usso-jeconder)
+license:    GPL-3.0
+
+This is test-sdk-info's description. You have a paragraph or two to tell the
+most important story about it. Keep it under 100 words though,
+we live in tweetspace.
+
+CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+  CHANNEL           VERSION  BUILD       BASE  REV  SIZE
+  latest/stable     -                               
+  latest/candidate  -                               
+  latest/beta       -                               
+  latest/edge       0.1      2026-03-10  all     1  677B

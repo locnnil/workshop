@@ -13,11 +13,15 @@ import (
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/cmd/internal/cmdutil"
+	"github.com/canonical/workshop/internal/arch"
 )
 
 type CmdInfo struct {
 	cmdutil.ColorMixin
 	root *CmdRoot
+
+	Base string
+	Arch string
 }
 
 func (c *CmdInfo) Command() *cobra.Command {
@@ -25,7 +29,8 @@ func (c *CmdInfo) Command() *cobra.Command {
 		Use:   "info <SDK>",
 		Short: "Show SDK info",
 		Long: `
-This command prints the SDK's metadata
+Prints the SDK's metadata,
+shows the revisions currently available in the SDK Store,
 and lists workshops where the SDK is installed.
 
 Notes:
@@ -37,12 +42,22 @@ Notes:
 		Args: cobra.ExactArgs(1),
 		RunE: c.Run,
 	}
+
+	cmd.PersistentFlags().StringVar(&c.Base, "base", "",
+		`Show SDKs compatible with a specific base.`)
+	cmd.PersistentFlags().StringVar(&c.Arch, "arch", "",
+		`Show SDKs compatible with a different architecture (or "all").`)
+
 	return cmd
 }
 
 var channelRisks = []string{"stable", "candidate", "beta", "edge"}
 
 func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
+	if c.Arch == "" {
+		c.Arch = arch.DpkgArchitecture()
+	}
+
 	cli, err := c.root.client()
 	if err != nil {
 		return err
@@ -53,9 +68,10 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		return err
 	}
 
-	tracks, revsByChannel := sortChannels(info.Channels)
+	tracks, revsByChannel := sortChannels(filterChannels(info.Channels, c.Base, c.Arch))
 
-	slices.SortFunc(info.Installed, func(a, b client.SdkInstalled) int {
+	installed := filterInstalled(info.Installed, c.Base, c.Arch)
+	slices.SortFunc(installed, func(a, b client.SdkInstalled) int {
 		if a.ProjectPath != b.ProjectPath {
 			return cmp.Compare(a.ProjectPath, b.ProjectPath)
 		}
@@ -85,7 +101,15 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 			maxSize = max(maxSize, len(units.GetByteSizeString(rev.DownloadSize, 2)))
 		}
 	}
-	tpl := "  %s\t%s\t%s\t%s\t%s\t%*s\t%*s\n"
+	baseTpl := "%s\t"
+	if c.Base != "" {
+		baseTpl = "%.0s"
+	}
+	archTpl := "%s\t"
+	if c.Arch != "all" {
+		archTpl = "%.0s"
+	}
+	tpl := "  %s\t%s\t%s\t" + baseTpl + archTpl + "%*s\t%*s\n"
 	if len(tracks) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "%s%s%s  (%s%s%s: %s)\n", esc.Bold, "CHANNELS", esc.End, esc.BrightYellow, "SDK Store preview", esc.End, "Workshop won't see these revisions yet")
@@ -114,16 +138,17 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	maxRev = len("REV")
-	for _, it := range info.Installed {
+	for _, it := range installed {
 		maxRev = max(maxRev, len(it.Revision))
 	}
-	if len(info.Installed) > 0 {
+	tpl = "  %s\t%s\t%s\t%s\t" + baseTpl + archTpl + "%*s\n"
+	if len(installed) > 0 {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "%s%s%s\n", esc.Bold, "INSTALLED", esc.End)
-		fmt.Fprintf(w, "  PROJECT\tWORKSHOP\tCHANNEL\tVERSION\tBASE\tARCH\t%*s\n", maxRev, "REV")
+		fmt.Fprintf(w, tpl, "PROJECT", "WORKSHOP", "CHANNEL", "VERSION", "BASE", "ARCH", maxRev, "REV")
 	}
 	var prev *client.SdkInstalled
-	for _, it := range info.Installed {
+	for _, it := range installed {
 		var project string
 		if prev == nil || prev.ProjectPath != it.ProjectPath {
 			project = cmdutil.ContractHome(it.ProjectPath)
@@ -135,12 +160,19 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		if base == "" {
 			base = "all"
 		}
-		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\t%s\t%*s\n",
-			project, it.Workshop, channel, it.Version, base, it.Arch, maxRev, it.Revision)
+		fmt.Fprintf(w, tpl, project, it.Workshop, channel, it.Version, base, it.Arch, maxRev, it.Revision)
 	}
 	w.Flush()
 
 	return nil
+}
+
+func filterChannels(channels []*client.SdkRevision, base, arch string) []*client.SdkRevision {
+	result := slices.Clone(channels)
+	return slices.DeleteFunc(result, func(rev *client.SdkRevision) bool {
+		return ((base != "" && rev.Base != "" && base != rev.Base) ||
+			(arch != "all" && rev.Arch != "all" && arch != rev.Arch))
+	})
 }
 
 // sortChannels lists tracks (e.g. "latest") in whatever order the Store
@@ -183,6 +215,14 @@ func sortChannels(channels []*client.SdkRevision) ([]string, map[string][]*clien
 	}
 
 	return tracks, revsByChannel
+}
+
+func filterInstalled(installed []client.SdkInstalled, base, arch string) []client.SdkInstalled {
+	result := slices.Clone(installed)
+	return slices.DeleteFunc(result, func(it client.SdkInstalled) bool {
+		return ((base != "" && it.Base != "" && base != it.Base) ||
+			(arch != "all" && it.Arch != "all" && arch != it.Arch))
+	})
 }
 
 func formatPublisher(publisher *client.StoreAccount, esc *cmdutil.Escapes) string {
