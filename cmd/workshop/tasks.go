@@ -64,6 +64,9 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		if err != nil {
 			return err
 		}
+		if change == nil {
+			return fmt.Errorf("change with id %q not found", av[0])
+		}
 	} else {
 		changesCmd := CmdChanges{
 			root: c.root,
@@ -76,11 +79,15 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		if len(changes) == 0 {
 			return errors.New("cannot find any changes")
 		}
-		change = changes[len(changes)-1]
-	}
-
-	if change == nil {
-		return fmt.Errorf("change with id %q not found", av[0])
+		for _, recent := range slices.Backward(changes) {
+			if len(recent.Tasks) > 0 {
+				change = recent
+				break
+			}
+		}
+		if change == nil {
+			return errors.New("cannot find any nonempty changes")
+		}
 	}
 
 	tasks := change.Tasks
