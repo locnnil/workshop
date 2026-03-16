@@ -2,14 +2,6 @@ summary: Test 'How to connect your local VS Code to a workshop' to ensure it's o
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  # Switch to real store for vscode-remote SDK
-
-  stop_sdk_store
-  snap set workshop gcs.url=""
-  snap restart workshop
-  sleep 5  # Wait for daemon to restart
-
-
   # Launch the workshop with vscode-remote SDK
 
   workshop_exec launch
@@ -24,11 +16,3 @@ execute: |
   # Clean up
 
   workshop_exec remove
-
-
-  # Restore fake store
-
-  snap set workshop gcs.url=http://localhost:8080/storage/v1/
-  snap restart workshop
-  sleep 5
-  start_sdk_store

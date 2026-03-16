@@ -1,5 +1,5 @@
 name: dev
 base: ubuntu@22.04
 sdks:
-  - name: test-sdk-go
-    channel: jammy/stable
+  - name: go
+    channel: all/edge

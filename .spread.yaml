@@ -56,10 +56,10 @@ suites:
     prepare: |
       . "$TESTSLIB"/utils.sh
       prepare_environment
-      setup_workshop
+      setup_workshop true  # use real store
     restore: |
       . "$TESTSLIB"/utils.sh
-      cleanup_workshop
+      cleanup_workshop true  # used real store, no need to clean it
     kill-timeout: 20m
 exclude:
   - .git
