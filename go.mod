@@ -9,12 +9,17 @@ require (
 	github.com/canonical/lxd v0.0.0-20260304202905-3ae3c2a21fc8
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.1
+	github.com/juju/clock v1.1.1
+	github.com/juju/errors v1.0.0
+	github.com/juju/retry v1.0.1
 	github.com/pkg/term v1.1.0
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2
+	go.uber.org/mock v0.6.0
 	golang.org/x/sys v0.41.0
 	google.golang.org/api v0.160.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+	gopkg.in/httprequest.v1 v1.2.1
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -28,7 +33,9 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
+	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
+	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/zitadel/logging v0.7.0 // indirect
 	github.com/zitadel/oidc/v3 v3.45.4 // indirect
 	github.com/zitadel/schema v1.3.2 // indirect
@@ -42,6 +49,7 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260217215200-42d3e9bedb6d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260217215200-42d3e9bedb6d // indirect
+	gopkg.in/errgo.v1 v1.0.0 // indirect
 )
 
 require (
@@ -68,7 +76,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.48.0
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/net v0.50.0
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/term v0.40.0
 	golang.org/x/text v0.34.0
