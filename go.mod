@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	cloud.google.com/go/storage v1.37.0
 	github.com/adrg/xdg v0.4.0
-	github.com/canonical/gencodo v0.2.0
+	github.com/canonical/gencodo v0.2.1
 	github.com/canonical/lxd v0.0.0-20260304202905-3ae3c2a21fc8
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.1

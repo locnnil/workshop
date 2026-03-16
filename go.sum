@@ -14,6 +14,8 @@ github.com/bmatcuk/doublestar/v4 v4.10.0 h1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6
 github.com/bmatcuk/doublestar/v4 v4.10.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/canonical/gencodo v0.2.0 h1:7HhSQHHqy3QW05/OVplMmiqaT5tR2F6vDMGMUamimo8=
 github.com/canonical/gencodo v0.2.0/go.mod h1:iFgUBc4HQSDhwR/tTAwYG25KJPqr8RbO8bbIjXKNL+I=
+github.com/canonical/gencodo v0.2.1 h1:RQHChtNds4k8jXZVp4rXXOKGFgF7ZjS9DNz+wV74AKQ=
+github.com/canonical/gencodo v0.2.1/go.mod h1:iFgUBc4HQSDhwR/tTAwYG25KJPqr8RbO8bbIjXKNL+I=
 github.com/canonical/lxd v0.0.0-20260304202905-3ae3c2a21fc8 h1:ijQh54234joiEIoXHVh79R79PqNnT04On1jCsBndmiM=
 github.com/canonical/lxd v0.0.0-20260304202905-3ae3c2a21fc8/go.mod h1:T5HIfwBSsoZdbH32v5zLmN7pJZNFkfPfooqO4f4pI48=
 github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b h1:Da2fardddn+JDlVEYtrzBLTtyzoyU3nIS0Cf0GvjmwU=
