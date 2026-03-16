@@ -24,13 +24,13 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         id: lint
         with:
-          version: v2.10
+          version: v2.11
           skip-cache: true
 
       - name: golangci-incremental
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.10
+          version: v2.11
           args: --config=.golangci.incremental.yaml
           only-new-issues: true
           skip-cache: true
