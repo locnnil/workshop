@@ -250,6 +250,7 @@ extensions = [
 
 exclude_patterns = [
     "readme.rst",
+    "reference/cli/sdk-*.rst",
     "reference/cli/workshop-*.rst",
     "reference/cli/sdkcraft-*.rst",
     "coverage.md",

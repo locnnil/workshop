@@ -23,6 +23,11 @@ and also has a number of global flags:
    Specify the project's directory path.
 
 
+-v, --version
+
+   Print Workshop version.
+
+
 {{ range .Files }}
 .. include:: {{ . }}
 

@@ -18,7 +18,7 @@ func (c *CmdDocs) Command() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:    "generate-docs",
 		Args:   cobra.MaximumNArgs(1),
-		Short:  "Generate workshop reference docs",
+		Short:  "Generate sdk reference docs",
 		Hidden: true,
 		RunE:   c.Run,
 	}
@@ -41,7 +41,7 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 		log.Fatalf("failed to create docs directory: %v", err)
 	}
 
-	indexTemplate, err := doctemplates.ReadFile("workshop.rst")
+	indexTemplate, err := doctemplates.ReadFile("sdk.rst")
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (c *CmdDocs) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	td := gencodo.TemplateInfo{
-		IndexFileName:         "workshop.rst",
+		IndexFileName:         "sdk.rst",
 		IndexTemplate:         string(indexTemplate),
 		SingleCommandTemplate: string(singleCommandTemplate),
 	}
