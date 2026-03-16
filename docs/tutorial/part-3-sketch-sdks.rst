@@ -294,7 +294,7 @@ To restore the stashed SDK:
    allowing you to restore it and continue working later.
 
    However, there's only one slot available for stashing.
-   Running :command:`workshop sketch-sdk --stash` overwrites the existing stash,
+   Running :command:`workshop sketch-sdk` overwrites the existing stash,
    if any.
    Be cautious to avoid losing your changes.
 
