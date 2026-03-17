@@ -135,6 +135,8 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 
 	workshop.ReplaceBackend(s.state, s.backend)
 
+	sdk.ReplaceStore(s.state, sdk.NewFakeStore())
+
 	/* empty task handler */
 	s.runner.AddHandler("fake-task", fakeHandler, nil)
 
@@ -154,9 +156,10 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 	s.runner.AddHandler("retry-task", retryHandler, nil)
 
 	s.se = overlord.NewStateEngine(s.state)
-	s.se.StartUp()
 	s.se.AddManager(s.sdkmgr)
 	s.se.AddManager(s.runner)
+	err = s.se.StartUp()
+	c.Assert(err, check.IsNil)
 
 	s.installedAt = time.Date(2023, 04, 25, 1, 2, 3, 0, time.UTC)
 	s.restoreInstallTime = testutil.FakeFunc(func() time.Time { return s.installedAt }, &workshop.InstallTimeNow)

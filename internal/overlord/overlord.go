@@ -41,6 +41,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdkstore"
 	"github.com/canonical/workshop/internal/systemd"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -124,6 +125,13 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 
 	o.stateEng = NewStateEngine(s)
 	o.runner = state.NewTaskRunner(s)
+
+	storeConfig, err := sdkstore.EnvConfig()
+	if err != nil {
+		return nil, err
+	}
+	sto := sdkstore.NewClient(storeConfig)
+	sdk.ReplaceStore(s, sto)
 
 	gcs := gcsstore.New()
 	sdk.ReplaceGcsStore(s, gcs)

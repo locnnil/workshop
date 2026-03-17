@@ -85,7 +85,7 @@ func (s *InfoSuite) TestInfoError(c *check.C) {
 
 	client := newInfoClient(path, restClient)
 	_, err := client.Info(context.Background(), name)
-	c.Assert(err, check.ErrorMatches, `"test-sdk-info" SDK not found`)
+	c.Assert(err, check.ErrorMatches, `no matching SDKs for "test-sdk-info"`)
 }
 
 func (s *InfoSuite) expectGet(c *check.C, client *MockRESTClient, p path.Path, name string) {

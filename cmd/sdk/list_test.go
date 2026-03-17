@@ -45,6 +45,11 @@ func (s *sdkSuite) Stdout() string {
 	return s.stdout.String()
 }
 
+func (s *sdkSuite) ResetStdStreams() {
+	s.stdout.Reset()
+	s.stderr.Reset()
+}
+
 func (s *sdkSuite) TestList(c *check.C) {
 	sdks := []client.SdkVolume{
 		{Name: "ollama", Version: "1.0-053", Revision: "82"},

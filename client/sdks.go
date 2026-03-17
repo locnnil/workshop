@@ -2,6 +2,27 @@ package client
 
 import "time"
 
+type StoreAccount struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display-name"`
+	Validation  string `json:"validation,omitempty"`
+}
+
+type SdkRevision struct {
+	Channel      string     `json:"channel"`
+	Track        string     `json:"track"`
+	Risk         string     `json:"risk"`
+	Revision     string     `json:"revision"`
+	BuiltAt      *time.Time `json:"built-at,omitempty"`
+	UploadedAt   *time.Time `json:"uploaded-at,omitempty"`
+	ReleasedAt   time.Time  `json:"released-at"`
+	Version      string     `json:"version,omitempty"`
+	Base         string     `json:"base,omitempty"`
+	Arch         string     `json:"arch,omitempty"`
+	DownloadSize uint64     `json:"download-size,omitzero"`
+}
+
 // SdkVolume represents SDK volume summary returned by the daemon.
 type SdkVolume struct {
 	Name     string     `json:"name"`
@@ -15,13 +36,20 @@ type SdkInstalled struct {
 	ProjectPath string `json:"project-path"`
 	Workshop    string `json:"workshop"`
 	Channel     string `json:"channel,omitempty"`
+	Base        string `json:"base,omitempty"`
+	Arch        string `json:"architecture,omitempty"`
 	SdkVolume
 }
 
 type SdkFullInfo struct {
 	Name        string         `json:"name"`
+	PackageID   string         `json:"package-id,omitempty"`
+	Title       string         `json:"title,omitempty"`
 	Summary     string         `json:"summary,omitempty"`
 	Description string         `json:"description,omitempty"`
+	License     string         `json:"license,omitempty"`
+	Publisher   *StoreAccount  `json:"publisher,omitempty"`
+	Channels    []*SdkRevision `json:"channels,omitempty"`
 	Installed   []SdkInstalled `json:"installed,omitempty"`
 }
 

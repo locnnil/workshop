@@ -16,7 +16,7 @@ type SdkNotFoundError struct {
 }
 
 func (e *SdkNotFoundError) Error() string {
-	return fmt.Sprintf("%q SDK not found", e.Name)
+	return fmt.Sprintf("no matching SDKs for %q", e.Name)
 }
 
 // Handle some of the basic error messages.

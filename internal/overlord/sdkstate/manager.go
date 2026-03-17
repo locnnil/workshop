@@ -2,15 +2,42 @@ package sdkstate
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sdkstore"
+	"github.com/canonical/workshop/internal/timeutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
+
+type StoreAccount struct {
+	ID          string `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display-name"`
+	Validation  string `json:"validation,omitempty"`
+}
+
+type SdkRevision struct {
+	Channel      string     `json:"channel"`
+	Track        string     `json:"track"`
+	Risk         string     `json:"risk"`
+	Revision     string     `json:"revision"`
+	BuiltAt      *time.Time `json:"built-at,omitempty"`
+	UploadedAt   *time.Time `json:"uploaded-at,omitempty"`
+	ReleasedAt   time.Time  `json:"released-at"`
+	Version      string     `json:"version,omitempty"`
+	Base         string     `json:"base,omitempty"`
+	Arch         string     `json:"arch,omitempty"`
+	DownloadSize uint64     `json:"download-size,omitzero"`
+}
 
 type SdkVolume struct {
 	Name     string     `json:"name"`
@@ -24,20 +51,28 @@ type SdkInstalled struct {
 	ProjectPath string `json:"project-path"`
 	Workshop    string `json:"workshop"`
 	Channel     string `json:"channel,omitempty"`
+	Base        string `json:"base,omitempty"`
+	Arch        string `json:"architecture,omitempty"`
 	SdkVolume
 }
 
 // This struct maintains information merged from
 // the local volumes infos and the store.
-// TODO: obtain Description and Summary from the store.
 type SdkFullInfo struct {
 	Name        string         `json:"name"`
+	PackageID   string         `json:"package-id,omitempty"`
+	Title       string         `json:"title,omitempty"`
 	Summary     string         `json:"summary,omitempty"`
 	Description string         `json:"description,omitempty"`
+	License     string         `json:"license,omitempty"`
+	Publisher   *StoreAccount  `json:"publisher,omitempty"`
+	Channels    []SdkRevision  `json:"channels,omitempty"`
 	Installed   []SdkInstalled `json:"installed,omitempty"`
 }
 
 type SdkManager struct {
+	state   *state.State
+	store   sdk.Store
 	backend workshop.Backend
 	repo    *interfaces.Repository
 }
@@ -47,11 +82,7 @@ var (
 )
 
 func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) *SdkManager {
-	manager := &SdkManager{repo: repo}
-
-	s.Lock()
-	manager.backend = workshop.WorkshopBackend(s)
-	s.Unlock()
+	manager := &SdkManager{state: s, repo: repo}
 
 	runner.AddHandler("retrieve-sdk", OnDo(manager.doRetrieveSdk), nil)
 	runner.AddHandler("install-sdk", OnDo(manager.doInstallSdk), OnUndo(manager.doUninstallSdk))
@@ -62,6 +93,14 @@ func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) 
 	runner.AddCleanup("uninstall-sdk", manager.doDeleteUnusedSdkVolumes)
 
 	return manager
+}
+
+func (w *SdkManager) StartUp() error {
+	w.state.Lock()
+	w.store = sdk.StoreService(w.state)
+	w.backend = workshop.WorkshopBackend(w.state)
+	w.state.Unlock()
+	return nil
 }
 
 func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
@@ -90,33 +129,101 @@ func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
 }
 
 func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error) {
-	sdks, err := w.backend.Sdks(ctx)
-	if err != nil {
+	full := &SdkFullInfo{Name: name}
+
+	var sdkErr *sdkstore.SdkNotFoundError
+	if err := w.fillChannels(ctx, name, full); err != nil && !errors.As(err, &sdkErr) {
 		return nil, err
 	}
 
-	sdks = slices.DeleteFunc(sdks, func(s workshop.SdkVolume) bool { return s.Name != name })
-	if len(sdks) == 0 {
-		return nil, workshop.ErrVolumeNotFound
+	if err := w.fillInstalled(ctx, name, full); err != nil {
+		return nil, err
 	}
 
-	full := SdkFullInfo{
-		Name:      name,
-		Installed: make([]SdkInstalled, 0, len(sdks)),
+	if sdkErr != nil && len(full.Installed) == 0 {
+		return nil, sdkErr
 	}
+	return full, nil
+}
+
+func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFullInfo) error {
+	response, err := w.store.Info(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	full.PackageID = response.PackageID
+	full.Title = response.Metadata.Title
+	full.Summary = response.Metadata.Summary
+	full.Description = response.Metadata.Description
+	full.License = response.Metadata.License
+	if response.Metadata.Publisher.ID != "" {
+		full.Publisher = &StoreAccount{
+			ID:          response.Metadata.Publisher.ID,
+			Username:    response.Metadata.Publisher.Username,
+			DisplayName: response.Metadata.Publisher.DisplayName,
+			Validation:  response.Metadata.Publisher.Validation,
+		}
+	}
+
+	full.Channels = make([]SdkRevision, 0, len(response.ChannelMap))
+	for _, entry := range response.ChannelMap {
+		var sdkYaml struct {
+			BuiltAt *timeutil.TimeUTC `yaml:"sdkcraft-started-at,omitempty"`
+		}
+		if err := yaml.Unmarshal(entry.Revision.SdkYAML, &sdkYaml); err != nil {
+			return fmt.Errorf("invalid %q SDK (%v) metadata: %w", response.Name, entry.Revision.Revision, err)
+		}
+
+		base := entry.Channel.Platform.Name + "@" + entry.Channel.Platform.Channel
+		if base == "all@all" {
+			base = ""
+		}
+
+		channel := SdkRevision{
+			Channel:      entry.Channel.Name,
+			Track:        entry.Channel.Track,
+			Risk:         entry.Channel.Risk,
+			Revision:     sdk.Revision{N: entry.Revision.Revision}.String(),
+			BuiltAt:      (*time.Time)(sdkYaml.BuiltAt),
+			UploadedAt:   (*time.Time)(entry.Revision.CreatedAt),
+			ReleasedAt:   time.Time(entry.Channel.ReleasedAt),
+			Version:      entry.Revision.Version,
+			Base:         base,
+			Arch:         entry.Channel.Platform.Architecture,
+			DownloadSize: entry.Revision.Download.Size,
+		}
+		full.Channels = append(full.Channels, channel)
+	}
+	return nil
+}
+
+func (w *SdkManager) fillInstalled(ctx context.Context, name string, full *SdkFullInfo) error {
+	sdks, err := w.backend.Sdks(ctx)
+	if err != nil {
+		return err
+	}
+	sdks = slices.DeleteFunc(sdks, func(s workshop.SdkVolume) bool { return s.Name != name })
+
+	full.Installed = make([]SdkInstalled, 0, len(sdks))
 	for _, s := range sdks {
 		info, err := sdk.ReadSdkInfo([]byte(s.SdkYAML), "", "")
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		// TODO: obtain summary, description, license from the actual store
-		// when it becomes available.
+		// Needed if the SDK isn't in the Store (e.g. try SDKs).
+		if full.Title == "" {
+			full.Title = info.Title
+		}
 		if full.Summary == "" {
 			full.Summary = info.Summary
 		}
 		if full.Description == "" {
 			full.Description = info.Description
+		}
+		if full.License == "" {
+			full.License = info.License
 		}
 
 		for pid, wps := range s.Workshops {
@@ -124,13 +231,20 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 			for _, wp := range wps {
 				winfo, err := w.backend.Workshop(pctx, wp)
 				if err != nil {
-					return nil, err
+					return err
 				}
 
 				channel := ""
 				sk, ok := winfo.Sdks[name]
 				if ok {
 					channel = sk.Channel
+				}
+
+				arch := info.Arch
+				if arch == "" {
+					// SDKcraft always sets architecture,
+					// but we probably shouldn't rely on it.
+					arch = "all"
 				}
 
 				full.Installed = append(full.Installed, SdkInstalled{
@@ -144,12 +258,13 @@ func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error)
 					Workshop:    winfo.Name,
 					ProjectPath: winfo.Project.Path,
 					Channel:     channel,
+					Base:        info.Base,
+					Arch:        arch,
 				})
 			}
 		}
 	}
-
-	return &full, nil
+	return nil
 }
 
 func (w *SdkManager) Ensure() error {
