@@ -147,14 +147,8 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(w, "%s%s%s\n", esc.Bold, "INSTALLED", esc.End)
 		fmt.Fprintf(w, tpl, "PROJECT", "WORKSHOP", "CHANNEL", "VERSION", "BASE", "ARCH", maxRev, "REV")
 	}
-	var prev *client.SdkInstalled
 	for _, it := range installed {
-		var project string
-		if prev == nil || prev.ProjectPath != it.ProjectPath {
-			project = cmdutil.ContractHome(it.ProjectPath)
-		}
-		prev = &it
-
+		project := cmdutil.ContractHome(it.ProjectPath)
 		channel := cmdutil.EmptyDash(it.Channel)
 		base := it.Base
 		if base == "" {
