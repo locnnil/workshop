@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
+	"github.com/canonical/workshop/internal/sdk"
 )
 
 type CmdList struct {
@@ -58,7 +60,17 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 	}
 
 	slices.SortFunc(sdks, func(a, b client.SdkVolume) int {
-		return cmp.Compare(a.Name, b.Name)
+		if a.Name != b.Name {
+			return cmp.Compare(a.Name, b.Name)
+		}
+		rev1, err1 := sdk.ParseRevision(a.Revision)
+		rev2, err2 := sdk.ParseRevision(b.Revision)
+		if err1 == nil && err2 == nil {
+			// Newest first.
+			return cmp.Compare(rev2.N, rev1.N)
+		}
+		// Should be unreachable.
+		return cmp.Compare(b.Revision, a.Revision)
 	})
 
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
@@ -75,11 +87,7 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 		fmt.Fprintf(w, "NAME\tVERSION\t%*s\t%*s\n", maxRev, "REV", maxSize, "SIZE")
 	}
 	for _, sdk := range sdks {
-		version := sdk.Version
-		if version == "" {
-			version = "-"
-		}
-
+		version := cmdutil.EmptyDash(sdk.Version)
 		size := units.GetByteSizeString(sdk.Size, 2)
 		fmt.Fprintf(w, "%s\t%s\t%*s\t%*s\n", sdk.Name, version, maxRev, sdk.Revision, maxSize, size)
 	}
