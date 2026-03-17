@@ -199,6 +199,7 @@ wayland
 Wayland
 WAYLAND
 webhook
+whoami
 workshopctl
 workshopd
 workspace
