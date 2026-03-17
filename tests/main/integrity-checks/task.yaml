@@ -28,7 +28,7 @@ execute: |
   mkdir -p ./new-project
   cp -r "$PROJECT"/.workshop ./new-project/
   workshop_exec launch --project $(pwd)/new-project/
-  workshop_exec list --project $(pwd)/new-project | MATCH "^$(pwd)/new-project[[:space:]]+ws[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --project $(pwd)/new-project | MATCH "^ws[[:space:]]+Ready[[:space:]]+-$"
 
   echo "Check for warnings when workshop files conflict"
   cp new-project/.workshop/ws.yaml new-project/.workshop.yaml

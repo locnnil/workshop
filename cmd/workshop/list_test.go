@@ -101,9 +101,9 @@ func (m *workshopInfo) TestWorkshopListFilesOnly(c *check.C) {
 
 	err := cmd.runList()
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `PROJECT        WORKSHOP  STATUS  NOTES
-/home/project  as-1      Off     -
-/home/project  ws        Off     -
+	c.Assert(m.stdout.String(), check.Equals, `WORKSHOP  STATUS  NOTES
+as-1      Off     -
+ws        Off     -
 `)
 	c.Check(n, check.Equals, 2)
 }
@@ -132,11 +132,11 @@ func (m *workshopInfo) TestWorkshopList(c *check.C) {
 	cmd.SetArgs([]string{"list"})
 	err := cmd.Execute()
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `PROJECT        WORKSHOP  STATUS  NOTES
-/home/project  as-1      Ready   -
-/home/project  ws        Error   missing-project
-/home/project  ds-1      Off     -
-/home/project  zs-1      Off     -
+	c.Assert(m.stdout.String(), check.Matches, `WORKSHOP  STATUS  NOTES
+as-1      Ready   -
+ws        Error   missing-project
+ds-1      Off     -
+zs-1      Off     -
 `)
 	m.ResetStdStreams()
 	c.Check(n, check.Equals, 2)
@@ -145,10 +145,10 @@ func (m *workshopInfo) TestWorkshopList(c *check.C) {
 	cmd.SetArgs([]string{"list", "--no-headers"})
 	err = cmd.Execute()
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, `/home/project  as-1  Ready  -
-/home/project  ws    Error  missing-project
-/home/project  ds-1  Off    -
-/home/project  zs-1  Off    -
+	c.Assert(m.stdout.String(), check.Matches, `as-1  Ready  -
+ws    Error  missing-project
+ds-1  Off    -
+zs-1  Off    -
 `)
 	m.ResetStdStreams()
 	c.Check(n, check.Equals, 4)

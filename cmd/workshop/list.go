@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"sync"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -69,62 +68,91 @@ func (c *CmdList) Run(cmd *cobra.Command, _ []string) error {
 }
 
 func (c *CmdList) runList() error {
+	if c.global {
+		return c.listGlobal()
+	}
+	return c.listProject()
+}
+
+func (c *CmdList) listProject() error {
 	cli, err := c.root.client()
 	if err != nil {
 		return err
 	}
 
+	project, err := cli.Project(c.root.project())
+	if err != nil {
+		return err
+	}
+
+	workshops, files, err := cli.List(&client.ListOptions{ProjectId: project.Id})
+	if err != nil {
+		return err
+	}
+
+	merged := sortWorkshops(workshops, files)
+	if len(merged) == 0 {
+		return nil
+	}
+
 	w := tabWriter()
-	var header sync.Once
-	printHeader := func() {
-		if !c.noHeaders {
-			fmt.Fprintf(w, "PROJECT\tWORKSHOP\tSTATUS\tNOTES\n")
-		}
+	if !c.noHeaders {
+		fmt.Fprintf(w, "WORKSHOP\tSTATUS\tNOTES\n")
 	}
-
-	if !c.global {
-		project, err := cli.Project(c.root.project())
-		if err != nil {
-			return err
-		}
-
-		workshops, files, err := cli.List(&client.ListOptions{ProjectId: project.Id})
-		if err != nil {
-			return err
-		}
-
-		/* List all workshops for the current project */
-		if len(workshops) != 0 || len(files) != 0 {
-			header.Do(printHeader)
-			print(w, workshops, files, *project)
-		}
-	} else {
-		projects, err := cli.Projects()
-		if err != nil {
-			return err
-		}
-
-		for _, p := range projects {
-			workshops, _, err := cli.List(&client.ListOptions{ProjectId: p.Id})
-			if err != nil {
-				return err
-			}
-			if len(workshops) == 0 {
-				continue
-			}
-			header.Do(printHeader)
-			// --global flag does not list files for consistency. We may not be
-			// aware of all the project directories on the system and, thus,
-			// will not know all the available "Off" workshops (contrary to the
-			// workshops that are in any known state, i.e. running instances,
-			// which we always know about from the workshop backend).
-			print(w, workshops, nil, p)
-		}
+	for _, wp := range merged {
+		fmt.Fprintf(w, "%s\t%s\t%s\n", wp.name, wp.status, wp.notes)
 	}
-
 	w.Flush()
 
 	return nil
+}
+
+func (c *CmdList) listGlobal() error {
+	cli, err := c.root.client()
+	if err != nil {
+		return err
+	}
+
+	projects, err := cli.Projects()
+	if err != nil {
+		return err
+	}
+
+	w := tabWriter()
+	printHeaders := !c.noHeaders
+	for _, p := range projects {
+		workshops, _, err := cli.List(&client.ListOptions{ProjectId: p.Id})
+		if err != nil {
+			return err
+		}
+		// --global flag does not list files for consistency. We may not be
+		// aware of all the project directories on the system and, thus,
+		// will not know all the available "Off" workshops (contrary to the
+		// workshops that are in any known state, i.e. running instances,
+		// which we always know about from the workshop backend).
+		merged := sortWorkshops(workshops, nil)
+		if len(merged) == 0 {
+			continue
+		}
+
+		if printHeaders {
+			fmt.Fprintf(w, "PROJECT\tWORKSHOP\tSTATUS\tNOTES\n")
+			printHeaders = false
+		}
+		project := cmdutil.ContractHome(p.Path)
+		for _, wp := range merged {
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", project, wp.name, wp.status, wp.notes)
+		}
+	}
+	w.Flush()
+
+	return nil
+}
+
+type workshopSummary struct {
+	name   string
+	status string
+	notes  string
 }
 
 func sorter[T *client.WorkshopInfo | *client.WorkshopFile](extract func(T) string) func(a, b T) int {
@@ -133,11 +161,13 @@ func sorter[T *client.WorkshopInfo | *client.WorkshopFile](extract func(T) strin
 	}
 }
 
-func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*client.WorkshopFile, prj client.Project) {
+func sortWorkshops(workshops []*client.WorkshopInfo, files []*client.WorkshopFile) []workshopSummary {
+	result := make([]workshopSummary, 0, len(workshops)+len(files))
+
 	slices.SortFunc(workshops, sorter(func(w *client.WorkshopInfo) string { return w.Name }))
 	for _, wp := range workshops {
-		line := workshopEntry(wp, prj)
-		fmt.Fprintln(w, strings.Join(line, "\t"))
+		notes := cmdutil.EmptyDash(strings.Join(wp.Notes, ","))
+		result = append(result, workshopSummary{wp.Name, wp.Status, notes})
 	}
 
 	slices.SortFunc(files, sorter(func(f *client.WorkshopFile) string { return f.Name }))
@@ -146,31 +176,11 @@ func print(w *tabwriter.Writer, workshops []*client.WorkshopInfo, files []*clien
 			return cmp.Compare(w.Name, wf.Name)
 		})
 		if !found {
-			line := fileEntry(wf, prj)
-			fmt.Fprintln(w, strings.Join(line, "\t"))
+			result = append(result, workshopSummary{wf.Name, "Off", "-"})
 		}
 	}
-}
 
-func fileEntry(w *client.WorkshopFile, p client.Project) []string {
-	line := []string{
-		cmdutil.ContractHome(p.Path),
-		w.Name,
-		"Off",
-		"-",
-	}
-	return line
-}
-
-func workshopEntry(w *client.WorkshopInfo, p client.Project) []string {
-	comment := cmdutil.EmptyDash(strings.Join(w.Notes, ","))
-	line := []string{
-		cmdutil.ContractHome(p.Path),
-		w.Name,
-		w.Status,
-		comment,
-	}
-	return line
+	return result
 }
 
 func tabWriter() *tabwriter.Writer {

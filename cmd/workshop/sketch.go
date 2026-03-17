@@ -14,7 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/client"
-	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
@@ -674,10 +673,10 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 		maxRev = max(maxRev, len(entry.rev))
 	}
 	if !c.noHeaders && len(entries) > 0 {
-		fmt.Fprintf(w, "PROJECT\tWORKSHOP\t%*s\tNOTES\n", maxRev, "REV")
+		fmt.Fprintf(w, "WORKSHOP\t%*s\tNOTES\n", maxRev, "REV")
 	}
 	for _, entry := range entries {
-		fmt.Fprintf(w, "%s\t%s\t%*s\t%s\n", entry.project, entry.workshop, maxRev, entry.rev, entry.notes)
+		fmt.Fprintf(w, "%s\t%*s\t%s\n", entry.workshop, maxRev, entry.rev, entry.notes)
 	}
 
 	w.Flush()
@@ -686,7 +685,6 @@ func (c *CmdSketches) Run(cmd *cobra.Command, _ []string) error {
 }
 
 type stashInfo struct {
-	project  string
 	workshop string
 	rev      string
 	notes    string
@@ -718,5 +716,5 @@ func stashEntry(userDataDir string, w *client.WorkshopInfo, p *client.Project) *
 		return nil
 	}
 
-	return &stashInfo{cmdutil.ContractHome(p.Path), w.Name, rev, notes}
+	return &stashInfo{w.Name, rev, notes}
 }

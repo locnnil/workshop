@@ -5,11 +5,11 @@ execute: |
   workshop_exec launch --wait-on-error || true
 
   echo "Check the workshop is in Waiting state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Waiting[[:space:]]+wait-on-error$"
+  workshop_exec list | MATCH "^ws-launch-abort[[:space:]]+Waiting[[:space:]]+wait-on-error$"
 
   echo "Check the \"workshop launch --abort\" command reverts to the previous state"
   workshop_exec launch --abort | MATCH "\"ws-launch-abort\" launch aborted"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-launch-abort[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-launch-abort[[:space:]]+Off[[:space:]]+-$"
 
   echo "Validate the task output from the launch attempt"
   workshop_exec tasks | tail -1 | MATCH ".*Aborting \"launch\" for workshop \"ws-launch-abort\"..."

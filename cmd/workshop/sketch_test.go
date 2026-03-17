@@ -831,12 +831,11 @@ func (m *workshopSketch) TestSketchesOK(c *check.C) {
 	err := cmd.Execute()
 	c.Assert(err, check.IsNil)
 
-	maxProject := max(len("PROJECT"), len(m.prjDir))
-	want := fmt.Sprintf(`%-*s  WORKSHOP  REV  NOTES
-%-*s  ws         x1  current
-%-*s  nosketch    -  stashed
-%-*s  both       x3  current,stashed
-`, maxProject, "PROJECT", maxProject, m.prjDir, maxProject, m.prjDir, maxProject, m.prjDir)
+	want := `WORKSHOP  REV  NOTES
+ws         x1  current
+nosketch    -  stashed
+both       x3  current,stashed
+`
 	c.Assert(m.stdout.String(), check.Equals, want)
 	m.ResetStdStreams()
 
@@ -847,10 +846,10 @@ func (m *workshopSketch) TestSketchesOK(c *check.C) {
 	err = cmd.Execute()
 	c.Assert(err, check.IsNil)
 
-	want = fmt.Sprintf(`%s  ws        x1  current
-%s  nosketch   -  stashed
-%s  both      x3  current,stashed
-`, m.prjDir, m.prjDir, m.prjDir)
+	want = `ws        x1  current
+nosketch   -  stashed
+both      x3  current,stashed
+`
 	c.Assert(m.stdout.String(), check.Equals, want)
 	m.ResetStdStreams()
 }

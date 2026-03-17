@@ -4,7 +4,7 @@ execute: |
 
   echo "Check workshop can be launched with a basic SDK"
   workshop_exec launch --verbose
-  workshop_exec list | MATCH "$(pwd)[[:space:]]*ws-basic[[:space:]]*Ready[[:space:]]*-"
+  workshop_exec list | MATCH "ws-basic[[:space:]]*Ready[[:space:]]*-"
 
   # Check setup-base is run using bash -x
   workshop_exec tasks | MATCH "\\+ echo 'setup-base ran successfully\!'\$"

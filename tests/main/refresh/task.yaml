@@ -41,7 +41,7 @@ execute: |
   workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Refresh \"ws-refresh\" workshop$"
 
   echo "Check the workshop is in Ready state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-refresh[[:space:]]+Ready[[:space:]]+-$"
 
   workshop_exec refresh ws-refresh-sdk
 
@@ -49,7 +49,7 @@ execute: |
   workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Refresh \"ws-refresh-sdk\" workshop$"
 
   echo "Check the workshop is in Ready state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
 
   echo "Check workshop refresh when no updates are available"
   workshop_exec refresh ws-refresh-sdk | MATCH "no updates available for \"ws-refresh-sdk\""

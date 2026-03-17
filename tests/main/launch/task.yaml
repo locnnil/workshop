@@ -14,7 +14,7 @@ execute: |
 
   function launch_and_validate() {
     workshop_exec launch "$1"
-    workshop_exec list | MATCH "$(pwd)[[:space:]]*$1[[:space:]]*Ready[[:space:]]*-"
+    workshop_exec list | MATCH "$1[[:space:]]*Ready[[:space:]]*-"
     # ensure the workshop has a socket for workshopctl
     workshop_exec exec "$1" test -S /var/lib/workshop/run/workshop.socket.untrusted
     # ensure the apt cache is mounted

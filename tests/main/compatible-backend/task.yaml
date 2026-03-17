@@ -3,7 +3,7 @@ priority: -101
 execute: |
   . "$TESTSLIB"/utils.sh  
 
-  workshop_exec list | MATCH "^.+[[:space:]]+comp-check[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec list | MATCH "^comp-check[[:space:]]+Off[[:space:]]+-$"
 
   oldchannel=$(snap info lxd | yq -r .tracking)
 
@@ -18,4 +18,4 @@ execute: |
   retry 5 snap install lxd --channel="$oldchannel"
   lxd waitready
   snap restart workshop
-  workshop_exec list | MATCH "^.+[[:space:]]+comp-check[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec list | MATCH "^comp-check[[:space:]]+Off[[:space:]]+-$"

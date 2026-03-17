@@ -4,7 +4,7 @@ summary: |
   - Project-specific list from a nested directory
   - List from a moved directory
   - List from a copied directory
-  - List turning into list --global if executed outside of a project directory
+  - List failing if executed outside of a project directory
 
 restore: |
   . "$TESTSLIB"/utils.sh
@@ -21,12 +21,12 @@ execute: |
 
   echo "workshop list from a nested directory must work similarly as if ran from a project directory"
   pushd ./; mkdir "$PROJECT"/nested; cd "$PROJECT"/nested
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-list[[:space:]]+Ready[[:space:]]+-$"
   popd; rmdir "$PROJECT"/nested
 
   echo "workshop --project should accept a relative directory"
   mkdir relative
-  workshop_exec list --project relative | MATCH "^.+[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --project relative | MATCH "^ws-list[[:space:]]+Ready[[:space:]]+-$"
   rmdir relative
 
   echo "Listing outside of a project directory should trigger an error"
@@ -35,31 +35,31 @@ execute: |
   echo "The directory was moved, its instances must update configuration with a new path"
   sudo -u ubuntu mv "$PROJECT" "$PROJECT"-new
   project_id=$(cat "$PROJECT"-new/.workshop.lock)
-  workshop_exec --project "$PROJECT"-new list | MATCH "^${PROJECT}-new[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-new list | MATCH "^ws-list[[:space:]]+Ready[[:space:]]+-$"
 
   echo "The directory was copied, its projects instances should still stay available at the old path"
   sudo -u ubuntu cp -R "$PROJECT"-new "$PROJECT"-copy
-  workshop_exec --project "$PROJECT"-copy list | MATCH "^$PROJECT-copy[[:space:]]+ws-list[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-copy list | MATCH "^ws-list[[:space:]]+Off[[:space:]]+-$"
   project_id_copy=$(cat "$PROJECT"-copy/.workshop.lock)
   test "$project_id_copy" != "$project_id"
 
   mv "$PROJECT"-new "$PROJECT"
   # launch from a new directory successfully
   workshop_exec --project "$PROJECT"-copy launch
-  workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-copy list | MATCH "^ws-list[[:space:]]+Ready[[:space:]]+-$"
   workshop_exec --project "$PROJECT" remove
   workshop_exec --project "$PROJECT"-copy remove
 
   echo "List should respect project-level workshop definitions"
   mv "$PROJECT"-copy/.workshop/ws-list.yaml "$PROJECT"-copy/workshop.yaml
-  workshop_exec --project "$PROJECT"-copy list | MATCH "^$PROJECT-copy[[:space:]]+ws-list[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-copy list | MATCH "^ws-list[[:space:]]+Off[[:space:]]+-$"
   workshop_exec --project "$PROJECT"-copy launch
-  workshop_exec --project "$PROJECT"-copy list | MATCH "^${PROJECT}-copy[[:space:]]+ws-list[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-copy list | MATCH "^ws-list[[:space:]]+Ready[[:space:]]+-$"
 
   echo "List should create nested project even if parent is known"
   mkdir -p "$PROJECT"-copy/subprj/.workshop
   touch "$PROJECT"-copy/subprj/.workshop/nested.yaml
-  workshop_exec --project "$PROJECT"-copy/subprj list | MATCH "^$PROJECT-copy/subprj[[:space:]]+nested[[:space:]]+Off[[:space:]]+-$"
+  workshop_exec --project "$PROJECT"-copy/subprj list | MATCH "^nested[[:space:]]+Off[[:space:]]+-$"
   workshop_exec --project "$PROJECT"-copy remove
 
   # TODO:
