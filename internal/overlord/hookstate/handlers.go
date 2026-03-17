@@ -60,20 +60,27 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	if verbose {
 		command = append(command, "-o", "xtrace")
 	}
+
+	uid := "0"
+	gid := "0"
 	if hook.HookType == SetupProject {
-		runAsUser := []string{
-			"sudo",
-			"--user=#" + workshop.User.Uid,
-			"--group=#" + workshop.User.Gid,
-			"--preserve-env",
-			"--",
-			"bash",
-			"-l",
-			"-c",
-			`exec -- "$0" "$@"`,
-		}
-		command = append(runAsUser, command...)
+		uid = workshop.User.Uid
+		gid = workshop.User.Gid
 	}
+
+	runAsUser := []string{
+		"sudo",
+		"--user=#" + uid,
+		"--group=#" + gid,
+		"--preserve-env",
+		"--",
+		"bash",
+		"-l",
+		"-c",
+		`exec -- "$0" "$@"`,
+	}
+	command = append(runAsUser, command...)
+
 	command = append(command, hookPath)
 
 	execArgs := &workshop.ExecArgs{
