@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -84,6 +85,40 @@ func (s *rootSuite) SetUpTest(c *check.C) {
 	s.prjDir = c.MkDir()
 	s.prjId = "42424242"
 	s.BaseWorkshopSuite.SetUpTest(c)
+}
+
+func (s *rootSuite) TestProjectNameCompletion(c *check.C) {
+	otherPrj := c.MkDir()
+	otherId := "24242424"
+
+	s.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		c.Check(r.Method, check.Equals, "GET")
+		c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+		fmt.Fprintf(w, `{"type": "sync", "result": [{"id":"%s","path":"%s"},{"id":"%s","path":"%s"}]}`, s.prjId, s.prjDir, otherId, otherPrj)
+	})
+
+	cmd := (&CmdRoot{}).Command()
+	complete, ok := cmd.GetFlagCompletionFunc("project")
+	c.Assert(ok, check.Equals, true)
+
+	subcmds := cmd.Commands()
+	idx := slices.IndexFunc(subcmds, func(c *cobra.Command) bool {
+		return c.Name() == "launch"
+	})
+	c.Assert(idx, testutil.IntGreaterEqual, 0)
+
+	completions, directive := complete(subcmds[idx], nil, "")
+	c.Check(completions, check.HasLen, 0)
+	c.Check(directive, check.Equals, cobra.ShellCompDirectiveFilterDirs)
+
+	idx = slices.IndexFunc(subcmds, func(c *cobra.Command) bool {
+		return c.Name() == "refresh"
+	})
+	c.Assert(idx, testutil.IntGreaterEqual, 0)
+
+	completions, directive = complete(subcmds[idx], nil, "/")
+	c.Check(completions, testutil.DeepUnsortedMatches, []string{s.prjDir, otherPrj})
+	c.Check(directive, check.Equals, cobra.ShellCompDirectiveDefault)
 }
 
 func (s *rootSuite) TestWorkshopNameCompletion(c *check.C) {
