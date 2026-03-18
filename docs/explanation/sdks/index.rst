@@ -42,3 +42,14 @@ and what design patterns lead to maintainable, reusable packages:
 
    SDKs versus Dockerfiles <sdk-vs-dockerfile>
    Design best practices <best-practices>
+
+
+Operations and tooling
+----------------------
+
+|ws_markup| exposes available SDKs through the :program:`sdk` CLI:
+
+.. toctree::
+   :maxdepth: 1
+
+   sdk-cli

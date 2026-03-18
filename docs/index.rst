@@ -115,6 +115,7 @@ In this documentation
 
    * - **Reference**
      - :ref:`Workshop CLI <ref_workshop__cli>` •
+       :ref:`SDK CLI <ref_sdk__cli>` •
        :ref:`SDKcraft CLI <ref_sdkcraft__cli>` •
        :ref:`Workshop internals <ref_workshop_internals>` •
        :ref:`SDK internals <ref_sdk_internals>` •

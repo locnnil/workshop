@@ -33,6 +33,24 @@
   specs:
     - SK000
 
+"sdk (CLI)":
+  category: SDK
+  type: tool
+  specs:
+    - SK048
+    - SK049
+
+"sdk info":
+  category: "sdk (CLI)"
+  type: command
+  specs:
+    - SK048
+
+"sdk list":
+  category: "sdk (CLI)"
+  type: command
+  specs: []
+
 "SDK base image":
   category: SDK
   type: concept
