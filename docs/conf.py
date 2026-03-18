@@ -99,7 +99,7 @@ html_context = {
     "category": "engineering/workshops",
     # Your Mattermost channel URL
     #
-    "mattermost": "https://chat.canonical.com/canonical/channels/SDK",
+    "mattermost": "https://chat.canonical.com/canonical/channels/workshop",
     # Your Matrix channel URL
     #
     "matrix": "https://matrix.to/#/#documentation:ubuntu.com",

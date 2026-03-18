@@ -170,7 +170,7 @@ we'll help you get it out there.
 .. rubric:: Get involved
 
 - `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
-- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
+- `Mattermost channel <https://chat.canonical.com/canonical/channels/workshop>`__
 - :ref:`Contribution and participation <contributing>`
 
 .. rubric:: Releases and roadmap
