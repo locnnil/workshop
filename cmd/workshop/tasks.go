@@ -151,7 +151,7 @@ func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string
 	cli, err := c.root.client()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	changesCmd := CmdChanges{
@@ -160,15 +160,16 @@ func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string
 	changes, err := changesCmd.changes(cli)
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	l := len(changes)
 	num := min(l, 10)
-	completions := make([]string, l)
+	completions := make([]string, 0, num)
 
 	for _, chg := range changes[l-num : l] {
-		completions = append(completions, fmt.Sprintf("%s\t%-5s %s\n", chg.ID, chg.Status, chg.Summary))
+		description := fmt.Sprintf("%-5s %s", chg.Status, chg.Summary)
+		completions = append(completions, cobra.CompletionWithDesc(chg.ID, description))
 	}
 
 	return completions, cobra.ShellCompDirectiveNoFileComp

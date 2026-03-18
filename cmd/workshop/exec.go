@@ -194,7 +194,7 @@ and the shell is interactive,
 the separator is also optional:
 $ workshop exec sh`,
 		RunE:              c.Run,
-		ValidArgsFunction: c.root.completeWorkshopName([]string{"Ready", "Waiting"}),
+		ValidArgsFunction: c.complete,
 	}
 
 	cmd.Flags().SortFlags = false
@@ -202,6 +202,14 @@ $ workshop exec sh`,
 	commonVars(cmd.Flags(), &c.flags)
 
 	return cmd
+}
+
+func (c *CmdExec) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveDefault
+	}
+
+	return c.root.doCompleteWorkshopNames(args, []string{"Ready", "Waiting"})
 }
 
 func (c *CmdExec) Run(cmd *cobra.Command, av []string) error {
@@ -310,19 +318,19 @@ func (c *CmdRun) complete(cmd *cobra.Command, av []string, toComplete string) ([
 	// must be an argument to the action. The case len(args.av) == 1 and
 	// args.argsLenAtDash < 0 is ambiguous, we check later on.
 	if len(args.av) > 1 || (args.argsLenAtDash == 0 && len(args.av) > 0) {
-		return nil, cobra.ShellCompDirectiveNoFileComp
+		return nil, cobra.ShellCompDirectiveDefault
 	}
 
 	cli, err := c.root.client()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	project, err := cli.Project(c.root.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	// Argument after a separator must be an action.
@@ -336,7 +344,7 @@ func (c *CmdRun) complete(cmd *cobra.Command, av []string, toComplete string) ([
 		// the workshop name, it must be an action and we don't know
 		// how to complete the second argument.
 		if err == nil && args.av[0] != workshop {
-			return nil, cobra.ShellCompDirectiveNoFileComp
+			return nil, cobra.ShellCompDirectiveDefault
 		}
 		// Otherwise the second argument is an action.
 		return completeActions(cli, project, args.av)
@@ -348,9 +356,6 @@ func (c *CmdRun) complete(cmd *cobra.Command, av []string, toComplete string) ([
 
 	// With a single workshop, complete actions first.
 	actions, directive := completeActions(cli, project, []string{workshop})
-	if directive == cobra.ShellCompDirectiveError {
-		return actions, directive
-	}
 	// If no actions match, but the workshop name does, complete it instead.
 	partialMatch := func(name string) bool { return strings.HasPrefix(name, toComplete) }
 	if !slices.ContainsFunc(actions, partialMatch) && strings.HasPrefix(workshop, toComplete) {
@@ -363,7 +368,7 @@ func completeActions(cli *client.Client, p *client.Project, args []string) ([]st
 	actions, err := listActions(cli, p, args)
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 	names := make([]string, 0, len(actions))
 	for name := range actions {

@@ -221,7 +221,7 @@ func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
 func (c *CmdRoot) completeWorkshopName(status []string) cobra.CompletionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 0 {
-			return []string{}, cobra.ShellCompDirectiveNoFileComp
+			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 
 		return c.doCompleteWorkshopNames(args, status)
@@ -238,13 +238,13 @@ func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]str
 	cli, err := c.client()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	project, err := cli.Project(c.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	return completeWorkshopNames(cli, project, args, status)
@@ -254,7 +254,7 @@ func completeWorkshopNames(cli *client.Client, project *client.Project, args []s
 	workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	desiredStatus := func(s string) bool {

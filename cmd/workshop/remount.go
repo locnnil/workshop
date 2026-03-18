@@ -112,19 +112,19 @@ func (c *CmdRemount) complete(cmd *cobra.Command, args []string, toComplete stri
 	cli, err := c.root.client()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	project, err := cli.Project(c.root.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	connections, err := cli.Connections(&client.ConnectionOptions{ProjectId: project.Id, Interface: "mount"})
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	// A mount must be connected for remount to work, only show currently

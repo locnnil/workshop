@@ -147,19 +147,19 @@ func (c *CmdLaunch) complete(cmd *cobra.Command, args []string, toComplete strin
 	cli, err := c.root.client()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	project, err := cli.Project(c.root.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	instances, files, err := cli.List(&client.ListOptions{ProjectId: project.Id})
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	var workshops []string
