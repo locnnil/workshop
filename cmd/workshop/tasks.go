@@ -53,7 +53,7 @@ $ workshop tasks`,
 	return cmd
 }
 
-const line = "......................................................................"
+const hrule = "......................................................................"
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	cli, err := c.root.client()
@@ -132,7 +132,7 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 			continue
 		}
 		fmt.Fprintln(os.Stdout)
-		fmt.Fprintln(os.Stdout, line)
+		fmt.Fprintln(os.Stdout, hrule)
 		fmt.Fprintln(os.Stdout, tsk.Summary)
 		fmt.Fprintln(os.Stdout)
 		for _, line := range tsk.Log {
