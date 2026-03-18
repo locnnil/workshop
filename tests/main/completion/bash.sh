@@ -17,6 +17,7 @@ do_complete() {
 }
 
 source /usr/share/bash-completion/bash_completion
+_completion_loader sdk || true
 _completion_loader workshop || true
 
 set -x
@@ -58,3 +59,14 @@ do_complete workshop refresh --project compl
 do_complete workshop refresh --project "$PWD/compl"
 [ "$COMPREPLY" = "$PWD/completion" ]
 popd >/dev/null
+
+func='__start_sdk'
+complete -p sdk | grep -qw "$func"
+
+echo "Test base completion"
+do_complete sdk info --base ubuntu@24.0
+[ "$COMPREPLY" = ubuntu@24.04 ]
+
+echo "Test arch completion"
+do_complete sdk info --arch s3
+[ "$COMPREPLY" = s390x ]

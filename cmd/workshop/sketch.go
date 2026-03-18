@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/canonical/workshop/client"
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
@@ -76,6 +77,8 @@ $ workshop sketch-sdk nimble --stash`,
 	cmd.Flags().StringVar(&c.name, "name", "", "Name for the ejected SDK.")
 	cmd.Flags().BoolVar(&c.remove, "remove", false, "Remove the sketch SDK from the workshop.")
 	cmd.Flags().BoolVar(&c.verbose, "verbose", false, "Combine stdout and stderr output from hooks.")
+
+	_ = cmd.RegisterFlagCompletionFunc("name", cmdutil.CompleteChoices())
 
 	cmd.MarkFlagsMutuallyExclusive("stash", "restore", "eject", "remove")
 
