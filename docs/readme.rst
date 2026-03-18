@@ -91,6 +91,8 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
    sudo snap login
    sudo snap install --classic workshop
 
+To get the newest features, install from the edge channel:
+``sudo snap install --classic --channel=latest/edge workshop``.
 
 If this command fails, you may need an invitation;
 contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
@@ -137,7 +139,7 @@ Use the following resources for communication, support, and feedback:
 
 - `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
 
-- `Mattermost channel <https://chat.canonical.com/canonical/channels/sdk>`__
+- `Mattermost channel <https://chat.canonical.com/canonical/channels/workshop>`__
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues/>`__
 
