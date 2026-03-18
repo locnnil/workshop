@@ -6,6 +6,7 @@ package sdkstore
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/juju/errors"
 	"go.uber.org/mock/gomock"
 	"gopkg.in/check.v1"
 
@@ -47,7 +47,7 @@ func (s *APIRequesterSuite) TestDoWithFailure(c *check.C) {
 	req := MustNewRequest(c, "http://api.foo.bar")
 
 	mockHTTPClient := NewMockHTTPClient(ctrl)
-	mockHTTPClient.EXPECT().Do(req).Return(emptyResponse(), errors.Errorf("boom")) //nolint:bodyclose
+	mockHTTPClient.EXPECT().Do(req).Return(emptyResponse(), errors.New("boom")) //nolint:bodyclose
 
 	requester := newAPIRequester(mockHTTPClient)
 	_, err := requester.Do(req) //nolint:bodyclose
@@ -222,7 +222,7 @@ func (s *RESTSuite) TestGetWithFailure(c *check.C) {
 	defer ctrl.Finish()
 
 	mockHTTPClient := NewMockHTTPClient(ctrl)
-	mockHTTPClient.EXPECT().Do(gomock.Any()).Return(emptyResponse(), errors.Errorf("boom")) //nolint:bodyclose
+	mockHTTPClient.EXPECT().Do(gomock.Any()).Return(emptyResponse(), errors.New("boom")) //nolint:bodyclose
 
 	client := newHTTPRESTClient(mockHTTPClient)
 

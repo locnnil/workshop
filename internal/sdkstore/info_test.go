@@ -7,11 +7,11 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 
-	"github.com/juju/errors"
 	"go.uber.org/mock/gomock"
 	"gopkg.in/check.v1"
 
@@ -104,7 +104,7 @@ func (s *InfoSuite) expectGet(c *check.C, client *MockRESTClient, p path.Path, n
 }
 
 func (s *InfoSuite) expectGetFailure(client *MockRESTClient) {
-	client.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(restResponse{StatusCode: http.StatusInternalServerError}, errors.Errorf("boom"))
+	client.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(restResponse{StatusCode: http.StatusInternalServerError}, errors.New("boom"))
 }
 
 func (s *InfoSuite) expectGetError(c *check.C, client *MockRESTClient, p path.Path, name string) {

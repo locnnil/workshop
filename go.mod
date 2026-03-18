@@ -10,7 +10,6 @@ require (
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/gorilla/websocket v1.5.1
 	github.com/juju/clock v1.1.1
-	github.com/juju/errors v1.0.0
 	github.com/juju/retry v1.0.1
 	github.com/pkg/term v1.1.0
 	github.com/spf13/afero v1.15.0
@@ -33,6 +32,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
+	github.com/juju/errors v1.0.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
