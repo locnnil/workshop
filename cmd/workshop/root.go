@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -29,7 +31,9 @@ func (c *CmdRoot) Command() *cobra.Command {
 		SilenceUsage:     true,
 		TraverseChildren: true,
 
-		PersistentPostRun: c.postRun,
+		RunE:                       c.run,
+		PersistentPostRun:          c.postRun,
+		SuggestionsMinimumDistance: 2,
 	}
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
@@ -164,6 +168,17 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.DisableAutoGenTag = true
 
 	return cmd
+}
+
+func (c *CmdRoot) run(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return cmd.Help()
+	}
+	msg := fmt.Sprintf("unknown command %q", args[0])
+	if suggestions := cmd.SuggestionsFor(args[0]); len(suggestions) > 0 {
+		msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
+	}
+	return errors.New(msg)
 }
 
 func (c *CmdRoot) client() (*client.Client, error) {
