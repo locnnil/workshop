@@ -27,8 +27,9 @@ type CmdInfo struct {
 
 func (c *CmdInfo) Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "info <SDK>",
-		Short: "Show SDK info",
+		Use:     "info <SDK>",
+		Short:   "Show SDK info",
+		GroupID: GrpExplore,
 		Long: `
 Prints the SDK's metadata,
 shows the revisions currently available in the SDK Store,

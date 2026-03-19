@@ -14,6 +14,11 @@ import (
 	"github.com/canonical/workshop/internal/version"
 )
 
+const (
+	GrpExplore = "explore-troubleshoot"
+	GrpMisc    = "misc"
+)
+
 type CmdRoot struct {
 	cli *client.Client
 }
@@ -21,7 +26,6 @@ type CmdRoot struct {
 func (c *CmdRoot) Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                        "sdk",
-		Short:                      "Inspect SDK volumes installed on the system",
 		SilenceErrors:              true,
 		SilenceUsage:               true,
 		TraverseChildren:           true,
@@ -32,6 +36,18 @@ func (c *CmdRoot) Command() *cobra.Command {
 	}
 	cmd.SetVersionTemplate("{{.Version}}\n")
 	cmd.DisableAutoGenTag = true
+
+	groups := []*cobra.Group{{
+		ID:    GrpExplore,
+		Title: "Discover and inspect available SDKs:",
+	}, {
+		ID:    GrpMisc,
+		Title: "Additional commands:",
+	}}
+	cmd.AddGroup(groups...)
+
+	cmd.SetHelpCommandGroupID(GrpMisc)
+	cmd.SetCompletionCommandGroupID(GrpMisc)
 
 	cmd.AddCommand((&CmdList{root: c}).Command())
 	cmd.AddCommand((&CmdInfo{root: c}).Command())
