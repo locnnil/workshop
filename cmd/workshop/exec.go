@@ -321,7 +321,7 @@ func (c *CmdRun) complete(cmd *cobra.Command, av []string, toComplete string) ([
 		return nil, cobra.ShellCompDirectiveDefault
 	}
 
-	cli, err := c.root.client()
+	cli, err := c.root.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveNoFileComp

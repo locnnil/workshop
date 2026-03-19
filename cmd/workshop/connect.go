@@ -136,7 +136,7 @@ func (c *CmdConnect) Run(cmd *cobra.Command, av []string) error {
 }
 
 func (c *CmdConnect) complete(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	cli, err := c.root.client()
+	cli, err := c.root.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveNoFileComp

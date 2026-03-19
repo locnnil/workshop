@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -198,6 +199,12 @@ func (c *CmdRoot) client() (*client.Client, error) {
 	return cli, err
 }
 
+func (c *CmdRoot) noRetryClient() (*client.Client, error) {
+	config := ClientConfig
+	config.RetryInterval = -1 * time.Millisecond
+	return client.New(&config)
+}
+
 func (c *CmdRoot) project() string {
 	if c.cwd == "" {
 		return c.prj
@@ -249,7 +256,7 @@ func (c *CmdRoot) doCompleteProjectPaths(cmd *cobra.Command, toComplete string) 
 		return nil, cobra.ShellCompDirectiveFilterDirs
 	}
 
-	cli, err := c.client()
+	cli, err := c.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveFilterDirs
@@ -332,7 +339,7 @@ func (c *CmdRoot) completeWorkshopNames(status []string) cobra.CompletionFunc {
 }
 
 func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]string, cobra.ShellCompDirective) {
-	cli, err := c.client()
+	cli, err := c.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveNoFileComp

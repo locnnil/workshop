@@ -148,7 +148,7 @@ func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	cli, err := c.root.client()
+	cli, err := c.root.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
 		return nil, cobra.ShellCompDirectiveNoFileComp

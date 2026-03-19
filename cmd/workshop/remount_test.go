@@ -12,7 +12,6 @@ import (
 
 type remountSuite struct {
 	BaseWorkshopSuite
-	client *client.Client
 	prjDir string
 	prjId  string
 }
@@ -23,7 +22,6 @@ func (m *remountSuite) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
 	m.BaseWorkshopSuite.SetUpTest(c)
-	m.client = &client.Client{}
 }
 
 func (m *remountSuite) TestRemountSuccess(c *check.C) {
