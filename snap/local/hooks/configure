@@ -4,9 +4,13 @@
 . "$SNAP/snap/lib/completion"
 
 if [ -d /var/lib/snapd/desktop ]; then
-    workshop_completion bash /var/lib/snapd/desktop/bash-completion/completions/workshop
-    workshop_completion fish /var/lib/snapd/desktop/fish/vendor_completions.d/workshop.fish
+    install_completion sdk bash /var/lib/snapd/desktop/bash-completion/completions/sdk
+    install_completion workshop bash /var/lib/snapd/desktop/bash-completion/completions/workshop
+
+    install_completion sdk fish /var/lib/snapd/desktop/fish/vendor_completions.d/sdk.fish
+    install_completion workshop fish /var/lib/snapd/desktop/fish/vendor_completions.d/workshop.fish
 fi
 if [ -d /usr/local/share ] && [ -w /usr/local/share ]; then
-    workshop_completion zsh /usr/local/share/zsh/site-functions/_workshop
+    install_completion sdk zsh /usr/local/share/zsh/site-functions/_sdk
+    install_completion workshop zsh /usr/local/share/zsh/site-functions/_workshop
 fi

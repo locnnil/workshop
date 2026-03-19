@@ -1,14 +1,15 @@
-workshop_completion() {
-    local shell path dir tmp
-    shell="$1"
-    path="$2"
+install_completion() {
+    local bin shell path dir tmp
+    bin="$1"
+    shell="$2"
+    path="$3"
 
     dir="$(dirname -- "$path")"
     install --directory -- "$dir"
 
     tmp="$(mktemp -- "${path}.XXXXXXXXXX")"
     chmod 0644 -- "$tmp"
-    "$SNAP/bin/workshop" completion "$shell" >"$tmp"
+    "$SNAP/bin/$bin" completion "$shell" >"$tmp"
     mv -- "$tmp" "$path"
 }
 
