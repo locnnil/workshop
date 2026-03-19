@@ -14,11 +14,11 @@ import (
 // and platform. There can be multiple channels of the same track and risk, but
 // with different platforms.
 type Channel struct {
+	Name       string           `json:"name,omitempty"`
 	Track      string           `json:"track,omitempty"`
 	Risk       string           `json:"risk,omitempty"`
-	Name       string           `json:"name,omitempty"`
 	Platform   Platform         `json:"platform,omitzero"`
-	ReleasedAt timeutil.TimeUTC `json:"released-at"`
+	ReleasedAt timeutil.TimeUTC `json:"released-at,omitzero"`
 }
 
 // Platform is a typed tuple for identifying SDKs with a matching architecture,

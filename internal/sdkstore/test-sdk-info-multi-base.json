@@ -17,14 +17,14 @@
     {
       "channel": {
         "name": "latest/stable",
+        "track": "latest",
+        "risk": "stable",
         "platform": {
           "architecture": "amd64",
           "channel": "20.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:48:34.474879Z",
-        "risk": "stable",
-        "track": "latest"
+        "released-at": "2026-03-10T23:48:34.474879Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:16:19.894258Z",
@@ -61,14 +61,14 @@
     {
       "channel": {
         "name": "latest/stable",
+        "track": "latest",
+        "risk": "stable",
         "platform": {
           "architecture": "amd64",
           "channel": "22.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:48:44.327082Z",
-        "risk": "stable",
-        "track": "latest"
+        "released-at": "2026-03-10T23:48:44.327082Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:16:31.917435Z",
@@ -105,14 +105,14 @@
     {
       "channel": {
         "name": "latest/stable",
+        "track": "latest",
+        "risk": "stable",
         "platform": {
           "architecture": "amd64",
           "channel": "24.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:48:51.554637Z",
-        "risk": "stable",
-        "track": "latest"
+        "released-at": "2026-03-10T23:48:51.554637Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:16:42.684241Z",
@@ -149,14 +149,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "amd64",
           "channel": "20.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:49:09.397396Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:49:09.397396Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:49:07.605786Z",
@@ -193,14 +193,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "arm64",
           "channel": "20.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:49:37.506334Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:49:37.506334Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:49:33.890123Z",
@@ -237,14 +237,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "riscv64",
           "channel": "20.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:50:09.178916Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:50:09.178916Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:50:05.426185Z",
@@ -281,14 +281,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "amd64",
           "channel": "22.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:49:18.751516Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:49:18.751516Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:49:14.930412Z",
@@ -325,14 +325,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "arm64",
           "channel": "22.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:49:48.030485Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:49:48.030485Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:49:43.827456Z",
@@ -369,14 +369,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "riscv64",
           "channel": "22.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:50:16.955362Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:50:16.955362Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:50:15.292817Z",
@@ -413,14 +413,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "amd64",
           "channel": "24.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:49:28.111011Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:49:28.111011Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:49:24.736009Z",
@@ -457,14 +457,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "arm64",
           "channel": "24.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-10T23:49:57.942362Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T23:49:57.942362Z"
       },
       "revision": {
         "created-at": "2026-03-10T23:49:53.081669Z",
@@ -501,14 +501,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "riscv64",
           "channel": "24.04",
           "name": "ubuntu"
         },
-        "released-at": "2026-03-11T00:13:19.621866Z",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-11T00:13:19.621866Z"
       },
       "revision": {
         "created-at": "2026-03-11T00:13:15.679272Z",
