@@ -103,6 +103,13 @@ type Config struct {
 
 	// UserAgent is the User-Agent header sent to the Workshop daemon.
 	UserAgent string
+
+	// RetryInterval is the time to wait between GET retries. Negative
+	// values disable retries.
+	RetryInterval time.Duration
+
+	// Timeout is the time to spend retrying the request.
+	Timeout time.Duration
 }
 
 // A Client knows how to talk to the Workshop daemon.
@@ -110,6 +117,9 @@ type Client struct {
 	baseURL   url.URL
 	doer      doer
 	userAgent string
+
+	retryInterval time.Duration
+	timeout       time.Duration
 
 	maintenance error
 
@@ -164,6 +174,17 @@ func New(config *Config) (*Client, error) {
 	client.userAgent = config.UserAgent
 	client.getWebsocket = func(url string) (clientWebsocket, error) {
 		return getWebsocket(transport, url)
+	}
+
+	if config.RetryInterval > 0 {
+		client.retryInterval = config.RetryInterval
+	} else if config.RetryInterval == 0 {
+		client.retryInterval = 250 * time.Millisecond
+	}
+	if config.Timeout > 0 {
+		client.timeout = config.Timeout
+	} else {
+		client.timeout = 5 * time.Second
 	}
 
 	return client, nil
@@ -261,24 +282,6 @@ func (client *Client) raw(ctx context.Context, method, urlpath string, query url
 	return rsp, nil
 }
 
-var (
-	doRetry   = 250 * time.Millisecond
-	doTimeout = 5 * time.Second
-)
-
-// FakeDoRetry fakes the delays used by the do retry loop (intended for
-// testing). Calling restore will revert the changes.
-func FakeDoRetry(retry, timeout time.Duration) (restore func()) {
-	oldRetry := doRetry
-	oldTimeout := doTimeout
-	doRetry = retry
-	doTimeout = timeout
-	return func() {
-		doRetry = oldRetry
-		doTimeout = oldTimeout
-	}
-}
-
 type hijacked struct {
 	do func(*http.Request) (*http.Response, error)
 }
@@ -296,18 +299,23 @@ func (client *Client) Hijack(f func(*http.Request) (*http.Response, error)) {
 // value. It's low-level, for testing/experimenting only; you should
 // usually use a higher level interface that builds on this.
 func (client *Client) do(method, path string, query url.Values, headers map[string]string, body io.Reader, v any) error {
-	retry := time.NewTicker(doRetry)
-	defer retry.Stop()
-	timeout := time.After(doTimeout)
+	var retry, timeout <-chan time.Time
+	if client.retryInterval > 0 {
+		ticker := time.NewTicker(client.retryInterval)
+		defer ticker.Stop()
+		retry = ticker.C
+		timeout = time.After(client.timeout)
+	}
+
 	var rsp *http.Response
 	var err error
 	for {
 		rsp, err = client.raw(context.Background(), method, path, query, headers, body)
-		if err == nil || method != "GET" {
+		if err == nil || method != "GET" || client.retryInterval <= 0 {
 			break
 		}
 		select {
-		case <-retry.C:
+		case <-retry:
 			continue
 		case <-timeout:
 		}

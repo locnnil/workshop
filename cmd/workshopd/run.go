@@ -24,6 +24,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/daemon"
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
@@ -65,6 +66,8 @@ func (c *cmdRun) Command() *cobra.Command {
 	cmd.Flags().BoolVar(&c.CreateDirs, "create-dirs", false, sharedRunEnterOptsHelp["create-dirs"])
 	cmd.Flags().StringVar(&c.HTTP, "http", "", sharedRunEnterOptsHelp["http"])
 	cmd.Flags().BoolVar(&c.Verbose, "verbose", false, sharedRunEnterOptsHelp["verbose"])
+
+	_ = cmd.RegisterFlagCompletionFunc("http", cmdutil.CompleteChoices())
 
 	return cmd
 }

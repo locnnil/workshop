@@ -821,21 +821,37 @@ func (m *workshopSketch) TestSketchSdkRemoveRevertOnFail(c *check.C) {
 }
 
 func (m *workshopSketch) TestSketchesOK(c *check.C) {
-	cmd := &CmdSketches{root: &CmdRoot{}}
-
 	m.mockSketchesHappyPath(c, mockWorkshopsListWithSketch)
 	m.mockMinimalSketchSdk(c, "ws", true, []byte(simpleSketchMeta))
 	m.mockMinimalSketchSdk(c, "nosketch", false, []byte(simpleSketchMeta))
 	m.mockMinimalSketchSdk(c, "both", false, []byte(simpleSketchMeta))
 
-	err := cmd.Run(nil, nil)
+	cmd := (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"sketches"})
+	err := cmd.Execute()
 	c.Assert(err, check.IsNil)
 
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`Project +Workshop  Rev  Notes
-%s  ws        x1   current
-%s  nosketch  -    stashed
-%s  both      x3   current,stashed
-`, m.prjDir, m.prjDir, m.prjDir))
+	want := `WORKSHOP  REV  NOTES
+ws         x1  current
+nosketch    -  stashed
+both       x3  current,stashed
+`
+	c.Assert(m.stdout.String(), check.Equals, want)
+	m.ResetStdStreams()
+
+	m.mockSketchesHappyPath(c, mockWorkshopsListWithSketch)
+
+	cmd = (&CmdRoot{}).Command()
+	cmd.SetArgs([]string{"sketches", "--no-headers"})
+	err = cmd.Execute()
+	c.Assert(err, check.IsNil)
+
+	want = `ws        x1  current
+nosketch   -  stashed
+both      x3  current,stashed
+`
+	c.Assert(m.stdout.String(), check.Equals, want)
+	m.ResetStdStreams()
 }
 
 func (m *workshopSketch) TestSketchesEmpty(c *check.C) {

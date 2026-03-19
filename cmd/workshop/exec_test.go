@@ -78,7 +78,7 @@ func (m *workshopExec) TestWorkshopActions(c *check.C) {
 	err := cmd.Run(cmd.Command(), nil)
 	c.Assert(err, check.IsNil)
 	c.Check(m.stdout.String(), check.Equals, "")
-	m.stdout.Reset()
+	m.ResetStdStreams()
 	c.Check(n, check.Equals, 3)
 
 	err = cmd.Run(cmd.Command(), []string{"ws"})
@@ -273,7 +273,7 @@ func (m *workshopExec) TestSingleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", ""}
@@ -283,7 +283,7 @@ func (m *workshopExec) TestSingleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "--", ""}
@@ -293,7 +293,7 @@ func (m *workshopExec) TestSingleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "--", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", "--", ""}
@@ -303,7 +303,7 @@ func (m *workshopExec) TestSingleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", "--", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "--", "foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 }
 
@@ -346,7 +346,7 @@ func (m *workshopExec) TestMultipleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveError)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", ""}
@@ -356,17 +356,17 @@ func (m *workshopExec) TestMultipleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "--", ""}
 	result, compDirective = run.ValidArgsFunction(run, nil, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveError)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "--", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", "--", ""}
@@ -376,6 +376,6 @@ func (m *workshopExec) TestMultipleWorkshopRunCompletion(c *check.C) {
 
 	os.Args = []string{"workshop", "__complete", "run", "ws", "--", "foo", ""}
 	result, compDirective = run.ValidArgsFunction(run, []string{"ws", "--", "foo"}, "")
-	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveNoFileComp)
+	c.Assert(compDirective, check.Equals, cobra.ShellCompDirectiveDefault)
 	c.Check(result, check.HasLen, 0)
 }

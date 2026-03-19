@@ -207,7 +207,7 @@ INSTALLED
   %-*s  dev       latest/edge    2.0          all           all     82
   %-*s  ci        latest/stable  2.1-084c8c8  ubuntu@20.04  amd64   85
   %-*s  dev       latest/stable  2.1-084c8c8  ubuntu@20.04  amd64   85
-`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, "")
+`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, nav)
 
 	c.Check(s.Stdout(), check.Equals, want)
 	s.ResetStdStreams()
@@ -236,7 +236,7 @@ INSTALLED
   %-*s  dev       latest/edge    2.0          all            82
   %-*s  ci        latest/stable  2.1-084c8c8  ubuntu@20.04   85
   %-*s  dev       latest/stable  2.1-084c8c8  ubuntu@20.04   85
-`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, "")
+`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, nav)
 
 	c.Check(s.Stdout(), check.Equals, want)
 	s.ResetStdStreams()
@@ -321,7 +321,7 @@ INSTALLED
   %-*s  dev       latest/edge    2.0           82
   %-*s  ci        latest/stable  2.1-084c8c8   85
   %-*s  dev       latest/stable  2.1-084c8c8   85
-`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, "")
+`, maxProject, "PROJECT", maxProject, lerobot, maxProject, nav, maxProject, nav)
 
 	c.Check(s.Stdout(), check.Equals, want)
 	s.ResetStdStreams()

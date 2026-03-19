@@ -47,14 +47,16 @@ type clientSuite struct {
 	status     int
 	tmpDir     string
 	socketPath string
-	restore    func()
 }
 
 var _ = Suite(&clientSuite{})
 
 func (cs *clientSuite) SetUpTest(c *C) {
 	var err error
-	cs.cli, err = client.New(nil)
+	cs.cli, err = client.New(&client.Config{
+		RetryInterval: time.Millisecond,
+		Timeout:       10 * time.Millisecond,
+	})
 	c.Assert(err, IsNil)
 	cs.cli.SetDoer(cs)
 	cs.err = nil
@@ -69,12 +71,6 @@ func (cs *clientSuite) SetUpTest(c *C) {
 
 	cs.tmpDir = c.MkDir()
 	cs.socketPath = filepath.Join(cs.tmpDir, "workshop.socket")
-
-	cs.restore = client.FakeDoRetry(time.Millisecond, 10*time.Millisecond)
-}
-
-func (cs *clientSuite) TearDownTest(c *C) {
-	cs.restore()
 }
 
 func (cs *clientSuite) Do(req *http.Request) (*http.Response, error) {

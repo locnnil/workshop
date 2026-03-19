@@ -15,8 +15,9 @@ import (
 )
 
 type CmdConnections struct {
-	root *CmdRoot
-	all  bool
+	root      *CmdRoot
+	all       bool
+	noHeaders bool
 }
 
 func (c *CmdConnections) Command() *cobra.Command {
@@ -49,6 +50,7 @@ $ workshop connections`,
 	}
 
 	cmd.Flags().BoolVar(&c.all, "all", false, "Include disconnected plugs in the output.")
+	cmd.Flags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
 
 	return cmd
 }
@@ -169,9 +171,6 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		})
 	}
 
-	w := tabWriter()
-	fmt.Fprintln(w, i18n.G("Interface\tPlug\tSlot\tNotes"))
-
 	for _, plug := range connections.Plugs {
 		if len(plug.Connections) == 0 && c.all {
 			var bind = maybeBound(plug.Ref(), connections.Plugs)
@@ -198,18 +197,23 @@ func (c *CmdConnections) Run(cmd *cobra.Command, av []string) error {
 		}
 	}
 
+	if len(annotatedConns) == 0 {
+		return nil
+	}
+
 	sort.Sort(byConnectionData(annotatedConns))
 
+	w := tabWriter()
+	if !c.noHeaders {
+		fmt.Fprintln(w, i18n.G("INTERFACE\tPLUG\tSLOT\tNOTES"))
+	}
 	for _, note := range annotatedConns {
 		// find the plug that the current connection is bound to
 		idx := slices.IndexFunc(annotatedConns, func(c connection) bool { return c.plug != "" && note.bind != "" && c.plug == note.bind })
 		note.bindIdx = idx + 1
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", note.interfaceName, note.plug, note.slot, note)
 	}
-
-	if len(annotatedConns) > 0 {
-		w.Flush()
-	}
+	w.Flush()
 
 	return nil
 }

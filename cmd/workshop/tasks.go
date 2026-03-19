@@ -13,7 +13,8 @@ import (
 )
 
 type CmdTasks struct {
-	root *CmdRoot
+	root      *CmdRoot
+	noHeaders bool
 }
 
 func (c *CmdTasks) Command() *cobra.Command {
@@ -47,10 +48,12 @@ $ workshop tasks`,
 		ValidArgsFunction: c.complete,
 	}
 
+	cmd.PersistentFlags().BoolVar(&c.noHeaders, "no-headers", false, "Hide table headers.")
+
 	return cmd
 }
 
-const line = "......................................................................"
+const hrule = "......................................................................"
 
 func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 	cli, err := c.root.client()
@@ -64,6 +67,9 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		if err != nil {
 			return err
 		}
+		if change == nil {
+			return fmt.Errorf("change with id %q not found", av[0])
+		}
 	} else {
 		changesCmd := CmdChanges{
 			root: c.root,
@@ -76,63 +82,62 @@ func (c *CmdTasks) Run(cmd *cobra.Command, av []string) error {
 		if len(changes) == 0 {
 			return errors.New("cannot find any changes")
 		}
-		change = changes[len(changes)-1]
-	}
-
-	if change != nil {
-		tasks := change.Tasks
-
-		slices.SortFunc(tasks, func(a, b *client.Task) int {
-			if a.SpawnTime.Before(b.SpawnTime) {
-				return -1
-			} else if a.SpawnTime.After(b.SpawnTime) {
-				return 1
-			}
-			return 0
-		})
-
-		if len(tasks) > 0 {
-			w := tabWriter()
-
-			maxDur := len("Duration")
-			for _, tsk := range tasks {
-				dur := len(tsk.DoingTime.Round(time.Millisecond).String())
-				if dur > maxDur {
-					maxDur = dur
-				}
-			}
-
-			fmt.Fprintf(w, "Status\t%*s\tSummary\n", maxDur, "Duration")
-
-			for _, tsk := range tasks {
-				duration := tsk.DoingTime.Round(time.Millisecond).String()
-				if tsk.DoingTime == 0 {
-					duration = "-"
-				}
-
-				fmt.Fprintf(w, "%s\t%*s\t%s\n",
-					tsk.Status,
-					maxDur,
-					duration,
-					tsk.Summary)
-			}
-			w.Flush()
-
-			for _, tsk := range tasks {
-				if len(tsk.Log) == 0 {
-					continue
-				}
-				fmt.Fprintln(os.Stdout)
-				fmt.Fprintln(os.Stdout, line)
-				fmt.Fprintln(os.Stdout, tsk.Summary)
-				fmt.Fprintln(os.Stdout)
-				for _, line := range tsk.Log {
-					fmt.Fprintln(os.Stdout, line)
-				}
+		for _, recent := range slices.Backward(changes) {
+			if len(recent.Tasks) > 0 {
+				change = recent
+				break
 			}
 		}
-	} else {
-		return fmt.Errorf("change with id %q not found", av[0])
+		if change == nil {
+			return errors.New("cannot find any nonempty changes")
+		}
+	}
+
+	tasks := change.Tasks
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	slices.SortFunc(tasks, func(a, b *client.Task) int {
+		return a.SpawnTime.Compare(b.SpawnTime)
+	})
+
+	var maxDur int
+	if !c.noHeaders {
+		maxDur = len("DURATION")
+	}
+	for _, tsk := range tasks {
+		maxDur = max(maxDur, len(tsk.DoingTime.Round(time.Millisecond).String()))
+	}
+	w := tabWriter()
+	if !c.noHeaders {
+		fmt.Fprintf(w, "STATUS\t%*s\tSUMMARY\n", maxDur, "DURATION")
+	}
+	for _, tsk := range tasks {
+		duration := tsk.DoingTime.Round(time.Millisecond).String()
+		if tsk.DoingTime == 0 {
+			duration = "-"
+		}
+
+		fmt.Fprintf(w, "%s\t%*s\t%s\n",
+			tsk.Status,
+			maxDur,
+			duration,
+			tsk.Summary)
+	}
+	w.Flush()
+
+	for _, tsk := range tasks {
+		if len(tsk.Log) == 0 {
+			continue
+		}
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, hrule)
+		fmt.Fprintln(os.Stdout, tsk.Summary)
+		fmt.Fprintln(os.Stdout)
+		for _, line := range tsk.Log {
+			fmt.Fprintln(os.Stdout, line)
+		}
 	}
 
 	return nil
@@ -143,10 +148,10 @@ func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	cli, err := c.root.client()
+	cli, err := c.root.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	changesCmd := CmdChanges{
@@ -155,15 +160,16 @@ func (c *CmdTasks) complete(cmd *cobra.Command, args []string, toComplete string
 	changes, err := changesCmd.changes(cli)
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	l := len(changes)
 	num := min(l, 10)
-	completions := make([]string, l)
+	completions := make([]string, 0, num)
 
 	for _, chg := range changes[l-num : l] {
-		completions = append(completions, fmt.Sprintf("%s\t%-5s %s\n", chg.ID, chg.Status, chg.Summary))
+		description := fmt.Sprintf("%-5s %s", chg.Status, chg.Summary)
+		completions = append(completions, cobra.CompletionWithDesc(chg.ID, description))
 	}
 
 	return completions, cobra.ShellCompDirectiveNoFileComp

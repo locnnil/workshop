@@ -14,6 +14,7 @@ import (
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/cmd/internal/cmdutil"
 	"github.com/canonical/workshop/internal/arch"
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type CmdInfo struct {
@@ -47,6 +48,10 @@ Notes:
 		`Show SDKs compatible with a specific base.`)
 	cmd.PersistentFlags().StringVar(&c.Arch, "arch", "",
 		`Show SDKs compatible with a different architecture (or "all").`)
+
+	_ = cmd.RegisterFlagCompletionFunc("base", cmdutil.CompleteChoices(workshop.SupportedBases...))
+	arches := append([]string{"all"}, arch.AllowedArchitectures...)
+	_ = cmd.RegisterFlagCompletionFunc("arch", cmdutil.CompleteChoices(arches...))
 
 	return cmd
 }
@@ -147,14 +152,8 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(w, "%s%s%s\n", esc.Bold, "INSTALLED", esc.End)
 		fmt.Fprintf(w, tpl, "PROJECT", "WORKSHOP", "CHANNEL", "VERSION", "BASE", "ARCH", maxRev, "REV")
 	}
-	var prev *client.SdkInstalled
 	for _, it := range installed {
-		var project string
-		if prev == nil || prev.ProjectPath != it.ProjectPath {
-			project = cmdutil.ContractHome(it.ProjectPath)
-		}
-		prev = &it
-
+		project := cmdutil.ContractHome(it.ProjectPath)
 		channel := cmdutil.EmptyDash(it.Channel)
 		base := it.Base
 		if base == "" {

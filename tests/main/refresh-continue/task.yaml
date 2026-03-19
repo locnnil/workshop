@@ -14,7 +14,7 @@ execute: |
   sed -i 's/test-sdk-setup-fail/test-sdk-basic/g' workshop.yaml
 
   echo "Check the workshop is in Waiting state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-cont[[:space:]]+Waiting[[:space:]]+wait-on-error$"
+  workshop_exec list | MATCH "^ws-refresh-cont[[:space:]]+Waiting[[:space:]]+wait-on-error$"
 
   echo "\"Fix\" the SDK error by creating an expected file"
   workshop_exec exec -- touch /home/workshop/setup-base-pass
@@ -23,4 +23,4 @@ execute: |
   workshop_exec refresh --continue | MATCH "\"ws-refresh-cont\" refreshed"
 
   echo "Check the workshop is in Ready state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-refresh-cont[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-refresh-cont[[:space:]]+Ready[[:space:]]+-$"

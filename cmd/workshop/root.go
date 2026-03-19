@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -165,6 +166,8 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.PersistentFlags().BoolP("help", "h", false, "Print the help message for the command.")
 	cmd.PersistentFlags().BoolP("version", "v", false, "Print Workshop version.")
 
+	_ = cmd.RegisterFlagCompletionFunc("project", c.completeProjectPaths())
+
 	cmd.DisableAutoGenTag = true
 
 	return cmd
@@ -196,6 +199,12 @@ func (c *CmdRoot) client() (*client.Client, error) {
 	return cli, err
 }
 
+func (c *CmdRoot) noRetryClient() (*client.Client, error) {
+	config := ClientConfig
+	config.RetryInterval = -1 * time.Millisecond
+	return client.New(&config)
+}
+
 func (c *CmdRoot) project() string {
 	if c.cwd == "" {
 		return c.prj
@@ -218,10 +227,105 @@ func (c *CmdRoot) postRun(cmd *cobra.Command, args []string) {
 	}
 }
 
+func (c *CmdRoot) completeProjectPaths() cobra.CompletionFunc {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return c.doCompleteProjectPaths(cmd, toComplete)
+	}
+}
+
+func (c *CmdRoot) doCompleteProjectPaths(cmd *cobra.Command, toComplete string) ([]string, cobra.ShellCompDirective) {
+	requireProject := []string{
+		"refresh",
+		"start",
+		"stop",
+		"info",
+		"exec",
+		"shell",
+		"run",
+		"remove",
+		"remount",
+		"connections",
+		"connect",
+		"disconnect",
+		"sketch-sdk",
+		"sketches",
+	}
+	if !slices.Contains(requireProject, cmd.Name()) {
+		// Project might be unknown (e.g. for `workshop launch`); any
+		// directory is potentially a new project.
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	}
+
+	cli, err := c.noRetryClient()
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	}
+
+	projects, err := cli.Projects()
+	if err != nil {
+		cobra.CompDebugln(err.Error(), false)
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	}
+
+	// We can complete absolute or relative paths. Unfortunately, paths
+	// starting with ~/ aren't supported. If we return a path starting with
+	// ~, cobra will incorrectly escape it to \~ for both bash and zsh.
+	var completions []string
+	if filepath.IsAbs(toComplete) {
+		completions = completeAbsProjectPaths(projects)
+	} else {
+		completions, err = completeRelProjectPaths(projects)
+		if err != nil {
+			cobra.CompDebugln(err.Error(), false)
+			return nil, cobra.ShellCompDirectiveFilterDirs
+		}
+	}
+
+	// Filter completions by prefix. Cobra usually does this for us, but
+	// if there aren't any matches we'd like to fall back to completing
+	// directories only. This doesn't work when toComplete was expanded
+	// from shell syntax (e.g. ~/...), but there's no way to distinguish
+	// that from the absolute path case.
+	completions = slices.DeleteFunc(completions, func(path string) bool {
+		return !strings.HasPrefix(path, toComplete)
+	})
+	if len(completions) == 0 {
+		return nil, cobra.ShellCompDirectiveFilterDirs
+	}
+
+	return completions, cobra.ShellCompDirectiveDefault
+}
+
+func completeAbsProjectPaths(projects []client.Project) []string {
+	completions := make([]string, 0, len(projects))
+	for _, p := range projects {
+		completions = append(completions, p.Path)
+	}
+	return completions
+}
+
+func completeRelProjectPaths(projects []client.Project) ([]string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	completions := make([]string, 0, len(projects))
+	for _, p := range projects {
+		path, err := filepath.Rel(cwd, p.Path)
+		if err != nil {
+			return nil, err
+		}
+		completions = append(completions, path)
+	}
+	return completions, nil
+}
+
 func (c *CmdRoot) completeWorkshopName(status []string) cobra.CompletionFunc {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) > 0 {
-			return []string{}, cobra.ShellCompDirectiveNoFileComp
+			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 
 		return c.doCompleteWorkshopNames(args, status)
@@ -235,16 +339,16 @@ func (c *CmdRoot) completeWorkshopNames(status []string) cobra.CompletionFunc {
 }
 
 func (c *CmdRoot) doCompleteWorkshopNames(args []string, status []string) ([]string, cobra.ShellCompDirective) {
-	cli, err := c.client()
+	cli, err := c.noRetryClient()
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	project, err := cli.Project(c.project())
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	return completeWorkshopNames(cli, project, args, status)
@@ -254,7 +358,7 @@ func completeWorkshopNames(cli *client.Client, project *client.Project, args []s
 	workshopInfo, _, err := cli.List(&client.ListOptions{ProjectId: project.Id})
 	if err != nil {
 		cobra.CompDebugln(err.Error(), false)
-		return nil, cobra.ShellCompDirectiveError
+		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	desiredStatus := func(s string) bool {

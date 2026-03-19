@@ -90,10 +90,6 @@ func (cs *execSuite) Do(req *http.Request) (*http.Response, error) {
 	return cs.clientSuite.Do(req)
 }
 
-func (s *execSuite) TearDownTest(c *C) {
-	s.clientSuite.TearDownTest(c)
-}
-
 func (s *execSuite) TestExitZero(c *C) {
 	opts := &client.ExecOptions{
 		Command: []string{"true"},

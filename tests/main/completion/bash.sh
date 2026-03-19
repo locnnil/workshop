@@ -17,6 +17,7 @@ do_complete() {
 }
 
 source /usr/share/bash-completion/bash_completion
+_completion_loader sdk || true
 _completion_loader workshop || true
 
 set -x
@@ -24,7 +25,7 @@ set -x
 func='__start_workshop'
 complete -p workshop | grep -qw "$func"
 
-# The completion functionality is well covered in unit tests. We check four
+# The completion functionality is well covered in unit tests. We check some
 # small examples here that each use different code paths.
 
 echo "Test launch completion"
@@ -43,3 +44,29 @@ do_complete workshop remount ws-comp/test-sdk-mount:one "$HOME/tmp/t"
 echo "Test stop completion"
 do_complete workshop stop w
 [ "$COMPREPLY" = ws-comp ]
+
+echo "Test project completion"
+mkdir -p empty-dir-with-no-workshops
+do_complete workshop launch --project ''
+printf '%s\0' "${COMPREPLY[@]}" | grep -Fqxz empty-dir-with-no-workshops
+do_complete workshop refresh --project ''
+printf '%s\0' "${COMPREPLY[@]}" | grep -Fqxz .
+pushd .. >/dev/null
+do_complete workshop launch --project compl
+[ "$COMPREPLY" = completion ]
+do_complete workshop refresh --project compl
+[ "$COMPREPLY" = completion ]
+do_complete workshop refresh --project "$PWD/compl"
+[ "$COMPREPLY" = "$PWD/completion" ]
+popd >/dev/null
+
+func='__start_sdk'
+complete -p sdk | grep -qw "$func"
+
+echo "Test base completion"
+do_complete sdk info --base ubuntu@24.0
+[ "$COMPREPLY" = ubuntu@24.04 ]
+
+echo "Test arch completion"
+do_complete sdk info --arch s3
+[ "$COMPREPLY" = s390x ]

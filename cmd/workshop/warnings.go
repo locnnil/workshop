@@ -93,6 +93,8 @@ By default, relative times are used up to 60 days, then YYYY-MM-DD.`)
 		`Use Unicode characters to improve legibility (auto|never|always).
 By default, Unicode is used only if the output supports it.`)
 
+	_ = cmd.RegisterFlagCompletionFunc("unicode", cmdutil.CompleteChoices("auto", "never", "always"))
+
 	return cmd
 }
 

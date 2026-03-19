@@ -12,10 +12,10 @@ execute: |
   workshop_exec stop
 
   echo "Check the workshop is in Stopped state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-stop[[:space:]]+Stopped[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-stop[[:space:]]+Stopped[[:space:]]+-$"
 
   echo "Check stopping the Stopped workshop does not result in error"
   workshop_exec stop
 
   echo "Check the workshop is in Stopped state"
-  workshop_exec list | MATCH "^.+[[:space:]]+ws-stop[[:space:]]+Stopped[[:space:]]+-$"
+  workshop_exec list | MATCH "^ws-stop[[:space:]]+Stopped[[:space:]]+-$"
