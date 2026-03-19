@@ -81,6 +81,20 @@ plugs:
 `,
 }
 
+var consumerSelfConnect = sdk.Meta{
+	Setup: consumer.Setup,
+	SdkYAML: `name: consumer
+base: ubuntu@22.04
+plugs:
+  plug:
+    interface: mock-network
+    attribute: one
+slots:
+  slot:
+    interface: mock-network
+`,
+}
+
 var consumerManyPlugs = sdk.Meta{
 	Setup: consumer.Setup,
 	SdkYAML: `name: consumer
@@ -343,6 +357,57 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindPlugSuccess(c *check.C) {
 
 	// ensure that backend profiles were set for both SDKs
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 2)
+	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
+}
+
+func (s *interfaceHandlersSuite) TestAutoconnectPlugAndSlotInSameSdk(c *check.C) {
+	// Setup
+	repo := s.mgr.Repository()
+	s.launchWorkshop(c, "ws", []sdk.Meta{consumerSelfConnect})
+	c.Assert(repo.AddSdk(sdk.MockInfo(c, consumerSelfConnect.SdkYAML, s.prj.ProjectId, "ws")), check.IsNil)
+
+	// Execute
+	s.state.Lock()
+	chg := s.newAutoconnectChange()
+	s.state.Unlock()
+
+	s.settle(c)
+
+	s.state.Lock()
+	defer s.state.Unlock()
+	c.Check(chg.Err(), check.IsNil)
+
+	// Validate task count (one connection - one task)
+	connectTasks := 0
+	for _, task := range chg.Tasks() {
+		if task.Kind() == "connect" {
+			connectTasks++
+		}
+	}
+	c.Assert(connectTasks, check.Equals, 1)
+
+	// Validate
+	ref, err := repo.Connected(s.prj.ProjectId, "ws", "consumer", "plug")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	ref, err = repo.Connected(s.prj.ProjectId, "ws", "consumer", "slot")
+	c.Assert(ref, check.HasLen, 1)
+	c.Assert(err, check.IsNil)
+
+	var conns map[string]any
+	err = s.state.Get("conns", &conns)
+	c.Check(err, check.IsNil)
+	c.Assert(conns, check.DeepEquals, map[string]any{
+		"42424242/ws/consumer:plug 42424242/ws/consumer:slot": map[string]any{
+			"interface":   "mock-network",
+			"auto":        true,
+			"plug-static": map[string]any{"attribute": "one"},
+		},
+	})
+
+	// ensure that backend profiles were set for the updated SDK
+	c.Assert(s.secBackend.SetupCalls, check.HasLen, 1)
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 0)
 }
 
