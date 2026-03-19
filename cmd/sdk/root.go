@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -18,13 +20,15 @@ type CmdRoot struct {
 
 func (c *CmdRoot) Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "sdk",
-		Short:             "Inspect SDK volumes installed on the system",
-		SilenceErrors:     true,
-		SilenceUsage:      true,
-		TraverseChildren:  true,
-		Version:           version.Version,
-		PersistentPostRun: c.postRun,
+		Use:                        "sdk",
+		Short:                      "Inspect SDK volumes installed on the system",
+		SilenceErrors:              true,
+		SilenceUsage:               true,
+		TraverseChildren:           true,
+		Version:                    version.Version,
+		RunE:                       c.run,
+		PersistentPostRun:          c.postRun,
+		SuggestionsMinimumDistance: 2,
 	}
 	cmd.SetVersionTemplate("{{.Version}}\n")
 	cmd.DisableAutoGenTag = true
@@ -37,6 +41,17 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.PersistentFlags().BoolP("version", "v", false, "Print SDK CLI version.")
 
 	return cmd
+}
+
+func (c *CmdRoot) run(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return cmd.Help()
+	}
+	msg := fmt.Sprintf("unknown command %q", args[0])
+	if suggestions := cmd.SuggestionsFor(args[0]); len(suggestions) > 0 {
+		msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
+	}
+	return errors.New(msg)
 }
 
 func (c *CmdRoot) client() (*client.Client, error) {
