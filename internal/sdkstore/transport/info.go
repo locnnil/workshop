@@ -24,24 +24,13 @@ type InfoMetadata struct {
 	Contact     string     `json:"contact,omitempty"`
 	Description string     `json:"description,omitempty"`
 	License     string     `json:"license,omitempty"`
-	Links       InfoLinks  `json:"links,omitzero"`
+	Links       Links      `json:"links,omitzero"`
 	Media       []Media    `json:"media,omitempty"`
 	Private     bool       `json:"private,omitempty"`
 	Publisher   Publisher  `json:"publisher,omitzero"`
 	Summary     string     `json:"summary,omitempty"`
 	Title       string     `json:"title,omitempty"`
 	Website     string     `json:"website,omitempty"`
-}
-
-// InfoLinks contains URLs associated with the SDK.
-type InfoLinks struct {
-	Contact   []string `json:"contact,omitempty"`
-	Docs      []string `json:"docs,omitempty"`
-	Donations []string `json:"donations,omitempty"`
-	Issues    []string `json:"issues,omitempty"`
-	Source    []string `json:"source,omitempty"`
-	Website   []string `json:"website,omitempty"`
-	Upstream  string   `json:"upstream,omitempty"`
 }
 
 // InfoChannelMap represents the information channel map. This defines a unique

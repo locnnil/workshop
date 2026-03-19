@@ -40,18 +40,15 @@ func WithInfoFields(fields []string) InfoOption {
 	}
 }
 
-// Create a infoOptions instance with default values.
 func newInfoOptions() *infoOptions {
 	return &infoOptions{}
 }
 
-// infoClient defines a client for info requests.
 type infoClient struct {
 	path   path.Path
 	client RESTClient
 }
 
-// newInfoClient creates a infoClient for requesting
 func newInfoClient(path path.Path, client RESTClient) *infoClient {
 	return &infoClient{
 		path:   path,

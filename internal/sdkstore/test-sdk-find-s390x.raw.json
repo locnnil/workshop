@@ -1,0 +1,37 @@
+{
+  "results": [
+    {
+      "name": "test-sdk-find-1-s390x",
+      "package-id": "dP9SNAfRBf8IL0w1OD8tuGEViVSBKji6",
+      "metadata": {
+        "contact": "",
+        "description": "Test SDK s390x description",
+        "license": "AGPL-3.0",
+        "links": {},
+        "media": [],
+        "publisher": {
+          "display-name": "Jonathan Conder",
+          "id": "YnyjkYo9nA6AlXsTKnpxrCGxNZgmSdmu",
+          "username":"usso-jeconder",
+          "validation":"unproven"
+        },
+        "summary": "Test SDK s390x summary"
+      },
+      "default-release": {
+        "channel": {
+          "name": "latest/edge",
+          "track": "latest",
+          "risk": "edge",
+          "platform": {
+            "architecture": "s390x",
+            "channel": "all",
+            "name": "all"
+          },
+          "released-at": "2026-03-19T08:24:40.960058+00:00"
+        },
+        "revision": 1,
+        "version": "0.1+s390x"
+      }
+    }
+  ]
+}

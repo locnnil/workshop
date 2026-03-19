@@ -43,8 +43,6 @@ func handleBasicAPIErrors(list transport.APIErrors) error {
 		return errors.New("SDK name not found")
 	case transport.ErrorCodeAPIError:
 		return errors.New("unexpected SDK Store API error")
-	case transport.ErrorCodeBadArgument:
-		return errors.New("query argument")
 	}
 	// We haven't handled the errors, so just return them.
 	masked = false

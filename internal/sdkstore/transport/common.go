@@ -4,6 +4,8 @@
 package transport
 
 import (
+	"strings"
+
 	"github.com/canonical/workshop/internal/timeutil"
 )
 
@@ -29,6 +31,10 @@ type Platform struct {
 	Architecture string `json:"architecture"`
 }
 
+func (p Platform) String() string {
+	return strings.Join([]string{p.Name, p.Channel, p.Architecture}, "#")
+}
+
 // Download represents the download structure from the SDK Store.
 type Download struct {
 	URL      string `json:"url"`
@@ -40,6 +46,17 @@ type Download struct {
 type Category struct {
 	Featured bool   `json:"featured"`
 	Name     string `json:"name"`
+}
+
+// Links contains URLs associated with the SDK.
+type Links struct {
+	Contact   []string `json:"contact,omitempty"`
+	Docs      []string `json:"docs,omitempty"`
+	Donations []string `json:"donations,omitempty"`
+	Issues    []string `json:"issues,omitempty"`
+	Source    []string `json:"source,omitempty"`
+	Website   []string `json:"website,omitempty"`
+	Upstream  string   `json:"upstream,omitempty"`
 }
 
 // Media defines media attached to an SDK.
