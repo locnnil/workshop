@@ -7,6 +7,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strings"
 	"syscall"
 
 	"gopkg.in/tomb.v2"
@@ -283,10 +284,19 @@ func (m *InterfaceManager) connectAuto(task *state.Task, wp *workshop.Workshop, 
 				// this is a normal and common condition.
 				continue
 			}
-
 			connectRefs = append(connectRefs, connRef)
 		}
 	}
+
+	// Sort connections by their ID to ensure deterministic order of connection tasks creation.
+	slices.SortFunc(connectRefs, func(a, b *interfaces.ConnRef) int {
+		return strings.Compare(a.ID(), b.ID())
+	})
+
+	// Remove duplicates: keep only first occurrence of each ID
+	connectRefs = slices.CompactFunc(connectRefs, func(a, b *interfaces.ConnRef) bool {
+		return a.ID() == b.ID()
+	})
 
 	ts := m.batchAutoConnectTasks(wp, info, connectRefs, plugDynamic, slotDynamic)
 	handlersetup.InjectTasks(task, ts)
