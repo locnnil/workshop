@@ -38,6 +38,11 @@ var api = []*Command{{
 	UserOK:  true,
 	GET:     v1GetSdkInfo,
 }, {
+	Path:    "/v1/find",
+	GuestOK: false,
+	UserOK:  true,
+	GET:     v1FindSdks,
+}, {
 	Path:    "/v1/projects/{id}/workshops",
 	GuestOK: false,
 	UserOK:  true,

@@ -178,6 +178,167 @@ func (s *apiSuite) importSdkVolume(c *check.C, meta sdk.Meta, size uint64) {
 	s.b.Volumes[name] = info
 }
 
+func (s *apiSuite) TestFindSdksOk(c *check.C) {
+	s.daemon(c)
+
+	stableReleased := time.Date(2026, 3, 10, 23, 48, 34, 474879000, time.UTC)
+	betaReleased := time.Date(2026, 1, 10, 23, 48, 34, 474879000, time.UTC)
+
+	restore := s.store.SetFindCallback(func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error) {
+		if query != "openvino" {
+			return nil, nil
+		}
+
+		return []transport.FindResponse{{
+			Name:      "openvino",
+			PackageID: "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
+			Metadata: transport.FindMetadata{
+				Description: "Accelerated toolkit",
+				License:     "Apache-2.0",
+				Publisher: transport.Publisher{
+					ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+					Username:    "hunter2",
+					DisplayName: "Hunter Two",
+					Validation:  "unproven",
+				},
+				Summary: "Intel OpenVINO toolkit",
+			},
+			DefaultRelease: transport.FindChannelMap{
+				Channel: transport.Channel{
+					Name:  "latest/stable",
+					Track: "latest",
+					Risk:  "stable",
+					Platform: transport.Platform{
+						Name:         "ubuntu",
+						Channel:      "20.04",
+						Architecture: "amd64",
+					},
+					ReleasedAt: timeutil.TimeUTC(stableReleased),
+				},
+				Revision: 85,
+				Version:  "2.1-084c8c8",
+			},
+		}, {
+			Name:      "openvino-notebooks",
+			PackageID: "geGY07WPXyvnQahmRP1oOegGUyjurXrY",
+			Metadata: transport.FindMetadata{
+				Description: "A collection of ready-to-run Jupyter notebooks for learning and experimenting with the OpenVINO™ Toolkit.",
+				License:     "Apache-2.0",
+				Publisher: transport.Publisher{
+					ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+					Username:    "hunter2",
+					DisplayName: "Hunter Two",
+					Validation:  "unproven",
+				},
+				Summary: "Jupyter notebook tutorials for OpenVINO",
+			},
+			DefaultRelease: transport.FindChannelMap{
+				Channel: transport.Channel{
+					Name:  "latest/beta",
+					Track: "latest",
+					Risk:  "beta",
+					Platform: transport.Platform{
+						Name:         "all",
+						Channel:      "all",
+						Architecture: "all",
+					},
+					ReleasedAt: timeutil.TimeUTC(betaReleased),
+				},
+				Revision: 7,
+				Version:  "0.1",
+			},
+		}}, nil
+	})
+	defer restore()
+
+	req, err := s.createSdksRequest("GET", "/v1/find?q=openvino")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1FindSdks(apiCmd("/v1/find"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	sdks, ok := rsp.Result.([]sdkstate.SdkSummary)
+	c.Assert(ok, check.Equals, true)
+
+	c.Check(sdks, testutil.DeepUnsortedMatches, []sdkstate.SdkSummary{{
+		Name:        "openvino",
+		PackageID:   "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
+		Summary:     "Intel OpenVINO toolkit",
+		Description: "Accelerated toolkit",
+		License:     "Apache-2.0",
+		Publisher: &sdkstate.StoreAccount{
+			ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+			Username:    "hunter2",
+			DisplayName: "Hunter Two",
+			Validation:  "unproven",
+		},
+		Channel:    "latest/stable",
+		Track:      "latest",
+		Risk:       "stable",
+		Revision:   "85",
+		ReleasedAt: stableReleased,
+		Version:    "2.1-084c8c8",
+		Base:       "ubuntu@20.04",
+		Arch:       "amd64",
+	}, {
+		Name:        "openvino-notebooks",
+		PackageID:   "geGY07WPXyvnQahmRP1oOegGUyjurXrY",
+		Summary:     "Jupyter notebook tutorials for OpenVINO",
+		Description: "A collection of ready-to-run Jupyter notebooks for learning and experimenting with the OpenVINO™ Toolkit.",
+		License:     "Apache-2.0",
+		Publisher: &sdkstate.StoreAccount{
+			ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+			Username:    "hunter2",
+			DisplayName: "Hunter Two",
+			Validation:  "unproven",
+		},
+		Channel:    "latest/beta",
+		Track:      "latest",
+		Risk:       "beta",
+		Revision:   "7",
+		ReleasedAt: betaReleased,
+		Version:    "0.1",
+		Base:       "",
+		Arch:       "all",
+	}})
+}
+
+func (s *apiSuite) TestFindSdksNoMatches(c *check.C) {
+	s.daemon(c)
+
+	req, err := s.createSdksRequest("GET", "/v1/find?q=openvino")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1FindSdks(apiCmd("/v1/find"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeSync)
+	c.Assert(rsp.Status, check.Equals, http.StatusOK)
+
+	sdks, ok := rsp.Result.([]sdkstate.SdkSummary)
+	c.Assert(ok, check.Equals, true)
+	c.Check(sdks, check.HasLen, 0)
+}
+
+func (s *apiSuite) TestFindSdksStoreDown(c *check.C) {
+	s.daemon(c)
+
+	restore := s.store.SetFindCallback(func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error) {
+		return nil, errors.New("destination unreachable")
+	})
+	defer restore()
+
+	req, err := s.createSdksRequest("GET", "/v1/find?q=openvino")
+	c.Assert(err, check.IsNil)
+
+	rsp := v1FindSdks(apiCmd("/v1/find"), req, nil).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Check(rsp.Status, check.Equals, http.StatusInternalServerError)
+	c.Check(rsp.Result.(*errorResult).Message, check.Equals, `cannot find SDKs matching "openvino": destination unreachable`)
+}
+
 func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 	s.daemon(c)
 
