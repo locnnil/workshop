@@ -1,6 +1,9 @@
 package client
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 type StoreAccount struct {
 	ID          string `json:"id"`
@@ -51,6 +54,36 @@ type SdkFullInfo struct {
 	Publisher   *StoreAccount  `json:"publisher,omitempty"`
 	Channels    []*SdkRevision `json:"channels,omitempty"`
 	Installed   []SdkInstalled `json:"installed,omitempty"`
+}
+
+type SdkSummary struct {
+	Name        string        `json:"name"`
+	PackageID   string        `json:"package-id,omitempty"`
+	Summary     string        `json:"summary,omitempty"`
+	Description string        `json:"description,omitempty"`
+	License     string        `json:"license,omitempty"`
+	Publisher   *StoreAccount `json:"publisher,omitempty"`
+	Channel     string        `json:"channel"`
+	Track       string        `json:"track"`
+	Risk        string        `json:"risk"`
+	Revision    string        `json:"revision"`
+	ReleasedAt  time.Time     `json:"released-at"`
+	Version     string        `json:"version,omitempty"`
+	Base        string        `json:"base,omitempty"`
+	Arch        string        `json:"arch,omitempty"`
+}
+
+// FindSdks searches the SDK Store.
+func (client *Client) FindSdks(q string) ([]SdkSummary, error) {
+	var sdks []SdkSummary
+	query := url.Values{}
+	query.Set("q", q)
+
+	_, err := client.doSync("GET", "/v1/find", query, nil, nil, &sdks)
+	if err != nil {
+		return nil, err
+	}
+	return sdks, nil
 }
 
 // Sdks lists the SDK volumes known to the daemon.

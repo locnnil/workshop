@@ -49,6 +49,7 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.SetHelpCommandGroupID(GrpMisc)
 	cmd.SetCompletionCommandGroupID(GrpMisc)
 
+	cmd.AddCommand((&CmdFind{root: c}).Command())
 	cmd.AddCommand((&CmdList{root: c}).Command())
 	cmd.AddCommand((&CmdInfo{root: c}).Command())
 	cmd.AddCommand((&CmdDocs{root: c}).Command())

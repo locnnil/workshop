@@ -88,7 +88,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	w := tabwriter.NewWriter(Stdout, 4, 3, 2, ' ', tabwriter.StripEscape)
 	fmt.Fprintf(w, "name:\t%s\n", info.Name)
 	if info.Publisher != nil {
-		fmt.Fprintf(w, "publisher:\t%s\n", formatPublisher(info.Publisher, esc))
+		fmt.Fprintf(w, "publisher:\t%s\n", longPublisher(info.Publisher, esc))
 	}
 	if info.License != "" {
 		fmt.Fprintf(w, "license:\t%s\n", info.License)
@@ -225,7 +225,7 @@ func filterInstalled(installed []client.SdkInstalled, base, arch string) []clien
 	})
 }
 
-func formatPublisher(publisher *client.StoreAccount, esc *cmdutil.Escapes) string {
+func longPublisher(publisher *client.StoreAccount, esc *cmdutil.Escapes) string {
 	var badge string
 	switch publisher.Validation {
 	case "verified":
@@ -240,7 +240,6 @@ func formatPublisher(publisher *client.StoreAccount, esc *cmdutil.Escapes) strin
 		return publisher.DisplayName + badge
 	}
 	return fmt.Sprintf("%s (%s%s)", publisher.DisplayName, publisher.Username, badge)
-
 }
 
 func optionalColumns(prev, rev *client.SdkRevision) (string, string, string, string) {
