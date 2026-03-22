@@ -9,6 +9,12 @@ repos:
         args:
           - --config=.golangci.incremental.yaml
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.23.1
+    hooks:
+      - id: zizmor
+        args: [--fix=safe]
+
   - repo: local
     hooks:
       - id: docs-check

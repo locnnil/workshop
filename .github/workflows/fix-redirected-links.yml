@@ -30,13 +30,15 @@ jobs:
       DOCS_DIR: docs
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.x"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: true
 
       - name: Ensure clean working tree
         run: |
@@ -66,7 +68,7 @@ jobs:
         id: redirect_fixer
         run: |
           set -o pipefail
-          args=(--docs-dir "$DOCS_DIR" --temp-dir "$TEMP_DIR" --redirect-codes "${{ inputs.redirect_codes }}" --max-redirects "${{ inputs.max_redirects }}")
+          args=(--docs-dir "$DOCS_DIR" --temp-dir "$TEMP_DIR" --redirect-codes "${REDIRECT_CODES}" --max-redirects "${MAX_REDIRECTS}")
           if [ "${{ inputs.verify_links }}" = "false" ]; then
             args+=(--no-verify)
           fi
@@ -88,6 +90,9 @@ jobs:
             exit "$exit_code"
           fi
           echo "no_redirects=false" >> "$GITHUB_OUTPUT"
+        env:
+          MAX_REDIRECTS: ${{ inputs.max_redirects }}
+          REDIRECT_CODES: ${{ inputs.redirect_codes }}
 
       - name: Check for changes
         id: git_changes
@@ -134,7 +139,7 @@ jobs:
         run: |
           verification_check="[x]"
           verification_note=""
-          if [ "${{ steps.pr_meta.outputs.failures }}" -ne 0 ]; then
+          if [ "${FAILURES}" -ne 0 ]; then
             verification_check="[ ]"
             verification_note="\n\nVerification failures were detected."
           fi
@@ -147,9 +152,9 @@ jobs:
           This PR automatically fixes redirected links detected by \`make linkcheck\`.
 
           ## Summary
-          - **Files modified:** ${{ steps.pr_meta.outputs.files }}
-          - **Redirects fixed:** ${{ steps.pr_meta.outputs.count }}
-          - **Redirect codes processed:** ${{ steps.pr_meta.outputs.codes }}
+          - **Files modified:** ${FILES}
+          - **Redirects fixed:** ${COUNT}
+          - **Redirect codes processed:** ${CODES}
 
           EOF
 
@@ -166,27 +171,33 @@ jobs:
           ---
           *Automated by linkcheck redirect fixer workflow*
           EOF
+        env:
+          FAILURES: ${{ steps.pr_meta.outputs.failures }}
+          FILES: ${{ steps.pr_meta.outputs.files }}
+          COUNT: ${{ steps.pr_meta.outputs.count }}
+          CODES: ${{ steps.pr_meta.outputs.codes }}
 
       - name: Commit changes and create PR
         if: steps.git_changes.outputs.has_changes == 'true'
         run: |
-          pr_branch="${{ steps.branch_name.outputs.branch }}"
-          git checkout -b "$pr_branch"
+          git checkout -b "${BRANCH}"
 
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
           git add .
           git commit -m "docs: Fix redirected links from linkcheck"
-          git push --set-upstream origin "$pr_branch"
+          git push --set-upstream origin "${BRANCH}"
 
           gh pr create \
-            --title "docs: Fix ${{ steps.pr_meta.outputs.count }} redirected links found by linkcheck" \
-            --body-file "${{ env.TEMP_DIR }}/redirect_fixes_pr_body.md" \
+            --title "docs: Fix ${COUNT} redirected links found by linkcheck" \
+            --body-file "${TEMP_DIR}/redirect_fixes_pr_body.md" \
             --base main \
             --label "documentation" \
             --label "automated"
         env:
+          BRANCH: ${{ steps.branch_name.outputs.branch }}
+          COUNT: ${{ steps.pr_meta.outputs.count }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts

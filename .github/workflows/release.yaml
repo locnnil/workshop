@@ -4,6 +4,8 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       matrix:
         runner:
@@ -16,35 +18,42 @@ jobs:
       - ${{ matrix.runner.arch }}
       - medium
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
-      - uses: canonical/action-build@v1
+      - uses: canonical/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
         id: snapcraft
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ${{ steps.snapcraft.outputs.snap }}
-          body: |
-            ## Docs Checklist
-            - [ ] JSON for SDKs
-            - [ ] JSON for workshops
-            - [ ] Release notes
-            - [ ] Version bump
-            - [ ] Coverage map update
+      - run: |
+          gh release create --notes-file=- "${GITHUB_REF#refs/tags/}" "$FILENAME" <<'EOF'
+          ## Docs Checklist
+          - [ ] JSON for SDKs
+          - [ ] JSON for workshops
+          - [ ] Release notes
+          - [ ] Version bump
+          - [ ] Coverage map update
+          EOF
+        env:
+          FILENAME: ${{ steps.snapcraft.outputs.snap }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   generate-docs:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on:
       - self-hosted
       - Linux
       - noble
     steps:
-      - uses: actions/checkout@v6
-
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: "1.25"
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: true
 
       - name: Generate CLI reference docs
         run: |
