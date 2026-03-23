@@ -275,10 +275,11 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	}
 	mergeConfig(inst.Config, nil, config, newApi)
 
+	promote := storagePoolDriver == "zfs" && snapshotConn.HasExtension("storage_zfs_promote")
 	if inst.Devices == nil {
 		inst.Devices = map[string]map[string]string{}
 	}
-	if err := mergeDevices(inst.Devices, snapshot.Sdks, name, newApi); err != nil {
+	if err := mergeDevices(inst.Devices, snapshot.Sdks, name, newApi, promote); err != nil {
 		return err
 	}
 
@@ -588,7 +589,7 @@ func mergeConfig(source, target, config map[string]string, newApi bool) {
 	maps.Copy(source, config)
 }
 
-func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string, newApi bool) error {
+func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string, newApi, promote bool) error {
 	if newApi {
 		maps.DeleteFunc(source, func(k string, v map[string]string) bool {
 			return k != "root"
@@ -610,6 +611,15 @@ func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w s
 				source[key] = none
 			}
 		}
+	}
+
+	if promote {
+		root := maps.Clone(source["root"])
+		if source == nil || root == nil {
+			return fmt.Errorf("internal error: %q workshop has no rootfs", w)
+		}
+		source["root"] = root
+		root["initial.zfs.promote"] = "true"
 	}
 
 	for i, sk := range sdks {
@@ -738,6 +748,17 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		// unique to the source instance, like MAC addresses and UUIDs.
 		req.Config = config
 		req.Devices = nil
+	}
+
+	promote := storagePoolDriver == "zfs" && dst.HasExtension("storage_zfs_promote")
+	if promote {
+		req.Devices = maps.Clone(req.Devices)
+		root := maps.Clone(req.Devices["root"])
+		if req.Devices == nil || root == nil {
+			return fmt.Errorf("internal error: %q has no rootfs", srcName)
+		}
+		req.Devices["root"] = root
+		root["initial.zfs.promote"] = "true"
 	}
 
 	args := lxd.InstanceCopyArgs{
