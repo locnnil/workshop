@@ -171,7 +171,7 @@ and another for the :program:`systemd` service file:
    parts:
      ollama:
        plugin: dump
-       source: https://github.com/ollama/ollama/releases/download/v0.9.6/ollama-linux-amd64.tgz
+       source: https://github.com/ollama/ollama/releases/download/v${CRAFT_PROJECT_VERSION}/ollama-linux-amd64.tgz
        source-type: tar
      user-service:
        plugin: dump

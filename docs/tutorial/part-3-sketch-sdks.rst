@@ -209,7 +209,6 @@ Then execute the following code to test the Ollama API:
 .. code-block:: python
 
    import requests
-   import json
 
    # Check if Ollama is running
    response = requests.get('http://localhost:11434/api/version')

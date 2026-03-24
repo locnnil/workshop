@@ -184,10 +184,11 @@ to the host system at a port of your choice (here, :samp:`8989`):
 
 
 The slot we're going to connect this plug to comes from the SDK itself
-and is named :samp:`dev/jupyter:jupyter`,
+and is named :samp:`jupyter`,
 so you don't have to add it manually:
 
 .. code-block:: console
+   :emphasize-lines: 8
 
    $ workshop connections --all
 
@@ -201,7 +202,7 @@ so you don't have to add it manually:
 
 Refresh the workshop to enable the tunnel;
 |ws_markup| will auto-connect the plug to the slot by matching their names
-(the slot's name is :samp:`dev/jupyter:jupyter`).
+(the plug's name is also :samp:`jupyter`).
 Check the result using :command:`workshop info`:
 
 .. code-block:: console
@@ -227,9 +228,9 @@ Now, JupyterLab is available at the plug address:
 
 .. code-block:: console
 
-   $ curl http://127.0.0.1:8989/lab?
+   $ curl -w '\n' http://127.0.0.1:8989/api
 
-     <!doctype html><html lang="en">...
+     {"version": "2.17.0"}
 
 
 .. note::

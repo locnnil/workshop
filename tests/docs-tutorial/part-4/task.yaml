@@ -14,6 +14,6 @@ execute: |
   run_sdkcraft init
   rm hooks/*
   mv ../{sdkcraft.yaml,ollama.service} .
-  mv ../{setup-base,save-state,restore-state,check-health,setup-project} hooks/
+  mv ../{setup-base,check-health,setup-project} hooks/
   run_sdkcraft clean
   run_sdkcraft try
