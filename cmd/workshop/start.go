@@ -14,8 +14,9 @@ type CmdStart struct {
 
 func (c *CmdStart) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "start <WORKSHOP>...",
-		Short: "Start one or many workshops",
+		Use:     "start <WORKSHOP>...",
+		Short:   "Start one or many workshops",
+		GroupID: GrpCRUD,
 		Long: `
 This command activates the workshops listed as arguments. For each one, it:
 

@@ -19,9 +19,10 @@ type CmdTasks struct {
 
 func (c *CmdTasks) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "tasks [<CHANGE ID>]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List tasks for a specific change",
+		Use:     "tasks [<CHANGE ID>]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List tasks for a specific change",
+		GroupID: GrpChanges,
 		Long: `
 Any substantial operation on a workshop is a change that consists of tasks;
 the command lists individual tasks that comprise a specific change.

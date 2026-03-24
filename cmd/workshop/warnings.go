@@ -55,9 +55,10 @@ type CmdOkay struct {
 
 func (c *CmdWarnings) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "warnings",
-		Args:  cobra.ExactArgs(0),
-		Short: "List warnings",
+		Use:     "warnings",
+		Args:    cobra.ExactArgs(0),
+		Short:   "List warnings",
+		GroupID: GrpWarnings,
 		Long: `
 This command lists the warnings that were reported to the system.
 
@@ -100,9 +101,10 @@ By default, Unicode is used only if the output supports it.`)
 
 func (c *CmdOkay) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "okay",
-		Args:  cobra.ExactArgs(0),
-		Short: "Acknowledge listed warnings",
+		Use:     "okay",
+		Args:    cobra.ExactArgs(0),
+		Short:   "Acknowledge listed warnings",
+		GroupID: GrpWarnings,
 		Long: `
 This command acknowledges all warnings
 listed previously by the "workshop warnings" command.

@@ -18,9 +18,10 @@ type CmdDisconnect struct {
 
 func (c *CmdDisconnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>]",
-		Args:  cobra.RangeArgs(1, 2),
-		Short: "Disconnect a plug or a slot",
+		Use:     "disconnect <WORKSHOP>/<SDK>:<PLUG OR SLOT> [<WORKSHOP>/<SDK>]:[<SLOT>]",
+		Args:    cobra.RangeArgs(1, 2),
+		Short:   "Disconnect a plug or a slot",
+		GroupID: GrpConnect,
 		Long: `
 This command disconnects a plug from its slot, or a slot from all its plugs.
 

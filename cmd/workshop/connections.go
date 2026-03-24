@@ -22,9 +22,10 @@ type CmdConnections struct {
 
 func (c *CmdConnections) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "connections [<WORKSHOP>]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "List interface connections",
+		Use:     "connections [<WORKSHOP>]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "List interface connections",
+		GroupID: GrpConnect,
 		Long: `
 This command lists the connections between interface plugs and slots
 for the entire project or a single workshop within it.
