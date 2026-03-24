@@ -17,7 +17,7 @@ execute: |
   echo "Ensure SDKs are unlinked successfully during abort"
   echo "Update the workshop file to use test-sdk-mount-broken"
   sed -i 's/test-sdk-setup-fail/test-sdk-mount-broken/g' workshop.yaml
-  ! workshop_exec launch --wait-on-error
+  ! workshop_exec launch --wait-on-error || false
   sed -i 's/test-sdk-mount-broken/test-sdk-setup-fail/g' workshop.yaml
 
   workshop_exec launch --abort

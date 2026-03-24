@@ -38,7 +38,7 @@ execute: |
     - name: test-sdk-setup-fail
       channel: latest/stable
   EOF
-  ! workshop_exec refresh --wait-on-error ws-remove
+  ! workshop_exec refresh --wait-on-error ws-remove || false
   workshop_exec remove ws-remove
   sed -i '/^sdks:$/,/^    channel: latest\/stable$/d' .workshop/ws-remove.yaml
   workshop_exec list | MATCH "^ws-remove[[:space:]]+Off[[:space:]]+-$"

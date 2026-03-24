@@ -37,7 +37,7 @@ execute: |
 
   echo "Break second SDK"
   echo false >> .workshop/two/sdk/hooks/setup-base
-  ! workshop_exec refresh
+  ! workshop_exec refresh || false
   workshop_exec exec -- test -d /one/two/three
   workshop_exec exec -- test ! -f /restored-state
 
