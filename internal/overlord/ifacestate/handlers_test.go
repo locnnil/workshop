@@ -432,7 +432,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectBindMasterPlugNotFound(c *check.
 
 	s.state.Lock()
 	defer s.state.Unlock()
-	c.Check(chg.Err(), check.ErrorMatches, `(?s).*SDK "ws/consumer" has no plug named "no-such-plug2".*`)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*"ws/consumer" SDK has no plug named "no-such-plug2".*`)
 
 	// Validate
 	pconns, err := repo.Connections(s.prj.ProjectId, "ws", "consumer")
@@ -523,7 +523,7 @@ func (s *interfaceHandlersSuite) TestAutoconnectFailsOnConflictingMountTargets(c
 	defer s.state.Unlock()
 
 	// Validate
-	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*cannot connect "ws/conflict-[12]:plug" without binding to "ws/conflict-[12]:plug": unbound plugs cannot share target "/opt".*`)
+	c.Assert(chg.Err(), check.ErrorMatches, `(?s).*conflicting target "/opt": plug "ws/conflict-[12]:plug" must bind to plug "ws/conflict-[12]:plug".*`)
 }
 
 func (s *interfaceHandlersSuite) TestAutoconnectBindResolvesMountConflicts(c *check.C) {

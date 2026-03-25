@@ -257,7 +257,7 @@ func v1GetConnections(c *Command, r *http.Request, _ *userState) Response {
 
 	if workshop != "" {
 		if err := checkWorkshopExists(r.Context(), c.d.overlord.WorkshopManager(), projectId, workshop); err != nil {
-			return statusNotFound("cannot access workshop %q: %w", workshop, err)
+			return statusNotFound("cannot access %q workshop: %w", workshop, err)
 		}
 	}
 
@@ -332,7 +332,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			continue
 		}
 		if err := checkInstalled(a.Plugs[i].ProjectId, a.Plugs[i].Workshop); err != nil {
-			return statusNotFound("cannot access workshop %q: %w", a.Plugs[i].Workshop, err)
+			return statusNotFound("cannot access %q workshop: %w", a.Plugs[i].Workshop, err)
 		}
 	}
 	for i := range a.Slots {
@@ -340,7 +340,7 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 			continue
 		}
 		if err := checkInstalled(a.Slots[i].ProjectId, a.Slots[i].Workshop); err != nil {
-			return statusNotFound("cannot access workshop %q: %w", a.Slots[i].Workshop, err)
+			return statusNotFound("cannot access %q workshop: %w", a.Slots[i].Workshop, err)
 		}
 	}
 
@@ -350,7 +350,9 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		repo := c.d.overlord.InterfaceManager().Repository()
 		connRef, err = repo.ResolveConnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,
 			a.Slots[0].ProjectId, a.Slots[0].Workshop, a.Slots[0].Sdk, a.Slots[0].Name)
-		if err == nil {
+		if err != nil {
+			err = fmt.Errorf("cannot resolve connection: %w", err)
+		} else {
 			wsmgr := c.d.overlord.WorkshopManager()
 			var plugW, slotW *workshop.Workshop
 			plugW, err = wsmgr.Workshop(r.Context(), connRef.PlugRef.Workshop, connRef.PlugRef.ProjectId)
@@ -374,10 +376,8 @@ func v1PostConnections(c *Command, r *http.Request, _ *userState) Response {
 		var conns []*interfaces.ConnRef
 		conns, err = c.d.overlord.InterfaceManager().ResolveDisconnect(a.Plugs[0].ProjectId, a.Plugs[0].Workshop, a.Plugs[0].Sdk, a.Plugs[0].Name,
 			a.Slots[0].ProjectId, a.Slots[0].Workshop, a.Slots[0].Sdk, a.Slots[0].Name, a.Forget)
-		if err == nil {
-			if len(conns) == 0 {
-				return statusBadRequest("nothing to do")
-			}
+		if err == nil && len(conns) == 0 {
+			return statusBadRequest("nothing to do")
 		}
 		repo := c.d.overlord.InterfaceManager().Repository()
 		seen := map[interfaces.ConnRef]bool{}

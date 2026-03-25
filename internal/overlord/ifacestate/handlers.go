@@ -39,7 +39,7 @@ func (m *InterfaceManager) doResolveInterfaces(task *state.Task, tomb *tomb.Tomb
 
 	// Ensure all bound plugs exist in the repository.
 	if err = m.resolveWorkshopBindings(wp); err != nil {
-		return err
+		return fmt.Errorf("invalid plug binding: %w", err)
 	}
 
 	// Ensure that connections requested via the workshop file use existing and
@@ -459,12 +459,12 @@ func (m *InterfaceManager) doConnect(task *state.Task, tomb *tomb.Tomb) error {
 
 	plug := m.repo.Plug(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name)
 	if plug == nil {
-		return fmt.Errorf("SDK %q has no plug named %q", plugRef.SdkRef().ShortRef(), plugRef.Name)
+		return fmt.Errorf("%q SDK has no plug named %q", plugRef.SdkRef().ShortRef(), plugRef.Name)
 	}
 
 	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
 	if slot == nil {
-		return fmt.Errorf("SDK %q has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
+		return fmt.Errorf("%q SDK has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
 	}
 
 	var plugDynamicAttrs, slotDynamicAttrs map[string]any
@@ -573,12 +573,12 @@ func (m *InterfaceManager) undoConnect(task *state.Task, tomb *tomb.Tomb) error 
 
 	plug := m.repo.Plug(plugRef.ProjectId, plugRef.Workshop, plugRef.Sdk, plugRef.Name)
 	if plug == nil {
-		return fmt.Errorf("SDK %q has no plug named %q", plugRef.SdkRef().ShortRef(), plugRef.Name)
+		return fmt.Errorf("%q SDK has no plug named %q", plugRef.SdkRef().ShortRef(), plugRef.Name)
 	}
 
 	slot := m.repo.Slot(slotRef.ProjectId, slotRef.Workshop, slotRef.Sdk, slotRef.Name)
 	if slot == nil {
-		return fmt.Errorf("SDK %q has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
+		return fmt.Errorf("%q SDK has no slot named %q", slotRef.SdkRef().ShortRef(), slotRef.Name)
 	}
 
 	if err = m.repo.Disconnect(plugRef.ProjectId, plugRef.Workshop,
@@ -747,10 +747,10 @@ func (m *InterfaceManager) undoDisconnect(task *state.Task, tomb *tomb.Tomb) (er
 		return nil
 	}
 	if plug == nil {
-		return fmt.Errorf("SDK %q has no plug named %q", cref.PlugRef.SdkRef().ShortRef(), cref.PlugRef.Name)
+		return fmt.Errorf("%q SDK has no plug named %q", cref.PlugRef.SdkRef().ShortRef(), cref.PlugRef.Name)
 	}
 	if slot == nil {
-		return fmt.Errorf("SDK %q has no slot named %q", cref.SlotRef.SdkRef().ShortRef(), cref.SlotRef.Name)
+		return fmt.Errorf("%q SDK has no slot named %q", cref.SlotRef.SdkRef().ShortRef(), cref.SlotRef.Name)
 	}
 
 	c, err := m.repo.Connect(&cref, oldconn.StaticPlugAttrs, oldconn.DynamicPlugAttrs,
@@ -1035,7 +1035,7 @@ func (m *InterfaceManager) remount(ctx context.Context, task *state.Task, plug *
 	revert.Add(func() {
 		if _, err := m.repo.Connect(connRef, connection.Plug.StaticAttrs(),
 			connection.Plug.DynamicAttrs(), connection.Slot.StaticAttrs(), oldDynamicAttrs, nil); err != nil {
-			logger.Debugf("On doRemount: cannot reconnect %q plug on a failed remount", plug.ShortRef())
+			logger.Debugf("On doRemount: cannot reconnect plug %q on a failed remount", plug.ShortRef())
 		}
 	})
 

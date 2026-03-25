@@ -1602,7 +1602,7 @@ func (s *apiSuite) TestLaunchWorkshopBindPlugIncompatibleIface(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "bindincompatible" workshop`,
-			ChangeErr: `(?s).*cannot bind "bindincompatible/test-sdk:data" \("mount" interface\) to "bindincompatible/test-sdk-2:gpu" \("gpu" interface\).*`,
+			ChangeErr: `(?s).*invalid plug binding: mount plug "bindincompatible/test-sdk:data" incompatible with gpu plug "bindincompatible/test-sdk-2:gpu".*`,
 		},
 	}
 
@@ -1753,7 +1753,7 @@ func (s *apiSuite) TestWorkshopConnectionsUnknownPlug(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "launch",
 			Summary:   `Launch "workshopbrokenconn" workshop`,
-			ChangeErr: `(?s).*SDK "workshopbrokenconn/test-sdk" has no plug named "data-unknown-plug".*`,
+			ChangeErr: `(?s).*"workshopbrokenconn/test-sdk" SDK has no plug named "data-unknown-plug".*`,
 		},
 	}
 
@@ -3719,7 +3719,7 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 			Status:    http.StatusAccepted,
 			Kind:      "refresh",
 			Summary:   `Refresh "manysdks" workshop`,
-			ChangeErr: `(?s).*SDK "manysdks/test-sdk" has no plug named "data-non-existent".*`,
+			ChangeErr: `(?s).*"manysdks/test-sdk" SDK has no plug named "data-non-existent".*`,
 		},
 	}
 	s.runActionTest(c, requests, expected)
