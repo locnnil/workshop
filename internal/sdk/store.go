@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha3"
 	"encoding/base64"
+	"errors"
+	"math/rand/v2"
 	"regexp"
 	"sync"
 
@@ -61,6 +63,7 @@ func StoreService(st *state.State) Store {
 type Store interface {
 	Find(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)
 	Info(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
+	Resolve(ctx context.Context, request transport.ResolveRequest) (transport.ResolveResponse, error)
 }
 
 func NewFakeStore() *FakeStore {
@@ -75,6 +78,9 @@ type FakeStore struct {
 
 	InfoCalls    []string
 	InfoCallback func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
+
+	ResolveCalls    []transport.ResolveRequest
+	ResolveCallback func(ctx context.Context, req transport.ResolveRequest) (transport.ResolveResponse, error)
 }
 
 func (f *FakeStore) SetFindCallback(find func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)) func() {
@@ -123,6 +129,29 @@ func (f *FakeStore) Info(ctx context.Context, name string, options ...sdkstore.I
 	return info(ctx, name, options...)
 }
 
+func (f *FakeStore) SetResolveCallback(resolve func(ctx context.Context, req transport.ResolveRequest) (transport.ResolveResponse, error)) func() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	old := f.ResolveCallback
+	f.ResolveCallback = resolve
+	return func() {
+		f.ResolveCallback = old
+	}
+}
+
+func (f *FakeStore) Resolve(ctx context.Context, req transport.ResolveRequest) (transport.ResolveResponse, error) {
+	f.lock.Lock()
+	f.ResolveCalls = append(f.ResolveCalls, req)
+	resolve := f.ResolveCallback
+	f.lock.Unlock()
+
+	if resolve == nil {
+		return transport.ResolveResponse{}, errors.New("resolve not implemented")
+	}
+	return resolve(ctx, req)
+}
+
 var nonAlphanumeric = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 // FakePackageID generates a deterministic string which looks like a package
@@ -135,6 +164,57 @@ func FakePackageID(name string) string {
 		packageID = packageID[:32]
 	}
 	return packageID
+}
+
+func FakeResolve(sdks map[string]Meta) func(ctx context.Context, req transport.ResolveRequest) (transport.ResolveResponse, error) {
+	return func(ctx context.Context, req transport.ResolveRequest) (transport.ResolveResponse, error) {
+		return fakeResolve(req, sdks)
+	}
+}
+
+func fakeResolve(req transport.ResolveRequest, sdks map[string]Meta) (transport.ResolveResponse, error) {
+	responses := make([]transport.ResolvePackageResponse, 0, len(req.Packages))
+
+	for _, pkg := range req.Packages {
+		resp := transport.ResolvePackageResponse{
+			InstanceKey: pkg.InstanceKey,
+			Namespace:   "sdk",
+			Name:        pkg.Name,
+		}
+
+		sk, ok := sdks[pkg.Name]
+		if ok {
+			resp.Status = "ok"
+			resp.ID = sk.PackageID
+			resp.Result = transport.ResolvePackageResult{
+				Channel: transport.ResolvePackageChannel{
+					Name:             pkg.Channel,
+					EffectiveChannel: pkg.Channel,
+					Platform:         pkg.Platform,
+				},
+				Revision: transport.ResolveRevision{
+					Platforms: []transport.Platform{pkg.Platform},
+					Download: transport.Download{
+						Sha3_384: sk.Sha3_384,
+					},
+					Revision: sk.Revision.N,
+				},
+			}
+		} else {
+			resp.Status = "error"
+			resp.Error = &transport.APIError{
+				Code:    "package-not-found",
+				Message: "Package not found",
+			}
+		}
+
+		responses = append(responses, resp)
+	}
+
+	rand.Shuffle(len(responses), func(i, j int) {
+		responses[i], responses[j] = responses[j], responses[i]
+	})
+	return transport.ResolveResponse{PackageResults: responses}, nil
 }
 
 type cachedGcsStoreKey struct{}

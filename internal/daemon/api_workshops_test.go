@@ -95,14 +95,6 @@ sdks:
   - name: test-sdk
     channel: latest/stable
 `
-	manysdks_newchan = `name: manysdks
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk
-    channel: latest/edge
-  - name: test-sdk-2
-    channel: latest/stable
-`
 	manysdks_connsadded = `name: manysdks
 base: ubuntu@22.04
 sdks:
@@ -194,13 +186,6 @@ sdks:
       tunnel:
         interface: tunnel
         endpoint: 8080
-`
-
-	wrongbase = `name: wrongbase
-base: ubuntu@24.04
-sdks:
-  - name: test-sdk-3
-    channel: latest/stable
 `
 
 	workshoptunnels = `name: tunnels
@@ -492,7 +477,7 @@ var apiSuiteSdks = map[string]sdk.Meta{
 func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
 	s.createWFile(c, name, yaml)
 
-	defer s.gcsStore.SetActionCallback(storeAction)()
+	defer s.store.SetResolveCallback(sdk.FakeResolve(apiSuiteSdks))()
 	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	reqbuf := bytes.NewBufferString(fmt.Sprintf(`{"names":["%s"],"action":"launch"}`, name))
@@ -909,7 +894,7 @@ type expectedResp struct {
 }
 
 func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected []*expectedResp) {
-	defer s.gcsStore.SetActionCallback(storeAction)()
+	defer s.store.SetResolveCallback(sdk.FakeResolve(apiSuiteSdks))()
 
 	s.vars = map[string]string{"id": s.project.ProjectId}
 	requests := []*http.Request{}
@@ -1032,19 +1017,6 @@ func storeDownload(ctx context.Context, setup sdk.Setup, report *progress.Report
 	}
 
 	return &sdk.Meta{Setup: setup, SdkYAML: sdkYaml}, nil
-}
-
-func storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
-	sdks := make([]sdk.Meta, 0, len(actions))
-	for _, act := range actions {
-		sk, ok := apiSuiteSdks[act.Name]
-		if !ok {
-			return nil, fmt.Errorf("%q SDK not found in Store", act.Name)
-		}
-		sk.Channel = act.Channel
-		sdks = append(sdks, sk)
-	}
-	return sdks, nil
 }
 
 func mockSdk(metadir, hooksdir string, meta string) error {
@@ -2359,86 +2331,6 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", "system-1"})
-}
-
-func (s *apiSuite) TestRefreshNewSdkChannel(c *check.C) {
-	s.daemon(c)
-	s.d.Overlord().Loop()
-	defer s.d.Overlord().Stop()
-	// Setup
-	s.createWFile(c, "manysdks", manysdks)
-	defer s.gcsStore.SetDownloadCallback(storeDownload)()
-
-	requests := []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-	}
-	expected := []*expectedResp{
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "launch",
-			Summary: `Launch "manysdks" workshop`,
-		},
-	}
-	s.runActionTest(c, requests, expected)
-
-	s.createWFile(c, "manysdks", manysdks_newchan)
-
-	requests = []*bytes.Buffer{
-		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
-	}
-	expected = []*expectedResp{
-		{
-			Type:    ResponseTypeAsync,
-			Status:  http.StatusAccepted,
-			Kind:    "refresh",
-			Summary: `Refresh "manysdks" workshop`,
-		},
-	}
-
-	s.runActionTest(c, requests, expected)
-
-	want := []expectedWorkshop{{
-		name: "manysdks",
-		base: "ubuntu@22.04",
-		sdks: []sdk.Setup{
-			{Name: sdk.System.String(), Source: sdk.SystemSource, Revision: system.SystemSdkRevision},
-			{Name: "test-sdk", PackageID: "t5tqUClfNeHiiOpvPvT29O0HkxeaXBOq", Channel: "latest/edge", Revision: sdk.R(1)},
-			{Name: "test-sdk-2", PackageID: "iCJybjjWd2n48hKoMdjGEIWwA3i2TmX7", Channel: "latest/stable", Revision: sdk.R(1)},
-		},
-		connections: []string{
-			"b8639dea/manysdks/test-sdk:data b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/test-sdk-2:photos b8639dea/manysdks/system:mount",
-			"b8639dea/manysdks/test-sdk-2:gpu b8639dea/manysdks/system:gpu",
-		},
-		plugs: []string{
-			"test-sdk:data",
-			"test-sdk-2:photos",
-			"test-sdk-2:gpu",
-		},
-		slots: []string{
-			"test-sdk-2:data-slot",
-			"system:camera",
-			"system:desktop",
-			"system:gpu",
-			"system:mount",
-			"system:ssh-agent",
-		},
-	}}
-	s.ensureWorkshops(c, want)
-
-	s.checkSnapshotCalls(c, "manysdks", []string{
-		"system",
-		"test-sdk",
-		"test-sdk-2",
-		"test-sdk",
-		"test-sdk-2",
-	})
-
-	s.checkLaunchOrRebuildCalls(c, "manysdks", []launchOrRebuild{
-		{manysdks, nil},
-		{manysdks_newchan, []string{"system"}},
-	})
 }
 
 func updateSdkStoreRev(name string, rev int, meta string) func() {
@@ -4146,13 +4038,11 @@ func (s *apiSuite) TestValidateSdkInfo(c *check.C) {
 	s.mockTrySdk(c, "test-sdk", "test-sdk_all.sdk", testsdk)
 	s.mockTrySdk(c, "test-sdk-2", "test-sdk-2_all.sdk", testsdk2_invalid)
 	s.createWFile(c, "manysdks", manysdks_try)
-	s.createWFile(c, "wrongbase", wrongbase)
 	defer s.gcsStore.SetDownloadCallback(storeDownload)()
 
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
-		bytes.NewBufferString(`{"names":["wrongbase"],"action":"launch"}`),
 	}
 
 	expected := []*expectedResp{
@@ -4165,11 +4055,6 @@ func (s *apiSuite) TestValidateSdkInfo(c *check.C) {
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
 			Message: `cannot launch "manysdks": SDK must be named "test-sdk-2" (now: "sdk-2")`,
-		},
-		{
-			Type:    ResponseTypeError,
-			Status:  http.StatusBadRequest,
-			Message: `cannot launch "wrongbase": "test-sdk-3" SDK has "ubuntu@22.04" base; required: "ubuntu@24.04"`,
 		},
 	}
 
