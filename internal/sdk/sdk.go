@@ -96,14 +96,18 @@ func (s Source) NeedsRetrieve() bool {
 	return s == StoreSource || s == SystemSource
 }
 
-type Id struct {
+// ContentID contains the information essential to identifying an SDK. SDKs
+// with the same ContentID will behave the same when installed in a workshop,
+// even if they come from different channels or sources.
+// It is not the same as the SDK Store PackageID.
+type ContentID struct {
 	Name     string
 	Sha3_384 string
 	IsVolume bool
 }
 
-func SetupId(setup Setup) Id {
-	return Id{Name: setup.Name, Sha3_384: setup.Sha3_384, IsVolume: setup.IsVolume()}
+func SetupContentID(setup Setup) ContentID {
+	return ContentID{Name: setup.Name, Sha3_384: setup.Sha3_384, IsVolume: setup.IsVolume()}
 }
 
 type sdkYaml struct {

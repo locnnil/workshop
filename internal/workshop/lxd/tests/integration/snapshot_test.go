@@ -155,7 +155,7 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	defer func() { _ = s.bd.UninstallSdk(s.ctx, wf.Name, meta.Name) }()
 
 	// Validate post-install metadata.
-	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupId(meta.Setup))
+	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(meta.Setup))
 	sdkAttached := s.workshopFormat(c, wf, snapshot)
 	c.Check(sdkAttached, testutil.JsonEquals, format["sdk-attached"])
 
@@ -174,7 +174,7 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Validate post-install metadata.
-	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupId(setup2))
+	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(setup2))
 	sdkMounted := s.workshopFormat(c, wf, snapshot)
 	c.Check(sdkMounted, testutil.JsonEquals, format["sdk-mounted"])
 

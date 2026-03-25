@@ -503,7 +503,7 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 	return s, nil
 }
 
-func sdkToSnapshotDevice(installOrder int, sk sdk.Id) map[string]string {
+func sdkToSnapshotDevice(installOrder int, sk sdk.ContentID) map[string]string {
 	return map[string]string{
 		"type":                   "none",
 		"user.sdk.sha3-384":      sk.Sha3_384,

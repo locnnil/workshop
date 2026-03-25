@@ -103,7 +103,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 			Name:        "ubuntu@24.04",
 			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
 		},
-		Sdks: []sdk.Id{{
+		Sdks: []sdk.ContentID{{
 			Name:     "test-sdk-1",
 			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			IsVolume: true,
@@ -112,7 +112,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
-	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
 		Name:     "test-sdk-2",
 		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		IsVolume: true,
@@ -318,7 +318,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 			Name:        "ubuntu@24.04",
 			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
 		},
-		Sdks: []sdk.Id{{
+		Sdks: []sdk.ContentID{{
 			Name:     "test-sdk-1",
 			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			IsVolume: true,
@@ -327,7 +327,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
-	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
 		Name:     "test-sdk-2",
 		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		IsVolume: true,
@@ -485,7 +485,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 			Name:        "ubuntu@24.04",
 			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
 		},
-		Sdks: []sdk.Id{{
+		Sdks: []sdk.ContentID{{
 			Name:     "test-sdk-1",
 			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			IsVolume: true,
@@ -494,7 +494,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
-	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
 		Name:     "test-sdk-2",
 		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		IsVolume: true,

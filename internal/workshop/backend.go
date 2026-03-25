@@ -98,7 +98,7 @@ type BaseImageManager interface {
 // length limits and a restricted character set.
 type Snapshot struct {
 	Image BaseImage
-	Sdks  []sdk.Id
+	Sdks  []sdk.ContentID
 }
 
 // BaseOnly identifies a "snapshot" which consists of a base image only.
@@ -109,9 +109,9 @@ func BaseOnly(name, fingerprint string) Snapshot {
 // SdkSnapshot identifies a snapshot consisting of a base image and a sequence
 // of installed SDKs.
 func SdkSnapshot(image BaseImage, sdks []sdk.Setup) Snapshot {
-	snapshot := Snapshot{Image: image, Sdks: make([]sdk.Id, 0, len(sdks))}
+	snapshot := Snapshot{Image: image, Sdks: make([]sdk.ContentID, 0, len(sdks))}
 	for _, s := range sdks {
-		snapshot.Sdks = append(snapshot.Sdks, sdk.SetupId(s))
+		snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(s))
 	}
 	return snapshot
 }

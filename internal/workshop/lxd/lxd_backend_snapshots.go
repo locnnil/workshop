@@ -138,7 +138,7 @@ func sdkSnapshotName(sk string) (string, error) {
 	return sk + "-" + hex.EncodeToString(bytes), nil
 }
 
-func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost, sdks []sdk.Id) error {
+func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost, sdks []sdk.ContentID) error {
 	projectId := req.Config[workshop.ConfigProjectId]
 	name := req.Config[workshop.ConfigWorkshopName]
 
@@ -246,7 +246,7 @@ func mergeConfig(source, target, config map[string]string, newApi bool) {
 	maps.Copy(source, config)
 }
 
-func mergeDevices(source map[string]map[string]string, sdks []sdk.Id, w string, newApi bool) error {
+func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string, newApi bool) error {
 	if newApi {
 		maps.DeleteFunc(source, func(k string, v map[string]string) bool {
 			return k != "root"
