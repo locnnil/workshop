@@ -1,0 +1,44 @@
+{
+  "package-results": [
+    {
+      "instance-key": "random123",
+      "status": "ok",
+      "namespace": "sdk",
+      "name": "test-sdk-info-multi-base",
+      "id": "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+      "result": {
+        "channel": {
+          "name": "stable",
+          "released-at": "2026-03-10T23:48:44.327082",
+          "track": null,
+          "risk": "stable",
+          "branch": null,
+          "effective-channel": "stable",
+          "platform": {
+            "name": "ubuntu",
+            "channel": "22.04",
+            "architecture": "amd64"
+          }
+        },
+        "revision": {
+          "created-at": "2026-03-10T23:16:31.917435",
+          "platforms": [
+            {
+              "name": "ubuntu",
+              "channel": "22.04",
+              "architecture": "amd64"
+            }
+          ],
+          "download": {
+            "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_2.sdk",
+            "size": 464,
+            "sha3-384": "59606df612d0290225f427935ac300437542a3c3024c52a0fb2bc5ae486ff801855f571ab8ecfe5f14f16b051d97673e"
+          },
+          "revision": 2,
+          "version": "0.2"
+        }
+      }
+    }
+  ],
+  "craft-results": []
+}

@@ -4,7 +4,6 @@ package sdkstore
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 
 	"gopkg.in/check.v1"

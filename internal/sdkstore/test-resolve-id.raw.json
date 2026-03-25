@@ -1,0 +1,44 @@
+{
+  "package-results": [
+    {
+      "instance-key": "random456",
+      "status": "ok",
+      "namespace": "sdk",
+      "name": "test-sdk-info-multi-base",
+      "id": "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+      "result": {
+        "channel": {
+          "name": "edge",
+          "released-at": "2026-03-11T00:13:19.621866",
+          "track": null,
+          "risk": "edge",
+          "branch": null,
+          "effective-channel": "edge",
+          "platform": {
+            "name": "ubuntu",
+            "channel": "24.04",
+            "architecture": "riscv64"
+          }
+        },
+        "revision": {
+          "created-at": "2026-03-11T00:13:15.679272",
+          "platforms": [
+            {
+              "name": "ubuntu",
+              "channel": "24.04",
+              "architecture": "riscv64"
+            }
+          ],
+          "download": {
+            "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_13.sdk",
+            "size": 480,
+            "sha3-384": "6e4067003e140090d017872a8a730a1205679d388efde0e2eff6ac4e89e639593ae0f4665f361bb52d704e8ec670be06"
+          },
+          "revision": 13,
+          "version": "0.3.1"
+        }
+      }
+    }
+  ],
+  "craft-results": []
+}
