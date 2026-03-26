@@ -72,6 +72,8 @@ In this documentation
        :ref:`Connect <ref_workshop_connect>` •
        :ref:`Shell access <ref_workshop_shell>` •
        :ref:`Add actions <how_add_actions>` •
+       :ref:`Use multiple workshops <how_use_multiple_workshops>` •
+       :ref:`Forward ports <how_forward_ports>` •
        :ref:`Status diagrams <ref_workshop_status>` •
        :ref:`Definition file <ref_workshop_definition>`
 
@@ -79,10 +81,10 @@ In this documentation
      - :ref:`Concepts <exp_sdk_concepts>` •
        :ref:`Sketch SDKs in-place <tut_sketch_sdks>` •
        :ref:`Craft full SDKs <tut_craft_sdks>` •
+       :ref:`Parts <exp_sdk_parts>` •
        :ref:`Design best practices <exp_sdk_best_practices>` •
        :ref:`SDKs vs Dockerfiles <exp_dockerfile_vs_sdk>` •
-       :ref:`Definition file <ref_sdk_definition>` •
-       :ref:`Internals <ref_sdk_internals>`
+       :ref:`Definition file <ref_sdk_definition>`
 
    * - **Interfaces**
      - :ref:`Concepts <exp_interface_concepts>` •
@@ -93,19 +95,20 @@ In this documentation
        :ref:`SSH agent <exp_ssh_interface>` •
        :ref:`Networking <exp_tunnel_interface>`
 
+   * - **Projects**
+     - :ref:`Concepts <exp_projects>` •
+       :ref:`Move projects <how_move_projects>` •
+       :ref:`Update projects <tut_project_updates>` •
+       :ref:`Changes and tasks <exp_changes_tasks>`
+
    * - **Development**
      - :ref:`Connect VS Code <how_vscode_connect_remote>` •
        :ref:`JetBrains Gateway <how_jetbrains_gateway>` •
        :ref:`VS Code in browser <how_vscode_run_in_browser>` •
        :ref:`JupyterLab in browser <how_jupyterlab_run_in_browser>` •
        :ref:`Use with Git <how_git_workshops>` •
-       :ref:`GitHub Actions locally <how_run_github_actions_locally>`
-
-   * - **Projects**
-     - :ref:`Concepts <exp_projects>` •
-       :ref:`Move projects <how_move_projects>` •
-       :ref:`Update projects <tut_project_updates>` •
-       :ref:`Changes and tasks <exp_changes_tasks>`
+       :ref:`Run GitHub Actions locally <how_run_github_actions_locally>` •
+       :ref:`AI agents <how_use_workshops_with_ai_agents>`
 
    * - **Troubleshooting**
      - :ref:`Debug workshops <how_debug_issues_workshops>` •
@@ -113,13 +116,17 @@ In this documentation
        :ref:`Resolve plug conflicts <how_resolve_plug_conflicts>` •
        :ref:`Purge workshops <how_purge>`
 
-   * - **Reference**
+   * - **Architecture**
+     - :ref:`Components <exp_arch_system_components>` •
+       :ref:`Runtime behavior <exp_arch_runtime_behavior>` •
+       :ref:`Workshop internals <ref_workshop_internals>` •
+       :ref:`SDK internals <ref_sdk_internals>`
+
+   * - **CLI**
      - :ref:`Workshop CLI <ref_workshop__cli>` •
        :ref:`SDK CLI <ref_sdk__cli>` •
        :ref:`SDKcraft CLI <ref_sdkcraft__cli>` •
-       :ref:`Workshop internals <ref_workshop_internals>` •
-       :ref:`SDK internals <ref_sdk_internals>` •
-       :ref:`Runtime behavior <exp_arch_runtime_behavior>`
+       :ref:`workshopctl CLI <ref_workshopctl__cli>`
 
 
 How this documentation is organised
@@ -181,6 +188,7 @@ we'll help you get it out there.
 .. rubric:: Governance and policies
 
 - `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
+- :ref:`Security policy <security>`
 
 .. rubric:: Feedback and support
 
