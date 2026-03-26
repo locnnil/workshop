@@ -122,7 +122,7 @@ Check the status of both workshops:
 
    $ workshop list
 
-     Workshop  Status  Notes
+     WORKSHOP  STATUS  NOTES
      frontend  Ready   -
      backend   Ready   -
 
@@ -171,7 +171,7 @@ use the :command:`workshop list` command without arguments:
 
    $ workshop list
 
-     Workshop  Status  Notes
+     WORKSHOP  STATUS  NOTES
      frontend  Ready   -
      backend   Ready   -
 
@@ -183,7 +183,7 @@ use the :option:`!--global` flag:
 
    $ workshop list --global
 
-     Project                   Workshop  Status  Notes
+     PROJECT                   WORKSHOP  STATUS  NOTES
      /home/user/my-project     frontend  Ready   -
      /home/user/my-project     backend   Ready   -
      /home/user/other-project  dev       Ready   -
@@ -298,7 +298,7 @@ by pairing a regular SDK plug with a :samp:`system` slot:
        plugs:
          api:
            interface: tunnel
-           endpoint: localhost:8080    # where the code connects
+           endpoint: localhost:8080    # where the client connects
      - name: system
        slots:
          api:
