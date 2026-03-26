@@ -21,8 +21,9 @@ type CmdLaunch struct {
 
 func (c *CmdLaunch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "launch <WORKSHOP>...",
-		Short: "Construct one or many workshops using their definitions",
+		Use:     "launch <WORKSHOP>...",
+		Short:   "Construct one or many workshops using their definitions",
+		GroupID: GrpCRUD,
 		Long: `
 This command constructs the workshops listed as arguments by going over their
 definitions and installing their components. For each workshop, it:

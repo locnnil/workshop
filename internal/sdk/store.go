@@ -56,6 +56,7 @@ func StoreService(st *state.State) Store {
 }
 
 type Store interface {
+	Find(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)
 	Info(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
 }
 
@@ -66,8 +67,34 @@ func NewFakeStore() *FakeStore {
 type FakeStore struct {
 	lock sync.Mutex
 
+	FindCalls    []string
+	FindCallback func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)
+
 	InfoCalls    []string
 	InfoCallback func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
+}
+
+func (f *FakeStore) SetFindCallback(find func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)) func() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	old := f.FindCallback
+	f.FindCallback = find
+	return func() {
+		f.FindCallback = old
+	}
+}
+
+func (f *FakeStore) Find(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error) {
+	f.lock.Lock()
+	f.FindCalls = append(f.FindCalls, query)
+	find := f.FindCallback
+	f.lock.Unlock()
+
+	if find == nil {
+		return nil, nil
+	}
+	return find(ctx, query, options...)
 }
 
 func (f *FakeStore) SetInfoCallback(info func(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)) func() {

@@ -15,9 +15,10 @@ type CmdRemount struct {
 
 func (c *CmdRemount) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE>",
-		Args:  cobra.ExactArgs(2),
-		Short: "Mount a new source location to the mount interface plug's target",
+		Use:     "remount <WORKSHOP>/<SDK>:<PLUG> <SOURCE>",
+		Args:    cobra.ExactArgs(2),
+		Short:   "Mount a new source location to the mount interface plug's target",
+		GroupID: GrpConnect,
 		Long: `
 This command mounts a new source location on the host to the target directory
 of the specified mount interface plug, qualified by the SDK name.

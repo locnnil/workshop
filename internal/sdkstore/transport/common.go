@@ -4,6 +4,8 @@
 package transport
 
 import (
+	"strings"
+
 	"github.com/canonical/workshop/internal/timeutil"
 )
 
@@ -14,11 +16,11 @@ import (
 // and platform. There can be multiple channels of the same track and risk, but
 // with different platforms.
 type Channel struct {
+	Name       string           `json:"name,omitempty"`
 	Track      string           `json:"track,omitempty"`
 	Risk       string           `json:"risk,omitempty"`
-	Name       string           `json:"name,omitempty"`
 	Platform   Platform         `json:"platform,omitzero"`
-	ReleasedAt timeutil.TimeUTC `json:"released-at"`
+	ReleasedAt timeutil.TimeUTC `json:"released-at,omitzero"`
 }
 
 // Platform is a typed tuple for identifying SDKs with a matching architecture,
@@ -27,6 +29,10 @@ type Platform struct {
 	Name         string `json:"name"`
 	Channel      string `json:"channel"`
 	Architecture string `json:"architecture"`
+}
+
+func (p Platform) String() string {
+	return strings.Join([]string{p.Name, p.Channel, p.Architecture}, "#")
 }
 
 // Download represents the download structure from the SDK Store.
@@ -40,6 +46,17 @@ type Download struct {
 type Category struct {
 	Featured bool   `json:"featured"`
 	Name     string `json:"name"`
+}
+
+// Links contains URLs associated with the SDK.
+type Links struct {
+	Contact   []string `json:"contact,omitempty"`
+	Docs      []string `json:"docs,omitempty"`
+	Donations []string `json:"donations,omitempty"`
+	Issues    []string `json:"issues,omitempty"`
+	Source    []string `json:"source,omitempty"`
+	Website   []string `json:"website,omitempty"`
+	Upstream  string   `json:"upstream,omitempty"`
 }
 
 // Media defines media attached to an SDK.

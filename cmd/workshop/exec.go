@@ -168,10 +168,11 @@ This command enumerates all actions in the workshop, printing a YAML map.
 
 func (c *CmdExec) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "exec [flags] [<WORKSHOP>] [--] <COMMAND>...",
-		Args:  cobra.MinimumNArgs(1),
-		Short: shortExecHelp,
-		Long:  longExecHelp,
+		Use:     "exec [flags] [<WORKSHOP>] [--] <COMMAND>...",
+		Args:    cobra.MinimumNArgs(1),
+		Short:   shortExecHelp,
+		GroupID: GrpUtilise,
+		Long:    longExecHelp,
 		Example: `
 Run the "go build main.go" command under the "nimble" workshop
 in the current project directory:
@@ -233,10 +234,11 @@ func execArgs(av []string, argsLenAtDash int) *ExecArgs {
 
 func (c *CmdShell) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "shell [<WORKSHOP>]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: shortShellHelp,
-		Long:  longShellHelp,
+		Use:     "shell [<WORKSHOP>]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   shortShellHelp,
+		GroupID: GrpUtilise,
+		Long:    longShellHelp,
 		Example: `
 Open the default login shell of the "workshop" user into the "nimble" workshop
 in the current project directory:
@@ -268,10 +270,11 @@ func (c *CmdShell) Run(cmd *cobra.Command, av []string) error {
 
 func (c *CmdRun) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "run [flags] [<WORKSHOP>] [--] <ACTION> <ARGUMENTS>...",
-		Args:  cobra.MinimumNArgs(1),
-		Short: shortRunHelp,
-		Long:  longRunHelp,
+		Use:     "run [flags] [<WORKSHOP>] [--] <ACTION> <ARGUMENTS>...",
+		Args:    cobra.MinimumNArgs(1),
+		Short:   shortRunHelp,
+		GroupID: GrpUtilise,
+		Long:    longRunHelp,
 		Example: `
 Run the "build" action under the "nimble" workshop
 in the current project directory:
@@ -679,10 +682,11 @@ type CmdActions struct {
 
 func (c *CmdActions) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "actions [<WORKSHOP>]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: shortActionsHelp,
-		Long:  longActionsHelp,
+		Use:     "actions [<WORKSHOP>]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   shortActionsHelp,
+		GroupID: GrpExplore,
+		Long:    longActionsHelp,
 		Example: `
 List actions for the "nimble" workshop in the current project directory:
 $ workshop actions nimble

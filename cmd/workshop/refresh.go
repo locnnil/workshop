@@ -22,8 +22,9 @@ type CmdRefresh struct {
 
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "refresh [--abort|--continue|--restore|--wait-on-error] <WORKSHOP>...",
-		Short: "Update workshops according to their definitions",
+		Use:     "refresh [--abort|--continue|--restore|--wait-on-error] <WORKSHOP>...",
+		Short:   "Update workshops according to their definitions",
+		GroupID: GrpCRUD,
 		Long: `
 This command updates the workshops listed as arguments. For each workshop, 
 it checks the workshop definition and applies any required updates 

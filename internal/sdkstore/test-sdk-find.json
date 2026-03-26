@@ -1,0 +1,62 @@
+[
+  {
+    "name": "test-sdk-find-1",
+    "package-id": "geGY07WPXyvnQahmRP1oOegGUyjurXrY",
+    "metadata": {
+      "description": "Test SDK description",
+      "license": "AGPL-3.0",
+      "publisher": {
+        "display-name": "Jonathan Conder",
+        "id": "YnyjkYo9nA6AlXsTKnpxrCGxNZgmSdmu",
+        "username":"usso-jeconder",
+        "validation":"unproven"
+      },
+      "summary": "Test SDK summary"
+    },
+    "default-release": {
+      "channel": {
+        "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
+        "platform": {
+          "architecture": "amd64",
+          "channel": "22.04",
+          "name": "ubuntu"
+        },
+        "released-at": "2026-03-19T07:54:22.067952Z"
+      },
+      "revision": 1,
+      "version": "0.1.1"
+    }
+  },
+  {
+    "name": "test-sdk-find-1-s390x",
+    "package-id": "dP9SNAfRBf8IL0w1OD8tuGEViVSBKji6",
+    "metadata": {
+      "description": "Test SDK s390x description",
+      "license": "AGPL-3.0",
+      "publisher": {
+        "display-name": "Jonathan Conder",
+        "id": "YnyjkYo9nA6AlXsTKnpxrCGxNZgmSdmu",
+        "username":"usso-jeconder",
+        "validation":"unproven"
+      },
+      "summary": "Test SDK s390x summary"
+    },
+    "default-release": {
+      "channel": {
+        "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
+        "platform": {
+          "architecture": "s390x",
+          "channel": "all",
+          "name": "all"
+        },
+        "released-at": "2026-03-19T08:24:40.960058Z"
+      },
+      "revision": 1,
+      "version": "0.1+s390x"
+    }
+  }
+]

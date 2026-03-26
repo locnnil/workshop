@@ -28,9 +28,10 @@ type CmdInfo struct {
 
 func (c *CmdInfo) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "info [<WORKSHOP>]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Print the current status and details of a workshop as YAML",
+		Use:     "info [<WORKSHOP>]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Print the current status and details of a workshop as YAML",
+		GroupID: GrpExplore,
 		Long: `
 This command outputs the basic settings, current status and individual SDK
 details for a workshop, formatting them as YAML. Specifically, it prints:

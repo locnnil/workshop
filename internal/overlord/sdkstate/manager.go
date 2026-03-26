@@ -70,6 +70,23 @@ type SdkFullInfo struct {
 	Installed   []SdkInstalled `json:"installed,omitempty"`
 }
 
+type SdkSummary struct {
+	Name        string        `json:"name"`
+	PackageID   string        `json:"package-id,omitempty"`
+	Summary     string        `json:"summary,omitempty"`
+	Description string        `json:"description,omitempty"`
+	License     string        `json:"license,omitempty"`
+	Publisher   *StoreAccount `json:"publisher,omitempty"`
+	Channel     string        `json:"channel"`
+	Track       string        `json:"track"`
+	Risk        string        `json:"risk"`
+	Revision    string        `json:"revision"`
+	ReleasedAt  time.Time     `json:"released-at"`
+	Version     string        `json:"version,omitempty"`
+	Base        string        `json:"base,omitempty"`
+	Arch        string        `json:"arch,omitempty"`
+}
+
 type SdkManager struct {
 	state   *state.State
 	store   sdk.Store
@@ -126,6 +143,50 @@ func (w *SdkManager) SdkVolumes(ctx context.Context) ([]SdkVolume, error) {
 		})
 	}
 	return entries, nil
+}
+
+func (w *SdkManager) FindSdks(ctx context.Context, query string) ([]SdkSummary, error) {
+	response, err := w.store.Find(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]SdkSummary, 0, len(response))
+	for _, entry := range response {
+		var publisher *StoreAccount
+		if entry.Metadata.Publisher.ID != "" {
+			publisher = &StoreAccount{
+				ID:          entry.Metadata.Publisher.ID,
+				Username:    entry.Metadata.Publisher.Username,
+				DisplayName: entry.Metadata.Publisher.DisplayName,
+				Validation:  entry.Metadata.Publisher.Validation,
+			}
+		}
+
+		base := entry.DefaultRelease.Channel.Platform.Name + "@" + entry.DefaultRelease.Channel.Platform.Channel
+		if base == "all@all" {
+			base = ""
+		}
+
+		summary := SdkSummary{
+			Name:        entry.Name,
+			PackageID:   entry.PackageID,
+			Summary:     entry.Metadata.Summary,
+			Description: entry.Metadata.Description,
+			License:     entry.Metadata.License,
+			Publisher:   publisher,
+			Channel:     entry.DefaultRelease.Channel.Name,
+			Track:       entry.DefaultRelease.Channel.Track,
+			Risk:        entry.DefaultRelease.Channel.Risk,
+			Revision:    sdk.Revision{N: entry.DefaultRelease.Revision}.String(),
+			ReleasedAt:  time.Time(entry.DefaultRelease.Channel.ReleasedAt),
+			Version:     entry.DefaultRelease.Version,
+			Base:        base,
+			Arch:        entry.DefaultRelease.Channel.Platform.Architecture,
+		}
+		result = append(result, summary)
+	}
+	return result, nil
 }
 
 func (w *SdkManager) Sdk(ctx context.Context, name string) (*SdkFullInfo, error) {

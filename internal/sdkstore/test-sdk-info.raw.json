@@ -17,14 +17,14 @@
     {
       "channel": {
         "name": "latest/edge",
+        "track": "latest",
+        "risk": "edge",
         "platform": {
           "architecture": "all",
           "channel": "all",
           "name": "all"
         },
-        "released-at": "2026-03-10T06:23:47.372123+00:00",
-        "risk": "edge",
-        "track": "latest"
+        "released-at": "2026-03-10T06:23:47.372123+00:00"
       },
       "revision": {
         "created-at": "2026-03-10T06:23:16.908418+00:00",

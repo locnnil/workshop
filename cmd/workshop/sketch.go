@@ -33,9 +33,10 @@ type CmdSketch struct {
 
 func (c *CmdSketch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "sketch-sdk [--stash|--restore|--eject|--remove] [<WORKSHOP>]",
-		Args:  cobra.MaximumNArgs(1),
-		Short: "Customize a workshop",
+		Use:     "sketch-sdk [--stash|--restore|--eject|--remove] [<WORKSHOP>]",
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Customize a workshop",
+		GroupID: GrpSketch,
 		Long: `The command opens the sketch SDK template in the default text editor.
 Add customizations by editing the template, then save and exit 
 the editor to apply the changes to the workshop.
@@ -611,9 +612,10 @@ type CmdSketches struct {
 
 func (c *CmdSketches) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "sketches",
-		Args:  cobra.ExactArgs(0),
-		Short: "List project sketch SDKs",
+		Use:     "sketches",
+		Args:    cobra.ExactArgs(0),
+		Short:   "List project sketch SDKs",
+		GroupID: GrpSketch,
 		Long: `
 This command enumerates all sketches in the project, printing a compact list:
 

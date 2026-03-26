@@ -14,8 +14,9 @@ type CmdRemove struct {
 
 func (c *CmdRemove) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "remove <WORKSHOP>...",
-		Short: "Remove one or many workshops",
+		Use:     "remove <WORKSHOP>...",
+		Short:   "Remove one or many workshops",
+		GroupID: GrpCRUD,
 		Long: `
 This command removes the workshops listed as arguments. For each workshop, it:
 

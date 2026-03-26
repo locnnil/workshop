@@ -18,9 +18,10 @@ type CmdConnect struct {
 
 func (c *CmdConnect) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>]",
-		Args:  cobra.RangeArgs(1, 2),
-		Short: "Connect a plug to a slot",
+		Use:     "connect <WORKSHOP>/<SDK>:<PLUG> [<WORKSHOP>/<SDK>][:<SLOT>]",
+		Args:    cobra.RangeArgs(1, 2),
+		Short:   "Connect a plug to a slot",
+		GroupID: GrpConnect,
 		Long: `
 This command connects a plug to a target slot
 that is specified as the second argument or deduced from the context.

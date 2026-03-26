@@ -5,6 +5,8 @@ package https
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,7 +14,6 @@ import (
 	"time"
 
 	"github.com/juju/clock"
-	"github.com/juju/errors"
 	"github.com/juju/retry"
 	"golang.org/x/net/http/httpproxy"
 
@@ -53,7 +54,7 @@ func DialContextMiddleware(breaker DialBreaker) TransportMiddleware {
 		}
 		transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 			if !breaker.Allowed(addr) {
-				return nil, errors.Errorf("access to address %q not allowed", addr)
+				return nil, fmt.Errorf("access to address %q not allowed", addr)
 			}
 
 			return dialer.DialContext(ctx, network, addr)
@@ -297,7 +298,7 @@ func (m retryMiddleware) clampBackoff(duration time.Duration) (time.Duration, er
 	}
 	if m.policy.MaxDelay > 0 && duration > m.policy.MaxDelay {
 		future := m.clock.Now().Add(duration)
-		return duration, errors.Errorf("API request retry is not accepting further requests until %s", future.Format(time.RFC3339))
+		return duration, fmt.Errorf("API request retry is not accepting further requests until %s", future.Format(time.RFC3339))
 	}
 	return duration, nil
 }

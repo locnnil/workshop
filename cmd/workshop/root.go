@@ -17,6 +17,17 @@ import (
 	"github.com/canonical/workshop/internal/version"
 )
 
+const (
+	GrpCRUD     = "create-update-delete"
+	GrpSketch   = "sketch"
+	GrpExplore  = "explore-troubleshoot"
+	GrpChanges  = "changes-tasks"
+	GrpConnect  = "connect"
+	GrpUtilise  = "utilise"
+	GrpWarnings = "warnings"
+	GrpMisc     = "misc"
+)
+
 type CmdRoot struct {
 	cwd string
 	cli *client.Client
@@ -38,127 +49,57 @@ func (c *CmdRoot) Command() *cobra.Command {
 	}
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
-	cmd.AddGroup(
-		&cobra.Group{
-			ID:    "create-update-delete",
-			Title: "Create new workshops; start, stop, update or delete existing ones:",
-		},
-		&cobra.Group{
-			ID:    "sketch",
-			Title: "Customize a workshop:",
-		},
-		&cobra.Group{
-			ID:    "explore-troubleshoot",
-			Title: "Enumerate workshops, list their details:",
-		},
-		&cobra.Group{
-			ID:    "changes-tasks",
-			Title: "List recent changes and individual activities:",
-		},
-		&cobra.Group{
-			ID:    "connect",
-			Title: "Create, manage, list and drop interface connections:",
-		},
-		&cobra.Group{
-			ID:    "utilise",
-			Title: "Run commands inside a workshop:",
-		},
-		&cobra.Group{
-			ID:    "warnings",
-			Title: "List and acknowledge warnings:",
-		},
-		&cobra.Group{
-			ID:    "misc",
-			Title: "Additional commands:",
-		},
-	)
+	groups := []*cobra.Group{{
+		ID:    GrpCRUD,
+		Title: "Create new workshops; start, stop, update, or delete existing ones:",
+	}, {
+		ID:    GrpSketch,
+		Title: "Customize a workshop:",
+	}, {
+		ID:    GrpExplore,
+		Title: "Enumerate workshops, list their details:",
+	}, {
+		ID:    GrpChanges,
+		Title: "List recent changes and individual activities:",
+	}, {
+		ID:    GrpConnect,
+		Title: "Create, manage, list, and drop interface connections:",
+	}, {
+		ID:    GrpUtilise,
+		Title: "Run commands inside a workshop:",
+	}, {
+		ID:    GrpWarnings,
+		Title: "List and acknowledge warnings:",
+	}, {
+		ID:    GrpMisc,
+		Title: "Additional commands:",
+	}}
+	cmd.AddGroup(groups...)
 
-	cmd.SetHelpCommandGroupID("misc")
-	cmd.SetCompletionCommandGroupID("misc")
+	cmd.SetHelpCommandGroupID(GrpMisc)
+	cmd.SetCompletionCommandGroupID(GrpMisc)
 
-	launchCmd := (&CmdLaunch{root: c}).Command()
-	launchCmd.GroupID = "create-update-delete"
-	cmd.AddCommand(launchCmd)
-
-	listCmd := (&CmdList{root: c}).Command()
-	listCmd.GroupID = "explore-troubleshoot"
-	cmd.AddCommand(listCmd)
-
-	changesCmd := (&CmdChanges{root: c}).Command()
-	changesCmd.GroupID = "changes-tasks"
-	cmd.AddCommand(changesCmd)
-
-	tasksCmd := (&CmdTasks{root: c}).Command()
-	tasksCmd.GroupID = "changes-tasks"
-	cmd.AddCommand(tasksCmd)
-
-	refreshCmd := (&CmdRefresh{root: c}).Command()
-	refreshCmd.GroupID = "create-update-delete"
-	cmd.AddCommand(refreshCmd)
-
-	startCmd := (&CmdStart{root: c}).Command()
-	startCmd.GroupID = "create-update-delete"
-	cmd.AddCommand(startCmd)
-
-	stopCmd := (&CmdStop{root: c}).Command()
-	stopCmd.GroupID = "create-update-delete"
-	cmd.AddCommand(stopCmd)
-
-	infoCmd := (&CmdInfo{root: c}).Command()
-	infoCmd.GroupID = "explore-troubleshoot"
-	cmd.AddCommand(infoCmd)
-
-	execCmd := (&CmdExec{root: c}).Command()
-	execCmd.GroupID = "utilise"
-	cmd.AddCommand(execCmd)
-
-	shellCmd := (&CmdShell{root: c}).Command()
-	shellCmd.GroupID = "utilise"
-	cmd.AddCommand(shellCmd)
-
-	runCmd := (&CmdRun{root: c}).Command()
-	runCmd.GroupID = "utilise"
-	cmd.AddCommand(runCmd)
-
-	actionsCmd := (&CmdActions{root: c}).Command()
-	actionsCmd.GroupID = "explore-troubleshoot"
-	cmd.AddCommand(actionsCmd)
-
-	removeCmd := (&CmdRemove{root: c}).Command()
-	removeCmd.GroupID = "create-update-delete"
-	cmd.AddCommand(removeCmd)
-
-	remountCmd := (&CmdRemount{root: c}).Command()
-	remountCmd.GroupID = "connect"
-	cmd.AddCommand(remountCmd)
-
-	connectionsCmd := (&CmdConnections{root: c}).Command()
-	connectionsCmd.GroupID = "connect"
-	cmd.AddCommand(connectionsCmd)
-
-	connectCmd := (&CmdConnect{root: c}).Command()
-	connectCmd.GroupID = "connect"
-	cmd.AddCommand(connectCmd)
-
-	disconnectCmd := (&CmdDisconnect{root: c}).Command()
-	disconnectCmd.GroupID = "connect"
-	cmd.AddCommand(disconnectCmd)
-
-	warningsCmd := (&CmdWarnings{root: c}).Command()
-	warningsCmd.GroupID = "warnings"
-	cmd.AddCommand(warningsCmd)
-
-	okayCmd := (&CmdOkay{root: c}).Command()
-	okayCmd.GroupID = "warnings"
-	cmd.AddCommand(okayCmd)
-
-	sketchCmd := (&CmdSketch{root: c}).Command()
-	sketchCmd.GroupID = "sketch"
-	cmd.AddCommand(sketchCmd)
-
-	sketchesCmd := (&CmdSketches{root: c}).Command()
-	sketchesCmd.GroupID = "sketch"
-	cmd.AddCommand(sketchesCmd)
+	cmd.AddCommand((&CmdLaunch{root: c}).Command())
+	cmd.AddCommand((&CmdList{root: c}).Command())
+	cmd.AddCommand((&CmdChanges{root: c}).Command())
+	cmd.AddCommand((&CmdTasks{root: c}).Command())
+	cmd.AddCommand((&CmdRefresh{root: c}).Command())
+	cmd.AddCommand((&CmdStart{root: c}).Command())
+	cmd.AddCommand((&CmdStop{root: c}).Command())
+	cmd.AddCommand((&CmdInfo{root: c}).Command())
+	cmd.AddCommand((&CmdExec{root: c}).Command())
+	cmd.AddCommand((&CmdShell{root: c}).Command())
+	cmd.AddCommand((&CmdRun{root: c}).Command())
+	cmd.AddCommand((&CmdActions{root: c}).Command())
+	cmd.AddCommand((&CmdRemove{root: c}).Command())
+	cmd.AddCommand((&CmdRemount{root: c}).Command())
+	cmd.AddCommand((&CmdConnections{root: c}).Command())
+	cmd.AddCommand((&CmdConnect{root: c}).Command())
+	cmd.AddCommand((&CmdDisconnect{root: c}).Command())
+	cmd.AddCommand((&CmdWarnings{root: c}).Command())
+	cmd.AddCommand((&CmdOkay{root: c}).Command())
+	cmd.AddCommand((&CmdSketch{root: c}).Command())
+	cmd.AddCommand((&CmdSketches{root: c}).Command())
 
 	cmd.AddCommand((&CmdDocs{root: c}).Command())
 

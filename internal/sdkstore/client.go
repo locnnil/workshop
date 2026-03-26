@@ -59,6 +59,7 @@ func basePath(base *url.URL) path.Path {
 
 // Client represents the client side of an SDK store.
 type Client struct {
+	*findClient
 	*infoClient
 }
 
@@ -75,12 +76,14 @@ func NewClient(config Config) *Client {
 	}
 
 	base := basePath(baseURL)
+	findPath := base.JoinPath("find")
 	infoPath := base.JoinPath("info")
 
 	apiRequester := newAPIRequester(httpClient)
 	restClient := newHTTPRESTClient(apiRequester)
 
 	return &Client{
+		findClient: newFindClient(findPath, restClient),
 		infoClient: newInfoClient(infoPath, restClient),
 	}
 }

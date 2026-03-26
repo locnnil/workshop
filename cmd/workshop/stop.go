@@ -14,8 +14,9 @@ type CmdStop struct {
 
 func (c *CmdStop) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "stop <WORKSHOP>...",
-		Short: "Stop one or many workshops",
+		Use:     "stop <WORKSHOP>...",
+		Short:   "Stop one or many workshops",
+		GroupID: GrpCRUD,
 		Long: `
 This command deactivates the workshops listed as arguments. For each one, it:
 

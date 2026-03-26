@@ -21,9 +21,10 @@ type CmdList struct {
 
 func (c *CmdList) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:   "list",
-		Args:  cobra.ExactArgs(0),
-		Short: "List project workshops",
+		Use:     "list",
+		Args:    cobra.ExactArgs(0),
+		Short:   "List project workshops",
+		GroupID: GrpExplore,
 		Long: `
 This command enumerates all workshops in the project, printing a compact list:
 
