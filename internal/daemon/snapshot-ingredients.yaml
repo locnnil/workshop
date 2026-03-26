@@ -34,6 +34,7 @@ SdkInstallation:
   InstalledAt: time.Time
 Setup:
   Name: string
+  PackageID: string
   Channel: string
   Source: sdk.Source
   Revision: sdk.Revision

@@ -29,10 +29,11 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	}
 
 	storeSdk := sdk.Setup{
-		Name:     "test-sdk-2",
-		Channel:  "latest/stable",
-		Revision: sdk.R(42),
-		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
+		Name:      "test-sdk-2",
+		PackageID: "iCJybjjWd2n48hKoMdjGEIWwA3i2TmX7",
+		Channel:   "latest/stable",
+		Revision:  sdk.R(42),
+		Sha3_384:  "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 	}
 
 	change := i.state.NewChange("sample", "...")

@@ -123,11 +123,11 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 		digest := sha3.Sum384([]byte(sdkYaml))
 		meta := sdk.Meta{
 			Setup: sdk.Setup{
-				Name:     sd.Name,
-				Channel:  sd.Channel,
-				Source:   sdk.StoreSource,
-				Revision: sdk.R(1),
-				Sha3_384: hex.EncodeToString(digest[:]),
+				Name:      sd.Name,
+				PackageID: sdk.FakePackageID(sd.Name),
+				Channel:   sd.Channel,
+				Revision:  sdk.R(1),
+				Sha3_384:  hex.EncodeToString(digest[:]),
 			},
 			SdkYAML: sdkYaml,
 		}
@@ -179,12 +179,29 @@ connections:
 	current := []workshopstate.Manifest{{
 		File:  &oldf,
 		Image: workshop.BaseImage{Name: newf.Base, Fingerprint: "fakeimage123"},
-		Sdks: []sdk.Setup{
-			{Name: "system", Source: sdk.SystemSource, Revision: sdk.R(1), Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7"},
-			{Name: "node", Channel: "latest/stable", Revision: sdk.R(42), Sha3_384: "4656e208fe96c2b29f30e2341ede0c5e1600657ee89e27ed9b382a27069804897095dc76f3d5123deac41608e70bca1d"},
-			{Name: "vscode-remote", Channel: "latest/edge", Revision: sdk.R(8), Sha3_384: "5083cf36b902ced693c34a47fe0437916dd812d1e7b1b6b9685984bab5dc23acf812cc2d7f7578c322e1a2fbdcff068d"},
-			{Name: "sketch", Source: sdk.SketchSource, Revision: sdk.R(-2), Sha3_384: "dd4b5a4cba8539e858e5fdcc318e46d9a2940439b0d8e7bd9c6bfc8b474f410d91aee43f5d4e18cb2c1b7dbaaba06fc3"},
-		},
+		Sdks: []sdk.Setup{{
+			Name:     "system",
+			Source:   sdk.SystemSource,
+			Revision: sdk.R(1),
+			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+		}, {
+			Name:      "node",
+			PackageID: "6ugIQcZtfu3KKD5nmXJqjzFJ69PQquju",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(42),
+			Sha3_384:  "4656e208fe96c2b29f30e2341ede0c5e1600657ee89e27ed9b382a27069804897095dc76f3d5123deac41608e70bca1d",
+		}, {
+			Name:      "vscode-remote",
+			PackageID: "B9awcrknIhDHnDUPfbY4TVjdzqM8NEgL",
+			Channel:   "latest/edge",
+			Revision:  sdk.R(8),
+			Sha3_384:  "5083cf36b902ced693c34a47fe0437916dd812d1e7b1b6b9685984bab5dc23acf812cc2d7f7578c322e1a2fbdcff068d",
+		}, {
+			Name:     "sketch",
+			Source:   sdk.SketchSource,
+			Revision: sdk.R(-2),
+			Sha3_384: "dd4b5a4cba8539e858e5fdcc318e46d9a2940439b0d8e7bd9c6bfc8b474f410d91aee43f5d4e18cb2c1b7dbaaba06fc3",
+		}},
 	}}
 	latest := []workshopstate.Manifest{{
 		File:  &newf,

@@ -22,11 +22,12 @@ type Meta struct {
 }
 
 type Setup struct {
-	Name     string   `json:"name"`
-	Channel  string   `json:"channel,omitempty"`
-	Source   Source   `json:"source,omitempty"`
-	Revision Revision `json:"revision"`
-	Sha3_384 string   `json:"sha3-384"`
+	Name      string   `json:"name"`
+	PackageID string   `json:"package-id,omitempty"`
+	Channel   string   `json:"channel,omitempty"`
+	Source    Source   `json:"source,omitempty"`
+	Revision  Revision `json:"revision"`
+	Sha3_384  string   `json:"sha3-384"`
 }
 
 func (s *Setup) Filepath() string {
@@ -150,6 +151,7 @@ type Info struct {
 	ProjectId   string
 	Workshop    string
 	Name        string
+	PackageID   string
 	Base        string
 	Arch        string
 	Version     string

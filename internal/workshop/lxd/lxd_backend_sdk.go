@@ -220,6 +220,7 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	}
 	volume.Config["user.kind"] = "sdk"
 	volume.Config["user.sdk.name"] = meta.Name
+	volume.Config["user.sdk.package-id"] = meta.PackageID
 	volume.Config["user.sdk.revision"] = meta.Revision.String()
 	volume.Config["user.sha3-384"] = meta.Sha3_384
 	volume.Config["user.sdk.meta"] = meta.SdkYAML
@@ -328,11 +329,18 @@ func sdkVolume(volume *api.StorageVolume, lxdProject string, size uint64) (works
 
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     volume.Config["user.sdk.name"],
-			Revision: revision,
-			Sha3_384: volume.Config["user.sha3-384"],
+			Name:      volume.Config["user.sdk.name"],
+			PackageID: volume.Config["user.sdk.package-id"],
+			Revision:  revision,
+			Sha3_384:  volume.Config["user.sha3-384"],
 		},
 		SdkYAML: volume.Config["user.sdk.meta"],
+	}
+
+	if sdk.IsSystem(meta.Name) {
+		meta.Source = sdk.SystemSource
+	} else if meta.Revision.Local() {
+		meta.Source = sdk.TrySource
 	}
 
 	workshops := make(map[string][]string)
@@ -447,6 +455,7 @@ func sdkToLxdDisk(sk workshop.SdkInstallation, mount workshop.Mount) (map[string
 	device := mountToLxdDisk(mount)
 
 	device["user.sdk.channel"] = sk.Channel
+	device["user.sdk.package-id"] = sk.PackageID
 	device["user.sdk.revision"] = sk.Revision.String()
 	device["user.sdk.sha3-384"] = sk.Sha3_384
 	device["user.sdk.install-order"] = strconv.FormatInt(int64(sk.InstallOrder), 10)
@@ -478,9 +487,10 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 	}
 	s := &workshop.SdkInstallation{
 		Setup: sdk.Setup{
-			Name:     name,
-			Channel:  device["user.sdk.channel"],
-			Sha3_384: device["user.sdk.sha3-384"],
+			Name:      name,
+			PackageID: device["user.sdk.package-id"],
+			Channel:   device["user.sdk.channel"],
+			Sha3_384:  device["user.sdk.sha3-384"],
 		},
 		InstallOrder: int(installOrder),
 	}
