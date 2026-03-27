@@ -661,7 +661,7 @@ func (f *wsOps) TestLxdBackendDownloadBaseResumeAfterCancellation(c *check.C) {
 		wg.Go(func() {
 			r := &progress.Reporter{
 				Name: "1",
-				Report: func(label string, done, total int) {
+				Report: func(label string, done, total int64) {
 					once.Do(func() { cancel() })
 				},
 			}

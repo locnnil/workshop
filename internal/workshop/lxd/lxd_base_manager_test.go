@@ -22,8 +22,8 @@ func (f *LxdBeTests) TestLaunchProgressReporter(c *check.C) {
 
 	expected := []*struct {
 		label string
-		done  int
-		total int
+		done  int64
+		total int64
 	}{
 		nil,
 		{"download", 65, 100},

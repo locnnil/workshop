@@ -502,8 +502,8 @@ func (ss *stateSuite) TestNewTaskAndCheckpoint(c *C) {
 	c.Check(task0_1.Status(), Equals, state.DoneStatus)
 
 	_, cur, tot := task0_1.Progress()
-	c.Check(cur, Equals, 5)
-	c.Check(tot, Equals, 10)
+	c.Check(cur, Equals, int64(5))
+	c.Check(tot, Equals, int64(10))
 
 	c.Assert(task0_1.Lanes(), DeepEquals, []int{42, 43})
 

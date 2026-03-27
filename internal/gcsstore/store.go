@@ -110,15 +110,14 @@ func (c *GcsStore) SdkAction(ctx context.Context, actions []sdk.SdkAction) ([]sd
 
 type reporterWriter struct {
 	r     *progress.Reporter
-	done  int
-	total int
+	done  int64
+	total int64
 }
 
 func (r *reporterWriter) Write(p []byte) (n int, err error) {
-	plen := len(p)
-	r.done += plen
+	r.done += int64(len(p))
 	r.r.Report("download", r.done, r.total)
-	return plen, nil
+	return len(p), nil
 }
 
 func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
@@ -179,7 +178,7 @@ func (c *GcsStore) DownloadSdk(ctx context.Context, setup sdk.Setup, report *pro
 	hash := md5.New()
 	writers := []io.Writer{file, hash}
 	if report != nil {
-		writers = append(writers, &reporterWriter{r: report, total: int(r.Size)})
+		writers = append(writers, &reporterWriter{r: report, total: r.Size})
 	}
 
 	if _, err = io.Copy(io.MultiWriter(writers...), r); err != nil {

@@ -60,8 +60,8 @@ type taskInfo struct {
 
 type taskInfoProgress struct {
 	Label string `json:"label"`
-	Done  int    `json:"done"`
-	Total int    `json:"total"`
+	Done  int64  `json:"done"`
+	Total int64  `json:"total"`
 }
 
 func getTaskLog(tsk *state.Task, verbose bool) []string {

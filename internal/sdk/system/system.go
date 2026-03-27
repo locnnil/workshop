@@ -86,12 +86,12 @@ func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, e
 	}
 
 	if report != nil {
-		size := 1
+		size := int64(1)
 		info, err := file.Stat()
 		if err != nil {
 			logger.Noticef("System SDK on Retrieve: %v", err)
 		} else {
-			size = int(info.Size())
+			size = info.Size()
 		}
 		report.Report("download", size, size)
 	}

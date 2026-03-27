@@ -441,8 +441,8 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	c.Assert(t1.Status(), check.Equals, state.DoneStatus)
 	label, done, total := t1.Progress()
 	c.Assert(label, check.Equals, "download finished")
-	c.Assert(done, check.Equals, 100)
-	c.Assert(total, check.Equals, 100)
+	c.Assert(done, check.Equals, int64(100))
+	c.Assert(total, check.Equals, int64(100))
 }
 
 func (s *workshopHandlers) TestConfigureTimezoneBrokenHost(c *check.C) {
