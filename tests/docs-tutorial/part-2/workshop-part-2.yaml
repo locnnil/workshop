@@ -1,4 +1,4 @@
-name: nimble
+name: dev
 base: ubuntu@24.04
 sdks:
   - name: ollama

@@ -24,7 +24,7 @@ execute: |
 
   ## Launch, start, and stop
 
-  workshop_exec launch && zfs list -r workshop
+  workshop_exec launch
   workshop_exec info
   echo ".workshop.lock" >> .gitignore
 
@@ -35,28 +35,27 @@ execute: |
   ## Refresh a workshop
 
   sed -i "s/22.04/24.04/g" workshop.yaml
-  workshop_exec refresh && zfs list -r workshop
+  workshop_exec refresh
 
 
   ## Execute commands
 
-  workshop_exec exec nimble -- ollama pull tinyllama  # Non-interactive version
-  workshop_exec exec nimble -- ollama list
+  workshop_exec exec dev -- ollama pull tinyllama  # Non-interactive version
+  workshop_exec exec dev -- ollama list
 
 
   ## Interactive shell
 
-  workshop_exec exec nimble bash -c "pwd"  # Non-interactive version
-  workshop_exec exec nimble bash -c "lsb_release -a"
-  workshop_exec exec nimble bash -c "echo \$USER"
+  workshop_exec exec dev bash -c "pwd"  # Non-interactive version
+  workshop_exec exec dev bash -c "lsb_release -a"
 
 
   ## Project directory updates
 
   touch created_outside.txt
-  workshop_exec exec nimble -- ls /project/
-  workshop_exec exec nimble bash -c "[ -f \"created_outside.txt\" ]"
-  workshop_exec exec nimble -- touch /project/created_inside.txt
+  workshop_exec exec dev -- ls /project/
+  workshop_exec exec dev test -f created_outside.txt
+  workshop_exec exec dev -- touch /project/created_inside.txt
   [ -f "created_inside.txt" ]
 
 

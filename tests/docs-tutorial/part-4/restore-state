@@ -1,4 +1,0 @@
-#!/usr/bin/bash
-while IFS='=' read -r key value; do
-    echo "export $key=$value" >> /home/workshop/.profile
-done < "$SDK_STATE_DIR"/env-vars

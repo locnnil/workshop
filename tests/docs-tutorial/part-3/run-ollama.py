@@ -1,5 +1,4 @@
 import requests
-import json
 
 # Check if Ollama is running
 response = requests.get('http://localhost:11434/api/version')

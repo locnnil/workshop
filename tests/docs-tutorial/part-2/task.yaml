@@ -9,7 +9,7 @@ execute: |
   chown -R ubuntu:ubuntu ollama-python-project/
   cd ollama-python-project/
   cp ../workshop-part-2.yaml workshop.yaml
-  workshop_exec launch && zfs list -r workshop
+  workshop_exec launch
   lxc storage set workshop size=20GB
 
   # ----------------------------------------------------------------------------
@@ -21,13 +21,13 @@ execute: |
 
   workshop_exec connections
 
-  workshop_exec disconnect nimble/ollama:models
+  workshop_exec disconnect dev/ollama:models
   workshop_exec connections
-  workshop_exec connect nimble/ollama:models :mount
+  workshop_exec connect dev/ollama:models :mount
   workshop_exec connections
 
   mkdir -p ~/.ollama/models
-  workshop_exec remount nimble/ollama:models ~/.ollama/models
+  workshop_exec remount dev/ollama:models ~/.ollama/models
   workshop_exec info
 
 
@@ -42,7 +42,7 @@ execute: |
           interface: tunnel
           endpoint: 127.0.0.1:8989
   EOF
-  workshop_exec refresh && zfs list -r workshop
   workshop_exec connections --all
+  workshop_exec refresh
   workshop_exec info
-  # curl http://127.0.0.1:8989/lab?
+  retry 5 curl -w '\n' http://127.0.0.1:8989/api

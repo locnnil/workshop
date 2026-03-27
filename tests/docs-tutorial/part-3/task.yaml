@@ -11,7 +11,7 @@ execute: |
   git init 2>/dev/null || true
   cp ../workshop-part-3.yaml workshop.yaml
   cp ../run-ollama.py .
-  workshop_exec launch && zfs list -r workshop
+  workshop_exec launch
   lxc storage set workshop size=20GB
 
   # ----------------------------------------------------------------------------
@@ -31,8 +31,8 @@ execute: |
 
   workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
-  workshop_exec exec nimble -- ollama pull tinyllama
-  workshop_exec exec nimble -- /var/lib/workshop/sdk/jupyter/venv/bin/python /project/run-ollama.py
+  workshop_exec exec dev -- ollama pull tinyllama
+  workshop_exec exec dev -- /var/lib/workshop/sdk/jupyter/venv/bin/python /project/run-ollama.py
 
 
   ## Stash and restore
