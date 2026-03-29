@@ -407,21 +407,21 @@ func (m *InterfaceManager) resolveWorkshopBindings(w *workshop.Workshop) error {
 			master := m.repo.Plug(w.Project.ProjectId, w.Name, plug.Bind.Sdk, plug.Bind.Name)
 			if master == nil {
 				sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: plug.Bind.Sdk}
-				return fmt.Errorf("SDK %q has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
+				return fmt.Errorf("%q SDK has no plug named %q", sdkRef.ShortRef(), plug.Bind.Name)
 			}
 
 			slave := m.repo.Plug(w.Project.ProjectId, w.Name, s.Name, name)
 			if slave == nil {
 				sdkRef := sdk.Ref{ProjectId: w.Project.ProjectId, Workshop: w.Name, Sdk: s.Name}
-				return fmt.Errorf("internal error: SDK %q has no plug named %q", sdkRef.ShortRef(), name)
+				return fmt.Errorf("internal error: %q SDK has no plug named %q", sdkRef.ShortRef(), name)
 			}
 
 			if slave.Interface != master.Interface {
-				return fmt.Errorf("cannot bind %q (%q interface) to %q (%q interface)", slave.Ref().ShortRef(), slave.Interface, master.Ref().ShortRef(), master.Interface)
+				return fmt.Errorf("%s plug %q incompatible with %s plug %q", slave.Interface, slave.Ref().ShortRef(), master.Interface, master.Ref().ShortRef())
 			}
 
 			if slave.Label != master.Label || !reflect.DeepEqual(slave.Attrs, master.Attrs) {
-				return fmt.Errorf("cannot bind %q to %q: incompatible attributes", slave.Ref().ShortRef(), master.Ref().ShortRef())
+				return fmt.Errorf("plugs %q and %q have different attributes", slave.Ref().ShortRef(), master.Ref().ShortRef())
 			}
 		}
 	}
@@ -430,10 +430,17 @@ func (m *InterfaceManager) resolveWorkshopBindings(w *workshop.Workshop) error {
 
 func (m *InterfaceManager) resolveWorkshopConnections(w *workshop.Workshop) error {
 	for _, conn := range w.File.Connections {
+		if _, ok := w.Sdks[conn.PlugRef.Sdk]; !ok {
+			return fmt.Errorf("invalid connection between %q and %q: %q SDK not found", conn.PlugRef, conn.SlotRef, conn.PlugRef.Sdk)
+		}
+		if _, ok := w.Sdks[conn.SlotRef.Sdk]; !ok {
+			return fmt.Errorf("invalid connection between %q and %q: %q SDK not found", conn.PlugRef, conn.SlotRef, conn.SlotRef.Sdk)
+		}
+
 		_, err := m.repo.ResolveConnect(w.Project.ProjectId, w.Name, conn.PlugRef.Sdk, conn.PlugRef.Name,
 			w.Project.ProjectId, w.Name, conn.SlotRef.Sdk, conn.SlotRef.Name)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid connection between %q and %q: %w", conn.PlugRef, conn.SlotRef, err)
 		}
 	}
 	return nil
@@ -473,9 +480,8 @@ func (m *InterfaceManager) checkConflictingMounts(w *workshop.Workshop) error {
 			return target == candidateTarget
 		})
 		if idx >= 0 {
-			return fmt.Errorf(`cannot connect %q without binding to %q: unbound plugs cannot share target %q`,
-				plug.Ref().ShortRef(), plugs[idx].Ref().ShortRef(),
-				candidateTarget)
+			return fmt.Errorf(`conflicting target %q: plug %q must bind to plug %q`,
+				candidateTarget, plug.Ref().ShortRef(), plugs[idx].Ref().ShortRef())
 		}
 	}
 	return nil

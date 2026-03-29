@@ -240,7 +240,7 @@ func (s *apiSuite) TestConnectionsNotFound(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]any{
 		"result": map[string]any{
-			"message": `cannot access workshop "not-found": workshop not launched`,
+			"message": `cannot access "not-found" workshop: workshop not launched`,
 		},
 		"status":      "Not Found",
 		"status-code": 404.0,
@@ -1241,7 +1241,7 @@ slots:
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]any{
 		"result": map[string]any{
-			"message": `cannot connect "consumer-ws/consumer:plug" ("test" interface) to "producer-ws/producer:slot" ("different" interface)`,
+			"message": `cannot resolve connection: test plug "consumer-ws/consumer:plug" incompatible with different slot "producer-ws/producer:slot"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1280,7 +1280,7 @@ func (s *apiSuite) TestConnectPlugFailureNoSuchPlug(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]any{
 		"result": map[string]any{
-			"message": `SDK "consumer-ws/consumer" has no plug named "missingplug"`,
+			"message": `cannot resolve connection: "consumer-ws/consumer" SDK has no plug named "missingplug"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1319,7 +1319,7 @@ func (s *apiSuite) TestConnectPlugFailureNoSuchSlot(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]any{
 		"result": map[string]any{
-			"message": `SDK "producer-ws/producer" has no slot named "missingslot"`,
+			"message": `cannot resolve connection: "producer-ws/producer" SDK has no slot named "missingslot"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1710,7 +1710,7 @@ func (s *apiSuite) TestDisconnectPlugFailureNoSuchPlug(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(body, check.DeepEquals, map[string]any{
 		"result": map[string]any{
-			"message": `SDK "consumer-ws/consumer" has no plug named "missingplug"`,
+			"message": `"consumer-ws/consumer" SDK has no plug named "missingplug"`,
 		},
 		"status":      "Bad Request",
 		"status-code": 400.0,
@@ -1757,7 +1757,7 @@ func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop
 	if producer {
 		c.Check(body, check.DeepEquals, map[string]any{
 			"result": map[string]any{
-				"message": `cannot access workshop "consumer-ws": workshop not launched`,
+				"message": `cannot access "consumer-ws" workshop: workshop not launched`,
 			},
 			"status":      "Not Found",
 			"status-code": 404.0,
@@ -1766,7 +1766,7 @@ func (s *apiSuite) testDisconnectFailureNoWorkshop(c *check.C, installedWorkshop
 	} else {
 		c.Check(body, check.DeepEquals, map[string]any{
 			"result": map[string]any{
-				"message": `cannot access workshop "producer-ws": workshop not launched`,
+				"message": `cannot access "producer-ws" workshop: workshop not launched`,
 			},
 			"status":      "Not Found",
 			"status-code": 404.0,

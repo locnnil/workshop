@@ -146,7 +146,7 @@ func (s *RepositorySuite) TestAddInterfaceClash(c *C) {
 	c.Assert(err, IsNil)
 	// Adding an interface with the same name as another interface is not allowed
 	err = s.emptyRepo.AddInterface(iface2)
-	c.Assert(err, ErrorMatches, `cannot add interface: "iface", interface name is in use`)
+	c.Assert(err, ErrorMatches, `cannot add iface interface: name in use`)
 	c.Assert(s.emptyRepo.Interface(iface1.Name()), Equals, iface1)
 }
 
@@ -181,7 +181,7 @@ func (s *RepositorySuite) TestAddBackend(c *C) {
 	backend := &ifacetest.TestSecurityBackend{BackendName: "test"}
 	c.Assert(s.emptyRepo.AddBackend(backend), IsNil)
 	err := s.emptyRepo.AddBackend(backend)
-	c.Assert(err, ErrorMatches, `cannot add backend "test", security system name is in use`)
+	c.Assert(err, ErrorMatches, `cannot add test backend: name in use`)
 }
 
 func (s *RepositorySuite) TestBackends(c *C) {
@@ -236,7 +236,7 @@ func (s *RepositorySuite) TestAddPlugClashingPlug(c *C) {
 	err := s.testRepo.AddPlug(s.plug)
 	c.Assert(err, IsNil)
 	err = s.testRepo.AddPlug(s.plug)
-	c.Assert(err, ErrorMatches, `sdk "consumer" has plugs conflicting on name "plug"`)
+	c.Assert(err, ErrorMatches, `"consumer" SDK has plugs conflicting on name "plug"`)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 1)
 }
 
@@ -255,7 +255,7 @@ func (s *RepositorySuite) TestAddPlugClashingSlot(c *C) {
 	err := s.testRepo.AddSlot(slot)
 	c.Assert(err, IsNil)
 	err = s.testRepo.AddPlug(plug)
-	c.Assert(err, ErrorMatches, `sdk "sdk" has plug and slot conflicting on name "clashing"`)
+	c.Assert(err, ErrorMatches, `"sdk" SDK has plug and slot conflicting on name "clashing"`)
 	c.Assert(s.testRepo.AllSlots(""), HasLen, 1)
 	c.Assert(s.testRepo.Slot(slot.Sdk.ProjectId, slot.Sdk.Workshop, slot.Sdk.Name, slot.Name), DeepEquals, slot)
 }
@@ -273,7 +273,7 @@ func (s *RepositorySuite) TestAddPlugFailsWithInvalidPlugName(c *C) {
 
 func (s *RepositorySuite) TestAddPlugFailsWithUnknownInterface(c *C) {
 	err := s.emptyRepo.AddPlug(s.plug)
-	c.Assert(err, ErrorMatches, `cannot add plug, interface "interface" is not known`)
+	c.Assert(err, ErrorMatches, `cannot add plug: "interface" interface unknown`)
 	c.Assert(s.emptyRepo.AllPlugs(""), HasLen, 0)
 }
 
@@ -353,7 +353,7 @@ func (s *RepositorySuite) TestRemovePlugSucceedsWhenPlugExistsAndDisconnected(c 
 
 func (s *RepositorySuite) TestRemovePlugFailsWhenPlugDoesntExist(c *C) {
 	err := s.emptyRepo.RemovePlug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
-	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", no such plug`)
+	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from "consumer" SDK: no such plug`)
 }
 
 func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
@@ -366,7 +366,7 @@ func (s *RepositorySuite) TestRemovePlugFailsWhenPlugIsConnected(c *C) {
 	c.Assert(err, IsNil)
 	// Removing a plug used by a slot returns an appropriate error
 	err = s.testRepo.RemovePlug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
-	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from sdk "consumer", it is still connected`)
+	c.Assert(err, ErrorMatches, `cannot remove plug "plug" from "consumer" SDK: still connected`)
 	// The plug is still there
 	slot := s.testRepo.Plug(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	c.Assert(slot, NotNil)
@@ -580,7 +580,7 @@ func (s *RepositorySuite) TestSlotFailsWhenSlotDoesntExist(c *C) {
 
 func (s *RepositorySuite) TestAddSlotFailsWhenInterfaceIsUnknown(c *C) {
 	err := s.emptyRepo.AddSlot(s.slot)
-	c.Assert(err, ErrorMatches, `cannot add slot, interface "interface" is not known`)
+	c.Assert(err, ErrorMatches, `cannot add slot: "interface" interface unknown`)
 }
 
 func (s *RepositorySuite) TestAddSlotFailsWhenSlotNameIsInvalid(c *C) {
@@ -600,7 +600,7 @@ func (s *RepositorySuite) TestAddSlotClashingSlot(c *C) {
 	c.Assert(err, IsNil)
 	// Adding the slot again fails with appropriate error
 	err = s.testRepo.AddSlot(s.slot)
-	c.Assert(err, ErrorMatches, `sdk "producer" has slots conflicting on name "slot"`)
+	c.Assert(err, ErrorMatches, `"producer" SDK has slots conflicting on name "slot"`)
 }
 
 func (s *RepositorySuite) TestAddSlotClashingPlug(c *C) {
@@ -618,7 +618,7 @@ func (s *RepositorySuite) TestAddSlotClashingPlug(c *C) {
 	err := s.testRepo.AddPlug(plug)
 	c.Assert(err, IsNil)
 	err = s.testRepo.AddSlot(slot)
-	c.Assert(err, ErrorMatches, `sdk "sdk" has plug and slot conflicting on name "clashing"`)
+	c.Assert(err, ErrorMatches, `"sdk" SDK has plug and slot conflicting on name "clashing"`)
 	c.Assert(s.testRepo.AllPlugs(""), HasLen, 1)
 	c.Assert(s.testRepo.Plug(plug.Sdk.ProjectId, plug.Sdk.Workshop, plug.Sdk.Name, plug.Name), DeepEquals, plug)
 }
@@ -664,7 +664,7 @@ func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotDoesntExist(c *C) {
 	// Removing a slot that doesn't exist returns an appropriate error
 	err := s.testRepo.RemoveSlot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(err, NotNil)
-	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from sdk "producer", no such slot`)
+	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from "producer" SDK: no such slot`)
 }
 
 func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotIsConnected(c *C) {
@@ -677,7 +677,7 @@ func (s *RepositorySuite) TestRemoveSlotFailsWhenSlotIsConnected(c *C) {
 	c.Assert(err, IsNil)
 	// Removing a slot occupied by a plug returns an appropriate error
 	err = s.testRepo.RemoveSlot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from sdk "producer", it is still connected`)
+	c.Assert(err, ErrorMatches, `cannot remove slot "slot" from "producer" SDK: still connected`)
 	// The slot is still there
 	slot := s.testRepo.Slot(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
 	c.Assert(slot, NotNil)
@@ -750,7 +750,7 @@ func (s *RepositorySuite) TestConnectFailsWhenSlotAndPlugAreIncompatible(c *C) {
 	// Connecting a plug to an incompatible slot fails with an appropriate error
 	connRef := NewConnRef(s.plug, s.slot)
 	_, err = s.testRepo.Connect(connRef, nil, nil, nil, nil, nil)
-	c.Assert(err, ErrorMatches, `cannot connect plug "ws/consumer:plug" \("other-interface" interface\) to "ws/producer:slot" \("interface" interface\)`)
+	c.Assert(err, ErrorMatches, `cannot connect: other-interface plug "ws/consumer:plug" incompatible with interface slot "ws/producer:slot"`)
 }
 
 func (s *RepositorySuite) TestConnectSucceeds(c *C) {
@@ -782,7 +782,7 @@ func (s *RepositorySuite) TestDisconnectFailsOnEmptyArgs(c *C) {
 func (s *RepositorySuite) TestDisconnectFailsWithoutPlug(c *C) {
 	c.Assert(s.testRepo.AddSlot(s.slot), IsNil)
 	err := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, ErrorMatches, `SDK "ws/consumer" has no plug named "plug"`)
+	c.Assert(err, ErrorMatches, `"ws/consumer" SDK has no plug named "plug"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
@@ -791,7 +791,7 @@ func (s *RepositorySuite) TestDisconnectFailsWithoutPlug(c *C) {
 func (s *RepositorySuite) TestDisconnectFailsWithutSlot(c *C) {
 	c.Assert(s.testRepo.AddPlug(s.plug), IsNil)
 	err := s.testRepo.Disconnect(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name, s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Assert(err, ErrorMatches, `SDK "ws/producer" has no slot named "slot"`)
+	c.Assert(err, ErrorMatches, `"ws/producer" SDK has no slot named "slot"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
@@ -845,10 +845,10 @@ func (s *RepositorySuite) TestConnectedFailsWithEmptyPlugSlotName(c *C) {
 func (s *RepositorySuite) TestConnectedFailsWithoutPlugOrSlot(c *C) {
 	_, err1 := s.testRepo.Connected(s.plug.Sdk.ProjectId, s.plug.Sdk.Workshop, s.plug.Sdk.Name, s.plug.Name)
 	_, err2 := s.testRepo.Connected(s.slot.Sdk.ProjectId, s.slot.Sdk.Workshop, s.slot.Sdk.Name, s.slot.Name)
-	c.Check(err1, ErrorMatches, `SDK "ws/consumer" has no plug or slot named "plug"`)
+	c.Check(err1, ErrorMatches, `"ws/consumer" SDK has no plug or slot named "plug"`)
 	e, _ := err1.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
-	c.Check(err2, ErrorMatches, `SDK "ws/producer" has no plug or slot named "slot"`)
+	c.Check(err2, ErrorMatches, `"ws/producer" SDK has no plug or slot named "slot"`)
 	e, _ = err1.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
@@ -1599,14 +1599,14 @@ func (s *RepositorySuite) TestConnection(c *C) {
 	_, err = s.testRepo.Connection(&ConnRef{
 		PlugRef: sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "a", Name: "b"},
 		SlotRef: sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "producer", Name: "slot"}})
-	c.Assert(err, ErrorMatches, `SDK "ws/a" has no plug named "b"`)
+	c.Assert(err, ErrorMatches, `"ws/a" SDK has no plug named "b"`)
 	e, _ := err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 
 	_, err = s.testRepo.Connection(&ConnRef{
 		PlugRef: sdk.PlugRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "consumer", Name: "plug"},
 		SlotRef: sdk.SlotRef{ProjectId: s.projectId, Workshop: "ws", Sdk: "a", Name: "b"}})
-	c.Assert(err, ErrorMatches, `SDK "ws/a" has no slot named "b"`)
+	c.Assert(err, ErrorMatches, `"ws/a" SDK has no slot named "b"`)
 	e, _ = err.(*NoPlugOrSlotError)
 	c.Check(e, NotNil)
 }
