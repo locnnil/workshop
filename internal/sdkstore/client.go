@@ -57,6 +57,11 @@ func basePath(base *url.URL) path.Path {
 	return path.MakePath(base).JoinPath(serverVersion, serverEntity)
 }
 
+// downloadPath returns the base configuration path for downloading SDKs.
+func downloadPath(base *url.URL) path.Path {
+	return path.MakePath(base).JoinPath("api", "v1", serverEntity, "download")
+}
+
 // resolvePath returns the configuration path for speaking to the resolve API.
 func resolvePath(base *url.URL) path.Path {
 	return path.MakePath(base).JoinPath(serverVersion, "revisions", "resolve")
@@ -64,6 +69,7 @@ func resolvePath(base *url.URL) path.Path {
 
 // Client represents the client side of an SDK store.
 type Client struct {
+	*downloadClient
 	*findClient
 	*infoClient
 	*resolveClient
@@ -82,6 +88,7 @@ func NewClient(config Config) *Client {
 	}
 
 	base := basePath(baseURL)
+	downloadPath := downloadPath(baseURL)
 	findPath := base.JoinPath("find")
 	infoPath := base.JoinPath("info")
 	resolvePath := resolvePath(baseURL)
@@ -90,8 +97,9 @@ func NewClient(config Config) *Client {
 	restClient := newHTTPRESTClient(apiRequester)
 
 	return &Client{
-		findClient:    newFindClient(findPath, restClient),
-		infoClient:    newInfoClient(infoPath, restClient),
-		resolveClient: newResolveClient(resolvePath, restClient),
+		downloadClient: newDownloadClient(downloadPath, httpClient),
+		findClient:     newFindClient(findPath, restClient),
+		infoClient:     newInfoClient(infoPath, restClient),
+		resolveClient:  newResolveClient(resolvePath, restClient),
 	}
 }
