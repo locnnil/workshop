@@ -10,9 +10,7 @@ import (
 	"os"
 
 	"github.com/canonical/workshop/internal/logger"
-	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 )
 
@@ -42,47 +40,17 @@ func SystemSdkMeta() (*sdk.Meta, error) {
 	return &sdk.Meta{Setup: setup, SdkYAML: string(sdkYaml)}, nil
 }
 
-func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
-	fl, err := sdk.OpenLock(setup.Name)
-	if err != nil {
-		return nil, err
-	}
-	if err = fl.Lock(); err != nil {
-		return nil, err
-	}
-	defer fl.Close()
-
-	target := setup.Filepath()
-	if osutil.FileExists(target) {
-		logger.Debugf("System SDK on Retrieve: SDK found locally: %s", target)
-		return SystemSdkMeta()
-	}
-
+func retrieveSystemSdk(file *os.File, setup sdk.Setup, report *progress.Reporter) error {
 	if setup.Revision != SystemSdkRevision {
-		return nil, fmt.Errorf("system SDK (%s) not available", setup.Revision)
+		return fmt.Errorf("system SDK (%s) not available", setup.Revision)
 	}
-
-	r := revert.New()
-	defer r.Fail()
-
-	// TODO: remove old system SDKs when no longer in use.
-	file, err := os.Create(target)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	r.Add(func() {
-		if err1 := os.Remove(target); err1 != nil {
-			logger.Noticef("System SDK on Retrieve: Cannot remove %q on a failed download: %v", target, err1)
-		}
-	})
 
 	writer := tar.NewWriter(file)
 	if err := addWritableFS(writer, SystemSdkFs); err != nil {
-		return nil, err
+		return err
 	}
 	if err := writer.Close(); err != nil {
-		return nil, err
+		return err
 	}
 
 	if report != nil {
@@ -96,8 +64,7 @@ func retrieveSystemSdk(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, e
 		report.Report("download", size, size)
 	}
 
-	r.Success()
-	return SystemSdkMeta()
+	return nil
 }
 
 // Like w.AddFs(fsys) but ensures the user always has write permissions.
@@ -155,7 +122,7 @@ func addWritableFS(w *tar.Writer, fsys fs.FS) error {
 	})
 }
 
-func FakeRetrieveSystemSdk(f func(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error)) func() {
+func FakeRetrieveSystemSdk(f func(file *os.File, setup sdk.Setup, report *progress.Reporter) error) func() {
 	oldRetrieveSystemSdk := RetrieveSystemSdk
 	RetrieveSystemSdk = f
 	return func() { RetrieveSystemSdk = oldRetrieveSystemSdk }

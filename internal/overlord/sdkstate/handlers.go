@@ -1,10 +1,13 @@
 package sdkstate
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -12,12 +15,14 @@ import (
 
 	"github.com/canonical/workshop/internal/interfaces/policy"
 	"github.com/canonical/workshop/internal/logger"
+	"github.com/canonical/workshop/internal/osutil"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
+	"github.com/canonical/workshop/internal/sdkstore"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -67,25 +72,6 @@ func sdkName(task *state.Task) (string, error) {
 	return sk, nil
 }
 
-// replaceSdkSetup updates a launch or refresh change with the latest SDK
-// revision, if it changed between the planning phase and retrieval. TODO:
-// remove this once the Store supports downloading a specific revision.
-func replaceSdkSetup(change *state.Change, w string, setup sdk.Setup) {
-	setups, err := WorkshopSdks(change, w)
-	if err != nil {
-		// Nothing to replace.
-		return
-	}
-
-	for i, s := range setups {
-		if s.Name == setup.Name {
-			setups[i] = setup
-			change.Set(WorkshopSdksKey(w), setups)
-			break
-		}
-	}
-}
-
 func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	user, project, w, err := UserProjectWorkshop(task)
 	if err != nil {
@@ -97,9 +83,92 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
+	st := task.State()
+	st.Lock()
+	base, err := WorkshopBase(task.Change(), w)
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
+	if _, err = m.backend.Sdk(ctx, rec); err == nil {
+		logger.Debugf("On doRetrieveSdk: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
+		return nil
+	}
+
+	fl, err := sdk.OpenLock(rec.Name)
+	if err != nil {
+		return err
+	}
+	defer fl.Close()
+	if err := fl.Lock(); err != nil {
+		return err
+	}
+
+	if err := m.retrieveSdk(ctx, task, rec); err != nil {
+		return err
+	}
+
+	sdkYaml, err := extractSdkYAML(ctx, rec)
+	if err != nil {
+		return err
+	}
+	if err := workshop.ValidateSdkInfo(project.ProjectId, w, base.Name, rec.Name, sdkYaml); err != nil {
+		return err
+	}
+	meta := sdk.Meta{Setup: rec, SdkYAML: sdkYaml}
+
+	reader, err := os.Open(rec.Filepath())
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	err = m.backend.ImportSdk(ctx, meta, reader)
+	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
+		logger.Debugf("On doRetrieveSdk: reuse existing SDK volume %q", sdk.VolumeName(meta.Name, meta.Revision))
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	// If the SDK was downloaded successfully, remove its previous rev if any.
+	if err := cleanupSdk(rec); err != nil {
+		logger.Noticef("On doRetrieveSdk: cannot cleanup previous download: %v", err)
+	}
+	return nil
+}
+
+func (m *SdkManager) retrieveSdk(ctx context.Context, task *state.Task, rec sdk.Setup) error {
+	path := rec.Filepath()
+	if osutil.FileExists(path) {
+		logger.Debugf("On doRetrieveSdk: %q SDK found locally: %s", rec.Name, path)
+		return nil
+	}
+
+	rev := revert.New()
+	defer rev.Fail()
+
+	writer, err := osutil.NewAtomicFile(path, 0666, 0, osutil.NoChown, osutil.NoChown)
+	if err != nil {
+		return err
+	}
+	rev.Add(func() {
+		if reverr := writer.Cancel(); reverr != nil {
+			logger.Noticef("On doRetrieveSdk: %v", reverr)
+		}
+	})
+
+	archive := sdkstore.SdkArchive{
+		Name:      rec.Name,
+		PackageID: rec.PackageID,
+		Revision:  rec.Revision.N,
+		Sha3_384:  rec.Sha3_384,
+	}
 	st := task.State()
 	reporter := &progress.Reporter{
 		Name: task.ID(),
@@ -110,47 +179,67 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		},
 	}
 
-	var meta *sdk.Meta
 	if rec.Source == sdk.SystemSource {
-		meta, err = system.RetrieveSystemSdk(rec, reporter)
+		err = system.RetrieveSystemSdk(writer.File, rec, reporter)
 	} else {
-		st.Lock()
-		store := sdk.GcsStoreService(st)
-		st.Unlock()
-
-		meta, err = store.DownloadSdk(ctx, rec, reporter)
+		err = m.store.Download(ctx, writer, archive, sdkstore.WithReporter(reporter))
 	}
 	if err != nil {
 		return err
 	}
 
-	// TODO: We should be downloading a specific revision. Remove this when
-	// the Store supports that (it will probably have to be removed anyway
-	// since DownloadSdk won't return metadata after that).
-	if meta.Revision != rec.Revision {
-		st.Lock()
-		change := task.Change()
-		replaceSdkSetup(change, w, meta.Setup)
-		base, err := WorkshopBase(change, w)
-		st.Unlock()
-		if err != nil {
-			return err
-		}
-
-		if err := workshop.ValidateSdkInfo(project.ProjectId, w, base.Name, meta.Name, meta.SdkYAML); err != nil {
-			return err
-		}
+	if err := writer.Commit(); err != nil {
+		return err
 	}
 
-	file, err := os.Open(meta.Filepath())
+	rev.Success()
+	return nil
+}
+
+func extractSdkYAML(ctx context.Context, rec sdk.Setup) (string, error) {
+	path := rec.Filepath()
+	cache := path + ".yaml"
+
+	content, err := os.ReadFile(cache)
+	if err == nil {
+		return string(content), nil
+	}
+
+	cmd := exec.CommandContext(ctx, "tar",
+		"--extract",
+		"--to-stdout",
+		"--force-local",
+		"--file="+path,
+		"meta/sdk.yaml",
+	)
+	content, err = cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	if err := osutil.AtomicWriteFile(cache, content, 0666, 0); err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+func cleanupSdk(rec sdk.Setup) error {
+	target := rec.Filepath()
+	matches, err := filepath.Glob(filepath.Join(filepath.Dir(target), rec.Name+"_*.sdk"))
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	err = m.backend.ImportSdk(ctx, *meta, file)
-	if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-		logger.Debugf("SDK Manager on maybeCreateVolume: reuse existing SDK volume %q", sdk.VolumeName(meta.Name, meta.Revision))
-		return nil
+
+	for _, m := range matches {
+		if m == target {
+			continue
+		}
+		if err1 := os.Remove(m + ".yaml"); err1 != nil && !errors.Is(err1, os.ErrNotExist) {
+			err = cmp.Or(err, err1)
+		}
+		if err1 := os.Remove(m); err1 != nil {
+			err = cmp.Or(err, err1)
+		}
 	}
 
 	return err

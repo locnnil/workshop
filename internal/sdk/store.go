@@ -5,6 +5,8 @@ import (
 	"crypto/sha3"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 	"math/rand/v2"
 	"regexp"
 	"sync"
@@ -61,6 +63,7 @@ func StoreService(st *state.State) Store {
 }
 
 type Store interface {
+	Download(ctx context.Context, w io.Writer, sdk sdkstore.SdkArchive, options ...sdkstore.DownloadOption) error
 	Find(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)
 	Info(ctx context.Context, name string, options ...sdkstore.InfoOption) (transport.InfoResponse, error)
 	Resolve(ctx context.Context, request transport.ResolveRequest) (transport.ResolveResponse, error)
@@ -73,6 +76,9 @@ func NewFakeStore() *FakeStore {
 type FakeStore struct {
 	lock sync.Mutex
 
+	DownloadCalls    []sdkstore.SdkArchive
+	DownloadCallback func(ctx context.Context, w io.Writer, sdk sdkstore.SdkArchive, options ...sdkstore.DownloadOption) error
+
 	FindCalls    []string
 	FindCallback func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)
 
@@ -81,6 +87,29 @@ type FakeStore struct {
 
 	ResolveCalls    []transport.ResolveRequest
 	ResolveCallback func(ctx context.Context, req transport.ResolveRequest) (transport.ResolveResponse, error)
+}
+
+func (f *FakeStore) SetDownloadCallback(download func(ctx context.Context, w io.Writer, sdk sdkstore.SdkArchive, options ...sdkstore.DownloadOption) error) func() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	old := f.DownloadCallback
+	f.DownloadCallback = download
+	return func() {
+		f.DownloadCallback = old
+	}
+}
+
+func (f *FakeStore) Download(ctx context.Context, w io.Writer, sdk sdkstore.SdkArchive, options ...sdkstore.DownloadOption) error {
+	f.lock.Lock()
+	f.DownloadCalls = append(f.DownloadCalls, sdk)
+	download := f.DownloadCallback
+	f.lock.Unlock()
+
+	if download == nil {
+		return fmt.Errorf("%q SDK (%v) not found", sdk.Name, sdk.Revision)
+	}
+	return download(ctx, w, sdk, options...)
 }
 
 func (f *FakeStore) SetFindCallback(find func(ctx context.Context, query string, options ...sdkstore.FindOption) ([]transport.FindResponse, error)) func() {

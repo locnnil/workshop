@@ -39,31 +39,34 @@ func (f *systemSdk) TearDownSuite(c *check.C) {
 }
 
 func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
-	var done, total int64
-	report := &progress.Reporter{Name: "1", Report: func(label string, d, t int64) {
-		done = d
-		total = t
-	}}
 	setup := sdk.Setup{
 		Name:     sdk.System.String(),
 		Source:   sdk.SystemSource,
 		Revision: system.SystemSdkRevision,
 		Sha3_384: system.SystemSdkDigest,
 	}
-	result, err := system.RetrieveSystemSdk(setup, report)
+	file, err := os.Create(setup.Filepath())
 	c.Assert(err, check.IsNil)
-	c.Check(result.Setup, check.Equals, setup)
-	c.Check(result.SdkYAML, check.Not(check.Equals), "")
+	defer file.Close()
+
+	var done, total int64
+	report := &progress.Reporter{Name: "1", Report: func(label string, d, t int64) {
+		done = d
+		total = t
+	}}
+
+	err = system.RetrieveSystemSdk(file, setup, report)
+	c.Assert(err, check.IsNil)
 	c.Check(int(done), testutil.IntGreaterThan, 0)
 	c.Check(int(total), testutil.IntGreaterThan, 0)
 	c.Check(done, check.Equals, total)
 
-	r, err := os.Open(setup.Filepath())
+	file.Close()
+	file, err = os.Open(setup.Filepath())
 	c.Assert(err, check.IsNil)
-	defer r.Close()
 
 	hash := sha3.New384()
-	_, err = r.WriteTo(hash)
+	_, err = file.WriteTo(hash)
 	c.Assert(err, check.IsNil)
 
 	digest := hex.EncodeToString(hash.Sum(nil))
@@ -78,10 +81,10 @@ func (s *systemSdk) TestRetrieveSystemSdkWrongRevision(c *check.C) {
 		Revision: sdk.R(system.SystemSdkRevision.N - 1),
 		Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
 	}
-	_, err := system.RetrieveSystemSdk(setup, nil)
+	err := system.RetrieveSystemSdk(nil, setup, nil)
 	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
 
 	setup.Revision.N += 2
-	_, err = system.RetrieveSystemSdk(setup, nil)
+	err = system.RetrieveSystemSdk(nil, setup, nil)
 	c.Check(err, check.ErrorMatches, fmt.Sprintf(`system SDK \(%s\) not available`, setup.Revision))
 }

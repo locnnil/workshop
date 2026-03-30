@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
@@ -569,7 +570,21 @@ func (s *FakeWorkshopBackend) ImportSdk(ctx context.Context, meta sdk.Meta, tarb
 		return workshop.ErrVolumeAlreadyExists
 	}
 
-	s.Volumes[name] = FakeVolume{Kind: "sdk", What: tarball.Name()}
+	info, err := tarball.Stat()
+	if err != nil {
+		return err
+	}
+
+	what := tarball.Name()
+	if !info.IsDir() {
+		content, err := io.ReadAll(tarball)
+		if err != nil {
+			return err
+		}
+		what = string(content)
+	}
+
+	s.Volumes[name] = FakeVolume{Kind: "sdk", What: what}
 	s.SdkVolumes[name] = meta
 	return nil
 }
