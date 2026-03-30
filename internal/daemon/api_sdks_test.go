@@ -162,11 +162,12 @@ func (s *apiSuite) TestSdksGetInvalidMetadata(c *check.C) {
 }
 
 func (s *apiSuite) importSdkVolume(c *check.C, meta sdk.Meta, size uint64) {
-	path := filepath.Join(c.MkDir(), "meta", "sdk.yaml")
+	vfs := c.MkDir()
+	path := filepath.Join(vfs, "meta", "sdk.yaml")
 	c.Assert(os.MkdirAll(filepath.Dir(path), 0755), check.IsNil)
 	c.Assert(os.WriteFile(path, []byte(meta.SdkYAML), 0644), check.IsNil)
 
-	tarball, err := os.Open(path)
+	tarball, err := os.Open(vfs)
 	c.Assert(err, check.IsNil)
 	defer tarball.Close()
 
