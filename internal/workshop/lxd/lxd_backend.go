@@ -232,8 +232,11 @@ func New() (*Backend, error) {
 			Name:   storagePool,
 			Driver: storagePoolDriver,
 		}
-		err := conn.CreateStoragePool(req)
+		op, err := conn.CreateStoragePool(req)
 		if err != nil {
+			return nil, err
+		}
+		if err := op.Wait(); err != nil {
 			return nil, err
 		}
 
@@ -255,10 +258,15 @@ func New() (*Backend, error) {
 			// ~14GiB of available space. LXD defaults to 20% in those cases
 			// which results in a ~2GiB pool size for workshop.
 			pool.Config["size"] = strconv.FormatUint(storagePoolMinimalGiB*1024*1024*1024, 10)
-			if err = conn.UpdateStoragePool(storagePool, pool.Writable(), etag); err != nil {
+			op, err = conn.UpdateStoragePool(storagePool, pool.Writable(), etag)
+			if err != nil {
+				return nil, err
+			}
+			if err := op.Wait(); err != nil {
 				logger.Noticef("On Backend.New: failed to set storage pool to the minimal size: %dGiB, %s", storagePoolMinimalGiB, err)
 				return nil, err
 			}
+
 			logger.Noticef("On Backend.New: set storage pool to the minimal size: %dGiB", storagePoolMinimalGiB)
 		}
 	} else if pools[idx].Driver != storagePoolDriver {
