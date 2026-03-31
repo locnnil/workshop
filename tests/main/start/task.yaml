@@ -1,6 +1,7 @@
 summary: Check workshop start
 prepare: |
   . "$TESTSLIB"/utils.sh
+  resolve_branch workshop.yaml
   workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh

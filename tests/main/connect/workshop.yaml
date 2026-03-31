@@ -1,7 +1,0 @@
-name: ws-conn
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk-mount
-    channel: latest/stable
-  - name: test-sdk-gpu
-    channel: latest/stable

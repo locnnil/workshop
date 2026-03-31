@@ -1,6 +1,7 @@
 summary: Check ssh-agent interface scenarios
 prepare: |
   . "$TESTSLIB"/utils.sh
+  resolve_branch .workshop/ws-ssh.yaml .workshop/ws-ssh-fail.yaml
   workshop_exec launch ws-ssh
 restore: |
   . "$TESTSLIB"/utils.sh

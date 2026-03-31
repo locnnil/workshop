@@ -1,0 +1,5 @@
+name: ws-basic
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic
+    channel: latest/stable${TEST_SDK_BRANCH}

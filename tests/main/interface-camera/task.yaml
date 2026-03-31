@@ -1,6 +1,7 @@
 summary: Check camera interface scenarios
 prepare: |
   . "$TESTSLIB"/utils.sh
+  resolve_branch .workshop/ws-camera.yaml .workshop/ws-camera-fail.yaml
   workshop_exec launch ws-camera
 restore: |
   . "$TESTSLIB"/utils.sh

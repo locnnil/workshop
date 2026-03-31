@@ -3,6 +3,7 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Check workshop can be launched with a basic SDK"
+  resolve_branch workshop.yaml
   workshop_exec launch --verbose
   workshop_exec list | MATCH "ws-basic[[:space:]]*Ready[[:space:]]*-"
 

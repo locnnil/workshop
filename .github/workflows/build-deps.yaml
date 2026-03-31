@@ -4,10 +4,18 @@ on:
     secrets:
       GH_SDKCRAFT:
         required: true
+      SDKCRAFT_STORE_CREDENTIALS:
+        required: true
     outputs:
       snap_workshop:
         description: "Workshop snap filename"
         value: ${{ jobs.build-workshop.outputs.snap_workshop }}
+      test_sdk_branch:
+        description: Store branch for test SDKs
+        value: ${{ jobs.detect-sdk-changes.outputs.branch }}
+
+permissions:
+  contents: read
 
 jobs:
   build-workshop:
@@ -120,3 +128,158 @@ jobs:
         with:
           name: spread_binary
           path: spread/spread
+
+  detect-sdk-changes:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    outputs:
+      branch: ${{ steps.base.outputs.branch }}
+      modified: ${{ steps.detect.outputs.modified }}
+      unchanged: ${{ steps.detect.outputs.unchanged }}
+    steps:
+      - name: Checkout Workshop
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          filter: 'tree:0'
+          persist-credentials: true
+
+      - name: Checkout base commit
+        id: base
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            'pull_request')
+              git fetch --filter=tree:0 origin "+${GITHUB_BASE_REF}:${GITHUB_BASE_REF}"
+
+              printf '[command]git rev-parse %s\n' "$GITHUB_BASE_REF"
+              rev=$(git rev-parse "$GITHUB_BASE_REF")
+              printf '%s\n' "$rev"
+
+              printf 'range=%s...HEAD\n' "$rev" >>"$GITHUB_OUTPUT"
+
+              printf 'branch=pr-%s\n' "$GITHUB_EVENT_NUMBER" >>"$GITHUB_OUTPUT"
+              ;;
+            'push')
+              git fetch --filter=tree:0 origin "$GITHUB_EVENT_BEFORE"
+
+              printf 'range=%s..HEAD\n' "$GITHUB_EVENT_BEFORE" >>"$GITHUB_OUTPUT"
+
+              printf 'branch=\n' >>"$GITHUB_OUTPUT"
+              ;;
+            *)
+              printf '::error::This workflow only supports push and pull_request events.\n'
+              exit 1
+              ;;
+          esac
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_EVENT_NUMBER: ${{ github.event.number }}
+
+      - name: Detect SDK changes
+        id: detect
+        run: |
+          cd tests/lib/sdk
+
+          modified=()
+          unchanged=()
+          for path in */*/*/; do
+            if git diff --quiet "${RANGE}" -- "$path"; then
+              unchanged+=("${path%/}")
+            else
+              modified+=("${path%/}")
+            fi
+          done
+
+          maybe_list() {
+            message="$1"
+            shift
+            if [ $# -gt 0 ]; then
+              printf '%s:\n' "$message"
+              for path in "$@"; do
+                printf '  %s\n' "$path"
+              done
+            fi
+          }
+
+          maybe_list 'Modified SDKs' "${modified[@]}"
+          maybe_list 'Unmodified SDKs' "${unchanged[@]}"
+
+          print_matrix() {
+            printf '%s=' "$1"
+            shift
+            for path in "$@"; do
+              IFS='/' read -r -a parts <<<"$path"
+
+              platforms='["amd64"]'
+              if [ "${parts[0]}" = test-sdk-info ]; then
+                platforms='["all"]'
+              fi
+
+              jq --null-input \
+                --arg name "${parts[0]}" \
+                --arg track "${parts[1]}" \
+                --arg risk "${parts[2]}" \
+                --arg platforms "$platforms" \
+                '$ARGS.named'
+            done | jq --compact-output --slurp .
+          }
+
+          print_matrix modified "${modified[@]}" >> "$GITHUB_OUTPUT"
+          print_matrix unchanged "${unchanged[@]}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        env:
+          RANGE: ${{ steps.base.outputs.range }}
+
+  build-test-sdk:
+    needs: detect-sdk-changes
+    if: needs.detect-sdk-changes.outputs.modified != '[]'
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.detect-sdk-changes.outputs.modified) }}
+      fail-fast: false
+    uses: canonical/sdkcraft-actions/.github/workflows/upload.yml@92f5df60c0878aea4844a7380fdfd24063f89ac9
+    with:
+      platforms: ${{ matrix.platforms }}
+      subdirectory: tests/lib/sdk/${{ matrix.name }}/${{ matrix.track }}/${{ matrix.risk }}
+      track: ${{ matrix.track }}
+      risk: ${{ matrix.risk }}
+      branch: ${{ needs.detect-sdk-changes.outputs.branch }}
+    secrets:
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS }}
+
+  release-test-sdks:
+    needs: detect-sdk-changes
+    if: github.event_name == 'pull_request' && needs.detect-sdk-changes.outputs.unchanged != '[]'
+    runs-on: [self-hosted, linux, noble, x64, xlarge]
+    steps:
+      - name: Install sdkcraft
+        run: sudo snap install sdkcraft --edge --classic
+
+      - name: Release test SDKs
+        run: |
+          mapfile -d '' -t sdks < <(jq --compact-output --raw-output0 '.[]' <<<"$SDKS")
+
+          for sdk in "${sdks[@]}"; do
+            name=$(jq --raw-output .name <<<"$sdk")
+            track=$(jq --raw-output .track <<<"$sdk")
+            risk=$(jq --raw-output .risk <<<"$sdk")
+
+            printf '::group::Releasing %s SDK to %s/%s/%s\n' "$name" "$track" "$risk" "$BRANCH"
+
+            curl -fsSLo info.json --retry 5 "https://api.staging.pkg.store/v2/sdks/info/$name?fields=channel-map,revision"
+
+            filter='."channel-map"[] | select(.channel.name == $channel) | .revision.revision'
+            jq --arg channel "${track}/${risk}" --raw-output0 "$filter" < info.json | sort --numeric-sort --zero-terminated > revisions
+
+            mapfile -d '' -t revisions < revisions
+            for rev in "${revisions[@]}"; do
+              sdkcraft release "$name" "$rev" "${track}/${risk}/${BRANCH}"
+            done
+
+            printf '::endgroup::\n'
+          done
+        shell: bash
+        env:
+          SDKS: ${{ needs.detect-sdk-changes.outputs.unchanged }}
+          BRANCH: ${{ needs.detect-sdk-changes.outputs.branch }}
+          SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS }} # zizmor: ignore[secrets-outside-env]

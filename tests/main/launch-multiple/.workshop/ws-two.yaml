@@ -1,5 +1,0 @@
-name: ws-two
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk-basic
-    channel: latest/stable

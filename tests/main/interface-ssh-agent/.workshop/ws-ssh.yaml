@@ -1,8 +1,0 @@
-name: ws-ssh
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk-ssh-agent
-    channel: latest/stable
-connections:
-  - plug: test-sdk-ssh-agent:ssh-agent
-    slot: system:ssh-agent

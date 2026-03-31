@@ -188,3 +188,11 @@ function run_sdkcraft() {
 function install_sdkcraft() {
     snap install --dangerous --classic /workshop/tests/sdkcraft_*.snap
 }
+
+function resolve_branch() {
+    local file
+    for file in "$@"; do
+        # shellcheck disable=SC2016
+        envsubst '${TEST_SDK_BRANCH}' < "${file}.in" > "$file"
+    done
+}

@@ -1,6 +1,7 @@
 summary: Check tunnel interface scenarios
 prepare: |
   . "$TESTSLIB"/utils.sh
+  resolve_branch .workshop.yaml
   workshop_exec launch ws-tunnel
 restore: |
   . "$TESTSLIB"/utils.sh

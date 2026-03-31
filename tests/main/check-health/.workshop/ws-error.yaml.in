@@ -1,0 +1,5 @@
+name: ws-error
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-health-error
+    channel: latest/stable${TEST_SDK_BRANCH}

@@ -8,6 +8,7 @@ restore: |
   apt remove -y expect
 execute: |
   . "$TESTSLIB"/utils.sh
+  resolve_branch workshop.yaml
   workshop_exec launch --no-wait
   sudo -u ubuntu 2>&1 -- expect -f ./health.exp
   workshop_exec remove

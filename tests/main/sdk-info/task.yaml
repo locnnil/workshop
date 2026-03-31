@@ -24,6 +24,7 @@ execute: |
   MATCH '[[:space:]]+latest/edge[[:space:]]+2\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+all[[:space:]]+[0-9]+[[:space:]]+[0-9]+B' < info.log
 
   echo "Test SDK info with one volume"
+  resolve_branch .workshop/edge.yaml .workshop/stable.yaml
   workshop_exec launch edge
   sdk_exec list | MATCH '^test-sdk-info[[:space:]]+2\.0[[:space:]]+[[:digit:]]+[[:space:]]+.*kB$'
 

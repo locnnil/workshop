@@ -2,6 +2,7 @@ summary: Check a failed non-transactional launch can be aborted successfully
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  resolve_branch workshop.setup-fail.yaml
   cp workshop.setup-fail.yaml workshop.yaml
   workshop_exec launch --wait-on-error || true
 

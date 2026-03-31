@@ -1,0 +1,29 @@
+name: ws-tunnel
+base: ubuntu@22.04
+sdks:
+  - name: system
+    plugs:
+      auto-connect-by-name:
+        interface: tunnel
+        endpoint: '@workshopacbn'
+      conflict:
+        interface: tunnel
+        endpoint: '0.0.0.0:8000'
+      test-sdk-http:
+        interface: tunnel
+        endpoint: 8001
+      tunnel:
+      unix-path:
+        interface: tunnel
+        endpoint: $HOME/test-tunnel.sock
+    slots:
+      postgres:
+        interface: tunnel
+        endpoint: 54321
+      unused:
+        interface: tunnel
+  - name: test-sdk-tunnel
+    channel: latest/stable${TEST_SDK_BRANCH}
+connections:
+  - plug: system:test-sdk-http
+    slot: test-sdk-tunnel:http

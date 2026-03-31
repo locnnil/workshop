@@ -12,6 +12,7 @@ jobs:
     uses: ./.github/workflows/build-deps.yaml
     secrets:
       GH_SDKCRAFT: ${{ secrets.GH_SDKCRAFT }}
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_STAGING }}
   snap-tests:
     needs: [build-deps]
     strategy:

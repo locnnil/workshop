@@ -1,5 +1,0 @@
-name: ws-conns-1
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk-mount
-    channel: latest/stable

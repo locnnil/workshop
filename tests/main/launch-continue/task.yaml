@@ -5,6 +5,7 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  resolve_branch workshop.yaml
   workshop_exec launch --wait-on-error || true
 
   echo "Check the workshop is in Waiting state"

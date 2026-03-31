@@ -1,6 +1,7 @@
 summary: Check GPU interface scenarios
 prepare: |
   . "$TESTSLIB"/utils.sh
+  resolve_branch .workshop/ws-gpu.yaml .workshop/ws-gpu-fail.yaml
   workshop_exec launch ws-gpu
 restore: |
   . "$TESTSLIB"/utils.sh

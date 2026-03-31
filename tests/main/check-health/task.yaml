@@ -1,7 +1,8 @@
 summary: Check check-health hook and set-health reporting
 execute: |
   . "$TESTSLIB"/utils.sh
-  
+
+  resolve_branch .workshop/ws-ok.yaml .workshop/ws-error.yaml .workshop/ws-waiting.yaml
   workshop_exec launch ws-ok
 
   echo "Check health reported okay"

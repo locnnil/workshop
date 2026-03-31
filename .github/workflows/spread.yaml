@@ -6,6 +6,8 @@ on:
         required: true
       STORE_CREDENTIALS:
         required: true
+      SDKCRAFT_STORE_CREDENTIALS:
+        required: true
   workflow_dispatch:
 
 permissions:
@@ -16,6 +18,7 @@ jobs:
     uses: ./.github/workflows/build-deps.yaml
     secrets:
       GH_SDKCRAFT: ${{ secrets.GH_SDKCRAFT }}
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS }}
   snap-tests:
     needs: [build-deps]
     strategy:
@@ -76,6 +79,8 @@ jobs:
         run: |
           mkdir ${{ github.workspace }}.cover
           spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}
+        env:
+          TEST_SDK_BRANCH: ${{ needs.build-deps.outputs.test_sdk_branch }}
       - name: Trim trailing slash from matrix.suite
         id: sanitize
         env:

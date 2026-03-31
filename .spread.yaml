@@ -7,6 +7,7 @@ environment:
   PROJECT_PATH: /workshop
   TESTSLIB: $PROJECT_PATH/tests/lib
   TESTS_SDKS: $PROJECT_PATH/tests/lib/sdk
+  TEST_SDK_BRANCH: $(HOST:printf %s "${TEST_SDK_BRANCH:+/$TEST_SDK_BRANCH}")
   SDK_STORE_BUCKET_DIR: /data/sdkstore
   IMAGE_SERVER: $(HOST:echo -n $WORKSHOP_IMAGE_SERVER)
 repack: |

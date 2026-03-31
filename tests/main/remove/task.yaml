@@ -8,6 +8,7 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Launch a workshop"
+  resolve_branch .workshop/ws-remove-mount.yaml
   workshop_exec launch ws-remove
 
   echo "Modify apt cache for later"
@@ -36,11 +37,11 @@ execute: |
   cat <<EOF >> .workshop/ws-remove.yaml
   sdks:
     - name: test-sdk-setup-fail
-      channel: latest/stable
+      channel: latest/stable${TEST_SDK_BRANCH}
   EOF
   ! workshop_exec refresh --wait-on-error ws-remove || false
   workshop_exec remove ws-remove
-  sed -i '/^sdks:$/,/^    channel: latest\/stable$/d' .workshop/ws-remove.yaml
+  sed -i '/^sdks:$/,/^    channel: latest\/stable.*$/d' .workshop/ws-remove.yaml
   workshop_exec list | MATCH "^ws-remove[[:space:]]+Off[[:space:]]+-$"
 
   echo "Check the workshop can be removed if in Error"

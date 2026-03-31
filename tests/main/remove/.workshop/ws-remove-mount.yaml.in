@@ -1,0 +1,5 @@
+name: ws-remove-mount
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-mount
+    channel: latest/stable${TEST_SDK_BRANCH}
