@@ -35,7 +35,6 @@ require (
 	github.com/juju/errors v1.0.0 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
-	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/zitadel/logging v0.7.0 // indirect
 	github.com/zitadel/oidc/v3 v3.45.5 // indirect
 	github.com/zitadel/schema v1.3.2 // indirect

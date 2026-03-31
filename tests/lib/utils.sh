@@ -76,9 +76,9 @@ EOF
 
     setup_lxd
 
-    retry 5 snap install --classic --channel=1.25/stable go
+    retry 5 snap install --classic --channel=1.26/stable go
     retry 5 snap install yq
-    
+
     chown -R ubuntu:ubuntu /workshop
 }
 
