@@ -1,0 +1,8 @@
+name: test-sdk-basic
+version: '1.0'
+summary: test-sdk-basic SDK
+description: |
+  test-sdk-basic SDK
+base: ubuntu@22.04
+architecture: amd64
+sdkcraft-started-at: '2026-04-01T23:27:53.386284Z'

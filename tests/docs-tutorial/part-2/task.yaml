@@ -35,7 +35,7 @@ execute: |
 
   cat >> workshop.yaml <<EOF
     - name: jupyter
-      channel: 24.04/edge
+      channel: latest/edge
     - name: system
       plugs:
         jupyter:

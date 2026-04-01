@@ -1,0 +1,11 @@
+name: test-sdk-camera
+version: "1.0"
+summary: test-sdk-camera SDK
+description: |
+  test-sdk-camera SDK
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+plugs:
+  camera:

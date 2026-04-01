@@ -1,0 +1,11 @@
+name: test-sdk-ssh-agent
+version: "1.0"
+summary: test-sdk-ssh-agent SDK
+description: |
+  test-sdk-ssh-agent SDK
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+plugs:
+  ssh-agent:

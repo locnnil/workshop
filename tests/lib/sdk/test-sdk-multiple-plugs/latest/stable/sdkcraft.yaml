@@ -1,0 +1,18 @@
+name: test-sdk-multiple-plugs
+version: "1.0"
+summary: test-sdk-multiple-plugs SDK
+description: |
+  test-sdk-multiple-plugs SDK
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+plugs:
+  one:
+    interface: mount
+    workshop-target: /mnt/one
+  two:
+    interface: mount
+    workshop-target: /opt/two
+  ssh-agent:
+    interface: ssh-agent

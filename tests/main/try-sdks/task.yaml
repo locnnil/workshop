@@ -7,14 +7,19 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch workshop with SDKs from try area"
-  store_area="$SDK_STORE_BUCKET_DIR/test-sdk-basic"
-  try_area='/home/ubuntu/.local/share/workshop/try/test-sdk-basic'
-  sudo -u ubuntu mkdir -p "$try_area"
-  sudo -u ubuntu cp "$store_area/latest/stable/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
-  echo 50aae25a070e742e9ea72a4bd3ed419f5a0a34391e294c4b619ed5659b041b7bfc872c4070811e4fba4084bcf15d8fe8 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
-  sudo -u ubuntu cp "$store_area/latest/stable/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
+  sdk_try() {
+    (cd "$1" && sudo -u ubuntu tar cf "$2/test-sdk-basic_all.sdk" *)
+    openssl sha3-384 < "$2/test-sdk-basic_all.sdk" | cut -d' ' -f2 | sudo -u ubuntu tee "$2/test-sdk-basic_all.sdk.sha3-384"
+    sudo -u ubuntu cp "$1/meta/sdk.yaml" "$2/test-sdk-basic_all.sdk.yaml"
+  }
 
+  echo "Copy test-sdk-basic (1) to try area"
+  try_area='/home/ubuntu/.local/share/workshop/try/test-sdk-basic'
+  rm -rf "$try_area"
+  sudo -u ubuntu mkdir -p "$try_area"
+  sdk_try unpacked/1 "$try_area"
+
+  echo "Launch workshop with SDKs from try area"
   workshop_exec launch
   workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
   try_area_contracted="~${try_area#*ubuntu}"
@@ -35,10 +40,7 @@ execute: |
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check SDKs in try area can be updated"
-  sudo -u ubuntu cp "$store_area/latest/edge/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
-  echo fccdbd97fa7d51053e0e6a9db8e3fc81bbce19aaa4d578072b9bb53527b45a80f30781c97c9fb830670b9141fdf8df19 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
-  sudo -u ubuntu cp "$store_area/latest/edge/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
-
+  sdk_try unpacked/2 "$try_area"
   workshop_exec refresh
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
   workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'

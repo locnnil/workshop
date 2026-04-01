@@ -1,0 +1,28 @@
+name: test-sdk-mount
+version: "1.0"
+summary: test-sdk-mount SDK
+description: |
+  test-sdk-mount SDK
+platforms:
+  ubuntu@22.04:amd64:
+  ubuntu@24.04:amd64:
+
+parts:
+  jobs:
+    plugin: nil
+    override-build: |
+      cd "$CRAFT_PART_INSTALL"
+      mkdir -p jobs
+      touch jobs/job.sh
+
+plugs:
+  one:
+    interface: mount
+    workshop-target: /mnt/one
+  two:
+    interface: mount
+    workshop-target: /opt/two
+slots:
+  jobs:
+    interface: mount
+    workshop-source: $SDK/jobs

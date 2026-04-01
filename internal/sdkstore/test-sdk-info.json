@@ -5,15 +5,55 @@
     "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
     "license": "GPL-3.0",
     "publisher": {
-      "display-name": "Jonathan Conder",
-      "id": "YnyjkYo9nA6AlXsTKnpxrCGxNZgmSdmu",
-      "username":"usso-jeconder",
+      "display-name": "Dmitry Lyfar",
+      "id": "eXipbnGB0LFt3v2YD8KTEMx5inT575ju",
+      "username":"usso-dlyfar",
       "validation":"unproven"
     },
     "summary": "Test SDK which supports all bases and architectures",
-    "title": "test-sdk-info"
+    "title": "SDK info"
   },
   "channel-map": [
+    {
+      "channel": {
+        "name": "latest/stable",
+        "track": "latest",
+        "risk": "stable",
+        "platform": {
+          "architecture": "all",
+          "channel": "all",
+          "name": "all"
+        },
+        "released-at": "2026-04-02T01:29:06.948542Z"
+      },
+      "revision": {
+        "created-at": "2026-04-02T01:29:04.183727Z",
+        "download": {
+          "sha3-384": "51779c9264f26baf29facfdaac39286712073b5ed3a5f3e63ab03cc3aa6275165d0d50d30d87beb45068c8c3ce70053a",
+          "size": 596,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e_3.sdk"
+        },
+        "platforms": [
+          {
+            "architecture": "all",
+            "channel": "all",
+            "name": "all"
+          }
+        ],
+        "revision": 3,
+        "sdk-yaml": {
+          "architecture": "all",
+          "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
+          "license": "GPL-3.0",
+          "name": "test-sdk-info",
+          "sdkcraft-started-at": "2026-04-02T01:28:56.859021Z",
+          "summary": "Test SDK which supports all bases and architectures",
+          "title": "SDK info",
+          "version": "1.0"
+        },
+        "version": "1.0"
+      }
+    },
     {
       "channel": {
         "name": "latest/edge",
@@ -24,14 +64,14 @@
           "channel": "all",
           "name": "all"
         },
-        "released-at": "2026-03-10T06:23:47.372123Z"
+        "released-at": "2026-04-02T01:28:47.872298Z"
       },
       "revision": {
-        "created-at": "2026-03-10T06:23:16.908418Z",
+        "created-at": "2026-04-02T01:28:46.134132Z",
         "download": {
-          "sha3-384": "cf722fc841c72cf53c4b2db88608589efb173fa2a50837ae6f07597ead85e6e30f36a85e98df9ba78d941b3c9e15ab3d",
-          "size": 677,
-          "url": "https://api.staging.pkg.store/api/v1/sdks/download/U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e_1.sdk"
+          "sha3-384": "47b440b2facd5176c7d346f32e59499d0b7afe268b8cd174ef5e07bf564147669d836e6d93c2ba1efe3b2e0f5cf94eee",
+          "size": 593,
+          "url": "https://api.staging.pkg.store/api/v1/sdks/download/U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e_2.sdk"
         },
         "platforms": [
           {
@@ -40,17 +80,18 @@
             "name": "all"
           }
         ],
-        "revision": 1,
+        "revision": 2,
         "sdk-yaml": {
           "architecture": "all",
           "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
           "license": "GPL-3.0",
           "name": "test-sdk-info",
-          "sdkcraft-started-at": "2026-03-10T06:22:30.544271Z",
+          "sdkcraft-started-at": "2026-04-02T01:28:40.615633Z",
           "summary": "Test SDK which supports all bases and architectures",
-          "version": "0.1"
+          "title": "SDK info",
+          "version": "2.0"
         },
-        "version": "0.1"
+        "version": "2.0"
       }
     }
   ]

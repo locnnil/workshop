@@ -1,0 +1,11 @@
+name: test-sdk-gpu
+version: "1.0"
+summary: test-sdk-gpu SDK
+description: |
+  test-sdk-gpu SDK
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+plugs:
+  gpu:

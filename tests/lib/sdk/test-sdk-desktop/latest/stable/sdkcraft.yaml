@@ -1,0 +1,11 @@
+name: test-sdk-desktop
+version: "1.0"
+summary: test-sdk-desktop SDK
+description: |
+  test-sdk-desktop SDK
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+plugs:
+  desktop:
