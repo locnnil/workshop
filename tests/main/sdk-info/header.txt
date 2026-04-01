@@ -6,5 +6,5 @@ This is test-sdk-info's description. You have a paragraph or two to tell the
 most important story about it. Keep it under 100 words though,
 we live in tweetspace.
 
-CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+CHANNELS
   CHANNEL           VERSION  BUILD       BASE  REV  SIZE

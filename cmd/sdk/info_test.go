@@ -190,7 +190,7 @@ license:    Apache-2.0
 Longer description
 can be multiline.
 
-CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+CHANNELS
   CHANNEL           VERSION      BUILD       BASE          ARCH     REV      SIZE
   latest/stable     2.1-084c8c8  2024-11-25  ubuntu@22.04  amd64     88  123.46kB
                                                            arm64     89    1.23MB
@@ -223,7 +223,7 @@ license:    Apache-2.0
 Longer description
 can be multiline.
 
-CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+CHANNELS
   CHANNEL           VERSION      BUILD       BASE          REV      SIZE
   latest/stable     2.1-084c8c8  2024-11-25  ubuntu@22.04   88  123.46kB
                                              ubuntu@20.04   85      123B
@@ -253,7 +253,7 @@ license:    Apache-2.0
 Longer description
 can be multiline.
 
-CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+CHANNELS
   CHANNEL           VERSION      BUILD       BASE          REV     SIZE
   latest/stable     2.2-c8c8084  2024-11-27  ubuntu@22.04   90  12.35MB
                     2.1-084c8c8  2024-11-25  ubuntu@20.04   87  12.35kB
@@ -280,7 +280,7 @@ license:    Apache-2.0
 Longer description
 can be multiline.
 
-CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+CHANNELS
   CHANNEL           VERSION      BUILD       ARCH     REV      SIZE
   latest/stable     2.1-084c8c8  2024-11-25  amd64     88  123.46kB
                                              arm64     89    1.23MB
@@ -309,7 +309,7 @@ license:    Apache-2.0
 Longer description
 can be multiline.
 
-CHANNELS  (SDK Store preview: Workshop won't see these revisions yet)
+CHANNELS
   CHANNEL           VERSION      BUILD       REV     SIZE
   latest/stable     2.1-084c8c8  2024-11-25   85     123B
   latest/candidate  ^                             

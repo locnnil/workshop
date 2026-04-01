@@ -118,7 +118,7 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	tpl := "  %s\t%s\t%s\t" + baseTpl + archTpl + "%*s\t%*s\n"
 	if len(tracks) > 0 {
 		fmt.Fprintln(w)
-		fmt.Fprintf(w, "%s%s%s  (%s%s%s: %s)\n", esc.Bold, "CHANNELS", esc.End, esc.BrightYellow, "SDK Store preview", esc.End, "Workshop won't see these revisions yet")
+		fmt.Fprintf(w, "%s%s%s\n", esc.Bold, "CHANNELS", esc.End)
 		fmt.Fprintf(w, tpl, "CHANNEL", "VERSION", "BUILD", "BASE", "ARCH", maxRev, "REV", maxSize, "SIZE")
 	}
 	for _, track := range tracks {
