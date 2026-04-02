@@ -29,9 +29,11 @@ func (s *apiSuite) TestSdksGetOk(c *check.C) {
 
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "ollama",
-			Revision: sdk.R(82),
-			Sha3_384: "9f4936de807da0c0d56f5418f223a4e8f91e99cbba66be6adf560642007e023435a1bfcfc5aa4fc92611dd12f848dd04",
+			Name:      "ollama",
+			PackageID: "H8HFZNByrb2npBRYjHHYh9kF4qZUSSDy",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(82),
+			Sha3_384:  "9f4936de807da0c0d56f5418f223a4e8f91e99cbba66be6adf560642007e023435a1bfcfc5aa4fc92611dd12f848dd04",
 		},
 		SdkYAML: `name: ollama
 version: 1.0-053c828
@@ -43,9 +45,11 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 
 	meta = sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "openvino",
-			Revision: sdk.R(85),
-			Sha3_384: "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
+			Name:      "openvino",
+			PackageID: "o0BEpd0l4HsBviYXxhDPKZ33iDeEumzK",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(85),
+			Sha3_384:  "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
 		},
 		SdkYAML: `name: openvino
 version: 2.1-084c8c8
@@ -57,9 +61,11 @@ sdkcraft-started-at: 2024-11-20T00:00:00+00:00
 
 	meta = sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "openvino",
-			Revision: sdk.R(82),
-			Sha3_384: "6ca811792aa9c9a4859726425bc6f3059bf90aefd1e3371b81bca7317b6429fceb9546fa47457eacbf84b373a8215059",
+			Name:      "openvino",
+			PackageID: "o0BEpd0l4HsBviYXxhDPKZ33iDeEumzK",
+			Channel:   "latest/edge",
+			Revision:  sdk.R(82),
+			Sha3_384:  "6ca811792aa9c9a4859726425bc6f3059bf90aefd1e3371b81bca7317b6429fceb9546fa47457eacbf84b373a8215059",
 		},
 		SdkYAML: `name: openvino
 version: 2.0
@@ -70,9 +76,11 @@ summary: Intel OpenVINO toolkit (legacy)
 
 	meta = sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "ros2",
-			Revision: sdk.R(5),
-			Sha3_384: "07d4793aff4203fc1e2069bd885a35f177903ea07d215972ebc8dc5e26635775c298c5c80bd336824a22751766005e72",
+			Name:      "ros2",
+			PackageID: "dYqYJ4goprUt3GkJo5j63HnLSrHsOaUu",
+			Channel:   "jazzy/stable",
+			Revision:  sdk.R(5),
+			Sha3_384:  "07d4793aff4203fc1e2069bd885a35f177903ea07d215972ebc8dc5e26635775c298c5c80bd336824a22751766005e72",
 		},
 		SdkYAML: `name: ros2
 version: 1.0
@@ -84,6 +92,7 @@ summary: ROS2 SDK
 	meta = sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "system",
+			Source:   sdk.SystemSource,
 			Revision: sdk.R(-1),
 			Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
 		},
@@ -144,9 +153,11 @@ func (s *apiSuite) TestSdksGetInvalidMetadata(c *check.C) {
 
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "bad",
-			Revision: sdk.R(1),
-			Sha3_384: "71baf962e8a7abd38480289e173d6a48364c8f6f5f8a391fdb83465b4ad676aa7504d100906a0efa8749c97fd61d367e",
+			Name:      "bad",
+			PackageID: "NFOfRaZ9hvTRXfVZBEcC5WJZpqy0ykN6",
+			Channel:   "latest/edge",
+			Revision:  sdk.R(1),
+			Sha3_384:  "71baf962e8a7abd38480289e173d6a48364c8f6f5f8a391fdb83465b4ad676aa7504d100906a0efa8749c97fd61d367e",
 		},
 		SdkYAML: "[",
 	}
@@ -162,11 +173,12 @@ func (s *apiSuite) TestSdksGetInvalidMetadata(c *check.C) {
 }
 
 func (s *apiSuite) importSdkVolume(c *check.C, meta sdk.Meta, size uint64) {
-	path := filepath.Join(c.MkDir(), "meta", "sdk.yaml")
+	vfs := c.MkDir()
+	path := filepath.Join(vfs, "meta", "sdk.yaml")
 	c.Assert(os.MkdirAll(filepath.Dir(path), 0755), check.IsNil)
 	c.Assert(os.WriteFile(path, []byte(meta.SdkYAML), 0644), check.IsNil)
 
-	tarball, err := os.Open(path)
+	tarball, err := os.Open(vfs)
 	c.Assert(err, check.IsNil)
 	defer tarball.Close()
 
@@ -213,7 +225,7 @@ func (s *apiSuite) TestFindSdksOk(c *check.C) {
 						Channel:      "20.04",
 						Architecture: "amd64",
 					},
-					ReleasedAt: timeutil.TimeUTC(stableReleased),
+					ReleasedAt: (*timeutil.TimeUTC)(&stableReleased),
 				},
 				Revision: 85,
 				Version:  "2.1-084c8c8",
@@ -242,7 +254,7 @@ func (s *apiSuite) TestFindSdksOk(c *check.C) {
 						Channel:      "all",
 						Architecture: "all",
 					},
-					ReleasedAt: timeutil.TimeUTC(betaReleased),
+					ReleasedAt: (*timeutil.TimeUTC)(&betaReleased),
 				},
 				Revision: 7,
 				Version:  "0.1",
@@ -278,7 +290,7 @@ func (s *apiSuite) TestFindSdksOk(c *check.C) {
 		Track:      "latest",
 		Risk:       "stable",
 		Revision:   "85",
-		ReleasedAt: stableReleased,
+		ReleasedAt: &stableReleased,
 		Version:    "2.1-084c8c8",
 		Base:       "ubuntu@20.04",
 		Arch:       "amd64",
@@ -298,7 +310,7 @@ func (s *apiSuite) TestFindSdksOk(c *check.C) {
 		Track:      "latest",
 		Risk:       "beta",
 		Revision:   "7",
-		ReleasedAt: betaReleased,
+		ReleasedAt: &betaReleased,
 		Version:    "0.1",
 		Base:       "",
 		Arch:       "all",
@@ -373,7 +385,7 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 						Channel:      "20.04",
 						Architecture: "amd64",
 					},
-					ReleasedAt: timeutil.TimeUTC(stableReleased),
+					ReleasedAt: (*timeutil.TimeUTC)(&stableReleased),
 				},
 				Revision: transport.InfoRevision{
 					CreatedAt: (*timeutil.TimeUTC)(&stableUploaded),
@@ -390,7 +402,7 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 						Channel:      "20.04",
 						Architecture: "amd64",
 					},
-					ReleasedAt: timeutil.TimeUTC(edgeReleased),
+					ReleasedAt: (*timeutil.TimeUTC)(&edgeReleased),
 				},
 				Revision: transport.InfoRevision{
 					CreatedAt: (*timeutil.TimeUTC)(&edgeUploaded),
@@ -419,11 +431,11 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 	// Add SDK setups with channels so the endpoint can report channels.
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "openvino",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(85),
-			Sha3_384: "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
+			Name:      "openvino",
+			PackageID: "o0BEpd0l4HsBviYXxhDPKZ33iDeEumzK",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(85),
+			Sha3_384:  "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
 		},
 		SdkYAML: `name: openvino
 version: 2.1-084c8c8
@@ -437,11 +449,11 @@ sdkcraft-started-at: 2024-11-20T00:00:00+00:00
 
 	meta = sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "openvino",
-			Channel:  "latest/edge",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(82),
-			Sha3_384: "6ca811792aa9c9a4859726425bc6f3059bf90aefd1e3371b81bca7317b6429fceb9546fa47457eacbf84b373a8215059",
+			Name:      "openvino",
+			PackageID: "o0BEpd0l4HsBviYXxhDPKZ33iDeEumzK",
+			Channel:   "latest/edge",
+			Revision:  sdk.R(82),
+			Sha3_384:  "6ca811792aa9c9a4859726425bc6f3059bf90aefd1e3371b81bca7317b6429fceb9546fa47457eacbf84b373a8215059",
 		},
 		SdkYAML: `name: openvino
 version: 2.0
@@ -486,7 +498,7 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 		Revision:     "85",
 		BuiltAt:      &d20,
 		UploadedAt:   &stableUploaded,
-		ReleasedAt:   stableReleased,
+		ReleasedAt:   &stableReleased,
 		Version:      "2.1-084c8c8",
 		Base:         "ubuntu@20.04",
 		Arch:         "amd64",
@@ -496,7 +508,7 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 		Revision:     "82",
 		BuiltAt:      &d25,
 		UploadedAt:   &edgeUploaded,
-		ReleasedAt:   edgeReleased,
+		ReleasedAt:   &edgeReleased,
 		Version:      "2.0",
 		Base:         "ubuntu@20.04",
 		Arch:         "amd64",
@@ -565,7 +577,7 @@ func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
 						Channel:      "20.04",
 						Architecture: "amd64",
 					},
-					ReleasedAt: timeutil.TimeUTC(stableReleased),
+					ReleasedAt: (*timeutil.TimeUTC)(&stableReleased),
 				},
 				Revision: transport.InfoRevision{
 					CreatedAt: (*timeutil.TimeUTC)(&stableUploaded),
@@ -611,7 +623,7 @@ func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
 		Revision:     "85",
 		BuiltAt:      &d20,
 		UploadedAt:   &stableUploaded,
-		ReleasedAt:   stableReleased,
+		ReleasedAt:   &stableReleased,
 		Version:      "2.1-084c8c8",
 		Base:         "ubuntu@20.04",
 		Arch:         "amd64",
@@ -632,11 +644,11 @@ func (s *apiSuite) TestSdkInfoLocalOnly(c *check.C) {
 	// Add SDK setup with channels so the endpoint can report channels.
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "openvino",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(85),
-			Sha3_384: "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
+			Name:      "openvino",
+			PackageID: "o0BEpd0l4HsBviYXxhDPKZ33iDeEumzK",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(85),
+			Sha3_384:  "e7439cbefe3266aa299e09c99a6ce7b0163aceea20a67e178445f588d3433fd7a3cd55036be3f92ceb0cfae54934da73",
 		},
 		SdkYAML: `name: openvino
 version: 2.1-084c8c8
@@ -728,7 +740,7 @@ func (s *apiSuite) TestSdkInfoInvalidStoreMetadata(c *check.C) {
 						Channel:      "20.04",
 						Architecture: "amd64",
 					},
-					ReleasedAt: timeutil.TimeUTC(stableReleased),
+					ReleasedAt: (*timeutil.TimeUTC)(&stableReleased),
 				},
 				Revision: transport.InfoRevision{
 					Revision: 42,
@@ -760,11 +772,11 @@ func (s *apiSuite) TestSdkInfoGetInvalidLocalMetadata(c *check.C) {
 
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "bad",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "71baf962e8a7abd38480289e173d6a48364c8f6f5f8a391fdb83465b4ad676aa7504d100906a0efa8749c97fd61d367e",
+			Name:      "bad",
+			PackageID: "NFOfRaZ9hvTRXfVZBEcC5WJZpqy0ykN6",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "71baf962e8a7abd38480289e173d6a48364c8f6f5f8a391fdb83465b4ad676aa7504d100906a0efa8749c97fd61d367e",
 		},
 		SdkYAML: "[",
 	}

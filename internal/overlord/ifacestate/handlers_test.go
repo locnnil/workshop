@@ -42,10 +42,11 @@ func fakeHandler(task *state.Task, _ *tomb.Tomb) error {
 
 var producer = sdk.Meta{
 	Setup: sdk.Setup{
-		Name:     "producer",
-		Channel:  "latest/stable",
-		Revision: sdk.Revision{N: 1},
-		Sha3_384: "ad5e649bf9faebda8ede856fc0ba67c333146698648f36b5b4ee89ace57f17deb4488675687a3bc096e91cc9a1b5a6e4",
+		Name:      "producer",
+		PackageID: "nBTV37lQ6yBahPPFwm5DF17P7XRGYRys",
+		Channel:   "latest/stable",
+		Revision:  sdk.Revision{N: 1},
+		Sha3_384:  "ad5e649bf9faebda8ede856fc0ba67c333146698648f36b5b4ee89ace57f17deb4488675687a3bc096e91cc9a1b5a6e4",
 	},
 	SdkYAML: `name: producer
 base: ubuntu@22.04
@@ -67,10 +68,11 @@ slots:
 
 var consumer = sdk.Meta{
 	Setup: sdk.Setup{
-		Name:     "consumer",
-		Channel:  "latest/stable",
-		Revision: sdk.Revision{N: 1},
-		Sha3_384: "5cb2865793d51841462193fccc18c77d74c6571f5ed45556d94d1b247d4f2090185f9edbaa705faace62f5df11f349af",
+		Name:      "consumer",
+		PackageID: "n6VDrh0ams3AHC6wcM9lJzE22walCXsu",
+		Channel:   "latest/stable",
+		Revision:  sdk.Revision{N: 1},
+		Sha3_384:  "5cb2865793d51841462193fccc18c77d74c6571f5ed45556d94d1b247d4f2090185f9edbaa705faace62f5df11f349af",
 	},
 	SdkYAML: `name: consumer
 base: ubuntu@22.04
@@ -120,10 +122,11 @@ plugs:
 
 var consumer2 = sdk.Meta{
 	Setup: sdk.Setup{
-		Name:     "consumer2",
-		Channel:  "latest/stable",
-		Revision: sdk.Revision{N: 1},
-		Sha3_384: "aa5b6a08c6be283b51d5430b21aa3cdc523f63dab50cff2ee13c83a7680bedd44475521af9aeec175105efa97c83a12b",
+		Name:      "consumer2",
+		PackageID: "A2DxDp11V4qUdOdXFghxsuaw4KL47qEH",
+		Channel:   "latest/stable",
+		Revision:  sdk.Revision{N: 1},
+		Sha3_384:  "aa5b6a08c6be283b51d5430b21aa3cdc523f63dab50cff2ee13c83a7680bedd44475521af9aeec175105efa97c83a12b",
 	},
 	SdkYAML: `name: consumer2
 base: ubuntu@22.04
@@ -136,10 +139,11 @@ plugs:
 
 var conflictingTarget1 = sdk.Meta{
 	Setup: sdk.Setup{
-		Name:     "conflict-1",
-		Channel:  "latest/stable",
-		Revision: sdk.Revision{N: 1},
-		Sha3_384: "e31b080cd302fdbbe9a5c207dcba039c2ae8e47c208ca5bd51588b5f89dc6679132b31d94d279faebb1fb2823df0068e",
+		Name:      "conflict-1",
+		PackageID: "ChQfH6VcNZtSl7Oa122KK25A9Utv1IBK",
+		Channel:   "latest/stable",
+		Revision:  sdk.Revision{N: 1},
+		Sha3_384:  "e31b080cd302fdbbe9a5c207dcba039c2ae8e47c208ca5bd51588b5f89dc6679132b31d94d279faebb1fb2823df0068e",
 	},
 	SdkYAML: `name: conflict-1
 base: ubuntu@22.04
@@ -152,10 +156,11 @@ plugs:
 
 var conflictingTarget2 = sdk.Meta{
 	Setup: sdk.Setup{
-		Name:     "conflict-2",
-		Channel:  "latest/stable",
-		Revision: sdk.Revision{N: 1},
-		Sha3_384: "7fcc3b8c47bb26bbf8502df69804342be1eace51606c3e2283c720cb41ad165a9fa130947e0066a479b6cc40e213168d",
+		Name:      "conflict-2",
+		PackageID: "jBHIn0iylLRakA361NqnToeXL34KRw4S",
+		Channel:   "latest/stable",
+		Revision:  sdk.Revision{N: 1},
+		Sha3_384:  "7fcc3b8c47bb26bbf8502df69804342be1eace51606c3e2283c720cb41ad165a9fa130947e0066a479b6cc40e213168d",
 	},
 	SdkYAML: `name: conflict-2
 base: ubuntu@22.04

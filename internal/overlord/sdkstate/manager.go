@@ -32,7 +32,7 @@ type SdkRevision struct {
 	Revision     string     `json:"revision"`
 	BuiltAt      *time.Time `json:"built-at,omitempty"`
 	UploadedAt   *time.Time `json:"uploaded-at,omitempty"`
-	ReleasedAt   time.Time  `json:"released-at"`
+	ReleasedAt   *time.Time `json:"released-at,omitempty"`
 	Version      string     `json:"version,omitempty"`
 	Base         string     `json:"base,omitempty"`
 	Arch         string     `json:"arch,omitempty"`
@@ -81,7 +81,7 @@ type SdkSummary struct {
 	Track       string        `json:"track"`
 	Risk        string        `json:"risk"`
 	Revision    string        `json:"revision"`
-	ReleasedAt  time.Time     `json:"released-at"`
+	ReleasedAt  *time.Time    `json:"released-at,omitempty"`
 	Version     string        `json:"version,omitempty"`
 	Base        string        `json:"base,omitempty"`
 	Arch        string        `json:"arch,omitempty"`
@@ -179,7 +179,7 @@ func (w *SdkManager) FindSdks(ctx context.Context, query string) ([]SdkSummary, 
 			Track:       entry.DefaultRelease.Channel.Track,
 			Risk:        entry.DefaultRelease.Channel.Risk,
 			Revision:    sdk.Revision{N: entry.DefaultRelease.Revision}.String(),
-			ReleasedAt:  time.Time(entry.DefaultRelease.Channel.ReleasedAt),
+			ReleasedAt:  (*time.Time)(entry.DefaultRelease.Channel.ReleasedAt),
 			Version:     entry.DefaultRelease.Version,
 			Base:        base,
 			Arch:        entry.DefaultRelease.Channel.Platform.Architecture,
@@ -248,7 +248,7 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 			Revision:     sdk.Revision{N: entry.Revision.Revision}.String(),
 			BuiltAt:      (*time.Time)(sdkYaml.BuiltAt),
 			UploadedAt:   (*time.Time)(entry.Revision.CreatedAt),
-			ReleasedAt:   time.Time(entry.Channel.ReleasedAt),
+			ReleasedAt:   (*time.Time)(entry.Channel.ReleasedAt),
 			Version:      entry.Revision.Version,
 			Base:         base,
 			Arch:         entry.Channel.Platform.Architecture,

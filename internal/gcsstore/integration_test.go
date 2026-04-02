@@ -57,16 +57,16 @@ func (f *storeIntegration) TestStoreDownloadOK(c *check.C) {
 func (f *storeIntegration) TestStoreDownloadProgressReport(c *check.C) {
 	s := gcsstore.New()
 	setup := sdk.Setup{Name: "test-sdk-basic", Channel: "latest/stable", Revision: sdk.R(1)}
-	done, total := 0, 0
-	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
+	var done, total int64
+	r := &progress.Reporter{Name: "1", Report: func(label string, d, t int64) {
 		done = d
 		total = t
 	}}
 	result, err := s.DownloadSdk(context.Background(), setup, r)
 	c.Assert(err, check.IsNil)
 	c.Assert(result.Filepath(), testutil.FilePresent)
-	c.Check(done, testutil.IntGreaterThan, 0)
-	c.Check(total, testutil.IntGreaterThan, 0)
+	c.Check(int(done), testutil.IntGreaterThan, 0)
+	c.Check(int(total), testutil.IntGreaterThan, 0)
 	c.Check(done, check.Equals, total)
 }
 

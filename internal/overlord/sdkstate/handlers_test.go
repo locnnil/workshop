@@ -214,10 +214,11 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 
 	newSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Revision: sdk.R(2),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(2),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -270,10 +271,11 @@ func (s *sdkStateSuite) TestDoInstallSdkFailedPolicyCheck(c *check.C) {
 
 	testSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test-broken",
-			Channel:  "latest/stable",
-			Revision: sdk.R(2),
-			Sha3_384: "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
+			Name:      "test-broken",
+			PackageID: "8pp61flaU7ZSSChRTvrDw1PImyu83v6P",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(2),
+			Sha3_384:  "eee11792d075bd015406afe6450ac4f5080d78867da10cc5aa9380c383f31b71c8c71d831edd53c67eafc4b745a6bc80",
 		},
 		SdkYAML: sdkYamlViolatesPolicy,
 	}
@@ -321,10 +323,11 @@ func (s *sdkStateSuite) TestDoInstallSdkBadInterfacesFound(c *check.C) {
 
 	newSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -361,10 +364,11 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 
 	newSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -478,15 +482,17 @@ func (s *sdkStateSuite) TestRetrieveUpdatedSdk(c *check.C) {
 	defer s.state.Unlock()
 
 	oldSdks := []sdk.Setup{{
-		Name:     "dependency",
-		Channel:  "latest/stable",
-		Revision: sdk.R(10),
-		Sha3_384: "71843b99f85547fbe99fec9caf39f9ead64bc59de11447f9c2065597af88ccc5d5239f3b83a7e82a79582eff5f3868e8",
+		Name:      "dependency",
+		PackageID: "86SlSqwM289qTuVvbPixQLM4K2pCWzEZ",
+		Channel:   "latest/stable",
+		Revision:  sdk.R(10),
+		Sha3_384:  "71843b99f85547fbe99fec9caf39f9ead64bc59de11447f9c2065597af88ccc5d5239f3b83a7e82a79582eff5f3868e8",
 	}, {
-		Name:     "test",
-		Channel:  "6/edge",
-		Revision: sdk.R(100),
-		Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		Name:      "test",
+		PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+		Channel:   "6/edge",
+		Revision:  sdk.R(100),
+		Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 	}, {
 		Name:     "project",
 		Source:   sdk.ProjectSource,
@@ -494,10 +500,11 @@ func (s *sdkStateSuite) TestRetrieveUpdatedSdk(c *check.C) {
 		Sha3_384: "6b1715cb90ce493a4f7f0c6745ad8155eac1874075d06c23fcba628b1276b6a0b093ef1b1969be891a1cfbc9345ffc5a",
 	}}
 	newSdk := sdk.Setup{
-		Name:     "test",
-		Channel:  "6/edge",
-		Revision: sdk.R(101),
-		Sha3_384: "805b5d3a5b935a255100653612b26c117ee280e3f522b69743ade2b907e566e716a8c8dcd706255577b0bc7dcd9eeeeb",
+		Name:      "test",
+		PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+		Channel:   "6/edge",
+		Revision:  sdk.R(101),
+		Sha3_384:  "805b5d3a5b935a255100653612b26c117ee280e3f522b69743ade2b907e566e716a8c8dcd706255577b0bc7dcd9eeeeb",
 	}
 
 	restore := store.SetDownloadCallback(func(ctx context.Context, setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
@@ -538,11 +545,11 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	s.state.Lock()
 	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -581,11 +588,11 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
 	s.state.Lock()
 	newSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -625,11 +632,11 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C
 	s.state.Lock()
 	newSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -661,11 +668,11 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	s.state.Lock()
 	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -707,11 +714,11 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 	s.state.Lock()
 	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -758,11 +765,11 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 	s.state.Lock()
 	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -827,11 +834,11 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	s.state.Lock()
 	oldSdk := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Channel:  "latest/stable",
-			Source:   sdk.StoreSource,
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: sdkYaml,
 	}
@@ -885,7 +892,6 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 	sdkProject := sdk.Meta{
 		Setup: sdk.Setup{
 			Name:     "test",
-			Channel:  "latest/stable",
 			Source:   sdk.ProjectSource,
 			Revision: sdk.R(-1),
 			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",

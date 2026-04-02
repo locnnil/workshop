@@ -22,11 +22,12 @@ type Meta struct {
 }
 
 type Setup struct {
-	Name     string   `json:"name"`
-	Channel  string   `json:"channel,omitempty"`
-	Source   Source   `json:"source,omitempty"`
-	Revision Revision `json:"revision"`
-	Sha3_384 string   `json:"sha3-384"`
+	Name      string   `json:"name"`
+	PackageID string   `json:"package-id,omitempty"`
+	Channel   string   `json:"channel,omitempty"`
+	Source    Source   `json:"source,omitempty"`
+	Revision  Revision `json:"revision"`
+	Sha3_384  string   `json:"sha3-384"`
 }
 
 func (s *Setup) Filepath() string {
@@ -96,14 +97,18 @@ func (s Source) NeedsRetrieve() bool {
 	return s == StoreSource || s == SystemSource
 }
 
-type Id struct {
+// ContentID contains the information essential to identifying an SDK. SDKs
+// with the same ContentID will behave the same when installed in a workshop,
+// even if they come from different channels or sources.
+// It is not the same as the SDK Store PackageID.
+type ContentID struct {
 	Name     string
 	Sha3_384 string
 	IsVolume bool
 }
 
-func SetupId(setup Setup) Id {
-	return Id{Name: setup.Name, Sha3_384: setup.Sha3_384, IsVolume: setup.IsVolume()}
+func SetupContentID(setup Setup) ContentID {
+	return ContentID{Name: setup.Name, Sha3_384: setup.Sha3_384, IsVolume: setup.IsVolume()}
 }
 
 type sdkYaml struct {
@@ -146,6 +151,7 @@ type Info struct {
 	ProjectId   string
 	Workshop    string
 	Name        string
+	PackageID   string
 	Base        string
 	Arch        string
 	Version     string

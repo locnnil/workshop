@@ -43,7 +43,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 
 	reporter := &progress.Reporter{
 		Name: task.ID(),
-		Report: func(label string, done, total int) {
+		Report: func(label string, done, total int64) {
 			st.Lock()
 			task.SetProgress(label, done, total)
 			st.Unlock()

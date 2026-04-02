@@ -162,7 +162,7 @@ func (b *Backend) downloadBase(ctx context.Context, op *downloadOp, image worksh
 		if o.Metadata == nil || imageInfo.Size <= 0 {
 			return
 		}
-		if upd := handleImageUpdate(o.Metadata, int(imageInfo.Size)); upd != nil {
+		if upd := handleImageUpdate(o.Metadata, imageInfo.Size); upd != nil {
 			op.Update(*upd)
 		}
 	})
@@ -312,7 +312,7 @@ var (
 // looking for specific progress labels. NOTE: There is no guarantee that the
 // LXD's progress reporting format won't change; this meta data parser is valid
 // for LXD 6.5.
-func handleImageUpdate(opmeta map[string]any, imsize int) *downloadUpdate {
+func handleImageUpdate(opmeta map[string]any, imsize int64) *downloadUpdate {
 	upd, ok := opmeta["download_progress"].(string)
 	if !ok {
 		return nil
@@ -320,7 +320,7 @@ func handleImageUpdate(opmeta map[string]any, imsize int) *downloadUpdate {
 
 	// check if the response metadata comes from a simplestream protocol
 	if data := imgDownloadSS.FindStringSubmatch(upd); len(data) == 3 {
-		done, err := strconv.Atoi(data[1])
+		done, err := strconv.ParseInt(data[1], 10, 0)
 		if err != nil {
 			// just in case, but this is ensured by the regex
 			return nil
@@ -345,7 +345,7 @@ func handleImageUpdate(opmeta map[string]any, imsize int) *downloadUpdate {
 		if err != nil {
 			return nil
 		}
-		donebytes := int(done) * int(multiplier)
+		donebytes := int64(done) * multiplier
 		return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}
 	}
 
@@ -354,8 +354,8 @@ func handleImageUpdate(opmeta map[string]any, imsize int) *downloadUpdate {
 
 type downloadUpdate struct {
 	Label string
-	Done  int
-	Total int
+	Done  int64
+	Total int64
 }
 
 type downloadOp struct {

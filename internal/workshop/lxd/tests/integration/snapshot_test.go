@@ -140,10 +140,11 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	// Install Store SDK.
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "store-sdk",
-			Channel:  "latest/stable",
-			Revision: sdk.R(23),
-			Sha3_384: "18b8ce233667942e94e1f5bdd22bcd516c4a375030a359a5bb09220b416d215fffda138d8d45eaab419ae2403c81ec5d",
+			Name:      "store-sdk",
+			PackageID: "7MW8x1TQWSOXMR6t8kvcsLiYJomy4eSz",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(23),
+			Sha3_384:  "18b8ce233667942e94e1f5bdd22bcd516c4a375030a359a5bb09220b416d215fffda138d8d45eaab419ae2403c81ec5d",
 		},
 		SdkYAML: `name: store-sdk
 `,
@@ -155,7 +156,7 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	defer func() { _ = s.bd.UninstallSdk(s.ctx, wf.Name, meta.Name) }()
 
 	// Validate post-install metadata.
-	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupId(meta.Setup))
+	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(meta.Setup))
 	sdkAttached := s.workshopFormat(c, wf, snapshot)
 	c.Check(sdkAttached, testutil.JsonEquals, format["sdk-attached"])
 
@@ -174,7 +175,7 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Validate post-install metadata.
-	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupId(setup2))
+	snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(setup2))
 	sdkMounted := s.workshopFormat(c, wf, snapshot)
 	c.Check(sdkMounted, testutil.JsonEquals, format["sdk-mounted"])
 

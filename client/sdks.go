@@ -19,7 +19,7 @@ type SdkRevision struct {
 	Revision     string     `json:"revision"`
 	BuiltAt      *time.Time `json:"built-at,omitempty"`
 	UploadedAt   *time.Time `json:"uploaded-at,omitempty"`
-	ReleasedAt   time.Time  `json:"released-at"`
+	ReleasedAt   *time.Time `json:"released-at,omitempty"`
 	Version      string     `json:"version,omitempty"`
 	Base         string     `json:"base,omitempty"`
 	Arch         string     `json:"arch,omitempty"`
@@ -67,7 +67,7 @@ type SdkSummary struct {
 	Track       string        `json:"track"`
 	Risk        string        `json:"risk"`
 	Revision    string        `json:"revision"`
-	ReleasedAt  time.Time     `json:"released-at"`
+	ReleasedAt  *time.Time    `json:"released-at,omitempty"`
 	Version     string        `json:"version,omitempty"`
 	Base        string        `json:"base,omitempty"`
 	Arch        string        `json:"arch,omitempty"`

@@ -39,8 +39,8 @@ func (f *systemSdk) TearDownSuite(c *check.C) {
 }
 
 func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
-	done, total := 0, 0
-	report := &progress.Reporter{Name: "1", Report: func(label string, d, t int) {
+	var done, total int64
+	report := &progress.Reporter{Name: "1", Report: func(label string, d, t int64) {
 		done = d
 		total = t
 	}}
@@ -54,8 +54,8 @@ func (s *systemSdk) TestRetrieveSystemSdkSuccess(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(result.Setup, check.Equals, setup)
 	c.Check(result.SdkYAML, check.Not(check.Equals), "")
-	c.Check(done, testutil.IntGreaterThan, 0)
-	c.Check(total, testutil.IntGreaterThan, 0)
+	c.Check(int(done), testutil.IntGreaterThan, 0)
+	c.Check(int(total), testutil.IntGreaterThan, 0)
 	c.Check(done, check.Equals, total)
 
 	r, err := os.Open(setup.Filepath())

@@ -103,7 +103,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 			Name:        "ubuntu@24.04",
 			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
 		},
-		Sdks: []sdk.Id{{
+		Sdks: []sdk.ContentID{{
 			Name:     "test-sdk-1",
 			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			IsVolume: true,
@@ -112,7 +112,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
-	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
 		Name:     "test-sdk-2",
 		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		IsVolume: true,
@@ -318,7 +318,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 			Name:        "ubuntu@24.04",
 			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
 		},
-		Sdks: []sdk.Id{{
+		Sdks: []sdk.ContentID{{
 			Name:     "test-sdk-1",
 			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			IsVolume: true,
@@ -327,7 +327,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashRemove(c *check.C) {
 	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
-	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
 		Name:     "test-sdk-2",
 		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		IsVolume: true,
@@ -374,9 +374,11 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	// Execute
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: testsdk,
 	}
@@ -410,6 +412,13 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 
 	vinfo, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Check(err, check.IsNil)
+	meta.Channel = ""
+	c.Check(vinfo.Meta, check.Equals, meta)
+	c.Check(vinfo.Workshops, check.HasLen, 0)
+
+	// Check again without meta.Channel.
+	vinfo, err = f.bd.Sdk(f.ctx, meta.Setup)
+	c.Check(err, check.IsNil)
 	c.Check(vinfo.Meta, check.Equals, meta)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
@@ -421,9 +430,11 @@ func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 	// Execute
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: testsdk,
 	}
@@ -468,6 +479,7 @@ func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 
 	vinfo, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Check(err, check.IsNil)
+	meta.Channel = ""
 	c.Check(vinfo.Meta, check.Equals, meta)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
 
@@ -485,7 +497,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 			Name:        "ubuntu@24.04",
 			Fingerprint: "81381cb6058f8ace800b00ea56a78c02627997d7fe60f0afb3b487b72ce27bac",
 		},
-		Sdks: []sdk.Id{{
+		Sdks: []sdk.ContentID{{
 			Name:     "test-sdk-1",
 			Sha3_384: "84fa7f3d2e556fe410132260dfacb67d4cbbfb36ecfc26dfcef3f247524122d58c992902def9b52b88da0d6ec0efad05",
 			IsVolume: true,
@@ -494,7 +506,7 @@ func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
 	err := f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
-	snapshot.Sdks = append(snapshot.Sdks, sdk.Id{
+	snapshot.Sdks = append(snapshot.Sdks, sdk.ContentID{
 		Name:     "test-sdk-2",
 		Sha3_384: "d4089378c26310627268153caa216240311f2a3193c778e96ed6dd895dc10c82db50f4f39676b29d23d9813b21e14b9b",
 		IsVolume: true,
@@ -661,7 +673,7 @@ func (f *wsOps) TestLxdBackendDownloadBaseResumeAfterCancellation(c *check.C) {
 		wg.Go(func() {
 			r := &progress.Reporter{
 				Name: "1",
-				Report: func(label string, done, total int) {
+				Report: func(label string, done, total int64) {
 					once.Do(func() { cancel() })
 				},
 			}
@@ -1026,9 +1038,11 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     "test-sdk",
-			Revision: sdk.R(1),
-			Sha3_384: "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
+			Name:      "test-sdk",
+			PackageID: "t5tqUClfNeHiiOpvPvT29O0HkxeaXBOq",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
 		},
 		SdkYAML: testsdk,
 	}
@@ -1048,6 +1062,7 @@ func (f *wsOps) TestLxdBackendWorkshopUsedByInVolumeInfoOK(c *check.C) {
 	// Validate UsedBy in VolumeInfo.
 	info, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
+	meta.Channel = ""
 	c.Check(info.Meta, check.Equals, meta)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}, other.ProjectId: {"test"}})
 

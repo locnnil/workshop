@@ -2,6 +2,9 @@ package sdk
 
 import (
 	"context"
+	"crypto/sha3"
+	"encoding/base64"
+	"regexp"
 	"sync"
 
 	"github.com/canonical/workshop/internal/overlord/state"
@@ -118,6 +121,20 @@ func (f *FakeStore) Info(ctx context.Context, name string, options ...sdkstore.I
 		return transport.InfoResponse{}, &sdkstore.SdkNotFoundError{Name: name}
 	}
 	return info(ctx, name, options...)
+}
+
+var nonAlphanumeric = regexp.MustCompile(`[^a-zA-Z0-9]`)
+
+// FakePackageID generates a deterministic string which looks like a package
+// ID from the Store, but isn't. In some cases it might not be long enough.
+func FakePackageID(name string) string {
+	digest := sha3.Sum384([]byte(name))
+	packageID := base64.RawStdEncoding.EncodeToString(digest[:])
+	packageID = nonAlphanumeric.ReplaceAllString(packageID, "")
+	if len(packageID) > 32 {
+		packageID = packageID[:32]
+	}
+	return packageID
 }
 
 type cachedGcsStoreKey struct{}

@@ -100,11 +100,12 @@ func (s *apiSuite) mockInstalledSDK(c *check.C, yaml string, w string) *workshop
 	digest := sha3.Sum384([]byte(yaml))
 	meta := sdk.Meta{
 		Setup: sdk.Setup{
-			Name:     info.Name,
-			Channel:  info.Channel,
-			Source:   info.Source,
-			Revision: info.Revision,
-			Sha3_384: hex.EncodeToString(digest[:]),
+			Name:      info.Name,
+			PackageID: sdk.FakePackageID(info.Name),
+			Channel:   info.Channel,
+			Source:    info.Source,
+			Revision:  info.Revision,
+			Sha3_384:  hex.EncodeToString(digest[:]),
 		},
 		SdkYAML: yaml,
 	}

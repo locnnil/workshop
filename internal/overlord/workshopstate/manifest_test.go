@@ -81,41 +81,46 @@ func (s *manifestSuite) TearDownTest(c *check.C) {
 var storeSdks = map[string]sdk.Meta{
 	"test": {
 		Setup: sdk.Setup{
-			Name:     "test",
-			Revision: sdk.R(1),
-			Sha3_384: "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
 		},
 		SdkYAML: "name: test\n",
 	},
 	"noble": {
 		Setup: sdk.Setup{
-			Name:     "noble",
-			Revision: sdk.R(1),
-			Sha3_384: "199a8c0bcf6f2348a795b7bc1d24595530a189b85c682c28b23d037365fb013e3dd71057ee21c99822b745c20349abd9",
+			Name:      "noble",
+			PackageID: "WMwWl1i0hX4PuT4nXdZrjecHnJuBfJ2R",
+			Revision:  sdk.R(1),
+			Sha3_384:  "199a8c0bcf6f2348a795b7bc1d24595530a189b85c682c28b23d037365fb013e3dd71057ee21c99822b745c20349abd9",
 		},
 		SdkYAML: "name: noble\nbase: ubuntu@24.04\n",
 	},
 	"rust": {
 		Setup: sdk.Setup{
-			Name:     "rust",
-			Revision: sdk.R(1),
-			Sha3_384: "e7e13b16b131f1a8bc3ef00601beb13031d82de118bf5204757d3f5d8fa3c69431d0944ed9ee8cfd479acb0b16a93941",
+			Name:      "rust",
+			PackageID: "CJgdEGpmNHMx6dALcAexfIfai9fpjX9K",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e7e13b16b131f1a8bc3ef00601beb13031d82de118bf5204757d3f5d8fa3c69431d0944ed9ee8cfd479acb0b16a93941",
 		},
 		SdkYAML: "name: rust\n",
 	},
 	"uv": {
 		Setup: sdk.Setup{
-			Name:     "uv",
-			Revision: sdk.R(1),
-			Sha3_384: "97c599c33ff9273e280277f29b18b501c388a1eac7bac4317b89e601639b863de66b7e4b3bfc7b08e762905b31ad38e1",
+			Name:      "uv",
+			PackageID: "1yAowR5Y3zFp1oH2Rh4uqClLJUzasRNl",
+			Revision:  sdk.R(1),
+			Sha3_384:  "97c599c33ff9273e280277f29b18b501c388a1eac7bac4317b89e601639b863de66b7e4b3bfc7b08e762905b31ad38e1",
 		},
 		SdkYAML: "name: uv\n",
 	},
 	"node": {
 		Setup: sdk.Setup{
-			Name:     "node",
-			Revision: sdk.R(1),
-			Sha3_384: "4656e208fe96c2b29f30e2341ede0c5e1600657ee89e27ed9b382a27069804897095dc76f3d5123deac41608e70bca1d",
+			Name:      "node",
+			PackageID: "6ugIQcZtfu3KKD5nmXJqjzFJ69PQquju",
+			Revision:  sdk.R(1),
+			Sha3_384:  "4656e208fe96c2b29f30e2341ede0c5e1600657ee89e27ed9b382a27069804897095dc76f3d5123deac41608e70bca1d",
 		},
 		SdkYAML: "name: node\n",
 	},

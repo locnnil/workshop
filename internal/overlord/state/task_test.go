@@ -231,38 +231,38 @@ func (ts *taskSuite) TestProgressAndSetProgress(c *C) {
 	t.SetProgress("snap", 2, 99)
 	label, cur, tot := t.Progress()
 	c.Check(label, Equals, "snap")
-	c.Check(cur, Equals, 2)
-	c.Check(tot, Equals, 99)
+	c.Check(cur, Equals, int64(2))
+	c.Check(tot, Equals, int64(99))
 
 	t.SetProgress("", 0, 0)
 	label, cur, tot = t.Progress()
 	c.Check(label, Equals, "")
-	c.Check(cur, Equals, 0)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(0))
+	c.Check(tot, Equals, int64(1))
 	c.Check(jsonStr(t), Not(testutil.Contains), "progress")
 
 	t.SetProgress("", 0, -1)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 0)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(0))
+	c.Check(tot, Equals, int64(1))
 	c.Check(jsonStr(t), Not(testutil.Contains), "progress")
 
 	t.SetProgress("", 0, -1)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 0)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(0))
+	c.Check(tot, Equals, int64(1))
 	c.Check(jsonStr(t), Not(testutil.Contains), "progress")
 
 	t.SetProgress("", 2, 1)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 0)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(0))
+	c.Check(tot, Equals, int64(1))
 	c.Check(jsonStr(t), Not(testutil.Contains), "progress")
 
 	t.SetProgress("", 42, 42)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 42)
-	c.Check(tot, Equals, 42)
+	c.Check(cur, Equals, int64(42))
+	c.Check(tot, Equals, int64(42))
 }
 
 func (ts *taskSuite) TestProgressDefaults(c *C) {
@@ -274,23 +274,23 @@ func (ts *taskSuite) TestProgressDefaults(c *C) {
 
 	c.Check(t.Status(), Equals, state.DoStatus)
 	_, cur, tot := t.Progress()
-	c.Check(cur, Equals, 0)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(0))
+	c.Check(tot, Equals, int64(1))
 
 	t.SetStatus(state.DoStatus)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 0)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(0))
+	c.Check(tot, Equals, int64(1))
 
 	t.SetStatus(state.DoneStatus)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 1)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(1))
+	c.Check(tot, Equals, int64(1))
 
 	t.SetStatus(state.ErrorStatus)
 	_, cur, tot = t.Progress()
-	c.Check(cur, Equals, 1)
-	c.Check(tot, Equals, 1)
+	c.Check(cur, Equals, int64(1))
+	c.Check(tot, Equals, int64(1))
 }
 
 func (ts *taskSuite) TestState(c *C) {
