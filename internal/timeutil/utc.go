@@ -20,6 +20,8 @@
 package timeutil
 
 import (
+	"errors"
+	"slices"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -35,7 +37,18 @@ func (t TimeUTC) MarshalText() ([]byte, error) {
 func (t *TimeUTC) UnmarshalText(data []byte) error {
 	var temp time.Time
 	if err := temp.UnmarshalText(data); err != nil {
-		return err
+		// If data has no timezone, the parser essentially complains that "" is
+		// not a valid timezone. Currently the SDK Store returns these
+		// timestamps, which are always UTC. Appending Z should fix the error,
+		// but we should remove this once the Store starts giving us timezones.
+		parseErr, ok := errors.AsType[*time.ParseError](err)
+		if !ok || parseErr.ValueElem != "" || parseErr.LayoutElem != "Z07:00" {
+			return err
+		}
+		data = append(slices.Clone(data), 'Z')
+		if err1 := temp.UnmarshalText(data); err1 != nil {
+			return err
+		}
 	}
 	*t = TimeUTC(temp.UTC())
 	return nil
