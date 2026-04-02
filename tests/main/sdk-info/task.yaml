@@ -16,7 +16,12 @@ execute: |
 
   echo "Test SDK info without any volumes"
   sdk_exec info test-sdk-info > info.log
-  diff -u header.txt info.log
+  diff -u header.txt <(head --lines="$lines" info.log)
+
+  MATCH '[[:space:]]+latest/stable[[:space:]]+1\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+all[[:space:]]+[0-9]+[[:space:]]+[0-9]+B' < info.log
+  MATCH '[[:space:]]+latest/candidate[[:space:]]+\^[[:space:]]*' < info.log
+  MATCH '[[:space:]]+latest/beta[[:space:]]+\^[[:space:]]*' < info.log
+  MATCH '[[:space:]]+latest/edge[[:space:]]+2\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+all[[:space:]]+[0-9]+[[:space:]]+[0-9]+B' < info.log
 
   echo "Test SDK info with one volume"
   workshop_exec launch edge
@@ -24,6 +29,7 @@ execute: |
 
   sdk_exec info test-sdk-info > info.log
   diff -u header.txt <(head --lines="$lines" info.log)
+  MATCH '[[:space:]]+latest/stable[[:space:]]+1\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+all[[:space:]]+[0-9]+[[:space:]]+[0-9]+B' < info.log
   MATCH "$PWD[[:space:]]+edge[[:space:]]+latest/edge[[:space:]]+2\\.0[[:space:]]+ubuntu@22.04[[:space:]]+[[:digit:]]+$" < info.log
 
   echo "Test SDK info with two volumes"
@@ -33,6 +39,7 @@ execute: |
 
   sdk_exec info test-sdk-info > info.log
   diff -u header.txt <(head --lines="$lines" info.log)
+  MATCH '[[:space:]]+latest/edge[[:space:]]+2\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+all[[:space:]]+[0-9]+[[:space:]]+[0-9]+B' < info.log
   MATCH "$PWD[[:space:]]+edge[[:space:]]+latest/edge[[:space:]]+2\\.0[[:space:]]+ubuntu@22.04[[:space:]]+[[:digit:]]+$" < info.log
   MATCH "[[:space:]]+stable[[:space:]]+latest/stable[[:space:]]+1\\.0[[:space:]]+ubuntu@22.04[[:space:]]+[[:digit:]]+$" < info.log
 
