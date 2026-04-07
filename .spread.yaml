@@ -24,12 +24,15 @@ suites:
       . "$TESTSLIB"/utils.sh
       prepare_environment
       setup_workshop
+    prepare-each: |
+      date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |
       . "$TESTSLIB"/utils.sh
       cleanup_workshop
-    debug: |
+    debug-each: |
       lxc list --project workshop.ubuntu
       sudo -u ubuntu 2>&1 -- workshop list --global
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
     kill-timeout: 30m
   tests/integration/:
     summary: LXD integration tests
@@ -47,9 +50,13 @@ suites:
       prepare_environment
       setup_workshop true  # use real store
       install_sdkcraft
+    prepare-each: |
+      date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |
       . "$TESTSLIB"/utils.sh
       cleanup_workshop true  # used real store, no need to clean it
+    debug-each: |
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
     kill-timeout: 30m
   tests/docs-how-to/:
     summary: Documentation how-to tests
@@ -57,9 +64,13 @@ suites:
       . "$TESTSLIB"/utils.sh
       prepare_environment
       setup_workshop true  # use real store
+    prepare-each: |
+      date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |
       . "$TESTSLIB"/utils.sh
       cleanup_workshop true  # used real store, no need to clean it
+    debug-each: |
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
     kill-timeout: 20m
 exclude:
   - .git

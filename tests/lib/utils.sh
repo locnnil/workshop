@@ -92,6 +92,7 @@ function setup_workshop() {
         start_sdk_store
     fi
 
+    snap set workshop workshop.debug=1
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
     snap alias workshop.sdk sdk
     snap restart workshop
