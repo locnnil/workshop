@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.37.0
 	github.com/adrg/xdg v0.4.0
 	github.com/canonical/gencodo v0.2.1
-	github.com/canonical/lxd v0.0.0-20260330183433-e43b86d41ba9
+	github.com/canonical/lxd v0.0.0-20260406200201-8c342a79d3ec
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/googleapis/gax-go/v2 v2.12.0
@@ -61,7 +61,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/zitadel/logging v0.7.0 // indirect
-	github.com/zitadel/oidc/v3 v3.45.5 // indirect
+	github.com/zitadel/oidc/v3 v3.46.0 // indirect
 	github.com/zitadel/schema v1.3.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -74,9 +74,9 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20240205150955-31a09d347014 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260311181403-84a4fc48630c // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260311181403-84a4fc48630c // indirect
-	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/errgo.v1 v1.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

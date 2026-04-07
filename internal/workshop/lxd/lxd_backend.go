@@ -290,7 +290,11 @@ func New() (*Backend, error) {
 			},
 		}
 
-		if err := conn.CreateNetwork(req); err != nil {
+		op, err := conn.CreateNetwork(req)
+		if err != nil {
+			return nil, err
+		}
+		if err := op.Wait(); err != nil {
 			return nil, err
 		}
 	} else if networks[idx].Type != networkType {
