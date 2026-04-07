@@ -237,15 +237,27 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 }
 
 func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {
-	platform, err := makePlatform(file.Base)
+	platforms, err := makePlatforms(file.Base)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := makeResolveRequest(platform, file.Sdks)
+	req, err := makeResolveRequest(platforms[0], file.Sdks)
 	if err != nil {
 		return nil, err
 	}
+
+	// We have to request each SDK 4 times because the Store requires SDK
+	// platforms to exactly match the request.
+	pkgs := make([]transport.ResolvePackage, 0, len(platforms)*len(req.Packages))
+	for i, platform := range platforms {
+		for _, pkg := range req.Packages {
+			pkg.InstanceKey += fmt.Sprint("_", i)
+			pkg.Platform = platform
+			pkgs = append(pkgs, pkg)
+		}
+	}
+	pkgs, req.Packages = req.Packages, pkgs
 
 	resp, err := sto.Resolve(ctx, req)
 	if err != nil {
@@ -254,27 +266,51 @@ func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file 
 
 	sdks := make([]sdk.Setup, 0, len(req.Packages))
 	errs := make([]error, 0, len(req.Packages))
-	for _, pkg := range req.Packages {
-		idx := slices.IndexFunc(resp.PackageResults, func(p transport.ResolvePackageResponse) bool {
-			return p.InstanceKey == pkg.InstanceKey
-		})
-		if idx < 0 {
-			errs = append(errs, fmt.Errorf("%q SDK: not found in refresh response", pkg.Name))
-			continue
+	for _, pkg := range pkgs {
+		var setup sdk.Setup
+		var errActual, errNotFound error
+		// Pick the most recent SDK among the compatible variants. Some
+		// platforms are likely to return revision-not-found errors. We ignore
+		// all errors if at least one SDK was found; if not we return the first
+		// unexpected error. If all errors are revision-not-found, we return
+		// the first one.
+		for i := range platforms {
+			key := fmt.Sprint(pkg.InstanceKey, "_", i)
+			idx := slices.IndexFunc(resp.PackageResults, func(p transport.ResolvePackageResponse) bool {
+				return p.InstanceKey == key
+			})
+			if idx < 0 {
+				errActual = cmp.Or(errActual, fmt.Errorf("%q SDK: not found in refresh response", pkg.Name))
+				continue
+			}
+
+			if err := storeError(resp.PackageResults[idx]); err != nil {
+				if resp.PackageResults[idx].Error != nil && resp.PackageResults[idx].Error.Code == "revision-not-found" {
+					errNotFound = cmp.Or(errNotFound, err)
+				} else {
+					errActual = cmp.Or(errActual, err)
+				}
+				continue
+			}
+
+			s, err := resolvedSetup(resp.PackageResults[idx])
+			if err != nil {
+				errActual = cmp.Or(errActual, err)
+				continue
+			}
+
+			if s.Revision.N > setup.Revision.N {
+				setup = s
+			}
 		}
 
-		if err := storeError(resp.PackageResults[idx]); err != nil {
-			errs = append(errs, err)
-			continue
+		if !setup.Revision.Unset() {
+			sdks = append(sdks, setup)
+		} else if errActual != nil {
+			errs = append(errs, errActual)
+		} else if errNotFound != nil {
+			errs = append(errs, errNotFound)
 		}
-
-		setup, err := resolvedSetup(resp.PackageResults[idx])
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-
-		sdks = append(sdks, setup)
 	}
 
 	if len(errs) == 1 {
@@ -290,17 +326,29 @@ func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file 
 	return sdks, nil
 }
 
-func makePlatform(base string) (transport.Platform, error) {
+func makePlatforms(base string) ([]transport.Platform, error) {
 	parts := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
 	if len(parts) != 2 {
-		return transport.Platform{}, fmt.Errorf("invalid base %q (expected <NAME>@<VERSION>)", base)
+		return nil, fmt.Errorf("invalid base %q (expected <NAME>@<VERSION>)", base)
 	}
 
-	return transport.Platform{
+	return []transport.Platform{{
 		Name:         parts[0],
 		Channel:      parts[1],
 		Architecture: arch.DpkgArchitecture(),
-	}, nil
+	}, {
+		Name:         "all",
+		Channel:      "all",
+		Architecture: arch.DpkgArchitecture(),
+	}, {
+		Name:         parts[0],
+		Channel:      parts[1],
+		Architecture: "all",
+	}, {
+		Name:         "all",
+		Channel:      "all",
+		Architecture: "all",
+	}}, nil
 }
 
 func makeResolveRequest(platform transport.Platform, sdks []workshop.SdkRecord) (transport.ResolveRequest, error) {

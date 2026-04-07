@@ -505,7 +505,7 @@ func (s *manifestSuite) TestLaunchValidRequest(c *check.C) {
 	c.Assert(s.store.ResolveCalls, check.HasLen, 1)
 	c.Check(s.store.ResolveCalls[0].Crafts, check.HasLen, 0)
 
-	c.Assert(s.store.ResolveCalls[0].Packages, check.HasLen, 2)
+	c.Assert(s.store.ResolveCalls[0].Packages, check.HasLen, 8)
 	packages := []transport.ResolvePackage{{
 		InstanceKey: s.store.ResolveCalls[0].Packages[0].InstanceKey,
 		Namespace:   "sdk",
@@ -527,11 +527,15 @@ func (s *manifestSuite) TestLaunchValidRequest(c *check.C) {
 			Architecture: "mock64",
 		},
 	}}
-	_, err = uuid.Parse(packages[0].InstanceKey)
+	key, found := strings.CutSuffix(packages[0].InstanceKey, "_0")
+	c.Assert(found, check.Equals, true)
+	_, err = uuid.Parse(key)
 	c.Assert(err, check.IsNil)
-	_, err = uuid.Parse(packages[1].InstanceKey)
+	key, found = strings.CutSuffix(packages[1].InstanceKey, "_0")
+	c.Assert(found, check.Equals, true)
+	_, err = uuid.Parse(key)
 	c.Assert(err, check.IsNil)
-	c.Check(s.store.ResolveCalls[0].Packages, check.DeepEquals, packages)
+	c.Check(s.store.ResolveCalls[0].Packages[:2], check.DeepEquals, packages)
 }
 
 func (s *manifestSuite) TestLaunchMissingTrySdkDir(c *check.C) {
