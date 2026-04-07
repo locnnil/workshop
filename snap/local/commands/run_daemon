@@ -1,8 +1,5 @@
 #!/bin/sh
 
-GCS_STORE_URL=$(snapctl get gcs.url)
-export GCS_STORE_URL
-
 SDK_STORE_URL=$(snapctl get store.url)
 export SDK_STORE_URL
 

@@ -51,7 +51,6 @@ fixup
 fmt
 func
 GCP
-gcs
 Gencodo
 gendocs
 GH

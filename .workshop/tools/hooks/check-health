@@ -3,9 +3,4 @@ if ! golangci-lint --version; then
   exit 1
 fi
 
-if ! fake-gcs-server --help 2> /dev/null; then
-  workshopctl set-health error "fake-gcs-server is not installed"
-  exit 1
-fi
-
 workshopctl set-health okay
