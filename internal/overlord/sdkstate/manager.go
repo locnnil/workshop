@@ -168,6 +168,13 @@ func (w *SdkManager) FindSdks(ctx context.Context, query string) ([]SdkSummary, 
 			base = ""
 		}
 
+		channel := sdk.Channel{
+			Name:  entry.DefaultRelease.Channel.Name,
+			Track: entry.DefaultRelease.Channel.Track,
+			Risk:  entry.DefaultRelease.Channel.Risk,
+		}
+		channel = channel.Full()
+
 		summary := SdkSummary{
 			Name:        entry.Name,
 			PackageID:   entry.PackageID,
@@ -175,9 +182,9 @@ func (w *SdkManager) FindSdks(ctx context.Context, query string) ([]SdkSummary, 
 			Description: entry.Metadata.Description,
 			License:     entry.Metadata.License,
 			Publisher:   publisher,
-			Channel:     entry.DefaultRelease.Channel.Track + "/" + entry.DefaultRelease.Channel.Risk,
-			Track:       entry.DefaultRelease.Channel.Track,
-			Risk:        entry.DefaultRelease.Channel.Risk,
+			Channel:     channel.Name,
+			Track:       channel.Track,
+			Risk:        channel.Risk,
 			Revision:    sdk.Revision{N: entry.DefaultRelease.Revision}.String(),
 			ReleasedAt:  (*time.Time)(entry.DefaultRelease.Channel.ReleasedAt),
 			Version:     entry.DefaultRelease.Version,
@@ -241,10 +248,17 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 			base = ""
 		}
 
-		channel := SdkRevision{
-			Channel:      entry.Channel.Track + "/" + entry.Channel.Risk,
-			Track:        entry.Channel.Track,
-			Risk:         entry.Channel.Risk,
+		channel := sdk.Channel{
+			Name:  entry.Channel.Name,
+			Track: entry.Channel.Track,
+			Risk:  entry.Channel.Risk,
+		}
+		channel = channel.Full()
+
+		revision := SdkRevision{
+			Channel:      channel.Name,
+			Track:        channel.Track,
+			Risk:         channel.Risk,
 			Revision:     sdk.Revision{N: entry.Revision.Revision}.String(),
 			BuiltAt:      (*time.Time)(sdkYaml.BuiltAt),
 			UploadedAt:   (*time.Time)(entry.Revision.CreatedAt),
@@ -254,7 +268,7 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 			Arch:         entry.Channel.Platform.Architecture,
 			DownloadSize: entry.Revision.Download.Size,
 		}
-		full.Channels = append(full.Channels, channel)
+		full.Channels = append(full.Channels, revision)
 	}
 	return nil
 }
