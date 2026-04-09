@@ -17,17 +17,16 @@ type CmdRefresh struct {
 	WaitOnError bool
 	Continue    bool
 	Abort       bool
-	Restore     bool
 }
 
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "refresh [--abort|--continue|--restore|--wait-on-error] <WORKSHOP>...",
+		Use:     "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>...",
 		Short:   "Update workshops according to their definitions",
 		GroupID: GrpCRUD,
 		Long: `
-This command updates the workshops listed as arguments. For each workshop, 
-it checks the workshop definition and applies any required updates 
+This command updates the workshops listed as arguments. For each workshop,
+it checks the workshop definition and applies any required updates
 to the base image, SDKs and interface connections.
 
 The "--wait-on-error" option pauses the refresh if an error occurs.
@@ -37,10 +36,6 @@ If multiple workshops are listed and an error occurs,
 the operation is aborted and reverted for all of them.
 Also, if you change the workshop definition while fixing the error,
 you must abort the operation and restart from scratch.
-
-The "--restore" option restores the workshop from the snapshot that was 
-created after the last successful launch or refresh. Any changes made 
-to the workshop will be discarded.
 
 Notes:
 
@@ -88,12 +83,7 @@ $ workshop refresh --continue`,
 	cmd.PersistentFlags().BoolVar(&c.verbose, "verbose",
 		false,
 		"Combine stdout and stderr output from hooks.")
-	cmd.PersistentFlags().BoolVar(&c.Restore, "restore",
-		false,
-		"Restore the workshop to the state after the most recent launch or refresh.")
-
 	cmd.MarkFlagsMutuallyExclusive("abort", "continue", "wait-on-error")
-	cmd.MarkFlagsMutuallyExclusive("restore", "continue", "abort")
 
 	return cmd
 }
@@ -122,9 +112,6 @@ func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av 
 	option := ""
 	if mode == "transactional" || mode == "wait-on-error" {
 		option = "update"
-		if c.Restore {
-			option = "restore"
-		}
 	}
 
 	changeId, err := cli.Refresh(project.Id, av, mode, option, c.verbose)

@@ -84,6 +84,7 @@ func (c *CmdRoot) Command() *cobra.Command {
 	cmd.AddCommand((&CmdChanges{root: c}).Command())
 	cmd.AddCommand((&CmdTasks{root: c}).Command())
 	cmd.AddCommand((&CmdRefresh{root: c}).Command())
+	cmd.AddCommand((&CmdRestore{root: c}).Command())
 	cmd.AddCommand((&CmdStart{root: c}).Command())
 	cmd.AddCommand((&CmdStop{root: c}).Command())
 	cmd.AddCommand((&CmdInfo{root: c}).Command())

@@ -96,6 +96,18 @@ func (client *Client) Refresh(projectId string, names []string, mode string, opt
 	})
 }
 
+func (client *Client) Restore(projectId string, names []string, verbose bool) (changeId string, err error) {
+	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
+		Action: "refresh",
+		Names:  names,
+		Options: &WorkshopActionOptions{
+			Mode:          "transactional",
+			RefreshOption: "restore",
+			Verbose:       verbose,
+		},
+	})
+}
+
 func (client *Client) Start(projectId string, names []string) (changeId string, err error) {
 	return client.doWorkshopAction(projectId, &WorkshopActionSetup{
 		Action: "start",

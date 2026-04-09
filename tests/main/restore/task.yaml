@@ -1,0 +1,28 @@
+summary: Check that workshop restore reverts filesystem and connections
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check the workshop is Ready"
+  workshop_exec list | MATCH "^ws-restore[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Create a sentinel file inside the workshop"
+  workshop_exec exec -- touch /home/workshop/sentinel
+  workshop_exec exec -- test -f /home/workshop/sentinel
+
+  echo "Restore the workshop"
+  workshop_exec restore
+
+  echo "Check the restore change is Done"
+  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Refresh \"ws-restore\" workshop$"
+
+  echo "Check the workshop is in Ready state after restore"
+  workshop_exec list | MATCH "^ws-restore[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check the sentinel file was removed by restore"
+  workshop_exec exec -- test ! -f /home/workshop/sentinel

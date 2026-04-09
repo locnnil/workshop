@@ -64,6 +64,21 @@ func (cs *clientSuite) TestClientRefresh(c *check.C) {
 	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"mode":"transactional","refresh-option":"update"}}\n`)
 }
 
+func (cs *clientSuite) TestClientRestore(c *check.C) {
+	cs.rsp = `{"type": "async", "status-code": 202, "change": "24"}`
+
+	id, err := cs.cli.Restore("42ws42ws", []string{"ws"}, false)
+
+	c.Check(cs.req.Method, check.Equals, "POST")
+	c.Assert(id, check.Equals, "24")
+	c.Assert(err, check.IsNil)
+
+	body, err := io.ReadAll(cs.req.Body)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(string(body), check.Matches, `{"names":\["ws"\],"action":"refresh","options":{"mode":"transactional","refresh-option":"restore"}}\n`)
+}
+
 func (cs *clientSuite) TestClientStart(c *check.C) {
 	cs.rsp = `{"type": "async", "status-code": 202, "change": "24"}`
 
