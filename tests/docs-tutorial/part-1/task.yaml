@@ -34,7 +34,7 @@ execute: |
 
   ## Refresh a workshop
 
-  sed -i "s/22.04/24.04/g" workshop.yaml
+  sed -e "s/22.04/24.04/g" -e "s/cpu/vulkan/g" -i workshop.yaml
   workshop_exec refresh
 
 

@@ -32,7 +32,7 @@ from the :samp:`latest/edge` channel:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/edge
+       channel: edge
 
 
 Suppose something goes wrong during :command:`workshop refresh`:
@@ -83,7 +83,7 @@ this time supplying the change ID as the argument:
    $ workshop tasks 81
 
      Status    Duration  Summary
-     Done          59ms  Retrieve "go" SDK from channel "latest/stable"
+     Done          59ms  Retrieve "go" SDK from channel "latest/edge"
      Undone        42ms  Create SDK state storage
      Done          28ms  Run hook "save-state" for "go" SDK
      Done          31ms  Disconnect interfaces of "go" SDK

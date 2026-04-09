@@ -20,7 +20,7 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 5-10
+   :emphasize-lines: 4-9
 
    name: dev
    base: ubuntu@24.04
@@ -31,7 +31,6 @@ and configure a tunnel interface plug for the :samp:`system` SDK:
            interface: tunnel
            endpoint: 8090
      - name: code-server
-       channel: 24.04/stable
 
 
 Launch the workshop.

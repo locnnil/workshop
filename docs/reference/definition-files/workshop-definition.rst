@@ -130,10 +130,11 @@ Each SDK is described with the following keys:
 
        It uses a
        `snap-like format <https://snapcraft.io/docs/channels>`__
-       of :samp:`<TRACK>/<RISK>`
-       without the :samp:`<BRANCH>` part.
+       of :samp:`<TRACK>/<RISK>/<BRANCH>`.
+       The default is :samp:`latest/stable`
+       (with no branch).
 
-       Required for SDKs from the Store.
+       Only applies to SDKs from the Store.
 
    * - :samp:`plugs`
      - object
@@ -467,7 +468,7 @@ Examples
 
 This YAML file defines a :samp:`golang` workshop
 with a single :samp:`go` SDK
-from the :samp:`latest/stable` channel,
+from the :samp:`1.26/stable` channel,
 and some useful actions:
 
 .. code-block:: yaml
@@ -477,7 +478,7 @@ and some useful actions:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
    actions:
      lint: |
        go vet
@@ -498,7 +499,7 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: edge
      - name: project-tunnel
        plugs:
          data:
@@ -522,19 +523,16 @@ and two connections:
    name: digits-cuda
    sdks:
      - name: tensorflow
-       channel: 22.04/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
      - name: imagenet
-       channel: 22.04/stable
        slots:
          images:
            interface: mount
            workshop-source: $SDK/images
      - name: cuda
-       channel: 22.04/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs

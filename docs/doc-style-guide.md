@@ -418,13 +418,13 @@ With emphasis:
 ```restructuredtext
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 7-11
+   :emphasize-lines: 7-9
 
    name: dev
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
    
    actions:
      lint: |
@@ -701,7 +701,7 @@ Example with options:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
 ```
 
 **Spacing and formatting**
@@ -1022,7 +1022,7 @@ Always include caption when it can be deduced from context:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
 ```
 
 Indentation: Use commonly recognized formatting:

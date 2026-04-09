@@ -2,9 +2,8 @@ name: dev
 base: ubuntu@24.04
 sdks:
   - name: ollama
-    channel: latest/edge
+    channel: vulkan
   - name: jupyter
-    channel: latest/edge
   - name: system
     plugs:
       jupyter:

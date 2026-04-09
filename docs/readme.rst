@@ -47,7 +47,6 @@ then run ``workshop launch``:
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: all/edge
 
 
 .. code-block:: console
@@ -92,7 +91,7 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
    sudo snap install --classic workshop
 
 To get the newest features, install from the edge channel:
-``sudo snap install --classic --channel=latest/edge workshop``.
+``sudo snap install --classic --edge workshop``.
 
 If this command fails, you may need an invitation;
 contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).

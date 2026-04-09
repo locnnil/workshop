@@ -555,7 +555,8 @@ SDK channels
 
 When SDKs are published by their creators and consumed by workshops,
 different versions and releases are tracked through the use of channels.
-A channel is a combination of a track and a risk, e.g., :samp:`latest/beta`.
+A channel is a combination of a track, a risk, and an optional branch,
+e.g., :samp:`latest/beta`.
 
 Tracks allow multiple published versions of an SDK to exist in parallel;
 while no specific scheme is enforced,
@@ -573,6 +574,10 @@ Risks represent a choice of maturity levels for a particular track:
 
 - :samp:`edge`: for unstable software that's still in active development;
   nothing is guaranteed
+
+Branches are short-lived subdivisions of a channel
+intended for experimentation, e.g. `1.2.3/edge/issue-56789`.
+After 30 days of no activity, a branch will be closed automatically.
 
 .. attention::
 

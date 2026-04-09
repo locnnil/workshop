@@ -197,14 +197,14 @@ provided by :samp:`service-sdk`.
              from:  0.0.0.0:8081/tcp
              to:    127.0.0.1:8080/tcp
        client-sdk:
-         tracking:   22.04/stable
+         tracking:   latest/stable
          installed:  2024-03-02  (1)
          tunnels:
            shared:
              from:  [::1]:1080/tcp
              to:    127.0.0.1:18080/tcp
        service-sdk:
-         tracking:   22.04/edge
+         tracking:   latest/edge
          installed:  2025-06-07  (2)
 
 

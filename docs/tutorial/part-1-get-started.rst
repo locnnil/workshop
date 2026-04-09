@@ -96,7 +96,7 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
 
 
 To get the newest features, install from the edge channel:
-:command:`sudo snap install --classic  --channel=latest/edge workshop`.
+:command:`sudo snap install --classic --edge workshop`.
 
 .. warning::
 
@@ -162,18 +162,20 @@ create a workshop definition named :file:`workshop.yaml`:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 4,5
+   :emphasize-lines: 4-5
 
    name: dev
    base: ubuntu@22.04
    sdks:
      - name: ollama
-       channel: 22.04/edge
+       channel: cpu
 
 
 Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
-comes from the :samp:`22.04/edge` channel.
+comes from the :samp:`cpu` track of the :samp:`cpu/stable` channel.
+Other tracks for :samp:`ollama` include :samp:`cuda`, :samp:`rocm`, and :samp:`vulkan`.
+These enable various levels of hardware acceleration.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
@@ -245,7 +247,7 @@ to see what went into your workshop:
        system:
          installed:  (1)
        ollama:
-         tracking:   22.04/edge
+         tracking:   cpu/stable
          installed:  0.9.6  2025-11-19  (981)
          mounts:
            models:
@@ -355,7 +357,7 @@ and refresh the workshop:
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 24.04/edge
+       channel: vulkan
 
 .. @artefact workshop refresh
 
@@ -524,7 +526,7 @@ pass the change ID to the command:
      Status   Duration  Summary
      Done    2m17.389s  Download "ubuntu@24.04" base image
      Done        113ms  Retrieve "system" SDK
-     Done    2m59.777s  Retrieve "ollama" SDK from channel "24.04/edge"
+     Done    2m59.777s  Retrieve "ollama" SDK from channel "vulkan/stable"
      Done        443ms  Create SDK state storage
      Done        581ms  Run hook "save-state" for "system" SDK
      Done        449ms  Run hook "save-state" for "ollama" SDK

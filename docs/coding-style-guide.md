@@ -593,7 +593,7 @@ testWorkshop := Workshop{
     Base:   "ubuntu@22.04",
     Status: "Ready",
     SDKs: []SDK{
-        {Name: "go", Channel: "22.04/stable"},
+        {Name: "go", Channel: "latest/stable"},
     },
 }
 ```

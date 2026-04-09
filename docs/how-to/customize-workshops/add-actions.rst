@@ -35,7 +35,7 @@ from the :ref:`tut_sketch_sdks` tutorial section:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
    
    actions:
      lint: |

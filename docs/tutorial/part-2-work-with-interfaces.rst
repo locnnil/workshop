@@ -109,7 +109,7 @@ you can remount to a directory in your home:
        system:
          installed:  (1)
        ollama:
-         tracking:   24.04/edge
+         tracking:   vulkan/stable
          installed:  0.9.6  2025-11-19  (214)
          mounts:
            models:
@@ -140,15 +140,14 @@ to run Jupyter notebooks with the Ollama models:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 6,7
+   :emphasize-lines: 6
 
    name: dev
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 24.04/edge
+       channel: vulkan/stable
      - name: jupyter
-       channel: 24.04/edge
 
 
 .. code-block:: console
@@ -167,15 +166,14 @@ to the host system at a port of your choice (here, :samp:`8989`):
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 8-12
+   :emphasize-lines: 7-11
 
    name: dev
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 24.04/edge
+       channel: vulkan/stable
      - name: jupyter
-       channel: 24.04/edge
      - name: system
        plugs:
          jupyter:

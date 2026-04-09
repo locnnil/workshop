@@ -56,9 +56,9 @@
           },
           "channel": {
             "type": "string",
-            "description": "Channel used for the SDK. May be empty when the SDK is installed from a local source.",
-            "pattern": "^(?:[a-z0-9](?:[.-]?[a-z0-9])*/(?:stable|candidate|beta|edge)|)$",
-            "errorMessage": "Channel must be empty or follow the pattern <track>/<risk> (e.g., 'latest/stable')."
+            "description": "Channel used for the SDK. Default is latest/stable unless the SDK is installed from a local source.",
+            "pattern": "^(?:(?:[a-zA-Z0-9](?:[_.-]?[a-zA-Z0-9])*/)?(?:stable|candidate|beta|edge)(?:/[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9])?|[a-zA-Z0-9](?:[_.-]?[a-zA-Z0-9])*|)$",
+            "errorMessage": "Channel must look like [<track>/]<risk>[/<branch>] or [<track>]."
           },
           "plugs": {
             "type": "object",

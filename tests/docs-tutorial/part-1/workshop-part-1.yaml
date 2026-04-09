@@ -2,4 +2,4 @@ name: dev
 base: ubuntu@22.04
 sdks:
   - name: ollama
-    channel: latest/edge
+    channel: cpu

@@ -60,7 +60,7 @@ for the browser-facing part of the project:
    base: ubuntu@24.04
    sdks:
      - name: node
-       channel: 24.04/stable
+       channel: 24
    actions:
      build: |
        npm run build
@@ -76,7 +76,7 @@ for the server-side code:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
    actions:
      test: |
        go test ./...
@@ -218,7 +218,7 @@ Both workshops can then include it:
    base: ubuntu@24.04
    sdks:
      - name: node
-       channel: 24.04/stable
+       channel: 24
      - name: project-common-tools
 
 
@@ -230,7 +230,7 @@ Both workshops can then include it:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
      - name: project-common-tools
 
 
@@ -271,7 +271,7 @@ by pairing a :samp:`system` plug with a regular SDK slot:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
        slots:
          api:
            interface: tunnel
@@ -294,7 +294,7 @@ by pairing a regular SDK plug with a :samp:`system` slot:
    base: ubuntu@24.04
    sdks:
      - name: node
-       channel: 24.04/stable
+       channel: 24
        plugs:
          api:
            interface: tunnel
