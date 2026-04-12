@@ -1,14 +1,14 @@
 {
-  "name": "test-sdk-info",
-  "package-id": "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
+  "name": "test-sdk-info-1",
+  "package-id": "96TKss360WoMRcFySGMOMhXhwbDdZh0E",
   "metadata": {
     "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
     "license": "GPL-3.0",
     "publisher": {
       "display-name": "Dmitry Lyfar",
-      "id": "eXipbnGB0LFt3v2YD8KTEMx5inT575ju",
-      "username":"usso-dlyfar",
-      "validation":"unproven"
+      "id": "rerCzOoMKcwXbFbziPbLdrxjmF36PCRd",
+      "username": "dlyfar",
+      "validation": "unproven"
     },
     "summary": "Test SDK which supports all bases and architectures",
     "title": "SDK info"
@@ -24,14 +24,14 @@
           "channel": "all",
           "name": "all"
         },
-        "released-at": "2026-04-02T01:29:06.948542Z"
+        "released-at": "2026-04-15T23:33:32.161874Z"
       },
       "revision": {
-        "created-at": "2026-04-02T01:29:04.183727Z",
+        "created-at": "2026-04-15T23:33:30.166917Z",
         "download": {
-          "sha3-384": "51779c9264f26baf29facfdaac39286712073b5ed3a5f3e63ab03cc3aa6275165d0d50d30d87beb45068c8c3ce70053a",
-          "size": 596,
-          "url": "https://api.staging.pkg.store/api/v1/sdks/download/U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e_3.sdk"
+          "sha3-384": "22e773fd5f052fbfcb077788e5a13b81415ff6f8f7bfd0a65cc19f3ce854054fd1090c04937d420cde5645c2940e29e3",
+          "size": 626,
+          "url": "https://api.pkg.store/api/v1/sdks/download/96TKss360WoMRcFySGMOMhXhwbDdZh0E_2.sdk"
         },
         "platforms": [
           {
@@ -40,13 +40,13 @@
             "name": "all"
           }
         ],
-        "revision": 3,
+        "revision": 2,
         "sdk-yaml": {
           "architecture": "all",
           "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
           "license": "GPL-3.0",
-          "name": "test-sdk-info",
-          "sdkcraft-started-at": "2026-04-02T01:28:56.859021Z",
+          "name": "test-sdk-info-1",
+          "sdkcraft-started-at": "2026-04-15T23:33:25.815047Z",
           "summary": "Test SDK which supports all bases and architectures",
           "title": "SDK info",
           "version": "1.0"
@@ -64,14 +64,14 @@
           "channel": "all",
           "name": "all"
         },
-        "released-at": "2026-04-02T01:28:47.872298Z"
+        "released-at": "2026-04-15T23:08:52.533822Z"
       },
       "revision": {
-        "created-at": "2026-04-02T01:28:46.134132Z",
+        "created-at": "2026-04-15T23:08:50.73701Z",
         "download": {
-          "sha3-384": "47b440b2facd5176c7d346f32e59499d0b7afe268b8cd174ef5e07bf564147669d836e6d93c2ba1efe3b2e0f5cf94eee",
-          "size": 593,
-          "url": "https://api.staging.pkg.store/api/v1/sdks/download/U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e_2.sdk"
+          "sha3-384": "0834579597dd61dd2ca3ff998716980f7bedd11ad36bbd15d013530d2bd8c1bc2645a03505cca378d242b228e3ffa9db",
+          "size": 597,
+          "url": "https://api.pkg.store/api/v1/sdks/download/96TKss360WoMRcFySGMOMhXhwbDdZh0E_1.sdk"
         },
         "platforms": [
           {
@@ -80,13 +80,13 @@
             "name": "all"
           }
         ],
-        "revision": 2,
+        "revision": 1,
         "sdk-yaml": {
           "architecture": "all",
           "description": "This is test-sdk-info's description. You have a paragraph or two to tell the\nmost important story about it. Keep it under 100 words though,\nwe live in tweetspace.\n",
           "license": "GPL-3.0",
-          "name": "test-sdk-info",
-          "sdkcraft-started-at": "2026-04-02T01:28:40.615633Z",
+          "name": "test-sdk-info-1",
+          "sdkcraft-started-at": "2026-04-15T23:08:46.868775Z",
           "summary": "Test SDK which supports all bases and architectures",
           "title": "SDK info",
           "version": "2.0"

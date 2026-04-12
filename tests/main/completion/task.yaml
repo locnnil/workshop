@@ -1,7 +1,6 @@
 summary: Check that shell completion is installed with the snap
 prepare: |
   . "$TESTSLIB"/utils.sh
-  resolve_branch .workshop/ws-comp.yaml
   workshop_exec launch ws-comp
 restore: |
   . "$TESTSLIB"/utils.sh

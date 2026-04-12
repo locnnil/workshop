@@ -145,17 +145,9 @@ function sdk_exec() {
 }
 
 function run_sdkcraft() {
-    sdkcraft "$@"
+    sudo -u ubuntu -- sdkcraft "$@"
 }
 
 function install_sdkcraft() {
     snap install --classic --edge sdkcraft
-}
-
-function resolve_branch() {
-    local file
-    for file in "$@"; do
-        # shellcheck disable=SC2016
-        envsubst '${TEST_SDK_BRANCH}' < "${file}.in" > "$file"
-    done
 }

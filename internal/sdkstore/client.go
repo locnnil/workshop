@@ -17,7 +17,7 @@ const (
 	// DefaultServerURL is the default location of the global SDK Store API.
 	// An alternate location can be configured by changing the URL
 	// field in the Config struct.
-	DefaultServerURL = "https://api.staging.pkg.store"
+	DefaultServerURL = "https://api.pkg.store"
 
 	// RefreshTimeout is the timout callers should use for Refresh calls.
 	RefreshTimeout = 10 * time.Second

@@ -1,0 +1,13 @@
+name: ws-exec
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic
+  - name: test-sdk-environment
+actions:
+  oneline: echo one line
+  multiline: |
+    echo multi
+    echo line
+  fail: "false"
+  file: ./script.sh
+  env: env

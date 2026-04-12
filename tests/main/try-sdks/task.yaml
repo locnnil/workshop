@@ -10,8 +10,12 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  mkdir work
+  chown ubuntu:ubuntu work
+  sudo -u ubuntu -- cp -r "$TESTSLIB/sdk/test-sdk-basic/latest"/{stable,edge} work/
+
   echo "Launch workshop with SDKs from try area"
-  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/stable" && run_sdkcraft try)
+  (cd work/stable && run_sdkcraft try)
   workshop_exec launch
   workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
   workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH '^~/.local/share/workshop/try/test-sdk-basic$'
@@ -31,7 +35,7 @@ execute: |
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check SDKs in try area can be updated"
-  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/edge" && run_sdkcraft try)
+  (cd work/edge && run_sdkcraft try)
   workshop_exec refresh
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
   workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'

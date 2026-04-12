@@ -1,9 +1,0 @@
-name: ws-refresh-snapshots
-base: ubuntu@22.04
-sdks:
-  - name: test-sdk-basic
-    channel: latest/stable${TEST_SDK_BRANCH}
-  - name: test-sdk-mount
-    channel: latest/stable${TEST_SDK_BRANCH}
-  - name: test-sdk-gpu
-    channel: latest/stable${TEST_SDK_BRANCH}

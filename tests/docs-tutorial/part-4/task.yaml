@@ -11,6 +11,7 @@ execute: |
 
   run_sdkcraft --help
   mkdir ollama/ && cd ollama/
+  chown ubuntu:ubuntu .
   run_sdkcraft init
   rm hooks/*
   mv ../{sdkcraft.yaml,ollama.service} .

@@ -1,0 +1,14 @@
+name: test-sdk-info-1
+title: SDK info
+version: "2.0"
+summary: Test SDK which supports all bases and architectures
+description: |
+  This is test-sdk-info's description. You have a paragraph or two to tell the
+  most important story about it. Keep it under 100 words though,
+  we live in tweetspace.
+license: GPL-3.0
+build-base: ubuntu@24.04
+platforms:
+  all:
+    build-on: amd64
+    build-for: all

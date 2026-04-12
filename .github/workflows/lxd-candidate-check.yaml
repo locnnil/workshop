@@ -11,7 +11,7 @@ jobs:
   build-deps:
     uses: ./.github/workflows/build-deps.yaml
     secrets:
-      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_STAGING }}
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_PROD }}
   snap-tests:
     needs: [build-deps]
     strategy:

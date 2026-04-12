@@ -19,10 +19,10 @@ func (f *downloadIntegration) TestDownload(c *check.C) {
 	client := NewClient(Config{})
 	hash := sha3.New384()
 	sdk := SdkArchive{
-		Name:      "test-sdk-info",
-		PackageID: "U9IBEcXiDkuaPLYjyUBpRZMETAr7g39e",
-		Revision:  1,
-		Sha3_384:  "cf722fc841c72cf53c4b2db88608589efb173fa2a50837ae6f07597ead85e6e30f36a85e98df9ba78d941b3c9e15ab3d",
+		Name:      "test-sdk-info-1",
+		PackageID: "96TKss360WoMRcFySGMOMhXhwbDdZh0E",
+		Revision:  2,
+		Sha3_384:  "22e773fd5f052fbfcb077788e5a13b81415ff6f8f7bfd0a65cc19f3ce854054fd1090c04937d420cde5645c2940e29e3",
 	}
 
 	err := client.Download(context.Background(), hash, sdk)
@@ -38,7 +38,7 @@ func (f *downloadIntegration) TestDownloadNotFound(c *check.C) {
 		Name:      "not-found",
 		PackageID: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
 		Revision:  55555,
-		Sha3_384:  "cf722fc841c72cf53c4b2db88608589efb173fa2a50837ae6f07597ead85e6e30f36a85e98df9ba78d941b3c9e15ab3d",
+		Sha3_384:  "22e773fd5f052fbfcb077788e5a13b81415ff6f8f7bfd0a65cc19f3ce854054fd1090c04937d420cde5645c2940e29e3",
 	}
 
 	err := client.Download(context.Background(), &buffer, sdk)

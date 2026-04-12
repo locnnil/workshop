@@ -1,9 +1,0 @@
-name: ws-desktop-fail
-base: ubuntu@22.04
-sdks:
-  - name: system
-    slots:
-      user-desktop:
-        interface: desktop
-  - name: test-sdk-desktop
-    channel: latest/stable${TEST_SDK_BRANCH}

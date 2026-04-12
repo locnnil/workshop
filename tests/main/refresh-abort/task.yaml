@@ -1,7 +1,6 @@
 summary: Check a failed non-transactional refresh can be aborted successfully
 prepare: |
   . "$TESTSLIB"/utils.sh
-  resolve_branch workshop.yaml
   workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh

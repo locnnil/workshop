@@ -71,8 +71,6 @@ jobs:
         run: |
           mkdir ${{ github.workspace }}.cover
           spread -artifacts=${{ github.workspace }}.cover tests/${{matrix.suite}}
-        env:
-          TEST_SDK_BRANCH: ${{ needs.build-deps.outputs.test_sdk_branch }}
       - name: Trim trailing slash from matrix.suite
         id: sanitize
         env:

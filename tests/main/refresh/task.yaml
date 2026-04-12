@@ -3,7 +3,6 @@ prepare: |
   . "$TESTSLIB"/utils.sh
   apt-add-repository -y universe
   apt install expect -y --no-install-recommends
-  resolve_branch multi/.workshop/ws-refresh-sdk.yaml multi/.workshop/ws-refresh-snapshots.yaml
   workshop_exec launch --project single
   workshop_exec launch ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
 restore: |
@@ -26,7 +25,7 @@ execute: |
   workshop_exec exec -- sudo test -f /var/cache/apt/archives/sentinel
 
   echo "Check workshop refresh --no-wait"
-  echo -e "sdks:\n  - name: test-sdk-health-waiting\n    channel: latest/stable${TEST_SDK_BRANCH}" >> workshop.yaml
+  echo -e "sdks:\n  - name: test-sdk-health-waiting" >> workshop.yaml
   workshop_exec refresh --no-wait
 
   # The refresh process here takes about 10s. 

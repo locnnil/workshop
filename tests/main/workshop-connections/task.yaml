@@ -2,7 +2,6 @@ summary: Check that "workshop connections" works as expected
 prepare: |
   . "$TESTSLIB"/utils.sh
   mkdir user-data user-data-2
-  resolve_branch .workshop/ws-user-conns.yaml .workshop/ws-user-conns.yaml.new
   workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh

@@ -1,0 +1,5 @@
+name: stable
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-info-1
+    channel: stable

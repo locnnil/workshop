@@ -4,38 +4,38 @@
       "instance-key": "random456",
       "status": "ok",
       "namespace": "sdk",
-      "name": "test-sdk-info-multi-base",
-      "id": "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
+      "name": "test-sdk-info-multi-base-1",
+      "id": "x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG",
       "result": {
         "channel": {
-          "name": "edge",
-          "released-at": "2026-03-11T00:13:19.621866",
+          "name": "stable",
+          "released-at": "2026-04-15T04:03:38.694727",
           "track": null,
-          "risk": "edge",
+          "risk": "stable",
           "branch": null,
-          "effective-channel": "edge",
+          "effective-channel": "stable",
           "platform": {
             "name": "ubuntu",
-            "channel": "24.04",
-            "architecture": "riscv64"
+            "channel": "20.04",
+            "architecture": "amd64"
           }
         },
         "revision": {
-          "created-at": "2026-03-11T00:13:15.679272",
+          "created-at": "2026-04-15T04:03:37.224647",
           "platforms": [
             {
               "name": "ubuntu",
-              "channel": "24.04",
-              "architecture": "riscv64"
+              "channel": "20.04",
+              "architecture": "amd64"
             }
           ],
           "download": {
-            "url": "https://api.staging.pkg.store/api/v1/sdks/download/ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1_13.sdk",
-            "size": 480,
-            "sha3-384": "6e4067003e140090d017872a8a730a1205679d388efde0e2eff6ac4e89e639593ae0f4665f361bb52d704e8ec670be06"
+            "url": "https://api.pkg.store/api/v1/sdks/download/x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG_19.sdk",
+            "size": 456,
+            "sha3-384": "4099fb92c71c5075364fdba4e451b545a8cb1ee0946bacaddef5f0682f2070385de9cf8898571eb91b14c99d0f07ea98"
           },
-          "revision": 13,
-          "version": "0.3.1"
+          "revision": 19,
+          "version": "0.2.1"
         }
       }
     }

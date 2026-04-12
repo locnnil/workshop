@@ -1,0 +1,18 @@
+name: ws-user-conns
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic
+    slots:
+      user-slot:
+        interface: mount
+        workshop-source: /project/user-data-2
+  - name: test-sdk-mount
+    plugs:
+      wp-plug:
+        interface: mount
+        workshop-target: /mnt/wp-plug
+connections:
+  - plug: test-sdk-mount:two
+    slot: test-sdk-basic:user-slot
+  - plug: test-sdk-mount:wp-plug
+    slot: test-sdk-basic:user-slot

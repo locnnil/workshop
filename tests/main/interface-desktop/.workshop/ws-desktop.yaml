@@ -1,0 +1,7 @@
+name: ws-desktop
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-desktop
+connections:
+  - plug: test-sdk-desktop:desktop
+    slot: system:desktop

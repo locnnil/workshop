@@ -43,7 +43,7 @@ func (s *FindSuite) TestFind(c *check.C) {
 	baseURL := MustParseURL(c, "http://api.foo.bar")
 
 	path := path.MakePath(baseURL)
-	query := "test-sdk-find"
+	query := "test-sdk-find-2"
 
 	restClient := NewMockRESTClient(ctrl)
 	s.expectGet(c, restClient, path, query)
@@ -62,7 +62,7 @@ func (s *FindSuite) TestFindWithOptions(c *check.C) {
 	baseURL := MustParseURL(c, "http://api.foo.bar")
 
 	path := path.MakePath(baseURL)
-	query := "test-sdk-find"
+	query := "test-sdk-find-2"
 
 	expect, err := path.Query("categories", "ide,language")
 	c.Assert(err, check.IsNil)
@@ -91,7 +91,7 @@ func (s *FindSuite) TestFindFailure(c *check.C) {
 	baseURL := MustParseURL(c, "http://api.foo.bar")
 
 	path := path.MakePath(baseURL)
-	query := "test-sdk-find"
+	query := "test-sdk-find-2"
 
 	restClient := NewMockRESTClient(ctrl)
 	s.expectGetFailure(restClient)
@@ -125,7 +125,7 @@ func (s *FindSuite) expectGetFailure(client *MockRESTClient) {
 func (s *FindSuite) TestFindRequestPayload(c *check.C) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c.Check(r.URL.Path, check.Equals, "/v2/sdks/find")
-		c.Check(r.URL.Query()["q"], check.DeepEquals, []string{"test-sdk-find"})
+		c.Check(r.URL.Query()["q"], check.DeepEquals, []string{"test-sdk-find-2"})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write(testSdkFindRaw)
@@ -142,7 +142,7 @@ func (s *FindSuite) TestFindRequestPayload(c *check.C) {
 	restClient := newHTTPRESTClient(apiRequester)
 
 	client := newFindClient(findPath, restClient)
-	responses, err := client.Find(context.Background(), "test-sdk-find")
+	responses, err := client.Find(context.Background(), "test-sdk-find-2")
 	c.Assert(err, check.IsNil)
 
 	var expected any

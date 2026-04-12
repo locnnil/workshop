@@ -1,7 +1,6 @@
 summary: Check plug binding
 prepare: |
   . "$TESTSLIB"/utils.sh
-  resolve_branch workshop.yaml
   workshop_exec launch
 execute: |
   . "$TESTSLIB"/utils.sh

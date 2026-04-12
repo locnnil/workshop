@@ -6,7 +6,6 @@ environment:
   PATH: $PATH:~/go/bin
   PROJECT_PATH: /workshop
   TESTSLIB: $PROJECT_PATH/tests/lib
-  TEST_SDK_BRANCH: $(HOST:printf %s "${TEST_SDK_BRANCH:+/$TEST_SDK_BRANCH}")
   IMAGE_SERVER: $(HOST:echo -n $WORKSHOP_IMAGE_SERVER)
 repack: |
   test -f tests/workshop_*.snap || snapcraft pack -o tests/

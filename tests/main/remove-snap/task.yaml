@@ -9,7 +9,6 @@ execute: |
   # shellcheck source=tests/lib/utils.sh
   . "$TESTSLIB"/utils.sh
 
-  resolve_branch project-2/.workshop/ws-snap-remove-2.yaml project-2/.workshop/ws-snap-remove-2a.yaml
   workshop_exec launch --project $(pwd)/project-1 ws-snap-remove-1 ws-snap-remove-1a
   workshop_exec launch --project $(pwd)/project-2 ws-snap-remove-2 ws-snap-remove-2a
 

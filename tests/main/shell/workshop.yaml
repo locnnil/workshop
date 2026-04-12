@@ -1,0 +1,4 @@
+name: ws-shell
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic

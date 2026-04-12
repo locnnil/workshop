@@ -3,6 +3,6 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   echo "Test SDK find"
-  sdk_exec find test-sdk-find-1 > find.log
-  MATCH 'test-sdk-find-1[[:space:]]+0\.1\.1[[:space:]]+Jonathan Conder[[:space:]]+Test SDK summary' < find.log
-  MATCH 'test-sdk-find-1-s390x[[:space:]]+0\.1\+s390x[[:space:]]+Jonathan Conder[[:space:]]+Test SDK s390x summary' < find.log
+  sdk_exec find test-sdk-find-2 > find.log
+  MATCH 'test-sdk-find-2[[:space:]]+0\.2[[:space:]]+Dmitry Lyfar[[:space:]]+Test SDK find 2 summary' < find.log
+  MATCH 'test-sdk-find-2-s390x[[:space:]]+0\.2\+s390x[[:space:]]+Dmitry Lyfar[[:space:]]+Test SDK find 2 s390x summary' < find.log

@@ -1,7 +1,6 @@
 summary: Check shell functionality and environment
 prepare: |
   . "$TESTSLIB"/utils.sh
-  resolve_branch workshop.yaml
   workshop_exec launch ws-shell
 restore: |
   . "$TESTSLIB"/utils.sh

@@ -1,7 +1,6 @@
 summary: Check that "workshop connections" works as expected
 prepare: |
   . "$TESTSLIB"/utils.sh
-  resolve_branch .workshop/ws-conns-1.yaml .workshop/ws-conns-2.yaml
   workshop_exec launch ws-conns-1 ws-conns-2
 restore: |
   . "$TESTSLIB"/utils.sh

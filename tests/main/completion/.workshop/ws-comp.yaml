@@ -1,0 +1,5 @@
+name: ws-comp
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-desktop
+  - name: test-sdk-mount

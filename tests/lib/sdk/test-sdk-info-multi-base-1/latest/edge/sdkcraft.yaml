@@ -1,0 +1,31 @@
+name: test-sdk-info-multi-base-1
+title: Test SDK info multi-base title
+version: "0.3"
+summary: Test SDK which supports multiple bases and architectures
+description: Test SDK info multi-base description
+license: LGPL-3.0
+contact: [contact@example.com, https://example.com/contact]
+issues: [issues@example.com, https://example.com/issues]
+source-code: https://example.com/source-code
+platforms:
+  ubuntu@20.04:amd64:
+  ubuntu@22.04:amd64:
+  ubuntu@24.04:amd64:
+  ubuntu@20.04:arm64:
+    build-on: [ubuntu@20.04:amd64]
+    build-for: [ubuntu@20.04:arm64]
+  ubuntu@22.04:arm64:
+    build-on: [ubuntu@22.04:amd64]
+    build-for: [ubuntu@22.04:arm64]
+  ubuntu@24.04:arm64:
+    build-on: [ubuntu@24.04:amd64]
+    build-for: [ubuntu@24.04:arm64]
+  ubuntu@20.04:riscv64:
+    build-on: [ubuntu@20.04:amd64]
+    build-for: [ubuntu@20.04:riscv64]
+  ubuntu@22.04:riscv64:
+    build-on: [ubuntu@22.04:amd64]
+    build-for: [ubuntu@22.04:riscv64]
+  ubuntu@24.04:riscv64:
+    build-on: [ubuntu@24.04:amd64]
+    build-for: [ubuntu@24.04:riscv64]

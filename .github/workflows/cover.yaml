@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/spread.yaml
     secrets:
       STORE_CREDENTIALS: ${{ secrets.STORE_CREDENTIALS }}
-      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_STAGING }}
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_PROD }}
   unit-tests:
     uses: ./.github/workflows/unit-tests.yaml
 

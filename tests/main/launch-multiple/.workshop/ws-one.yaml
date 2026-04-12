@@ -1,0 +1,4 @@
+name: ws-one
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic

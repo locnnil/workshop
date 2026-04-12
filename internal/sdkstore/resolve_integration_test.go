@@ -22,12 +22,12 @@ func (f *resolveIntegration) TestResolveByName(c *check.C) {
 		Packages: []transport.ResolvePackage{{
 			InstanceKey: "random123",
 			Namespace:   "sdk",
-			Name:        "test-sdk-info-multi-base",
-			Channel:     "latest/stable",
+			Name:        "test-sdk-info-multi-base-1",
+			Channel:     "latest/edge",
 			Platform: transport.Platform{
 				Name:         "ubuntu",
 				Channel:      "22.04",
-				Architecture: "amd64",
+				Architecture: "riscv64",
 			},
 		}},
 	}
@@ -48,12 +48,12 @@ func (f *resolveIntegration) TestResolveByID(c *check.C) {
 		Packages: []transport.ResolvePackage{{
 			InstanceKey: "random456",
 			Namespace:   "sdk",
-			ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
-			Channel:     "latest/edge",
+			ID:          "x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG",
+			Channel:     "latest/stable",
 			Platform: transport.Platform{
 				Name:         "ubuntu",
-				Channel:      "24.04",
-				Architecture: "riscv64",
+				Channel:      "20.04",
+				Architecture: "amd64",
 			},
 		}},
 	}

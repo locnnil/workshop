@@ -1,7 +1,6 @@
 summary: Check workshop sketch-sdk
 prepare: |
   . "$TESTSLIB"/utils.sh
-  resolve_branch workshop.yaml
   workshop_exec launch
 restore: |
   . "$TESTSLIB"/utils.sh
