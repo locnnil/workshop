@@ -46,7 +46,7 @@ Prerequisites
 ~~~~~~~~~~~~~
 
 |sdk_markup| relies on
-`LXD 6.3+ <https://canonical.com/lxd>`_
+`LXD 6.6+ <https://canonical.com/lxd>`_
 for low-level operation,
 using its
 `REST API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
