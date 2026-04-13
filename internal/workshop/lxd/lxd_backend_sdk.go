@@ -2,13 +2,10 @@ package lxdbackend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -22,21 +19,6 @@ import (
 	"github.com/canonical/workshop/internal/timeutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
-
-var volumeIndex = `name: %s
-backend: %s
-type: custom
-config:
-  volume:
-    name: %s
-    description: "SDK Volume"
-    type: custom
-    content_type: filesystem
-`
-
-func volumeIndexContent(name string) string {
-	return fmt.Sprintf(volumeIndex, name, storagePool, name)
-}
 
 // LockVolume ensures exclusive access to the specified volume. If there is an
 // ongoing operation on the volume, the calling goroutine will block until the
@@ -124,89 +106,12 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 		return err
 	}
 
-	// The tarballs will be transformed into a LXD-compatible backup format to
-	// create them directly as a custom volume. The LXD's tar archive has the
-	// following format:
-	//
-	// backup/
-	//  volume/
-	//  index.yaml
-
-	dir, err := os.MkdirTemp("", name)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir)
-
-	// umask 0 with --no-same-permissions preserves normal permissions,
-	// just not setuid, setgid, etc. The parent directory should be empty
-	// with 700 permissions. For more details see
-	// https://www.gnu.org/software/tar/manual/html_section/Security.html
-	unpack := exec.CommandContext(ctx, "bash",
-		"-c",
-		`umask 0 && exec -- "$0" "$@"`,
-		"tar",
-		"--extract",
-		"--no-same-owner",
-		"--no-same-permissions",
-		"--keep-old-files",
-		"--file=/dev/stdin",
-		"--transform",
-		"s,^,volume/,",
-		"--directory="+dir,
-	)
-	unpack.Stdin = tarball
-
-	if _, err := unpack.Output(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			logger.Debugf("Failed to unpack volume tarball: %s", exitErr.Stderr)
-		}
-		return err
-	}
-
-	// Generate index.yaml for the volume.
-	if err = os.WriteFile(filepath.Join(dir, "index.yaml"), []byte(volumeIndexContent(name)), 0644); err != nil {
-		return err
-	}
-
-	newtar := filepath.Join(dir, filepath.Base(tarball.Name()))
-	repack := exec.CommandContext(ctx, "tar",
-		"--create",
-		"--format=posix",
-		"--force-local",
-		"--remove-files",
-		"--file",
-		newtar,
-		"--transform",
-		"s,^,backup/,",
-		"--directory="+dir,
-		"--no-same-owner",
-		"volume/",
-		"index.yaml",
-	)
-
-	if _, err := repack.Output(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			logger.Debugf("Failed to repack volume tarball: %s", exitErr.Stderr)
-			return exitErr
-		}
-		return err
-	}
-
-	f, err := os.Open(newtar)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
 	vol := lxd.StoragePoolVolumeBackupArgs{
-		BackupFile: f,
+		BackupFile: tarball,
 		Name:       name,
 	}
 
-	op, err := conn.CreateStoragePoolVolumeFromBackup(storagePool, vol)
+	op, err := conn.CreateStoragePoolVolumeFromTarball(storagePool, vol)
 	if err != nil {
 		return err
 	}
