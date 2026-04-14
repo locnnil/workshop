@@ -255,6 +255,7 @@ exclude_patterns = [
     "reference/cli/sdkcraft-*.rst",
     "coverage.md",
     "examples/*",
+    ".venv",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
