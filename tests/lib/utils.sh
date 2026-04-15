@@ -148,9 +148,8 @@ function run_sdkcraft() {
     sdkcraft "$@"
 }
 
-# Install sdkcraft from a local snap file
 function install_sdkcraft() {
-    snap install --dangerous --classic /workshop/tests/sdkcraft_*.snap
+    snap install --classic --edge sdkcraft
 }
 
 function resolve_branch() {

@@ -2,8 +2,6 @@ name: Build Dependencies
 on:
   workflow_call:
     secrets:
-      GH_SDKCRAFT:
-        required: true
       SDKCRAFT_STORE_CREDENTIALS:
         required: true
     outputs:
@@ -49,45 +47,6 @@ jobs:
         with:
           name: snap_workshop
           path: ${{ steps.cache-workshop.outputs.cache-hit == 'true' && steps.snapcraft_workshop_cached.outputs.snap || steps.snapcraft_workshop.outputs.snap }}
-
-  build-sdkcraft:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Sdkcraft
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: canonical/sdkcraft
-          show-progress: true
-          token: ${{ secrets.GH_SDKCRAFT }} # zizmor: ignore[secrets-outside-env]
-          path: sdkcraft
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Get Sdkcraft commit hash
-        id: sdkcraft-sha
-        run: echo "sha=$(git -C sdkcraft rev-parse HEAD)" >> $GITHUB_OUTPUT
-      - name: Cache Sdkcraft snap
-        id: cache-sdkcraft
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: sdkcraft/sdkcraft_*.snap
-          key: sdkcraft-snap-${{ steps.sdkcraft-sha.outputs.sha }}
-      - name: Build Sdkcraft
-        if: steps.cache-sdkcraft.outputs.cache-hit != 'true'
-        uses: canonical/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
-        id: snapcraft_sdkcraft
-        with:
-          path: sdkcraft
-      - name: Set snap path from cache
-        if: steps.cache-sdkcraft.outputs.cache-hit == 'true'
-        id: snapcraft_sdkcraft_cached
-        run: |
-          snap_file=$(ls sdkcraft/sdkcraft_*.snap)
-          echo "snap=$snap_file" >> $GITHUB_OUTPUT
-      - name: Upload Sdkcraft
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: snap_sdkcraft
-          path: ${{ steps.cache-sdkcraft.outputs.cache-hit == 'true' && steps.snapcraft_sdkcraft_cached.outputs.snap || steps.snapcraft_sdkcraft.outputs.snap }}
 
   build-spread:
     runs-on: ubuntu-latest

@@ -23,6 +23,7 @@ suites:
       . "$TESTSLIB"/utils.sh
       prepare_environment
       setup_workshop
+      install_sdkcraft
     prepare-each: |
       date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |

@@ -4,26 +4,17 @@ restore: |
   workshop_exec remove || true
   lxc storage volume delete workshop custom/test-sdk-basic-x1 || true
   lxc storage volume delete workshop custom/test-sdk-basic-x2 || true
+  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/stable" && run_sdkcraft clean) || true
+  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/edge" && run_sdkcraft clean) || true
+  rm -rf /home/ubuntu/.local/share/workshop/try/test-sdk-basic
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  sdk_try() {
-    (cd "$1" && sudo -u ubuntu tar cf "$2/test-sdk-basic_all.sdk" *)
-    openssl sha3-384 < "$2/test-sdk-basic_all.sdk" | cut -d' ' -f2 | sudo -u ubuntu tee "$2/test-sdk-basic_all.sdk.sha3-384"
-    sudo -u ubuntu cp "$1/meta/sdk.yaml" "$2/test-sdk-basic_all.sdk.yaml"
-  }
-
-  echo "Copy test-sdk-basic (1) to try area"
-  try_area='/home/ubuntu/.local/share/workshop/try/test-sdk-basic'
-  rm -rf "$try_area"
-  sudo -u ubuntu mkdir -p "$try_area"
-  sdk_try unpacked/1 "$try_area"
-
   echo "Launch workshop with SDKs from try area"
+  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/stable" && run_sdkcraft try)
   workshop_exec launch
   workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
-  try_area_contracted="~${try_area#*ubuntu}"
-  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH "^${try_area_contracted}\$"
+  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH '^~/.local/share/workshop/try/test-sdk-basic$'
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check try and in-project SDKs can share revision numbers"
@@ -40,7 +31,7 @@ execute: |
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check SDKs in try area can be updated"
-  sdk_try unpacked/2 "$try_area"
+  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/edge" && run_sdkcraft try)
   workshop_exec refresh
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
   workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'

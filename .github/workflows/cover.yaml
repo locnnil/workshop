@@ -25,7 +25,6 @@ jobs:
   spread:
     uses: ./.github/workflows/spread.yaml
     secrets:
-      GH_SDKCRAFT: ${{ secrets.GH_SDKCRAFT }}
       STORE_CREDENTIALS: ${{ secrets.STORE_CREDENTIALS }}
       SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_STAGING }}
   unit-tests:
