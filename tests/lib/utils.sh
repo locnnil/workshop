@@ -145,7 +145,7 @@ function sdk_exec() {
 }
 
 function run_sdkcraft() {
-    sudo -u ubuntu -- sdkcraft "$@"
+    sudo XDG_RUNTIME_DIR="/run/user/$(id -u ubuntu)" -u ubuntu -- sdkcraft "$@"
 }
 
 function install_sdkcraft() {
