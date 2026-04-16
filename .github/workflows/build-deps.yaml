@@ -109,10 +109,11 @@ jobs:
             if git diff --quiet "${base}..HEAD" -- "$path"; then
               continue
             fi
-            if git cat-file -t "${base}:./${path}" &> /dev/null; then
-              printf '::error::%s SDK is immutable, create a new SDK instead.\n' "${path%/}"
-              exit 1
-            fi
+            # TODO: enable this after merging https://github.com/canonical/workshop/pull/689
+            # if git cat-file -t "${base}:./${path}" &> /dev/null; then
+            #   printf '::error::%s SDK is immutable, create a new SDK instead.\n' "${path%/}"
+            #   exit 1
+            # fi
           done
           cd ..
 
