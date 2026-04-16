@@ -379,7 +379,9 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 			},
 			ChannelMap: []transport.InfoChannelMap{{
 				Channel: transport.Channel{
-					Name: "latest/stable",
+					Name:  "latest/stable",
+					Track: "latest",
+					Risk:  "stable",
 					Platform: transport.Platform{
 						Name:         "ubuntu",
 						Channel:      "20.04",
@@ -396,7 +398,9 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 				},
 			}, {
 				Channel: transport.Channel{
-					Name: "latest/edge",
+					Name:  "latest/edge",
+					Track: "latest",
+					Risk:  "edge",
 					Platform: transport.Platform{
 						Name:         "ubuntu",
 						Channel:      "20.04",
@@ -495,6 +499,8 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 
 	c.Check(full.Channels, testutil.DeepUnsortedMatches, []sdkstate.SdkRevision{{
 		Channel:      "latest/stable",
+		Track:        "latest",
+		Risk:         "stable",
 		Revision:     "85",
 		BuiltAt:      &d20,
 		UploadedAt:   &stableUploaded,
@@ -505,6 +511,8 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 		DownloadSize: 1234,
 	}, {
 		Channel:      "latest/edge",
+		Track:        "latest",
+		Risk:         "edge",
 		Revision:     "82",
 		BuiltAt:      &d25,
 		UploadedAt:   &edgeUploaded,
@@ -571,7 +579,9 @@ func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
 			},
 			ChannelMap: []transport.InfoChannelMap{{
 				Channel: transport.Channel{
-					Name: "latest/stable",
+					Name:  "latest/stable",
+					Track: "latest",
+					Risk:  "stable",
 					Platform: transport.Platform{
 						Name:         "ubuntu",
 						Channel:      "20.04",
@@ -620,6 +630,8 @@ func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
 
 	c.Check(full.Channels, check.DeepEquals, []sdkstate.SdkRevision{{
 		Channel:      "latest/stable",
+		Track:        "latest",
+		Risk:         "stable",
 		Revision:     "85",
 		BuiltAt:      &d20,
 		UploadedAt:   &stableUploaded,

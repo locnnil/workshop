@@ -175,7 +175,7 @@ func (w *SdkManager) FindSdks(ctx context.Context, query string) ([]SdkSummary, 
 			Description: entry.Metadata.Description,
 			License:     entry.Metadata.License,
 			Publisher:   publisher,
-			Channel:     entry.DefaultRelease.Channel.Name,
+			Channel:     entry.DefaultRelease.Channel.Track + "/" + entry.DefaultRelease.Channel.Risk,
 			Track:       entry.DefaultRelease.Channel.Track,
 			Risk:        entry.DefaultRelease.Channel.Risk,
 			Revision:    sdk.Revision{N: entry.DefaultRelease.Revision}.String(),
@@ -242,7 +242,7 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 		}
 
 		channel := SdkRevision{
-			Channel:      entry.Channel.Name,
+			Channel:      entry.Channel.Track + "/" + entry.Channel.Risk,
 			Track:        entry.Channel.Track,
 			Risk:         entry.Channel.Risk,
 			Revision:     sdk.Revision{N: entry.Revision.Revision}.String(),
