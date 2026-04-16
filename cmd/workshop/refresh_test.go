@@ -162,7 +162,6 @@ func (m *workshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
 func (m *workshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.WaitOnError = true
-	cmd.Restore = true
 
 	n := 0
 	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +180,7 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 			c.Check(r.Method, check.Equals, "POST")
 			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]any{"action": "refresh",
-				"names": []any{"ws"}, "options": map[string]any{"mode": "wait-on-error", "refresh-option": "restore"}})
+				"names": []any{"ws"}, "options": map[string]any{"mode": "wait-on-error", "refresh-option": "update"}})
 			w.WriteHeader(202)
 			fmt.Fprintln(w, `{"type":"async", "change": "42", "status-code": 202}`)
 		case 4:

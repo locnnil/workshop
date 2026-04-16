@@ -431,6 +431,12 @@
     - SK012
     - SK020
 
+"workshop restore":
+  category: "workshop (CLI)"
+  type: command
+  specs:
+    - SK050
+
 "workshop remount":
   category: "workshop (CLI)"
   type: command
