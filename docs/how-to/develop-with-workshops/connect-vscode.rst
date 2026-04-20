@@ -22,13 +22,12 @@ After that, add the :samp:`vscode-remote` SDK to your workshop definition:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 4-5
+   :emphasize-lines: 4
 
    name: dev
    base: ubuntu@24.04
    sdks:
      - name: vscode-remote
-       channel: 24.04/edge
 
 
 Launch the workshop.

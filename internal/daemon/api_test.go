@@ -29,7 +29,6 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/ifacestate"
-	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
 	"github.com/canonical/workshop/internal/testutil"
@@ -44,7 +43,6 @@ type apiSuite struct {
 	b          *fakebackend.FakeWorkshopBackend
 	secBackend *ifacetest.TestSecurityBackend
 	store      *sdk.FakeStore
-	gcsStore   *sdk.FakeGcsStore
 
 	workshopDir string
 	user        *user.User
@@ -82,11 +80,7 @@ func (s *apiSuite) SetUpTest(c *check.C) {
 	}
 
 	s.store = sdk.NewFakeStore()
-	s.gcsStore = &sdk.FakeGcsStore{}
-	retrieveSystemSdk := func(setup sdk.Setup, report *progress.Reporter) (*sdk.Meta, error) {
-		return s.gcsStore.DownloadSdk(context.TODO(), setup, report)
-	}
-	s.restoreRetrieve = system.FakeRetrieveSystemSdk(retrieveSystemSdk)
+	s.restoreRetrieve = system.FakeRetrieveSystemSdk(systemDownload(c))
 
 	s.b, err = fakebackend.New(c.MkDir())
 	c.Check(err, check.IsNil)
@@ -150,7 +144,6 @@ func (s *apiSuite) daemon(c *check.C) *Daemon {
 	c.Assert(err, check.IsNil)
 
 	sdk.ReplaceStore(d.state, s.store)
-	sdk.ReplaceGcsStore(d.state, s.gcsStore)
 
 	c.Assert(d.overlord.StartUp(), check.IsNil)
 	d.addRoutes()

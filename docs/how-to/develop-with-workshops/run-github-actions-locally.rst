@@ -52,13 +52,12 @@ to include the :samp:`github-runner` SDK:
 
 .. code-block:: yaml
    :caption: workshop.yaml
-   :emphasize-lines: 4-5
+   :emphasize-lines: 4
 
    name: ci
    base: ubuntu@24.04
    sdks:
      - name: github-runner
-       channel: latest/stable
 
 
 This installs the official `Runner <https://github.com/actions/runner>`_ client

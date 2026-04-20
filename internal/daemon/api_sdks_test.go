@@ -746,7 +746,9 @@ func (s *apiSuite) TestSdkInfoInvalidStoreMetadata(c *check.C) {
 			Name: "bad",
 			ChannelMap: []transport.InfoChannelMap{{
 				Channel: transport.Channel{
-					Name: "latest/stable",
+					Name:  "latest/stable",
+					Track: "latest",
+					Risk:  "stable",
 					Platform: transport.Platform{
 						Name:         "ubuntu",
 						Channel:      "20.04",

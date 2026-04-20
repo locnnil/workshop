@@ -6,4 +6,3 @@ sdks:
       user-desktop:
         interface: desktop
   - name: test-sdk-desktop
-    channel: latest/stable

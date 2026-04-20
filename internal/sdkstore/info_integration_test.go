@@ -4,7 +4,6 @@ package sdkstore
 
 import (
 	"context"
-	_ "embed"
 	"encoding/json"
 
 	"gopkg.in/check.v1"
@@ -17,7 +16,7 @@ var _ = check.Suite(&infoIntegration{})
 func (f *infoIntegration) TestSdkInfo(c *check.C) {
 	client := NewClient(Config{})
 	var response any
-	err := client.info(context.Background(), &response, "test-sdk-info")
+	err := client.info(context.Background(), &response, "test-sdk-info-1")
 	c.Assert(err, check.IsNil)
 
 	var expected any
@@ -29,7 +28,7 @@ func (f *infoIntegration) TestSdkInfo(c *check.C) {
 func (f *infoIntegration) TestSdkInfoMultiBase(c *check.C) {
 	client := NewClient(Config{})
 	var response any
-	err := client.info(context.Background(), &response, "test-sdk-info-multi-base", WithInfoFields(allInfoFields))
+	err := client.info(context.Background(), &response, "test-sdk-info-multi-base-1", WithInfoFields(allInfoFields))
 	c.Assert(err, check.IsNil)
 
 	var expected any

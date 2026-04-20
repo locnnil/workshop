@@ -1,0 +1,30 @@
+name: test-sdk-tunnel
+version: "1.0"
+summary: test-sdk-tunnel SDK
+description: |
+  test-sdk-tunnel SDK
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+plugs:
+  alias:
+    interface: tunnel
+  conflict:
+    interface: tunnel
+    endpoint: 5432
+  postgres:
+    interface: tunnel
+    endpoint: 5432
+slots:
+  auto-connect-by-name:
+    interface: tunnel
+    endpoint: 9999
+  http:
+    interface: tunnel
+    endpoint: '[::1]:8000'
+  unix-abstract:
+    interface: tunnel
+    endpoint: '@abstract'
+  unused:
+    interface: tunnel

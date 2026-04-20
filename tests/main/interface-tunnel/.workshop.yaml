@@ -23,7 +23,6 @@ sdks:
       unused:
         interface: tunnel
   - name: test-sdk-tunnel
-    channel: latest/stable
 connections:
   - plug: system:test-sdk-http
     slot: test-sdk-tunnel:http

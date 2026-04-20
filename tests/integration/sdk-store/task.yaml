@@ -1,0 +1,10 @@
+summary: Run SDK Store integration tests
+
+execute: |
+  rm -rf cover
+  mkdir cover
+
+  go test -cover "$SPREAD_PATH"/internal/sdkstore -timeout=30m -tags=integration -check.v -check.f '.*Integration' -coverpkg=github.com/canonical/workshop/internal/sdkstore -args -test.gocoverdir="$PWD"/cover
+
+artifacts:
+  - cover

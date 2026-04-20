@@ -250,7 +250,7 @@ func (w *WorkshopManager) RefreshMany(project workshop.Project, current, latest 
 }
 
 func maybeRefresh(installed, candidate sdk.Setup) bool {
-	return installed.Source != candidate.Source || installed.Channel != candidate.Channel || installed.Revision != candidate.Revision
+	return installed.Source != candidate.Source || installed.Revision != candidate.Revision
 }
 
 type refreshPlan struct {

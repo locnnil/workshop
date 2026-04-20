@@ -2,4 +2,3 @@ name: ws-camera
 base: ubuntu@22.04
 sdks:
   - name: test-sdk-camera
-    channel: latest/stable

@@ -35,7 +35,7 @@ in your repository:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
 
 
 Next,
@@ -167,7 +167,7 @@ to change the base image:
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: 24.04/stable
+       channel: 1.26
 
 
 Next, launch the redefined workshop to work on the problem:

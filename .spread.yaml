@@ -6,8 +6,6 @@ environment:
   PATH: $PATH:~/go/bin
   PROJECT_PATH: /workshop
   TESTSLIB: $PROJECT_PATH/tests/lib
-  TESTS_SDKS: $PROJECT_PATH/tests/lib/sdk
-  SDK_STORE_BUCKET_DIR: /data/sdkstore
   IMAGE_SERVER: $(HOST:echo -n $WORKSHOP_IMAGE_SERVER)
 repack: |
   test -f tests/workshop_*.snap || snapcraft pack -o tests/
@@ -24,12 +22,16 @@ suites:
       . "$TESTSLIB"/utils.sh
       prepare_environment
       setup_workshop
+      install_sdkcraft
+    prepare-each: |
+      date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |
       . "$TESTSLIB"/utils.sh
       cleanup_workshop
-    debug: |
+    debug-each: |
       lxc list --project workshop.ubuntu
       sudo -u ubuntu 2>&1 -- workshop list --global
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
     kill-timeout: 30m
   tests/integration/:
     summary: LXD integration tests
@@ -45,21 +47,29 @@ suites:
     prepare: |
       . "$TESTSLIB"/utils.sh
       prepare_environment
-      setup_workshop true  # use real store
+      setup_workshop
       install_sdkcraft
+    prepare-each: |
+      date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |
       . "$TESTSLIB"/utils.sh
-      cleanup_workshop true  # used real store, no need to clean it
+      cleanup_workshop
+    debug-each: |
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
     kill-timeout: 30m
   tests/docs-how-to/:
     summary: Documentation how-to tests
     prepare: |
       . "$TESTSLIB"/utils.sh
       prepare_environment
-      setup_workshop true  # use real store
+      setup_workshop
+    prepare-each: |
+      date --rfc-3339=seconds > /tmp/spread-job-start
     restore: |
       . "$TESTSLIB"/utils.sh
-      cleanup_workshop true  # used real store, no need to clean it
+      cleanup_workshop
+    debug-each: |
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
     kill-timeout: 20m
 exclude:
   - .git

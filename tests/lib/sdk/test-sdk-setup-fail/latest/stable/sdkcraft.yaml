@@ -1,0 +1,8 @@
+name: test-sdk-setup-fail
+version: "1.0"
+summary: test-sdk-setup-fail SDK
+description: |
+  test-sdk-setup-fail SDK
+base: ubuntu@22.04
+platforms:
+  amd64:

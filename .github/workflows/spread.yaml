@@ -2,9 +2,9 @@ name: Workshop end-to-end tests
 on:
   workflow_call:
     secrets:
-      GH_SDKCRAFT:
-        required: true
       STORE_CREDENTIALS:
+        required: true
+      SDKCRAFT_STORE_CREDENTIALS:
         required: true
   workflow_dispatch:
 
@@ -15,7 +15,7 @@ jobs:
   build-deps:
     uses: ./.github/workflows/build-deps.yaml
     secrets:
-      GH_SDKCRAFT: ${{ secrets.GH_SDKCRAFT }}
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS }}
   snap-tests:
     needs: [build-deps]
     strategy:
@@ -56,11 +56,6 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: snap_workshop
-          path: ${{ github.workspace }}/tests/
-      - name: Download Sdkcraft Snap
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: snap_sdkcraft
           path: ${{ github.workspace }}/tests/
       - name: Download spread binary
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

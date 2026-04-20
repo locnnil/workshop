@@ -6,4 +6,3 @@ sdks:
       user-ssh:
         interface: ssh-agent
   - name: test-sdk-ssh-agent
-    channel: latest/stable

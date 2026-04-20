@@ -2,6 +2,7 @@ summary: Check a failed non-transactional launch can be aborted successfully
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  cp workshop.setup-fail.yaml workshop.yaml
   workshop_exec launch --wait-on-error || true
 
   echo "Check the workshop is in Waiting state"
@@ -16,9 +17,9 @@ execute: |
 
   echo "Ensure SDKs are unlinked successfully during abort"
   echo "Update the workshop file to use test-sdk-mount-broken"
-  sed -i 's/test-sdk-setup-fail/test-sdk-mount-broken/g' workshop.yaml
+  cp workshop.mount-broken.yaml workshop.yaml
   ! workshop_exec launch --wait-on-error || false
-  sed -i 's/test-sdk-mount-broken/test-sdk-setup-fail/g' workshop.yaml
+  cp workshop.setup-fail.yaml workshop.yaml
 
   workshop_exec launch --abort
   workshop_exec tasks | tail -2 | MATCH '.*"test-sdk-mount-broken" SDK has bad plugs or slots: one \(unknown attribute for mount interface slot: "host-source"\)'

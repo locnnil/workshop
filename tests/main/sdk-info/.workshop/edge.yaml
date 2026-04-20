@@ -1,5 +1,5 @@
 name: edge
 base: ubuntu@22.04
 sdks:
-  - name: test-sdk-info
-    channel: latest/edge
+  - name: test-sdk-info-1
+    channel: edge

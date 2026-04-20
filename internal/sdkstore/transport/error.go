@@ -15,7 +15,7 @@ type ErrorResponse struct {
 type APIError struct {
 	Code    APIErrorCode  `json:"code"`
 	Message string        `json:"message"`
-	Extra   APIErrorExtra `json:"extra"`
+	Extra   APIErrorExtra `json:"extra,omitzero"`
 }
 
 func (a APIError) Error() string {

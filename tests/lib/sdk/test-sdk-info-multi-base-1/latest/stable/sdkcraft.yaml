@@ -1,0 +1,29 @@
+name: test-sdk-info-multi-base-1
+title: Test SDK info multi-base title
+adopt-info: version
+summary: Test SDK which supports multiple bases and architectures
+description: Test SDK info multi-base description
+license: LGPL-3.0
+contact: [contact@example.com, https://example.com/contact]
+issues: [issues@example.com, https://example.com/issues]
+source-code: https://example.com/source-code
+platforms:
+  ubuntu@20.04:amd64:
+  ubuntu@22.04:amd64:
+  ubuntu@24.04:amd64:
+
+parts:
+  version:
+    plugin: nil
+    override-pull: |
+      craftctl default
+
+      case "$CRAFT_PLATFORM" in
+        'ubuntu@20.04':*)
+          version='0.2.1'
+          ;;
+        *)
+          version='0.2'
+          ;;
+      esac
+      craftctl set version="$version"

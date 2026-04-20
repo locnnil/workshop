@@ -147,9 +147,7 @@ Create a workshop definition file in the project root:
    base: ubuntu@24.04
    sdks:
      - name: claude-code
-       channel: all/edge
      - name: copilot-cli
-       channel: all/edge
 
    actions:
      claude-auto: |

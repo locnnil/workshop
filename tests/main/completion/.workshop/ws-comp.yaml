@@ -2,6 +2,4 @@ name: ws-comp
 base: ubuntu@22.04
 sdks:
   - name: test-sdk-desktop
-    channel: latest/stable
   - name: test-sdk-mount
-    channel: latest/stable

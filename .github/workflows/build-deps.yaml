@@ -2,12 +2,15 @@ name: Build Dependencies
 on:
   workflow_call:
     secrets:
-      GH_SDKCRAFT:
+      SDKCRAFT_STORE_CREDENTIALS:
         required: true
     outputs:
       snap_workshop:
         description: "Workshop snap filename"
         value: ${{ jobs.build-workshop.outputs.snap_workshop }}
+
+permissions:
+  contents: read
 
 jobs:
   build-workshop:
@@ -41,45 +44,6 @@ jobs:
         with:
           name: snap_workshop
           path: ${{ steps.cache-workshop.outputs.cache-hit == 'true' && steps.snapcraft_workshop_cached.outputs.snap || steps.snapcraft_workshop.outputs.snap }}
-
-  build-sdkcraft:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Sdkcraft
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: canonical/sdkcraft
-          show-progress: true
-          token: ${{ secrets.GH_SDKCRAFT }} # zizmor: ignore[secrets-outside-env]
-          path: sdkcraft
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Get Sdkcraft commit hash
-        id: sdkcraft-sha
-        run: echo "sha=$(git -C sdkcraft rev-parse HEAD)" >> $GITHUB_OUTPUT
-      - name: Cache Sdkcraft snap
-        id: cache-sdkcraft
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: sdkcraft/sdkcraft_*.snap
-          key: sdkcraft-snap-${{ steps.sdkcraft-sha.outputs.sha }}
-      - name: Build Sdkcraft
-        if: steps.cache-sdkcraft.outputs.cache-hit != 'true'
-        uses: canonical/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
-        id: snapcraft_sdkcraft
-        with:
-          path: sdkcraft
-      - name: Set snap path from cache
-        if: steps.cache-sdkcraft.outputs.cache-hit == 'true'
-        id: snapcraft_sdkcraft_cached
-        run: |
-          snap_file=$(ls sdkcraft/sdkcraft_*.snap)
-          echo "snap=$snap_file" >> $GITHUB_OUTPUT
-      - name: Upload Sdkcraft
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: snap_sdkcraft
-          path: ${{ steps.cache-sdkcraft.outputs.cache-hit == 'true' && steps.snapcraft_sdkcraft_cached.outputs.snap || steps.snapcraft_sdkcraft.outputs.snap }}
 
   build-spread:
     runs-on: ubuntu-latest
@@ -120,3 +84,83 @@ jobs:
         with:
           name: spread_binary
           path: spread/spread
+
+  detect-sdk-changes:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      sdks: ${{ steps.detect.outputs.sdks }}
+    steps:
+      - name: Checkout Workshop
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          filter: 'tree:0'
+          persist-credentials: true
+
+      - name: Detect staged SDKs
+        id: detect
+        run: |
+          git fetch --filter=tree:0 origin "+${GITHUB_BASE_REF}:${GITHUB_BASE_REF}"
+          base=$(git merge-base "$GITHUB_BASE_REF" HEAD)
+
+          cd tests/lib/sdk
+          for path in */*/*/; do
+            if git diff --quiet "${base}..HEAD" -- "$path"; then
+              continue
+            fi
+            # TODO: enable this after merging https://github.com/canonical/workshop/pull/689
+            # if git cat-file -t "${base}:./${path}" &> /dev/null; then
+            #   printf '::error::%s SDK is immutable, create a new SDK instead.\n' "${path%/}"
+            #   exit 1
+            # fi
+          done
+          cd ..
+
+          sdks=()
+          if [ -d staging ]; then
+            cd staging
+            for path in */*/*/; do
+              if git cat-file -t "${base}:../sdk/${path}" &> /dev/null; then
+                printf '::error::%s SDK is immutable, create a new SDK instead.\n' "${path%/}"
+                exit 1
+              fi
+              sdks+=("${path%/}")
+            done
+          fi
+
+          {
+            printf 'sdks='
+            for sdk in "${sdks[@]}"; do
+              IFS='/' read -r -a parts <<<"$sdk"
+
+              platforms='["amd64"]'
+              if [ -f "${sdk}/platforms.json" ]; then
+                platforms=$(< "${sdk}/platforms.json")
+              fi
+
+              jq --null-input \
+                --arg path "tests/lib/staging/$sdk" \
+                --arg track "${parts[1]}" \
+                --arg risk "${parts[2]}" \
+                --argjson platforms "$platforms" \
+                '$ARGS.named'
+            done | jq --compact-output --slurp .
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  build-test-sdk:
+    needs: detect-sdk-changes
+    if: needs.detect-sdk-changes.outputs.sdks != '[]'
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.detect-sdk-changes.outputs.sdks) }}
+      fail-fast: false
+    uses: canonical/sdkcraft-actions/.github/workflows/upload.yml@92f5df60c0878aea4844a7380fdfd24063f89ac9
+    with:
+      platforms: ${{ toJSON(matrix.platforms) }}
+      subdirectory: ${{ matrix.path }}
+      track: ${{ matrix.track }}
+      risk: ${{ matrix.risk }}
+    secrets:
+      SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS }}

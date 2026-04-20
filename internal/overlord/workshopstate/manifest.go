@@ -11,6 +11,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
@@ -18,6 +20,7 @@ import (
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
+	"github.com/canonical/workshop/internal/sdkstore/transport"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -127,7 +130,7 @@ func (a *artifactFinder) launchOrRefreshManifests(ctx context.Context, names []s
 		action = "refresh"
 	}
 
-	sto := sdk.GcsStoreService(a.state)
+	sto := sdk.StoreService(a.state)
 
 	rev := revert.New()
 	defer rev.Fail()
@@ -233,21 +236,189 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 	return &Manifest{File: wp.File, Image: wp.Image, Sdks: installed}, nil
 }
 
-func (a *artifactFinder) findStoreSdks(sto sdk.GcsStore, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {
-	acts := make([]sdk.SdkAction, 0, len(file.Sdks))
-	for _, sd := range file.Sdks {
-		if sd.Source != sdk.StoreSource {
-			continue
-		}
-		act := sdk.SdkAction{ProjectId: a.project.ProjectId, Workshop: file.Name, Name: sd.Name, Base: file.Base, Channel: sd.Channel, Action: sdk.Install}
-		acts = append(acts, act)
-	}
-
-	sdks, err := sto.SdkAction(ctx, acts)
+func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {
+	platforms, err := makePlatforms(file.Base)
 	if err != nil {
 		return nil, err
 	}
-	return validateSdkMeta(a.project.ProjectId, file, sdks)
+
+	req, err := makeResolveRequest(platforms[0], file.Sdks)
+	if err != nil {
+		return nil, err
+	}
+
+	// We have to request each SDK 4 times because the Store requires SDK
+	// platforms to exactly match the request.
+	pkgs := make([]transport.ResolvePackage, 0, len(platforms)*len(req.Packages))
+	for i, platform := range platforms {
+		for _, pkg := range req.Packages {
+			pkg.InstanceKey += fmt.Sprint("_", i)
+			pkg.Platform = platform
+			pkgs = append(pkgs, pkg)
+		}
+	}
+	pkgs, req.Packages = req.Packages, pkgs
+
+	resp, err := sto.Resolve(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	sdks := make([]sdk.Setup, 0, len(req.Packages))
+	errs := make([]error, 0, len(req.Packages))
+	for _, pkg := range pkgs {
+		var setup sdk.Setup
+		var errActual, errNotFound error
+		// Pick the most recent SDK among the compatible variants. Some
+		// platforms are likely to return revision-not-found errors. We ignore
+		// all errors if at least one SDK was found; if not we return the first
+		// unexpected error. If all errors are revision-not-found, we return
+		// the first one.
+		for i := range platforms {
+			key := fmt.Sprint(pkg.InstanceKey, "_", i)
+			idx := slices.IndexFunc(resp.PackageResults, func(p transport.ResolvePackageResponse) bool {
+				return p.InstanceKey == key
+			})
+			if idx < 0 {
+				errActual = cmp.Or(errActual, fmt.Errorf("%q SDK: not found in refresh response", pkg.Name))
+				continue
+			}
+
+			if err := storeError(resp.PackageResults[idx]); err != nil {
+				if resp.PackageResults[idx].Error != nil && resp.PackageResults[idx].Error.Code == "revision-not-found" {
+					errNotFound = cmp.Or(errNotFound, err)
+				} else {
+					errActual = cmp.Or(errActual, err)
+				}
+				continue
+			}
+
+			s, err := resolvedSetup(resp.PackageResults[idx])
+			if err != nil {
+				errActual = cmp.Or(errActual, err)
+				continue
+			}
+
+			if s.Revision.N > setup.Revision.N {
+				setup = s
+			}
+		}
+
+		if !setup.Revision.Unset() {
+			sdks = append(sdks, setup)
+		} else if errActual != nil {
+			errs = append(errs, errActual)
+		} else if errNotFound != nil {
+			errs = append(errs, errNotFound)
+		}
+	}
+
+	if len(errs) == 1 {
+		return nil, errs[0]
+	}
+	if len(errs) > 1 {
+		for i := range errs {
+			errs[i] = fmt.Errorf("- %w", errs[i])
+		}
+		return nil, fmt.Errorf("multiple SDK Store errors:\n%w", errors.Join(errs...))
+	}
+
+	return sdks, nil
+}
+
+func makePlatforms(base string) ([]transport.Platform, error) {
+	parts := strings.FieldsFunc(base, func(r rune) bool { return r == '@' })
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid base %q (expected <NAME>@<VERSION>)", base)
+	}
+
+	return []transport.Platform{{
+		Name:         parts[0],
+		Channel:      parts[1],
+		Architecture: arch.DpkgArchitecture(),
+	}, {
+		Name:         "all",
+		Channel:      "all",
+		Architecture: arch.DpkgArchitecture(),
+	}, {
+		Name:         parts[0],
+		Channel:      parts[1],
+		Architecture: "all",
+	}, {
+		Name:         "all",
+		Channel:      "all",
+		Architecture: "all",
+	}}, nil
+}
+
+func makeResolveRequest(platform transport.Platform, sdks []workshop.SdkRecord) (transport.ResolveRequest, error) {
+	req := transport.ResolveRequest{
+		Packages: make([]transport.ResolvePackage, 0, len(sdks)),
+	}
+	for _, sd := range sdks {
+		if sd.Source != sdk.StoreSource {
+			continue
+		}
+
+		pkg := transport.ResolvePackage{
+			Namespace: "sdk",
+			Name:      sd.Name,
+			Channel:   sd.Channel,
+			Platform:  platform,
+		}
+		if pkg.Channel == "" {
+			pkg.Channel = "stable"
+		}
+
+		for {
+			uuid, err := uuid.NewRandom()
+			if err != nil {
+				return transport.ResolveRequest{}, err
+			}
+			pkg.InstanceKey = uuid.String()
+
+			hasKey := func(p transport.ResolvePackage) bool {
+				return pkg.InstanceKey == p.InstanceKey
+			}
+			if !slices.ContainsFunc(req.Packages, hasKey) {
+				break
+			}
+		}
+
+		req.Packages = append(req.Packages, pkg)
+	}
+	return req, nil
+}
+
+func storeError(resp transport.ResolvePackageResponse) error {
+	if resp.Status != "error" && resp.Error == nil {
+		return nil
+	}
+
+	message := "unknown error"
+	if resp.Error != nil {
+		message = resp.Error.Message
+	}
+
+	if resp.Name == "" {
+		return fmt.Errorf("unknown SDK: %s", message)
+	}
+	return fmt.Errorf("%q SDK: %s", resp.Name, message)
+}
+
+func resolvedSetup(resp transport.ResolvePackageResponse) (sdk.Setup, error) {
+	channel, err := sdk.ParseChannel(resp.Result.Channel.EffectiveChannel)
+	if err != nil {
+		return sdk.Setup{}, err
+	}
+
+	return sdk.Setup{
+		Name:      resp.Name,
+		PackageID: resp.ID,
+		Channel:   channel.Full().Name,
+		Revision:  sdk.Revision{N: resp.Result.Revision.Revision},
+		Sha3_384:  resp.Result.Revision.Download.Sha3_384,
+	}, nil
 }
 
 func (a *artifactFinder) findLocalSdks(ctx context.Context, current *Manifest, latest *workshop.File) ([]sdk.Setup, error) {

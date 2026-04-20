@@ -1,0 +1,17 @@
+{
+  "package-results": [
+    {
+      "instance-key": "random789",
+      "status": "error",
+      "namespace": "sdk",
+      "name": "not-found",
+      "id": null,
+      "error": {
+        "code": "package-not-found",
+        "message": "Package not found"
+      },
+      "result": null
+    }
+  ],
+  "craft-results": []
+}

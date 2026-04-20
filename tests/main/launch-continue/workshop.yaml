@@ -2,4 +2,3 @@ name: ws-launch-cont
 base: ubuntu@22.04
 sdks:
   - name: test-sdk-setup-fail
-    channel: latest/stable

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/uuid"
 	"gopkg.in/check.v1"
 	"gopkg.in/yaml.v3"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
+	"github.com/canonical/workshop/internal/sdkstore/transport"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
@@ -29,6 +31,7 @@ import (
 type manifestSuite struct {
 	state   *state.State
 	backend *fakebackend.FakeWorkshopBackend
+	store   *sdk.FakeStore
 	runner  *state.TaskRunner
 	manager *workshopstate.WorkshopManager
 	ctx     context.Context
@@ -68,9 +71,9 @@ func (s *manifestSuite) SetUpTest(c *check.C) {
 	s.project = *project
 	s.ctx = context.WithValue(ctx, workshop.ContextProjectId, s.project.ProjectId)
 
-	store := sdk.NewFakeGcsStore()
-	store.SetActionCallback(s.storeAction)
-	sdk.ReplaceGcsStore(s.state, store)
+	s.store = sdk.NewFakeStore()
+	s.store.SetResolveCallback(sdk.FakeResolve(storeSdks))
+	sdk.ReplaceStore(s.state, s.store)
 }
 
 func (s *manifestSuite) TearDownTest(c *check.C) {
@@ -124,19 +127,6 @@ var storeSdks = map[string]sdk.Meta{
 		},
 		SdkYAML: "name: node\n",
 	},
-}
-
-func (s *manifestSuite) storeAction(ctx context.Context, actions []sdk.SdkAction) ([]sdk.Meta, error) {
-	sdks := make([]sdk.Meta, 0, len(actions))
-	for _, act := range actions {
-		sk, ok := storeSdks[act.Name]
-		if !ok {
-			return nil, fmt.Errorf("%q SDK not found in Store", act.Name)
-		}
-		sk.Channel = act.Channel
-		sdks = append(sdks, sk)
-	}
-	return sdks, nil
 }
 
 func mockSdk(metadir, hooksdir string, meta string) error {
@@ -459,18 +449,93 @@ func (s *manifestSuite) TestLaunchMissingStoreSdk(c *check.C) {
 	s.createWFile(c, "test-1", "ubuntu@20.04", sdks)
 
 	_, err := s.manager.LaunchManifests(s.ctx, s.project, []string{"test-1"})
-	c.Assert(err, check.ErrorMatches, `cannot launch "test-1": "nonexistent" SDK not found in Store`)
+	c.Assert(err, check.ErrorMatches, `cannot launch "test-1": "nonexistent" SDK: Package not found`)
 }
 
-func (s *manifestSuite) TestLaunchValidatesStoreSdks(c *check.C) {
+func (s *manifestSuite) TestLaunchMissingStoreSdks(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	sdks := []workshop.SdkRecord{{Name: "noble", Channel: "latest/stable"}}
+	sdks := []workshop.SdkRecord{
+		{Name: "nonexistent1", Channel: "latest/edge"},
+		{Name: "nonexistent2", Channel: "latest/beta"},
+	}
 	s.createWFile(c, "test-1", "ubuntu@20.04", sdks)
 
 	_, err := s.manager.LaunchManifests(s.ctx, s.project, []string{"test-1"})
-	c.Assert(err, check.ErrorMatches, `cannot launch "test-1": "noble" SDK has "ubuntu@24.04" base; required: "ubuntu@20.04"`)
+	c.Assert(err, check.ErrorMatches, `cannot launch "test-1": multiple SDK Store errors:
+- "nonexistent1" SDK: Package not found
+- "nonexistent2" SDK: Package not found`)
+}
+
+func (s *manifestSuite) TestLaunchValidRequest(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	architecture := arch.ArchitectureType(arch.DpkgArchitecture())
+	arch.SetArchitecture("mock64")
+	defer arch.SetArchitecture(architecture)
+
+	sdks := []workshop.SdkRecord{
+		{Name: "test"},
+		{Name: "node", Channel: "latest/edge"},
+	}
+	s.createWFile(c, "test-1", "ubuntu@20.04", sdks)
+
+	manifests, err := s.manager.LaunchManifests(s.ctx, s.project, []string{"test-1"})
+	c.Assert(err, check.IsNil)
+
+	c.Assert(manifests, check.HasLen, 1)
+
+	c.Check(manifests[0].File, check.DeepEquals, &workshop.File{
+		Name: "test-1",
+		Base: "ubuntu@20.04",
+		Sdks: sdks,
+	})
+	c.Check(manifests[0].Image, check.Equals, workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
+
+	systemSdk, err := system.SystemSdkMeta()
+	c.Assert(err, check.IsNil)
+	testSdk := storeSdks["test"]
+	testSdk.Channel = "latest/stable"
+	nodeSdk := storeSdks["node"]
+	nodeSdk.Channel = "latest/edge"
+	c.Check(manifests[0].Sdks, check.DeepEquals, []sdk.Setup{systemSdk.Setup, testSdk.Setup, nodeSdk.Setup})
+
+	c.Assert(s.store.ResolveCalls, check.HasLen, 1)
+	c.Check(s.store.ResolveCalls[0].Crafts, check.HasLen, 0)
+
+	c.Assert(s.store.ResolveCalls[0].Packages, check.HasLen, 8)
+	packages := []transport.ResolvePackage{{
+		InstanceKey: s.store.ResolveCalls[0].Packages[0].InstanceKey,
+		Namespace:   "sdk",
+		Name:        "test",
+		Channel:     "stable",
+		Platform: transport.Platform{
+			Name:         "ubuntu",
+			Channel:      "20.04",
+			Architecture: "mock64",
+		},
+	}, {
+		InstanceKey: s.store.ResolveCalls[0].Packages[1].InstanceKey,
+		Namespace:   "sdk",
+		Name:        "node",
+		Channel:     "latest/edge",
+		Platform: transport.Platform{
+			Name:         "ubuntu",
+			Channel:      "20.04",
+			Architecture: "mock64",
+		},
+	}}
+	key, found := strings.CutSuffix(packages[0].InstanceKey, "_0")
+	c.Assert(found, check.Equals, true)
+	_, err = uuid.Parse(key)
+	c.Assert(err, check.IsNil)
+	key, found = strings.CutSuffix(packages[1].InstanceKey, "_0")
+	c.Assert(found, check.Equals, true)
+	_, err = uuid.Parse(key)
+	c.Assert(err, check.IsNil)
+	c.Check(s.store.ResolveCalls[0].Packages[:2], check.DeepEquals, packages)
 }
 
 func (s *manifestSuite) TestLaunchMissingTrySdkDir(c *check.C) {

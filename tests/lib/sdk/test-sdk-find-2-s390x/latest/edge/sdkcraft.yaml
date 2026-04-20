@@ -1,0 +1,14 @@
+name: test-sdk-find-2-s390x
+title: Test SDK find 2 s390x title
+version: "0.2+s390x"
+summary: Test SDK find 2 s390x summary
+description: Test SDK find 2 s390x description
+license: AGPL-3.0
+contact: [contact@example.com, https://example.com/contact]
+issues: [issues@example.com, https://example.com/issues]
+source-code: https://example.com/source-code
+build-base: ubuntu@24.04
+platforms:
+  s390x:
+    build-on: amd64
+    build-for: s390x

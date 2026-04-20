@@ -29,9 +29,3 @@ actions:
     /opt/snapd-testing-tools/utils/spread-shellcheck tests/integration
   cover: |
     go test -covermode=count -coverpkg=./... -coverprofile=coverage.out ./...
-  fake-store: |
-    STORE_DIR=/tmp/sdkstore
-    source tests/lib/utils.sh
-    rm -rf "$STORE_DIR"
-    publish_test_sdks ./tests/lib/sdk "$STORE_DIR"
-    fake-gcs-server -data /tmp -backend memory -scheme http -port 8080 -host 127.0.0.1 -public-host localhost:8080

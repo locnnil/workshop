@@ -6,4 +6,3 @@ sdks:
       user-camera:
         interface: camera
   - name: test-sdk-camera
-    channel: latest/stable

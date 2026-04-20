@@ -4,21 +4,21 @@ restore: |
   workshop_exec remove || true
   lxc storage volume delete workshop custom/test-sdk-basic-x1 || true
   lxc storage volume delete workshop custom/test-sdk-basic-x2 || true
+  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/stable" && run_sdkcraft clean) || true
+  (cd "$TESTSLIB/sdk/test-sdk-basic/latest/edge" && run_sdkcraft clean) || true
+  rm -rf /home/ubuntu/.local/share/workshop/try/test-sdk-basic
 execute: |
   . "$TESTSLIB"/utils.sh
 
-  echo "Launch workshop with SDKs from try area"
-  store_area="$SDK_STORE_BUCKET_DIR/test-sdk-basic"
-  try_area='/home/ubuntu/.local/share/workshop/try/test-sdk-basic'
-  sudo -u ubuntu mkdir -p "$try_area"
-  sudo -u ubuntu cp "$store_area/latest/stable/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
-  echo 50aae25a070e742e9ea72a4bd3ed419f5a0a34391e294c4b619ed5659b041b7bfc872c4070811e4fba4084bcf15d8fe8 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
-  sudo -u ubuntu cp "$store_area/latest/stable/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
+  mkdir work
+  chown ubuntu:ubuntu work
+  sudo -u ubuntu -- cp -r "$TESTSLIB/sdk/test-sdk-basic/latest"/{stable,edge} work/
 
+  echo "Launch workshop with SDKs from try area"
+  (cd work/stable && run_sdkcraft try)
   workshop_exec launch
   workshop_exec exec -- findmnt /var/lib/workshop/sdk/test-sdk-basic | MATCH 'workshop/custom/default_test-sdk-basic-x1'
-  try_area_contracted="~${try_area#*ubuntu}"
-  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH "^${try_area_contracted}\$"
+  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH '^~/.local/share/workshop/try/test-sdk-basic$'
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check try and in-project SDKs can share revision numbers"
@@ -35,10 +35,7 @@ execute: |
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x1\)$'
 
   echo "Check SDKs in try area can be updated"
-  sudo -u ubuntu cp "$store_area/latest/edge/test-sdk-basic.sdk" "$try_area/test-sdk-basic_all.sdk"
-  echo fccdbd97fa7d51053e0e6a9db8e3fc81bbce19aaa4d578072b9bb53527b45a80f30781c97c9fb830670b9141fdf8df19 | sudo -u ubuntu tee "$try_area/test-sdk-basic_all.sdk.sha3-384"
-  sudo -u ubuntu cp "$store_area/latest/edge/sdk.yaml" "$try_area/test-sdk-basic_all.sdk.yaml"
-
+  (cd work/edge && run_sdkcraft try)
   workshop_exec refresh
   workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '\(x2\)$'
   workshop_exec exec -- cat /var/lib/workshop/sdk/test-sdk-basic/sdk/hooks/setup-base | MATCH 'setup-base v2'

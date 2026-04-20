@@ -28,7 +28,6 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/gcsstore"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/cmdstate"
@@ -132,9 +131,6 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 	}
 	sto := sdkstore.NewClient(storeConfig)
 	sdk.ReplaceStore(s, sto)
-
-	gcs := gcsstore.New()
-	sdk.ReplaceGcsStore(s, gcs)
 
 	if workshopBackendOverride != nil {
 		workshop.ReplaceBackend(s, workshopBackendOverride)

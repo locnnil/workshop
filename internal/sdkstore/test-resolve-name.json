@@ -1,0 +1,44 @@
+{
+  "package-results": [
+    {
+      "instance-key": "random123",
+      "status": "ok",
+      "namespace": "sdk",
+      "name": "test-sdk-info-multi-base-1",
+      "id": "x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG",
+      "result": {
+        "channel": {
+          "name": "edge",
+          "released-at": "2026-04-15T03:46:16.565275Z",
+          "track": "",
+          "risk": "edge",
+          "branch": "",
+          "effective-channel": "edge",
+          "platform": {
+            "name": "ubuntu",
+            "channel": "22.04",
+            "architecture": "riscv64"
+          }
+        },
+        "revision": {
+          "created-at": "2026-04-15T03:46:15.158932Z",
+          "platforms": [
+            {
+              "name": "ubuntu",
+              "channel": "22.04",
+              "architecture": "riscv64"
+            }
+          ],
+          "download": {
+            "url": "https://api.pkg.store/api/v1/sdks/download/x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG_17.sdk",
+            "size": 460,
+            "sha3-384": "8a002dbaa099217fd304cfc04c828afd9b35e079cb27961c3537ec83e422ee0e9ddc0df43d9a98e8a59f55db32c5ea4f"
+          },
+          "revision": 17,
+          "version": "0.3"
+        }
+      }
+    }
+  ],
+  "craft-results": []
+}

@@ -30,9 +30,7 @@ where the SDKs store their models
       base: ubuntu@22.04
       sdks:
         - name: torchaudio
-          channel: 22.04/stable
         - name: torchvision
-          channel: 22.04/stable
 
 
    Launching this workshop would cause a conflict
@@ -47,15 +45,13 @@ where the SDKs store their models
 
    .. code-block:: yaml
       :caption: .workshop/digits.yaml
-      :emphasize-lines: 10
+      :emphasize-lines: 8
 
       name: digits
       base: ubuntu@22.04
       sdks:
         - name: torchaudio
-          channel: 22.04/stable
         - name: torchvision
-          channel: 22.04/stable
           plugs:
             hub:
               bind: torchaudio:hub

@@ -100,7 +100,7 @@ A simple definition might look like this:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
 
 
 .. @artefact SDK
@@ -215,29 +215,26 @@ eventually, all interface connections are
 in a single task *after* all the SDK layers have been created,
 because all components must be in place before the wiring can be done.
 
-This example adds a slot, a plug, and two connections to its SDKs:
+This example adds a slot, a plug, and a connection to its SDKs:
 
 .. code-block:: yaml
    :caption: .workshop/dev.yaml
-   :emphasize-lines: 6-9, 12-14
+   :emphasize-lines: 5-8, 10-13, 15-17
 
    base: ubuntu@22.04
    name: dev
    sdks:
      - name: tensorflow
-       channel: 22.04/stable
        plugs:
          cuda:
            interface: mount
            workshop-target: /usr/local/cuda/lib64
      - name: imagenet
-       channel: 22.04/stable
        slots:
          images:
            interface: mount
            workshop-source: $SDK/images
      - name: cuda
-       channel: 22.04/stable
    connections:
      - plug: tensorflow:cuda
        slot: cuda:libs
@@ -294,7 +291,7 @@ intended as utility helpers for a development environment:
    base: ubuntu@24.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
    actions:
      lint: |
        golangci-lint run  --out-format=colored-line-number -c .golangci.yaml

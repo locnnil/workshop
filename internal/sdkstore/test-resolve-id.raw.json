@@ -1,0 +1,44 @@
+{
+  "package-results": [
+    {
+      "instance-key": "random456",
+      "status": "ok",
+      "namespace": "sdk",
+      "name": "test-sdk-info-multi-base-1",
+      "id": "x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG",
+      "result": {
+        "channel": {
+          "name": "stable",
+          "released-at": "2026-04-15T04:03:38.694727",
+          "track": null,
+          "risk": "stable",
+          "branch": null,
+          "effective-channel": "stable",
+          "platform": {
+            "name": "ubuntu",
+            "channel": "20.04",
+            "architecture": "amd64"
+          }
+        },
+        "revision": {
+          "created-at": "2026-04-15T04:03:37.224647",
+          "platforms": [
+            {
+              "name": "ubuntu",
+              "channel": "20.04",
+              "architecture": "amd64"
+            }
+          ],
+          "download": {
+            "url": "https://api.pkg.store/api/v1/sdks/download/x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG_19.sdk",
+            "size": 456,
+            "sha3-384": "4099fb92c71c5075364fdba4e451b545a8cb1ee0946bacaddef5f0682f2070385de9cf8898571eb91b14c99d0f07ea98"
+          },
+          "revision": 19,
+          "version": "0.2.1"
+        }
+      }
+    }
+  ],
+  "craft-results": []
+}

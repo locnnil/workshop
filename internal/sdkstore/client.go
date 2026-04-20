@@ -17,7 +17,7 @@ const (
 	// DefaultServerURL is the default location of the global SDK Store API.
 	// An alternate location can be configured by changing the URL
 	// field in the Config struct.
-	DefaultServerURL = "https://api.staging.pkg.store"
+	DefaultServerURL = "https://api.pkg.store"
 
 	// RefreshTimeout is the timout callers should use for Refresh calls.
 	RefreshTimeout = 10 * time.Second
@@ -57,10 +57,22 @@ func basePath(base *url.URL) path.Path {
 	return path.MakePath(base).JoinPath(serverVersion, serverEntity)
 }
 
+// downloadPath returns the base configuration path for downloading SDKs.
+func downloadPath(base *url.URL) path.Path {
+	return path.MakePath(base).JoinPath("api", "v1", serverEntity, "download")
+}
+
+// resolvePath returns the configuration path for speaking to the resolve API.
+func resolvePath(base *url.URL) path.Path {
+	return path.MakePath(base).JoinPath(serverVersion, "revisions", "resolve")
+}
+
 // Client represents the client side of an SDK store.
 type Client struct {
+	*downloadClient
 	*findClient
 	*infoClient
+	*resolveClient
 }
 
 // NewClient creates a new SDK Store client from the supplied configuration.
@@ -76,14 +88,18 @@ func NewClient(config Config) *Client {
 	}
 
 	base := basePath(baseURL)
+	downloadPath := downloadPath(baseURL)
 	findPath := base.JoinPath("find")
 	infoPath := base.JoinPath("info")
+	resolvePath := resolvePath(baseURL)
 
 	apiRequester := newAPIRequester(httpClient)
 	restClient := newHTTPRESTClient(apiRequester)
 
 	return &Client{
-		findClient: newFindClient(findPath, restClient),
-		infoClient: newInfoClient(infoPath, restClient),
+		downloadClient: newDownloadClient(downloadPath, httpClient),
+		findClient:     newFindClient(findPath, restClient),
+		infoClient:     newInfoClient(infoPath, restClient),
+		resolveClient:  newResolveClient(resolvePath, restClient),
 	}
 }

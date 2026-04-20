@@ -61,11 +61,10 @@ base: ubuntu@20.04
 sdks:
   - name: system
   - name: huggingface
-    channel: latest/stable
   - name: cuda
     channel: latest/edge
   - name: zookeeper
-    channel: latest/candidate
+    channel: candidate
   - name: automotive
     channel: latest/beta
   - name: try-rocm
@@ -83,9 +82,9 @@ actions:
 	c.Assert(file.Name, check.Equals, "xbert-gpu")
 	c.Assert(file.Base, check.Equals, "ubuntu@20.04")
 	c.Assert(file.Sdks[0], check.DeepEquals, workshop.SdkRecord{Name: "system", Source: sdk.SystemSource})
-	c.Assert(file.Sdks[1], check.DeepEquals, workshop.SdkRecord{Name: "huggingface", Channel: "latest/stable"})
+	c.Assert(file.Sdks[1], check.DeepEquals, workshop.SdkRecord{Name: "huggingface"})
 	c.Assert(file.Sdks[2], check.DeepEquals, workshop.SdkRecord{Name: "cuda", Channel: "latest/edge"})
-	c.Assert(file.Sdks[3], check.DeepEquals, workshop.SdkRecord{Name: "zookeeper", Channel: "latest/candidate"})
+	c.Assert(file.Sdks[3], check.DeepEquals, workshop.SdkRecord{Name: "zookeeper", Channel: "candidate"})
 	c.Assert(file.Sdks[4], check.DeepEquals, workshop.SdkRecord{Name: "automotive", Channel: "latest/beta"})
 	c.Assert(file.Sdks[5], check.DeepEquals, workshop.SdkRecord{Name: "rocm", Source: sdk.TrySource})
 	c.Assert(file.Sdks[6], check.DeepEquals, workshop.SdkRecord{Name: "linter", Source: sdk.ProjectSource})
@@ -315,7 +314,7 @@ sdks:
 	f.createWFile(c, "xbert-gpu", yaml)
 	file, err := f.project.Workshop("xbert-gpu")
 	c.Assert(file, check.IsNil)
-	c.Assert(err, check.ErrorMatches, `unsupported channel "latest/foo" for "cuda" SDK`)
+	c.Assert(err, check.ErrorMatches, `"cuda" SDK: invalid risk "foo" in channel "latest/foo"`)
 }
 
 func (f *workshopFile) TestShortcuts(c *check.C) {

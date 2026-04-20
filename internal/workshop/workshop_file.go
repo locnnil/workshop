@@ -22,7 +22,6 @@ var (
 	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
 
 	workshopName = regexp.MustCompile(`^[a-z](?:-?[a-z0-9])*$`)
-	channel      = regexp.MustCompile(`^(?:[a-z0-9](?:[.-]?[a-z0-9])*/(?:stable|candidate|beta|edge)|)$`)
 	actionName   = workshopName
 
 	Directory = ".workshop"
@@ -295,8 +294,10 @@ func validateSdks(sdks []SdkRecord) error {
 		}
 		seen[s.Name] = true
 
-		if !channel.MatchString(s.Channel) {
-			return fmt.Errorf("unsupported channel %q for %q SDK", s.Channel, s.Name)
+		if s.Channel != "" {
+			if _, err := sdk.ParseChannel(s.Channel); err != nil {
+				return fmt.Errorf("%q SDK: %w", s.Name, err)
+			}
 		}
 	}
 	return nil

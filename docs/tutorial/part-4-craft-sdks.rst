@@ -40,7 +40,7 @@ using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
 
 
 To get the newest features, install from the edge channel:
-:command:`sudo snap install --classic  --channel=latest/edge sdkcraft`.
+:command:`sudo snap install --classic --edge sdkcraft`.
 
 Prerequisites
 ~~~~~~~~~~~~~

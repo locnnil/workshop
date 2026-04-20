@@ -1,7 +1,7 @@
 summary: Check check-health hook and set-health reporting
 execute: |
   . "$TESTSLIB"/utils.sh
-  
+
   workshop_exec launch ws-ok
 
   echo "Check health reported okay"

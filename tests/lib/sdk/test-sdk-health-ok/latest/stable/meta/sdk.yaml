@@ -1,9 +1,0 @@
-name: test-sdk-health-ok
-title: test-sdk-health-ok
-base: ubuntu@22.04
-
-summary: test-sdk-health-ok SDK
-description: |
-  test-sdk-health-ok SDK
-
-sdkcraft-started-at: '2025-04-03T02:01:00.123456+00:00'

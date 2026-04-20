@@ -5,8 +5,6 @@ prepare: |
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove
-  # We need to restart the store after a spread REBOOT for the next task
-  start_sdk_store
 execute: |
   . "$TESTSLIB"/utils.sh
 

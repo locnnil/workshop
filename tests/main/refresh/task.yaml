@@ -25,7 +25,7 @@ execute: |
   workshop_exec exec -- sudo test -f /var/cache/apt/archives/sentinel
 
   echo "Check workshop refresh --no-wait"
-  echo -e "sdks:\n  - name: test-sdk-health-waiting\n    channel: latest/stable" >> workshop.yaml
+  echo -e "sdks:\n  - name: test-sdk-health-waiting" >> workshop.yaml
   workshop_exec refresh --no-wait
 
   # The refresh process here takes about 10s. 

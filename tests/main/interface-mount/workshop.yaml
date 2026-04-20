@@ -2,7 +2,6 @@ name: ws-mount
 base: ubuntu@22.04
 sdks:
   - name: test-sdk-mount
-    channel: latest/stable
     plugs:
       jobs:
         interface: mount

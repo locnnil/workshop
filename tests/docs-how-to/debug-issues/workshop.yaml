@@ -2,4 +2,4 @@ name: dev-volatile
 base: ubuntu@22.04
 sdks:
   - name: go
-    channel: all/edge
+    channel: edge

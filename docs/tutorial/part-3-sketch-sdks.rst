@@ -48,9 +48,8 @@ when we discussed :ref:`tut_work_with_interfaces`:
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 24.04/edge
+       channel: vulkan/stable
      - name: jupyter
-       channel: 24.04/edge
      - name: system
        plugs:
          jupyter:

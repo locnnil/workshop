@@ -31,7 +31,7 @@ Things change *after* you run :command:`workshop launch`:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 22.04/stable
+       channel: 1.26
 
 .. @artefact workshop --project
 .. @artefact workshop launch

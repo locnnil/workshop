@@ -6,4 +6,3 @@ sdks:
       user-gpu:
         interface: gpu
   - name: test-sdk-gpu
-    channel: latest/stable

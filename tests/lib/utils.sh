@@ -83,15 +83,9 @@ EOF
 }
 
 function setup_workshop() {
-    local use_real_store="${1:-false}"
-
     snap install --dangerous --classic /workshop/tests/*.snap
 
-    if [ "$use_real_store" != "true" ]; then
-        snap set workshop gcs.url=http://localhost:8080/storage/v1/
-        start_sdk_store
-    fi
-
+    snap set workshop workshop.debug=1
     snap set workshop workshop.image.server.url="$IMAGE_SERVER"
     snap alias workshop.sdk sdk
     snap restart workshop
@@ -101,39 +95,10 @@ function setup_workshop() {
 }
 
 function cleanup_workshop() {
-    local use_real_store="${1:-false}"
-
-    if [ "$use_real_store" != "true" ]; then
-        stop_sdk_store
-    fi
-
     snap remove workshop --purge
     snap remove sdkcraft --purge
     find /workshop -name .workshop.lock -delete
     loginctl disable-linger ubuntu
-}
-
-function start_sdk_store() {
-    # run fake GCS bucket storage to emulate SDK store
-    publish_test_sdks "$TESTS_SDKS" "$SDK_STORE_BUCKET_DIR"
-    # a bug with fake-gcs-server that returns 404 if not owned by the user
-    chown -R ubuntu.ubuntu /data
-    mkdir -p /storage
-    chown -R ubuntu.ubuntu /storage
-
-    go install github.com/fsouza/fake-gcs-server@latest
-    fake-gcs-server -data /data -scheme http -port 8080 -public-host localhost:8080 >~/fake_sdk_store.log 2>&1 &
-
-    echo "Waiting for the fake SDK store to start on port 8080..."
-    while ! nc -z localhost 8080; do
-        sleep 2
-    done
-}
-
-function stop_sdk_store() {
-    pkill -f fake-gcs-server || true
-    rm -rf /data
-    rm -rf /storage
 }
 
 # Publish test SDKs in the fake SDK Store
@@ -180,10 +145,9 @@ function sdk_exec() {
 }
 
 function run_sdkcraft() {
-    sdkcraft "$@"
+    sudo XDG_RUNTIME_DIR="/run/user/$(id -u ubuntu)" -u ubuntu -- sdkcraft "$@"
 }
 
-# Install sdkcraft from a local snap file
 function install_sdkcraft() {
-    snap install --dangerous --classic /workshop/tests/sdkcraft_*.snap
+    snap install --classic --edge sdkcraft
 }
