@@ -41,6 +41,15 @@ Notes:
 - For an overview of SDK volumes, use "sdk list".
 - For per-workshop information, use "workshop info".
 `,
+		Example: `
+Show metadata, Store channels, and local installations for the "openvino" SDK:
+$ sdk info openvino
+
+Restrict the Store channels to a specific base:
+$ sdk info openvino --base ubuntu@24.04
+
+Show the channels for every supported architecture:
+$ sdk info openvino --arch all`,
 		Args: cobra.ExactArgs(1),
 		RunE: c.Run,
 	}

@@ -26,9 +26,10 @@ There are several commands that vary by their purpose:
      - What they do
 
    * - Discover
-     - :command:`info`,
+     - :command:`find`,
+       :command:`info`,
        :command:`list`
-     - Enumerate SDKs, list their details and current usage.
+     - Search the Store, enumerate local SDKs, and show their details and current usage.
 
 
 .. note::

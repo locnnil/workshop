@@ -5,7 +5,7 @@
                  commands and global options for managing SDKs.
 
 sdk (CLI)
-=========
+==============
 
 .. @artefact sdk (CLI)
 
@@ -22,6 +22,9 @@ and also has a number of global flags:
 
    Print SDK CLI version.
 
+
+
+.. include:: sdk-find.rst
 
 
 .. include:: sdk-info.rst
