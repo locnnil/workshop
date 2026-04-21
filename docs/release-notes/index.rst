@@ -98,10 +98,11 @@ Older versions:
 
 Latest version:
 
-- `SDKcraft 0.1.13 <https://github.com/canonical/sdkcraft/releases/tag/0.1.13>`_
+- `SDKcraft 0.1.14 <https://github.com/canonical/sdkcraft/releases/tag/0.1.14>`_
 
 Recent versions:
 
+- `SDKcraft 0.1.13 <https://github.com/canonical/sdkcraft/releases/tag/0.1.13>`_
 - `SDKcraft 0.1.12 <https://github.com/canonical/sdkcraft/releases/tag/0.1.12>`_
 - `SDKcraft 0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/0.1.11>`_
 - SDKcraft v0.1.10 didn't go public; also, version naming scheme dropped the "v"

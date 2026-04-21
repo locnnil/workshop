@@ -15,8 +15,7 @@ Prime artifacts defined for a part
 
 .. code-block:: console
 
-   $ sdkcraft prime [--destructive-mode | --use-lxd]
-                      [--shell | --shell-after] [--debug]
+   $ sdkcraft prime [--destructive-mode | --use-lxd] [--shell | --shell-after] [--debug]
                       [--platform name | --build-for arch]
                       [part-name ...]
 

@@ -15,8 +15,8 @@ Run SDK tests
 
 .. code-block:: console
 
-   $ sdkcraft test [--destructive-mode] [--shell | --shell-after] [--debug]
-                     [--platform name] [--list]
+   $ sdkcraft test [--destructive-mode] [--shell | --shell-after] [--debug] [--platform name]
+                     [--list]
                      [test_expressions ...]
 
 .. rubric:: Description
@@ -78,15 +78,17 @@ Test the project:
 
    $ sdkcraft test
 
+
 List the jobs that would run:
 
 .. code-block:: console
 
    $ sdkcraft test --list
 
+
 Run a specific test suite:
 
 .. code-block:: console
 
-   $ sdkcraft test tests/my-suite/
+   $ sdkcraft test my-suite/
 

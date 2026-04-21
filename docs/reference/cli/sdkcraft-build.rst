@@ -15,8 +15,7 @@ Build artifacts defined for a part
 
 .. code-block:: console
 
-   $ sdkcraft build [--destructive-mode | --use-lxd]
-                      [--shell | --shell-after] [--debug]
+   $ sdkcraft build [--destructive-mode | --use-lxd] [--shell | --shell-after] [--debug]
                       [--platform name | --build-for arch]
                       [part-name ...]
 
