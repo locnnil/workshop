@@ -50,6 +50,15 @@ execute: |
   workshop_exec exec dev bash -c "lsb_release -a"
 
 
+  ## Reusable actions
+
+  cat >> workshop.yaml <<'EOF'
+actions:
+  pull: ollama pull "$@"
+EOF
+  workshop_exec run dev -- pull tinyllama
+
+
   ## Project directory updates
 
   touch created_outside.txt

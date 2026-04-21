@@ -48,6 +48,48 @@ Unlike changes in SDK layout or base,
 action updates do not require a :command:`workshop refresh`.
 
 
+Accept arguments
+----------------
+
+Action bodies are :program:`bash` scripts,
+and they consume the arguments
+that :command:`workshop run` forwards to them
+as positional parameters.
+
+For instance,
+:samp:`"$@"` expands to every argument passed after the action name,
+while :samp:`"$1"`, :samp:`"$2"`, and so on pick individual ones.
+
+To add a :samp:`tests` action
+that forwards arbitrary flags and paths
+to :command:`go test`:
+
+.. code-block:: yaml
+   :caption: workshop.yaml
+   :emphasize-lines: 7-8
+
+   name: dev
+   base: ubuntu@22.04
+   sdks:
+     - name: go
+       channel: 1.26
+
+   actions:
+     tests: go test "$@"
+
+
+Keep the quotes around :samp:`"$@"`:
+they preserve the boundaries between arguments,
+so flags with spaces or wildcards reach the action intact.
+
+.. note::
+
+   For details on :program:`bash` positional parameters,
+   see `Special Parameters
+   <https://www.gnu.org/software/bash/manual/html_node/Special-Parameters.html>`__
+   in the :program:`bash` manual.
+
+
 Running actions
 ---------------
 
@@ -73,13 +115,15 @@ with an optional separator (:samp:`--`):
          ^---------^ SC2002 (style): Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead.
 
 
-When you run an action using :command:`workshop run`,
-any additional arguments provided after the action name
-are passed directly to the action itself:
+Any arguments supplied after the action name
+are forwarded to the action's :program:`bash` script
+as positional parameters.
+For example, the :samp:`tests` action defined above
+runs a single test under a specific package:
 
 .. code-block:: console
 
-   $ workshop run dev -- lint --verbose
+   $ workshop run dev -- tests -run TestFoo ./pkg/...
 
 
 In projects with a single workshop, the workshop name is optional:

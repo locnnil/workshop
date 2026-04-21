@@ -94,6 +94,11 @@ and includes a number of mandatory and optional keys:
        The options :samp:`errexit` and :samp:`pipefail`
        are set by default.
 
+       Arguments passed to :command:`workshop run`
+       are available inside the script
+       through the standard :program:`bash` positional parameters:
+       :samp:`"$@"`, :samp:`"$1"`, and so on.
+
 
 Each SDK is described with the following keys:
 
