@@ -19,8 +19,19 @@ func (c *CmdRestore) Command() *cobra.Command {
 		Short:   "Restore workshops to the state of the last launch or refresh",
 		GroupID: GrpCRUD,
 		Long: `
-Restore the container filesystem to the point of the last launch or refresh,
-then reset the connections and mounts to default settings.
+This command restores the container filesystem of the workshops listed
+as arguments to the point of the last launch or refresh,
+then resets the connections and mounts to default settings.
+
+Notes:
+
+- The workshop must be "Ready" or "Stopped" to be restored.
+
+- Multiple workshops can be restored in a single command invocation;
+  the command processes them sequentially.
+
+- To update an existing workshop instead of reverting changes,
+  use "workshop refresh".
 `,
 		Example: `
 Restore the "nimble" and "jazzy" workshops in the current project directory:

@@ -15,13 +15,13 @@ Update workshops according to their definitions.
 
 .. code-block:: console
 
-   $ workshop refresh [--abort|--continue|--restore|--wait-on-error] <WORKSHOP>... [flags]
+   $ workshop refresh [--abort|--continue|--wait-on-error] <WORKSHOP>... [flags]
 
 .. rubric:: Description
 
 
-This command updates the workshops listed as arguments. For each workshop, 
-it checks the workshop definition and applies any required updates 
+This command updates the workshops listed as arguments. For each workshop,
+it checks the workshop definition and applies any required updates
 to the base image, SDKs and interface connections.
 
 The "--wait-on-error" option pauses the refresh if an error occurs.
@@ -29,10 +29,8 @@ Thus, you can fix the error and resume the operation or abort and revert it.
 This option can only be used with a single workshop.
 If multiple workshops are listed and an error occurs,
 the operation is aborted and reverted for all of them.
-
-The "--restore" option restores the workshop from the snapshot that was 
-created after the last successful launch or refresh. Any changes made 
-to the workshop will be discarded.
+Also, if you change the workshop definition while fixing the error,
+you must abort the operation and restart from scratch.
 
 Notes:
 
@@ -102,11 +100,6 @@ continue the operation:
 --no-wait
 
    Return the change ID, don't wait for the operation to finish.
-
-
---restore
-
-   Restore the workshop to the state after the most recent launch or refresh.
 
 
 --verbose

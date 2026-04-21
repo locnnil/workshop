@@ -53,6 +53,15 @@ List changes for all workshops in the current project directory:
 
 
 
+.. rubric:: Flags
+
+
+--no-headers
+
+   Hide table headers.
+
+
+
 
 
 .. rubric:: See also
