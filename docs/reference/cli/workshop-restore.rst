@@ -1,0 +1,71 @@
+.. _ref_workshop_restore:
+
+
+.. meta::
+   :description: Reference documentation for the 'workshop restore' command
+
+workshop restore
+----------------
+
+.. @artefact workshop restore
+
+Restore workshops to the state of the last launch or refresh.
+
+.. rubric:: Usage
+
+.. code-block:: console
+
+   $ workshop restore [flags] <WORKSHOP>...
+
+.. rubric:: Description
+
+
+This command restores the container filesystem of the workshops listed
+as arguments to the point of the last launch or refresh,
+then resets the connections and mounts to default settings.
+
+Notes:
+
+- The workshop must be "Ready" or "Stopped" to be restored.
+
+- Multiple workshops can be restored in a single command invocation;
+  the operation is transactional, so if any workshop fails to restore,
+  all are reverted.
+
+- To update an existing workshop instead of reverting changes,
+  use "workshop refresh".
+
+
+.. rubric:: Examples
+
+
+Restore the "nimble" and "jazzy" workshops in the current project directory:
+
+.. code-block:: console
+
+   $ workshop restore nimble jazzy
+
+
+The name is optional if the project has only one workshop:
+
+.. code-block:: console
+
+   $ workshop restore
+
+
+
+.. rubric:: Flags
+
+
+--no-wait
+
+   Return the change ID, don't wait for the operation to finish.
+
+
+--verbose
+
+   Combine stdout and stderr output from hooks.
+
+
+
+

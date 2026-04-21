@@ -28,7 +28,8 @@ Notes:
 - The workshop must be "Ready" or "Stopped" to be restored.
 
 - Multiple workshops can be restored in a single command invocation;
-  the command processes them sequentially.
+  the operation is transactional, so if any workshop fails to restore,
+  all are reverted.
 
 - To update an existing workshop instead of reverting changes,
   use "workshop refresh".

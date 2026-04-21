@@ -35,6 +35,14 @@ to ensure the integrity of the workshop in the event of failure.
 By default, a failed change restores the workshop
 to its last operational state.
 
+To explicitly revert to the state after the last successful launch or refresh,
+use the :command:`workshop restore` command.
+It restores the container filesystem from the most recent snapshot
+and resets all connections and remounts to their defaults.
+Unlike the automatic rollback during a failed refresh,
+:command:`restore` is a deliberate user action
+to discard all changes made to a workshop since it was last set up.
+
 
 See also
 --------
@@ -54,4 +62,5 @@ Reference:
 - :ref:`ref_workshop_changes`
 - :ref:`ref_workshop_launch`
 - :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_restore`
 - :ref:`ref_workshop_tasks`
