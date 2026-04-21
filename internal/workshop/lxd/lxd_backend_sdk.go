@@ -3,6 +3,7 @@ package lxdbackend
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -92,34 +93,61 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	}
 	defer unlockVolume(name)
 
-	conn, err := s.LxdClient(ctx)
+	// Disable cancellation, because the LXD operation will plow on regardless,
+	// and the lock is supposed to prevent concurrent import operations.
+	lockedCtx := context.WithoutCancel(ctx)
+	conn, err := s.LxdClient(lockedCtx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
 
-	_, _, err = conn.GetStoragePoolVolume(storagePool, "custom", name)
-	if err == nil {
-		return workshop.ErrVolumeAlreadyExists
-	}
-	if !api.StatusErrorCheck(err, http.StatusNotFound) {
+	volume, _, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
+	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
 		return err
+	}
+	if err == nil {
+		if volume.Config["user.kind"] == "sdk" {
+			return workshop.ErrVolumeAlreadyExists
+		}
+		if err := s.cleanupPartialImportSdk(conn, name, ""); err != nil {
+			return err
+		}
 	}
 
 	vol := lxd.StoragePoolVolumeBackupArgs{
-		BackupFile: tarball,
+		BackupFile: io.NopCloser(tarball),
 		Name:       name,
 	}
 
-	op, err := conn.CreateStoragePoolVolumeFromTarball(storagePool, vol)
-	if err != nil {
-		return err
-	}
-	if err = op.WaitContext(ctx); err != nil {
-		return err
+	for i := range 2 {
+		op, err := conn.CreateStoragePoolVolumeFromTarball(storagePool, vol)
+		if err != nil {
+			return err
+		}
+		if err := op.Wait(); i == 0 && IsImportSdkConflict(err) {
+			// It's very unlikely, but if workshopd dies right after uploading
+			// the tarball, then restarts and retries the import before LXD
+			// creates the import operation, but the original operation updates
+			// the database before the current one, then this operation results
+			// in a conflict, and we should retry. It's also possible that the
+			// current operation wins the race, and we can safely let the other
+			// one fail in the background.
+			if err := s.cleanupPartialImportSdk(conn, name, op.Get().ID); err != nil {
+				return err
+			}
+			if _, err := tarball.Seek(0, io.SeekStart); err != nil {
+				return err
+			}
+			continue
+		} else if err != nil {
+			return err
+		}
+		break
 	}
 
-	volume, etag, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
+	var etag string
+	volume, etag, err = conn.GetStoragePoolVolume(storagePool, "custom", name)
 	if err != nil {
 		return err
 	}
@@ -129,11 +157,51 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	volume.Config["user.sdk.revision"] = meta.Revision.String()
 	volume.Config["user.sha3-384"] = meta.Sha3_384
 	volume.Config["user.sdk.meta"] = meta.SdkYAML
-	op, err = conn.UpdateStoragePoolVolume(storagePool, "custom", name, volume.Writable(), etag)
+	op, err := conn.UpdateStoragePoolVolume(storagePool, "custom", name, volume.Writable(), etag)
 	if err != nil {
 		return err
 	}
 	return op.Wait()
+}
+
+// If workshopd dies, an import operation can be in progress despite holding
+// the volume lock. Since we can't currently detect which operation it is
+// (since https://github.com/canonical/lxd/pull/18033 isn't in stable yet), we
+// wait for all import operations to complete before proceeding. We can't
+// assume the volume has the right contents, because LXD creates the volume's
+// database entry before extracting the tarball. However, once we're able to
+// identify the specific operation, it should be safe to reuse the volume
+// after the operation succeeds.
+func (s *Backend) cleanupPartialImportSdk(conn lxd.InstanceServer, name string, ignoreID string) error {
+	ops, err := conn.GetOperations()
+	if err != nil {
+		return err
+	}
+
+	for _, op := range ops {
+		if op.ID == ignoreID || !IsImportSdkOperation(op) {
+			continue
+		}
+		if _, _, err := conn.GetOperationWait(op.ID, -1); err != nil && !api.StatusErrorCheck(err) {
+			return err
+		}
+	}
+
+	return s.deleteVolume(conn, name)
+}
+
+// Export this so the LXD candidate tests pick up description changes.
+func IsImportSdkOperation(op api.Operation) bool {
+	return op.Description == "Creating storage volume"
+}
+
+// Export this so the LXD candidate tests pick up error message changes.
+func IsImportSdkConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "'storage_volumes_unique_storage_pool_id_node_id_project_id_name_type'") ||
+		strings.Contains(err.Error(), "volume already exists on storage pool")
 }
 
 func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
@@ -143,7 +211,10 @@ func (s *Backend) DeleteSdk(ctx context.Context, setup sdk.Setup) error {
 	}
 	defer conn.Disconnect()
 
-	name := sdk.VolumeName(setup.Name, setup.Revision)
+	return s.deleteVolume(conn, sdk.VolumeName(setup.Name, setup.Revision))
+}
+
+func (s *Backend) deleteVolume(conn lxd.InstanceServer, name string) error {
 	op, err := conn.DeleteStoragePoolVolume(storagePool, "custom", name)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
@@ -206,6 +277,10 @@ func (s *Backend) Sdk(ctx context.Context, setup sdk.Setup) (workshop.SdkVolume,
 	}
 	if err != nil {
 		return workshop.SdkVolume{}, err
+	}
+	if vol.Config["user.kind"] != "sdk" {
+		// This can happen when ImportSdk is aborted abruptly.
+		return workshop.SdkVolume{}, workshop.ErrVolumeNotFound
 	}
 
 	size := volumeSize(conn, vol.Name)

@@ -384,8 +384,6 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	}
 	tarball := helper.MockSdkTarball(c, meta.Name, testsdk)
 
-	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
-
 	var wg sync.WaitGroup
 
 	var successCnt, existCnt int32
@@ -408,8 +406,6 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
 	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(4))
 
-	c.Check(cmd.Calls(), check.HasLen, 2)
-
 	vinfo, err := f.bd.Sdk(f.ctx, meta.Setup)
 	c.Check(err, check.IsNil)
 	meta.Channel = ""
@@ -421,6 +417,65 @@ func (f *wsOps) TestLxdBackendImportSdkOK(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(vinfo.Meta, check.Equals, meta)
 	c.Check(vinfo.Workshops, check.HasLen, 0)
+
+	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
+	c.Assert(err, check.IsNil)
+}
+
+// This test detects changes to the import operation type and conflict error
+// message. See IsImportSdkOperation and IsImportSdkConflict.
+func (f *wsOps) TestLxdBackendImportSdkConflict(c *check.C) {
+	// Execute
+	meta := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: testsdk,
+	}
+	tarball := helper.MockSdkTarball(c, meta.Name, testsdk)
+
+	// Create test project without racing for it.
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	conn.Disconnect()
+
+	var wg sync.WaitGroup
+
+	var successCnt, existCnt int32
+	for range 2 {
+		wg.Go(func() {
+			conn, err := f.bd.LxdClient(f.ctx)
+			c.Assert(err, check.IsNil)
+			defer conn.Disconnect()
+
+			file, err := os.Open(tarball)
+			c.Assert(err, check.IsNil)
+			defer file.Close()
+
+			vol := lxd.StoragePoolVolumeBackupArgs{
+				BackupFile: file,
+				Name:       sdk.VolumeName(meta.Name, meta.Revision),
+			}
+			op, err := conn.CreateStoragePoolVolumeFromTarball("workshop", vol)
+			if err == nil {
+				c.Check(lxdbackend.IsImportSdkOperation(op.Get()), check.Equals, true)
+				err = op.Wait()
+			}
+			if lxdbackend.IsImportSdkConflict(err) {
+				atomic.AddInt32(&existCnt, 1)
+			} else if c.Check(err, check.IsNil) {
+				atomic.AddInt32(&successCnt, 1)
+			}
+		})
+	}
+	wg.Wait()
+
+	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
+	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(1))
 
 	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
 	c.Assert(err, check.IsNil)
@@ -440,51 +495,47 @@ func (f *wsOps) TestLxdBackendImportSdkInterrupted(c *check.C) {
 	}
 	tarball := helper.MockSdkTarball(c, meta.Name, testsdk)
 
-	cmd := testutil.FakeCommand(c, "tar", `/usr/bin/tar "$@"`)
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
 
-	var wg sync.WaitGroup
+	// Simulate operation started by previous workshopd run.
+	started := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
 
-	var successCnt, existCnt, canceled int32
-	for i := range 5 {
-		newctx, cancel := context.WithCancel(f.ctx)
+		file, err := os.Open(tarball)
+		c.Assert(err, check.IsNil)
+		defer file.Close()
 
-		if i%2 == 0 {
-			cancel()
-		} else {
-			defer cancel()
+		vol := lxd.StoragePoolVolumeBackupArgs{
+			BackupFile: file,
+			Name:       sdk.VolumeName(meta.Name, meta.Revision),
+		}
+		op, err := conn.CreateStoragePoolVolumeFromTarball("workshop", vol)
+		c.Assert(err, check.IsNil)
+		close(started)
+		_ = op.Wait()
+	}()
+
+	file, err := os.Open(tarball)
+	if c.Check(err, check.IsNil) {
+		defer file.Close()
+
+		err = f.bd.ImportSdk(f.ctx, meta, file)
+		c.Check(err, check.IsNil)
+
+		select {
+		case <-started:
+		case <-done:
 		}
 
-		wg.Go(func() {
-			file, err := os.Open(tarball)
-			c.Assert(err, check.IsNil)
-			defer file.Close()
-			if err := f.bd.ImportSdk(newctx, meta, file); err == nil {
-				atomic.AddInt32(&successCnt, 1)
-			} else if errors.Is(err, workshop.ErrVolumeAlreadyExists) {
-				atomic.AddInt32(&existCnt, 1)
-			} else if errors.Is(err, context.Canceled) {
-				atomic.AddInt32(&canceled, 1)
-			} else {
-				c.Assert(err, check.IsNil)
-			}
-		})
+		err = f.bd.DeleteSdk(f.ctx, meta.Setup)
+		c.Check(err, check.IsNil)
 	}
-	wg.Wait()
 
-	c.Check(atomic.LoadInt32(&successCnt), check.Equals, int32(1))
-	c.Check(atomic.LoadInt32(&existCnt), check.Equals, int32(1))
-	c.Check(atomic.LoadInt32(&canceled), check.Equals, int32(3))
-
-	c.Check(cmd.Calls(), check.HasLen, 2)
-
-	vinfo, err := f.bd.Sdk(f.ctx, meta.Setup)
-	c.Check(err, check.IsNil)
-	meta.Channel = ""
-	c.Check(vinfo.Meta, check.Equals, meta)
-	c.Check(vinfo.Workshops, check.HasLen, 0)
-
-	err = f.bd.DeleteSdk(f.ctx, meta.Setup)
-	c.Assert(err, check.IsNil)
+	<-done
 }
 
 func (f *wsOps) TestLxdBackendDeleteWorkshop(c *check.C) {
