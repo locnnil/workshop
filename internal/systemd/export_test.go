@@ -30,12 +30,6 @@ func FakeServicesDir(dir string) (restore func()) {
 	}
 }
 
-func FakeOsGetenv(f func(string) string) func() {
-	oldOsGetenv := osGetenv
-	osGetenv = f
-	return func() { osGetenv = oldOsGetenv }
-}
-
 func FakeOsutilStreamCommand(f func(string, ...string) (io.ReadCloser, error)) func() {
 	old := osutilStreamCommand
 	osutilStreamCommand = f

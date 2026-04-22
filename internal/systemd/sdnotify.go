@@ -23,10 +23,25 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 )
 
-var osGetenv = os.Getenv
+var notifySocket string
+
+func FakeNotifySocket(socket string) func() {
+	oldSocket := notifySocket
+	notifySocket = socket
+	return func() { notifySocket = oldSocket }
+}
+
+func init() {
+	notifySocket = os.Getenv("NOTIFY_SOCKET")
+	// Unset so that subprocesses don't try to notify systemd; this prevents
+	// systemctl show-environment from spamming the workshopd journal. See
+	// https://github.com/systemd/systemd/blob/v260/src/shared/main-func.c#L23.
+	if err := os.Unsetenv("NOTIFY_SOCKET"); err != nil {
+		panic(fmt.Errorf("cannot unset NOTIFY_SOCKET: %w", err))
+	}
+}
 
 func SocketAvailable() bool {
-	notifySocket := osGetenv("NOTIFY_SOCKET")
 	return notifySocket != "" && osutil.FileExists(notifySocket)
 }
 
@@ -38,7 +53,6 @@ func SdNotify(notifyState string) error {
 		return fmt.Errorf("cannot use empty notify state")
 	}
 
-	notifySocket := osGetenv("NOTIFY_SOCKET")
 	if notifySocket == "" {
 		return fmt.Errorf("$NOTIFY_SOCKET not defined")
 	}

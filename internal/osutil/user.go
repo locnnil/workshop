@@ -215,7 +215,7 @@ func userEnvironment(user *user.User) (map[string]string, error) {
 	// current user), and XDG_RUNTIME_DIR is incorrect in the second case.
 	// See https://github.com/systemd/systemd/issues/39838.
 	var args []string
-	env := syscall.Environ()
+	env := os.Environ()
 	uid, err := strconv.ParseInt(user.Uid, 10, 64)
 	if err == nil && uid == 0 {
 		args = []string{"show-environment"}

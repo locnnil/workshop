@@ -25,27 +25,23 @@ import (
 )
 
 type sdNotifyTestSuite struct {
-	env           map[string]string
-	restoreGetenv func()
+	restoreSocket func()
 }
 
 var _ = Suite(&sdNotifyTestSuite{})
 
 func (sd *sdNotifyTestSuite) SetUpTest(c *C) {
-	sd.env = map[string]string{}
-	sd.restoreGetenv = systemd.FakeOsGetenv(func(k string) string {
-		return sd.env[k]
-	})
+	sd.restoreSocket = systemd.FakeNotifySocket("")
 }
 
 func (sd *sdNotifyTestSuite) TearDownTest(c *C) {
-	sd.restoreGetenv()
+	sd.restoreSocket()
 }
 
 func (sd *sdNotifyTestSuite) TestSocketAvailable(c *C) {
 	socketPath := filepath.Join(c.MkDir(), "notify.socket")
 	c.Assert(systemd.SocketAvailable(), Equals, false)
-	sd.env["NOTIFY_SOCKET"] = socketPath
+	defer systemd.FakeNotifySocket(socketPath)()
 	c.Assert(systemd.SocketAvailable(), Equals, false)
 	f, _ := os.Create(socketPath)
 	f.Close()
@@ -58,13 +54,13 @@ func (sd *sdNotifyTestSuite) TestSdNotifyMissingNotifyState(c *C) {
 
 func (sd *sdNotifyTestSuite) TestSdNotifyWrongNotifySocket(c *C) {
 	for _, t := range []struct {
-		env    string
+		socket string
 		errStr string
 	}{
 		{"", `\$NOTIFY_SOCKET not defined`},
 		{"xxx", `cannot use \$NOTIFY_SOCKET value: "xxx"`},
 	} {
-		sd.env["NOTIFY_SOCKET"] = t.env
+		defer systemd.FakeNotifySocket(t.socket)()
 		c.Check(systemd.SdNotify("something"), ErrorMatches, t.errStr)
 	}
 }
@@ -74,7 +70,7 @@ func (sd *sdNotifyTestSuite) TestSdNotifyIntegration(c *C) {
 		filepath.Join(c.MkDir(), "socket"),
 		"@socket",
 	} {
-		sd.env["NOTIFY_SOCKET"] = sockPath
+		defer systemd.FakeNotifySocket(sockPath)()
 
 		conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{
 			Name: sockPath,
