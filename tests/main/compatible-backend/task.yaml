@@ -1,7 +1,7 @@
 summary: Test workshopd checks LXD compatibility
 priority: -101
 execute: |
-  . "$TESTSLIB"/utils.sh  
+  . "$TESTSLIB"/utils.sh
 
   workshop_exec list | MATCH "^comp-check[[:space:]]+Off[[:space:]]+-$"
 

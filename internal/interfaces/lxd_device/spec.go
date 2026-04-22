@@ -1,18 +1,48 @@
 package lxd_device
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/user"
 	"strconv"
 	"strings"
 
+	"github.com/canonical/lxd/shared/api"
+
 	"github.com/canonical/workshop/internal/interfaces"
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
+
+// lxdServerInfo retrieves GPU resources and CDI support from LXD.
+var lxdServerInfo = func(ctx context.Context) (*api.Resources, bool, error) {
+	conn, err := lxdbackend.ConnectLxd(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	defer conn.Disconnect()
+
+	resources, err := conn.GetServerResources()
+	if err != nil {
+		return nil, false, err
+	}
+
+	cdiSupported := conn.HasExtension("gpu_cdi") && conn.HasExtension("gpu_cdi_amd") && conn.HasExtension("gpu_cdi_hotplug")
+
+	return resources, cdiSupported, nil
+}
+
+// MockLxdServerInfo replaces the LXD server info function used by
+// NewSpecification and returns a restore function.
+func MockLxdServerInfo(f func(ctx context.Context) (*api.Resources, bool, error)) func() {
+	old := lxdServerInfo
+	lxdServerInfo = f
+	return func() { lxdServerInfo = old }
+}
 
 func NewSpecification(user string, sdk string) (*Specification, error) {
 	usr, env, err := osutil.UserAndEnv(user)
@@ -20,23 +50,35 @@ func NewSpecification(user string, sdk string) (*Specification, error) {
 		return nil, err
 	}
 
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, workshop.ContextUser, user)
+
+	resources, cdiSupported, err := lxdServerInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Specification{
-		devices:     make(map[string]map[string]string),
-		config:      make(map[string]string),
-		Profile:     workshop.NewSdkProfile(sdk),
-		User:        usr,
-		Environment: env,
+		devices:      make(map[string]map[string]string),
+		config:       make(map[string]string),
+		Profile:      workshop.NewSdkProfile(sdk),
+		User:         usr,
+		Environment:  env,
+		resources:    resources,
+		cdiSupported: cdiSupported,
 	}, nil
 }
 
 type Specification struct {
 	Profile workshop.SdkProfile
 
-	devices map[string]map[string]string
-	config  map[string]string
+	devices   map[string]map[string]string
+	config    map[string]string
+	resources *api.Resources
 
-	User        *user.User
-	Environment map[string]string
+	User         *user.User
+	Environment  map[string]string
+	cdiSupported bool
 }
 
 // AddPermanentSlot records side-effects of having a slot.
@@ -136,28 +178,73 @@ func (s *Specification) SetDesktop(desktop workshop.Desktop) error {
 	return nil
 }
 
+func detectGpuVendor(vendorID string) string {
+	switch vendorID {
+	case "8086":
+		return "intel"
+	case "10de":
+		return "nvidia"
+	case "1002":
+		return "amd"
+	default:
+		return "unknown"
+	}
+}
+
 func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 	s.Profile.Gpu = &gpu
 
-	// The default workshop user must be able to access the GPU device.
-	// Workshop assigns the GPU devices to workshop.workshop. A more
-	// traditional way here would be to add dri devices to the video/render
-	// groups, but it requires an additional workshop exec to find out the
-	// groups' ids at the LXD profile generation time. Given that we are
-	// solving the problem of access in a confined environment and workshop
-	// is a passwordless sudo user anyway, it was decided that it is OK if
-	// the workshop user owns GPU devices.
+	if s.cdiSupported {
+		gpus := s.resources.GPU
+		if gpus.Total == 0 {
+			logger.Debugf("GPU interface requested, but no GPU detected on the host system")
+			return nil
+		}
 
-	// On another note, the render and video groups are not assigned to the
-	// card*/render* dri devices by LXD properly. Both will be assigned to
-	// the group provided in "gid"; there is no way to assign video to card*
-	// and render to render* devices.
-	name := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name)
-	s.devices[name] = map[string]string{
-		"type":    "gpu",
-		"gputype": "physical",
-		"uid":     workshop.User.Uid,
-		"gid":     workshop.User.Gid,
+		for _, c := range gpus.Cards {
+			vendor := detectGpuVendor(c.VendorID)
+			switch vendor {
+			case "nvidia", "amd":
+				device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor)
+				// Add "all" devices per vendor. Indexes would be rather accurate but
+				// the problem with indexes is that the AMD CDI start indexes from 0
+				// regardless what index the card has in the system whilst NVIDIA CDI
+				// indexes match the system indexes. LXD should include UUIDs
+				// in the GPU resources which we can use in the spec instead of IDs.
+				if _, ok := s.devices[device]; !ok {
+					s.devices[device] = map[string]string{
+						"type":    "gpu",
+						"gputype": "physical",
+						"id":      vendor + ".com/gpu=all",
+					}
+				}
+			case "intel":
+				// Intel GPUs are not yet supported by the GPU CDI spec, so we
+				// fall back to exposing them as 'physical' GPUs with a specific
+				// ID.
+				cardId := strconv.FormatUint(c.DRM.ID, 10)
+				device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor, cardId)
+				s.devices[device] = map[string]string{
+					"type":    "gpu",
+					"gputype": "physical",
+					"uid":     workshop.User.Uid,
+					"gid":     workshop.User.Gid,
+					"id":      cardId,
+				}
+			default:
+				logger.Debugf("Unknown GPU vendor ID '%s' for GPU card with ID %d", c.VendorID, c.DRM.ID)
+			}
+
+		}
+	} else {
+		// TODO: Remove when switched to LXD 6.8
+		name := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name)
+		s.devices[name] = map[string]string{
+			"type":    "gpu",
+			"gputype": "physical",
+			"uid":     workshop.User.Uid,
+			"gid":     workshop.User.Gid,
+		}
 	}
 
 	return nil

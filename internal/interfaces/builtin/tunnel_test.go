@@ -20,11 +20,13 @@
 package builtin_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 
+	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/asserts"
@@ -44,6 +46,7 @@ type tunnelSuite struct {
 
 	restoreUserLookup func()
 	restoreUserEnv    func()
+	restoreLxdInfo    func()
 }
 
 var _ = check.Suite(&tunnelSuite{
@@ -59,9 +62,13 @@ func (s *tunnelSuite) SetUpSuite(c *check.C) {
 	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
 		return nil, nil
 	})
+	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, bool, error) {
+		return &api.Resources{}, false, nil
+	})
 }
 
 func (s *tunnelSuite) TearDownSuite(c *check.C) {
+	s.restoreLxdInfo()
 	s.restoreUserEnv()
 	s.restoreUserLookup()
 }
