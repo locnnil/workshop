@@ -44,6 +44,7 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 		Summary:     "Intel OpenVINO toolkit",
 		Description: "Longer description\ncan be multiline.",
 		License:     "Apache-2.0",
+		Website:     "https://openvino.ai",
 		Publisher: &client.StoreAccount{
 			ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
 			Username:    "intel",
@@ -200,6 +201,7 @@ func (s *sdkSuite) TestInfo(c *check.C) {
 	want := fmt.Sprintf(`name:       openvino
 publisher:  Intel**
 license:    Apache-2.0
+website:    https://openvino.ai
 
 Longer description
 can be multiline.
@@ -233,6 +235,7 @@ INSTALLED
 	want = fmt.Sprintf(`name:       openvino
 publisher:  Intel**
 license:    Apache-2.0
+website:    https://openvino.ai
 
 Longer description
 can be multiline.
@@ -263,6 +266,7 @@ INSTALLED
 	want = fmt.Sprintf(`name:       openvino
 publisher:  Intel**
 license:    Apache-2.0
+website:    https://openvino.ai
 
 Longer description
 can be multiline.
@@ -290,6 +294,7 @@ INSTALLED
 	want = fmt.Sprintf(`name:       openvino
 publisher:  Intel**
 license:    Apache-2.0
+website:    https://openvino.ai
 
 Longer description
 can be multiline.
@@ -319,6 +324,7 @@ INSTALLED
 	want = fmt.Sprintf(`name:       openvino
 publisher:  Intel**
 license:    Apache-2.0
+website:    https://openvino.ai
 
 Longer description
 can be multiline.

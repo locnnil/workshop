@@ -79,6 +79,7 @@ type SdkFullInfo struct {
 	Summary     string         `json:"summary,omitempty"`
 	Description string         `json:"description,omitempty"`
 	License     string         `json:"license,omitempty"`
+	Website     string         `json:"website,omitempty"`
 	Publisher   *StoreAccount  `json:"publisher,omitempty"`
 	Channels    []SdkRevision  `json:"channels,omitempty"`
 	Installed   []SdkInstalled `json:"installed,omitempty"`
@@ -254,6 +255,7 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 	for _, entry := range response.ChannelMap {
 		var sdkYaml struct {
 			BuiltAt *timeutil.TimeUTC `yaml:"sdkcraft-started-at,omitempty"`
+			Website string            `yaml:"website,omitempty"`
 		}
 		if err := yaml.Unmarshal(entry.Revision.SdkYAML, &sdkYaml); err != nil {
 			return fmt.Errorf("invalid %q SDK (%v) metadata: %w", response.Name, entry.Revision.Revision, err)
@@ -270,6 +272,12 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 			Risk:  entry.Channel.Risk,
 		}
 		channel = channel.Full()
+
+		// TODO: replace with fethcing the website URL from
+		// the InfoMetadata when the store supports it.
+		if sdkYaml.Website != "" {
+			full.Website = sdkYaml.Website
+		}
 
 		revision := SdkRevision{
 			Channel:      channel.Name,
