@@ -5,7 +5,7 @@
                  commands and global options for managing SDKs.
 
 sdk (CLI)
-==============
+=========
 
 .. @artefact sdk (CLI)
 
