@@ -201,8 +201,9 @@ func currentUserAndEnv() (*user.User, map[string]string, error) {
 	return usr, env, err
 }
 
-// Returns the environment for the user as set by systemd.
-// This is the equivalent of running 'systemctl --user show-environment'
+// Returns the environment for the user as set by systemd, or the system
+// environment if user is root. This is the equivalent of running
+// `systemctl [--user] show-environment`.
 func userEnvironment(user *user.User) (map[string]string, error) {
 	// When running as the target user, systemctl can connect to the user
 	// bus directly, but this requires XDG_RUNTIME_DIR to be set. Other
@@ -213,17 +214,22 @@ func userEnvironment(user *user.User) (map[string]string, error) {
 	// --machine is ignored in the first case (given that it matches the
 	// current user), and XDG_RUNTIME_DIR is incorrect in the second case.
 	// See https://github.com/systemd/systemd/issues/39838.
-	args := []string{"--user", "show-environment"}
-	var env []string
+	var args []string
+	env := syscall.Environ()
 	uid, err := strconv.ParseInt(user.Uid, 10, 64)
-	if err == nil && uid == int64(os.Geteuid()) {
+	if err == nil && uid == 0 {
+		args = []string{"show-environment"}
+	} else if err == nil && uid == int64(os.Geteuid()) {
+		args = []string{"--user", "show-environment"}
 		defaultXdg := filepath.Join(dirs.XdgRuntimeDirBase, user.Uid)
-		env = append(env, "XDG_RUNTIME_DIR="+defaultXdg)
+		defaultEnv := []string{"XDG_RUNTIME_DIR=" + defaultXdg}
+		env = append(defaultEnv, env...)
 	} else {
-		args = append(args, fmt.Sprintf("--machine=%s@.host", user.Uid))
+		machine := fmt.Sprintf("--machine=%s@.host", user.Uid)
+		args = []string{machine, "--user", "show-environment"}
 	}
 	cmd := exec.Command("systemctl", args...)
-	cmd.Env = append(cmd.Env, env...)
+	cmd.Env = env
 
 	out, errOut, err := RunCmd(cmd)
 	if err != nil {
