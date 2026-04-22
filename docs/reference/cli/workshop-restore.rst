@@ -26,7 +26,7 @@ then resets the connections and mounts to default settings.
 
 Notes:
 
-- The workshop must be "Ready" or "Stopped" to be restored.
+- The workshop must be "Ready" to be restored.
 
 - Multiple workshops can be restored in a single command invocation;
   the operation is transactional, so if any workshop fails to restore,
