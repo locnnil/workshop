@@ -272,6 +272,13 @@ for longer or more complex shell commands
 that they expect to run frequently inside the workshop,
 right in the definition file.
 
+Because action bodies are :program:`bash` scripts,
+they receive the trailing arguments of :command:`workshop run`
+as standard positional parameters.
+Use :samp:`"$@"` to forward every argument
+and :samp:`"$1"`, :samp:`"$2"`, and so on to pick individual ones.
+See :ref:`how_add_actions` for an example.
+
 Actions are not part of the layered snapshot system at all.
 They stay in the definition,
 and are parsed by the :ref:`daemon <exp_arch_daemon>`
@@ -298,7 +305,7 @@ intended as utility helpers for a development environment:
      shellcheck: |
        git ls-files | file --mime-type -Nnf- | grep shellscript | cut -f1 -d: | xargs shellcheck --check-sourced --external-sources
      unit: |
-       go test ./...
+       go test "$@" ./...
      cover: |
        go test ./... -coverprofile=coverage.out
        go tool cover -html=coverage.out

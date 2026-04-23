@@ -466,6 +466,52 @@ who's also named :samp:`workshop`:
    workshop@dev-6b79e889:/project$ exit
 
 
+.. _tut_actions:
+
+Reusable actions
+~~~~~~~~~~~~~~~~
+
+.. @artefact workshop actions
+
+For complex commands that you run often,
+define actions in your workshop definition
+to invoke them with :command:`workshop run`.
+
+Add an :samp:`actions` section to :file:`workshop.yaml`:
+
+.. code-block:: yaml
+   :caption: workshop.yaml
+   :emphasize-lines: 6-7
+
+   name: dev
+   base: ubuntu@24.04
+   sdks:
+     - name: ollama
+       channel: vulkan
+   actions:
+     pull: ollama pull "$@"
+
+
+The :samp:`"$@"` expansion forwards every argument
+supplied after the action name
+into the action's :program:`bash` script.
+
+Pull a model through the new action;
+:samp:`"$@"` forwards :samp:`tinyllama` into :command:`ollama pull`:
+
+.. code-block:: console
+
+   $ workshop run dev -- pull tinyllama
+
+
+Finally, actions are parsed on every :command:`workshop run`,
+so there's no need to refresh the workshop after editing them.
+
+.. note::
+
+   See :ref:`how_add_actions` for more on writing and running actions.
+
+
 .. _tut_project_updates:
 
 Project directory updates

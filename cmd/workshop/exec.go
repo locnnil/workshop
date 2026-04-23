@@ -153,6 +153,9 @@ If the project has no such workshop
 and the shell is interactive,
 the argument is treated as an action to run in the default workshop.
 
+Any trailing arguments are forwarded to the action as positional parameters,
+so action scripts can consume them with standard shell expansions.
+
 Notes:
 
 - To start a workshop before running actions in it, use "workshop start".
@@ -289,7 +292,11 @@ $ workshop run -- build
 If the action doesn't overlap with a workshop name
 and the shell is interactive,
 the separator is also optional:
-$ workshop run build`,
+$ workshop run build
+
+Forward arguments to an action that consumes them
+(for example, ` + "``tests: go test \"$@\"``" + ` in the workshop definition):
+$ workshop run dev -- tests -run TestFoo ./pkg/...`,
 		RunE:              c.Run,
 		ValidArgsFunction: c.complete,
 	}
