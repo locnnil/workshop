@@ -53,10 +53,10 @@ execute: |
   ## Reusable actions
 
   cat >> workshop.yaml <<'EOF'
-actions:
-  pull: ollama pull "$@"
-EOF
-  workshop_exec run dev -- pull tinyllama
+  actions:
+    pull: ollama pull "$@"
+  EOF
+  workshop_exec run dev -- pull tinyllama:latest
 
 
   ## Project directory updates
