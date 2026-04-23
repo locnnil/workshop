@@ -68,6 +68,9 @@ and also has a number of global flags:
 .. include:: workshop-remove.rst
 
 
+.. include:: workshop-restore.rst
+
+
 .. include:: workshop-run.rst
 
 
@@ -100,7 +103,7 @@ Shell completion
 ----------------
 
 To configure shell completion,
-follow the instructions offered by **workshop completion**:
+follow the instructions offered by :command:`workshop completion`:
 
 .. code-block:: console
 

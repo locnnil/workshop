@@ -371,6 +371,12 @@ However, it ensures the workshop remains operational.
 If issues occur, a refresh rolls back to a previous stable condition,
 whereas a failed launch has no condition to revert to and just fails.
 
+To discard any changes made since the last successful launch or refresh,
+run :command:`workshop restore`.
+Unlike the automatic rollback on a failed refresh, this is a deliberate action
+that reverts the workshop to the most recent snapshot
+and resets connections and mounts to their defaults.
+
 Now that you can launch, refresh, start and stop a workshop,
 let's move on to more practical purposes.
 

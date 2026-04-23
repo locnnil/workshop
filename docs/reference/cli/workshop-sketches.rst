@@ -9,7 +9,7 @@ workshop sketches
 
 .. @artefact workshop sketches
 
-List sketches.
+List project sketch SDKs.
 
 .. rubric:: Usage
 
@@ -39,6 +39,15 @@ List the sketches in the current project directory:
 .. code-block:: console
 
    $ workshop sketches
+
+
+
+.. rubric:: Flags
+
+
+--no-headers
+
+   Hide table headers.
 
 
 

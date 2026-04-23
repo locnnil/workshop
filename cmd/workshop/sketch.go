@@ -38,7 +38,7 @@ func (c *CmdSketch) Command() *cobra.Command {
 		Short:   "Customize a workshop",
 		GroupID: GrpSketch,
 		Long: `The command opens the sketch SDK template in the default text editor.
-Add customizations by editing the template, then save and exit 
+Add customizations by editing the template, then save and exit
 the editor to apply the changes to the workshop.
 
 The "--stash" and "--restore" options respectively stash the SDK,
@@ -52,6 +52,7 @@ so it can be committed to your repository.
 The sketch SDK is intended for experiments and prototyping iterations.
 
 Notes:
+
 - You can only have one sketch SDK per workshop at a time.
 
 - Run "workshop info" to list all SDKs currently installed

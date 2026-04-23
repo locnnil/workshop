@@ -9,7 +9,7 @@ workshop sketch-sdk
 
 .. @artefact workshop sketch-sdk
 
-Edit the sketch SDK and graft it onto the workshop.
+Customize a workshop.
 
 .. rubric:: Usage
 
@@ -19,26 +19,26 @@ Edit the sketch SDK and graft it onto the workshop.
 
 .. rubric:: Description
 
-
-This opens the "sketch" SDK definition in the default text editor,
-enabling rapid experiments and tweaks at the SDK level.
-
-Saving the definition and exiting the editor causes a refresh,
-which installs the configured "sketch" SDK in the workshop.
+The command opens the sketch SDK template in the default text editor.
+Add customizations by editing the template, then save and exit
+the editor to apply the changes to the workshop.
 
 The "--stash" and "--restore" options respectively stash the SDK,
 reversing the changes, and quickly restore it to the workshop.
-The "--eject" option moves the SDK definition into the project directory,
-so it can be added to multiple workshops or shared with others.
-The "--remove" option removes the SDK permanently.
+
+To make these customizations persistent,
+run "workshop sketch-sdk --eject".
+This saves the SDK definition under .workshop/ in the project directory,
+so it can be committed to your repository.
+
+The sketch SDK is intended for experiments and prototyping iterations.
 
 Notes:
 
-- The "sketch" SDK doesn't appear in the workshop definition
-  and cannot include build-time data such as parts.
+- You can only have one sketch SDK per workshop at a time.
 
-- In addition to hooks, the "sketch" SDK can use interfaces
-  by defining plugs and slots.
+- Run "workshop info" to list all SDKs currently installed
+  in the workshop, including the sketch SDK if present.
 
 
 .. rubric:: Examples
@@ -52,11 +52,12 @@ and apply it after saving by automatically refreshing the workshop:
    $ workshop sketch-sdk nimble
 
 
-The name is optional if the project has only one workshop:
+Save the sketch SDK for the "nimble" workshop
+as a project SDK named "tools":
 
 .. code-block:: console
 
-   $ workshop sketch-sdk
+   $ workshop sketch-sdk nimble --eject --name tools
 
 
 Stash the sketch SDK, temporarily reverting the changes in the workshop:
