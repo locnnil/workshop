@@ -114,13 +114,13 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 }
 
 func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
-	err := lxdbackend.CheckServerVersion("6.3")
+	err := lxdbackend.CheckServerVersion("6.6")
 	c.Assert(err, check.IsNil)
 
-	err = lxdbackend.CheckServerVersion("6.4")
+	err = lxdbackend.CheckServerVersion("6.7")
 	c.Assert(err, check.IsNil)
 
-	err = lxdbackend.CheckServerVersion("6.2")
+	err = lxdbackend.CheckServerVersion("6.5")
 	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
 
 	err = lxdbackend.CheckServerVersion("5.9")
@@ -135,9 +135,9 @@ func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
 	err = lxdbackend.CheckServerVersion("6.x")
 	c.Assert(err, check.ErrorMatches, ".*cannot parse LXD server version.*")
 
-	err = lxdbackend.CheckServerVersion("6.3.1")
+	err = lxdbackend.CheckServerVersion("6.6.1")
 	c.Assert(err, check.IsNil)
 
-	err = lxdbackend.CheckServerVersion("6.2.9")
+	err = lxdbackend.CheckServerVersion("6.5.9")
 	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
 }

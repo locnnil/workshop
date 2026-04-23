@@ -145,7 +145,7 @@ To restart the workshop daemon: 'sudo snap restart workshop'`, err)
 
 func checkVersion(version string) error {
 	const minimalLXDMajor = 6
-	const minimalLXDMinor = 3
+	const minimalLXDMinor = 6
 
 	comps := strings.Split(version, ".")
 

@@ -94,11 +94,6 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	ctx, cancel := BackendContext(tomb, user, project.ProjectId)
 	defer cancel()
 
-	if _, err = m.backend.Sdk(ctx, rec); err == nil {
-		logger.Debugf("On doRetrieveSdk: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
-		return nil
-	}
-
 	fl, err := sdk.OpenLock(rec.Name)
 	if err != nil {
 		return err
@@ -106,6 +101,11 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 	defer fl.Close()
 	if err := fl.Lock(); err != nil {
 		return err
+	}
+
+	if _, err = m.backend.Sdk(ctx, rec); err == nil {
+		logger.Debugf("On doRetrieveSdk: reuse existing SDK volume %q", sdk.VolumeName(rec.Name, rec.Revision))
+		return nil
 	}
 
 	if err := m.retrieveSdk(ctx, task, rec); err != nil {
