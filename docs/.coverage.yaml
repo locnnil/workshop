@@ -40,6 +40,11 @@
     - SK048
     - SK049
 
+"sdk find":
+  category: "sdk (CLI)"
+  type: command
+  specs: []
+
 "sdk info":
   category: "sdk (CLI)"
   type: command

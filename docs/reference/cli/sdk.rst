@@ -24,6 +24,9 @@ and also has a number of global flags:
 
 
 
+.. include:: sdk-find.rst
+
+
 .. include:: sdk-info.rst
 
 

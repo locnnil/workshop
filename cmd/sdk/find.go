@@ -34,6 +34,15 @@ Notes:
 - To view more details for one of the SDKs, use "sdk info".
 - To list SDKs on the local system, use "sdk list".
 `,
+		Example: `
+Search for SDKs matching a single keyword:
+$ sdk find openvino
+
+Combine multiple words into a single query:
+$ sdk find jupyter notebooks
+
+Hide the table header in the output:
+$ sdk find openvino --no-headers`,
 		RunE: c.Run,
 	}
 

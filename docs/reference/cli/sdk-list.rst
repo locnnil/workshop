@@ -32,4 +32,31 @@ Notes:
   if several revisions are present simultaneously.
 
 
+.. rubric:: Examples
+
+
+List all local SDK volumes:
+
+.. code-block:: console
+
+   $ sdk list
+
+
+Hide the table header in the output:
+
+.. code-block:: console
+
+   $ sdk list --no-headers
+
+
+
+.. rubric:: Flags
+
+
+--no-headers
+
+   Hide table headers.
+
+
+
 

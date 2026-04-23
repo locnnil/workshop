@@ -36,6 +36,12 @@ Notes:
 - Multiple entries may appear for a single SDK
   if several revisions are present simultaneously.
 `,
+		Example: `
+List all local SDK volumes:
+$ sdk list
+
+Hide the table header in the output:
+$ sdk list --no-headers`,
 		Args: cobra.NoArgs,
 		RunE: c.Run,
 	}
