@@ -15,8 +15,7 @@ Stage built artifacts into a common staging area
 
 .. code-block:: console
 
-   $ sdkcraft stage [--destructive-mode | --use-lxd]
-                      [--shell | --shell-after] [--debug]
+   $ sdkcraft stage [--destructive-mode | --use-lxd] [--shell | --shell-after] [--debug]
                       [--platform name | --build-for arch]
                       [part-name ...]
 

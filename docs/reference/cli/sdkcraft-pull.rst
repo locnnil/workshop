@@ -15,8 +15,7 @@ Download or retrieve artifacts defined for a part
 
 .. code-block:: console
 
-   $ sdkcraft pull [--destructive-mode | --use-lxd]
-                     [--shell | --shell-after] [--debug]
+   $ sdkcraft pull [--destructive-mode | --use-lxd] [--shell | --shell-after] [--debug]
                      [--platform name | --build-for arch]
                      [part-name ...]
 

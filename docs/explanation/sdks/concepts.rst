@@ -244,21 +244,34 @@ Note that :samp:`sketch` is a reserved name,
 and the sketch SDK is always installed last.
 
 
-.. _exp_try_sdk:
+.. _exp_test_try_sdk:
 
-Trying out SDKs
----------------
+Testing and trying SDKs
+-----------------------
 
 .. @artefact sdkcraft (CLI)
 .. @artefact try SDK
 
+
+Once an SDK is packed,
+publishers have two ways to exercise it before upload.
+
+The :command:`sdkcraft test` command runs the SDK's
+`spread <https://github.com/canonical/spread>`__ tests
+against a freshly packed SDK.
+These tests live under the SDK's :file:`tests/` tree
+and are the publisher's responsibility to author and maintain;
+|sdk_markup| only invokes the spread harness and reports results.
+
 The :command:`sdkcraft try` command allows publishers to test SDKs
 before uploading them to the Store.
-Once installed in a workshop, these SDKs behave identically to SDKs from the Store.
+Once installed in a workshop,
+these SDKs behave identically to SDKs from the Store.
 
 |sdk_markup| does not install SDKs in a workshop directly;
 it simply copies packed SDKs to a directory called the *try area*.
-|ws_markup| looks in this directory when installing an SDK with the :samp:`try-` prefix.
+|ws_markup| looks in this directory
+when installing an SDK with the :samp:`try-` prefix.
 
 The try area has no channels;
 only one version of an SDK can be tested at a time.

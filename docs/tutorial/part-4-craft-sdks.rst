@@ -461,7 +461,7 @@ Try the SDK
 .. @artefact try SDK
 
 When you're confident the SDK is ready to be built,
-test it in-place before uploading it to the Store.
+try it in-place before uploading it to the Store.
 
 Under :file:`ollama/`, run:
 
@@ -526,6 +526,31 @@ help debug any issues that may arise during launch or refresh:
    see the respective Craft Parts
    `documentation section
    <https://canonical-craft-parts.readthedocs-hosted.com/latest/common/craft-parts/explanation/lifecycle/>`_.
+
+
+.. _tut_sdkcraft_test:
+
+Test the SDK
+------------
+
+Additionally,
+you can write and run `spread <https://github.com/canonical/spread>`__ tests
+against the SDK to ensure its functionality
+and catch any issues before publishing it.
+For |sdk_markup|, :program:`spread` tests are declared
+under :file:`tests/` in the SDK directory;
+each test describes a specific executable user workflow.
+
+To run the test suite against the packed SDK:
+
+.. code-block:: console
+
+   $ sdkcraft test
+
+
+At runtime, each test provisions a clean LXD container,
+installs the packed SDK into a workshop,
+and runs the declared scenarios end-to-end.
 
 
 .. _tut_sdkcraft_publish:
