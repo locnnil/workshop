@@ -272,7 +272,7 @@ Images
 
 |ws_markup| containers are created from base operating system images.
 By default, |ws_markup| fetches base images,
-such as Ubuntu 20.04 LTS, Ubuntu 22.04 LTS, or Ubuntu 24.04 LTS,
+such as Ubuntu 22.04 LTS, Ubuntu 24.04 LTS, or Ubuntu 26.04 LTS,
 from the official
 `Ubuntu cloud image repository <https://cloud-images.ubuntu.com/releases>`_.
 

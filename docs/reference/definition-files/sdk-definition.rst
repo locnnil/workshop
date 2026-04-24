@@ -73,7 +73,7 @@ Other fields are optional.
        that provides the underlying OS capabilities.
 
        It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`,
-       or :samp:`ubuntu@24.04`.
+       :samp:`ubuntu@24.04`, or :samp:`ubuntu@26.04`.
 
        SDKs with a :samp:`base` can only be added to a workshop with the same :samp:`base`.
        SDKs without a :samp:`base` can be added to any workshop.

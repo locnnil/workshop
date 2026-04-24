@@ -19,7 +19,7 @@ import (
 const MAX_WORKSHOP_NAME_LENGTH = 40
 
 var (
-	SupportedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
+	SupportedBases = sdk.AllowedBases
 
 	workshopName = regexp.MustCompile(`^[a-z](?:-?[a-z0-9])*$`)
 	actionName   = workshopName

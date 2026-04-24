@@ -17,6 +17,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -431,30 +432,6 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		return err
 	}
 
-	if args.action {
-		logger.Debugf("Running action %q", av)
-	} else {
-		// Obtain an exec session as close to a real login shell as possible.
-		// This is required as an lxd exec call is a simple namespace exec, and LXD
-		// ignores the instance configuration by design:
-		// https://documentation.ubuntu.com/lxd/en/latest/instance-exec/#user-groups-and-working-directory
-
-		command := []string{"sudo",
-			"-u",
-			"#" + strconv.Itoa(flags.UserId),
-			"-g",
-			"#" + strconv.Itoa(flags.GroupId),
-			"--preserve-env",
-			"--",
-			"bash",
-			"-l",
-			"-c",
-			`exec -- "$0" "$@"`,
-		}
-		av = append(command, av...)
-		logger.Debugf("Running %q", av)
-	}
-
 	// Set up environment variables.
 	env := make(map[string]string)
 
@@ -491,6 +468,34 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		}
 
 		env[key] = value
+	}
+
+	if args.action {
+		logger.Debugf("Running action %q", av)
+	} else {
+		// Obtain an exec session as close to a real login shell as possible.
+		// This is required as an lxd exec call is a simple namespace exec, and LXD
+		// ignores the instance configuration by design:
+		// https://documentation.ubuntu.com/lxd/en/latest/instance-exec/#user-groups-and-working-directory
+		keys := slices.Sorted(maps.Keys(env))
+		command := []string{"sudo",
+			"-u",
+			"#" + strconv.Itoa(flags.UserId),
+			"-g",
+			"#" + strconv.Itoa(flags.GroupId),
+		}
+		for _, k := range keys {
+			command = append(command, "--preserve-env="+k)
+		}
+		command = append(command,
+			"--",
+			"bash",
+			"-l",
+			"-c",
+			`exec -- "$0" "$@"`,
+		)
+		av = append(command, av...)
+		logger.Debugf("Running %q", av)
 	}
 
 	// Record terminal state (and restore it before we exit).

@@ -12,7 +12,7 @@ import (
 const MAX_SDK_NAME_LENGTH = 40
 
 var (
-	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04"}
+	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04", "ubuntu@26.04"}
 	sdkName      = regexp.MustCompile(`^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$`)
 	// Regular expression describing correct plug, slot and interface names.
 	validPlugSlotIface = regexp.MustCompile("^[a-z](?:-?[a-z0-9])*$")

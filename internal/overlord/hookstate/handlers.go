@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/canonical/x-go/strutil"
@@ -60,27 +62,6 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 	if verbose {
 		command = append(command, "-o", "xtrace")
 	}
-
-	uid := "0"
-	gid := "0"
-	if hook.HookType == SetupProject {
-		uid = workshop.User.Uid
-		gid = workshop.User.Gid
-	}
-
-	runAsUser := []string{
-		"sudo",
-		"--user=#" + uid,
-		"--group=#" + gid,
-		"--preserve-env",
-		"--",
-		"bash",
-		"-l",
-		"-c",
-		`exec -- "$0" "$@"`,
-	}
-	command = append(runAsUser, command...)
-
 	command = append(command, hookPath)
 
 	execArgs := &workshop.ExecArgs{
@@ -144,6 +125,34 @@ func (h *HookManager) doRunHook(task *state.Task, tomb *tomb.Tomb) error {
 		execArgs.Environment["XDG_RUNTIME_DIR"] = xdgRuntimeDir
 		execArgs.Environment["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + filepath.Join(xdgRuntimeDir, "bus")
 	}
+
+	uid := "0"
+	gid := "0"
+	if hook.HookType == SetupProject {
+		uid = workshop.User.Uid
+		gid = workshop.User.Gid
+	}
+
+	keys := slices.Collect(maps.Keys(execArgs.Environment))
+	keys = append(keys, "WORKSHOP_COOKIE")
+	slices.Sort(keys)
+
+	runAsUser := []string{
+		"sudo",
+		"--user=#" + uid,
+		"--group=#" + gid,
+	}
+	for _, k := range keys {
+		runAsUser = append(runAsUser, "--preserve-env="+k)
+	}
+	runAsUser = append(runAsUser,
+		"--",
+		"bash",
+		"-l",
+		"-c",
+		`exec -- "$0" "$@"`,
+	)
+	execArgs.Command = append(runAsUser, execArgs.Command...)
 
 	return h.executeHook(ctx, task, w, &hook, execArgs)
 }
