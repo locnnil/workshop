@@ -42,7 +42,7 @@ To check out the connected interfaces of a workshop, list the connections:
 
    $ workshop connections
 
-     Interface  Plug               Slot              Notes
+     INTERFACE  PLUG               SLOT              NOTES
      gpu        dev/ollama:gpu     dev/system:gpu    -
      mount      dev/ollama:models  dev/system:mount  -
 
@@ -76,13 +76,13 @@ To check the connection state, run :command:`workshop connections`:
    $ workshop disconnect dev/ollama:models
    $ workshop connections
 
-     Interface  Plug            Slot            Notes
+     INTERFACE  PLUG            SLOT            NOTES
      gpu        dev/ollama:gpu  dev/system:gpu  -
 
    $ workshop connect dev/ollama:models :mount
    $ workshop connections
 
-     Interface  Plug               Slot              Notes
+     INTERFACE  PLUG               SLOT              NOTES
      gpu        dev/ollama:gpu     dev/system:gpu    -
      mount      dev/ollama:models  dev/system:mount  manual
 
@@ -192,7 +192,7 @@ so you don't have to add it manually:
 
    $ workshop connections --all
 
-     Interface  Plug                Slot                      Notes
+     INTERFACE  PLUG                SLOT                      NOTES
      gpu        dev/ollama:gpu      dev/system:gpu            -
      mount      dev/jupyter:venv    dev/system:mount          -
      mount      dev/ollama:models   dev/system:mount          -
@@ -298,7 +298,7 @@ instead of falling back to :samp:`dev/system:mount`:
 
    $ workshop connections --all
 
-     Interface  Plug                Slot                      Notes
+     INTERFACE  PLUG                SLOT                      NOTES
      gpu        dev/ollama:gpu      dev/system:gpu            -
      mount      dev/jupyter:venv    dev/uv:venv               -
      mount      dev/ollama:models   dev/system:mount          -

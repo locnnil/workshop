@@ -156,7 +156,7 @@ along with the line number of the target plug:
 
    $ workshop connections digits
 
-     Interface  Plug                    Slot                 Notes
+     INTERFACE  PLUG                    SLOT                 NOTES
      mount      digits/torchaudio:hub   digits/system:mount  bind.1
      mount      digits/torchvision:hub  digits/system:mount  bind.1
 

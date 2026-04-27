@@ -168,7 +168,7 @@ To check if a plug or slot is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                  Slot                Notes
+     INTERFACE  PLUG                  SLOT                NOTES
      ...
      tunnel     ws/client-sdk:shared  ws/system:shared    manual
      tunnel     ws/system:app         ws/service-sdk:app  manual

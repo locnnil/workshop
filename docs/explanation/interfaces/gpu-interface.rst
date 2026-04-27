@@ -78,7 +78,7 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug            Slot           Notes
+     INTERFACE  PLUG            SLOT           NOTES
      ...
      gpu        ws/gpu-sdk:gpu  ws/system:gpu  -
 

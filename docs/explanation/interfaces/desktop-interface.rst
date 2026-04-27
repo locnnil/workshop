@@ -114,7 +114,7 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                   Slot                Notes
+     INTERFACE  PLUG                   SLOT                NOTES
      ...
      desktop    ws/desktop-sdk:desktop ws/system:desktop   manual
 

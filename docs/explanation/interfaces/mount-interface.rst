@@ -123,7 +123,7 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug                Slot    Notes
+     INTERFACE  PLUG                SLOT    NOTES
      ...
      mount      ws/mount-sdk:cache  :cache  manual
 
