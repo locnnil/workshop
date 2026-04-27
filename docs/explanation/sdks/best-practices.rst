@@ -361,8 +361,8 @@ and system package manager integration:
    PATH="$SDK/bin:\$PATH"
    EOF
 
-   "$SDK"/bin/uv generate-shell-completion bash > /etc/bash_completion.d/uv.sh
-   "$SDK"/bin/uvx --generate-shell-completion bash > /etc/bash_completion.d/uvx.sh
+   "$SDK"/bin/uv generate-shell-completion bash > /usr/share/bash-completion/completions/uv
+   "$SDK"/bin/uvx --generate-shell-completion bash > /usr/share/bash-completion/completions/uvx
 
    mkdir -p /usr/local/libexec/alternatives
 

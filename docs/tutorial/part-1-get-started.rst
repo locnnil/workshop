@@ -190,6 +190,23 @@ list the workshops in the project directory:
      ~/ollama-python-project  dev       Off     -
 
 
+.. note::
+
+   |ws_markup| ships shell completion for Bash, Zsh, Fish, and PowerShell;
+   if you installed via snap, it is already enabled.
+   Press Tab as you type any :program:`workshop` command
+   to autocomplete subcommands, flags, and arguments.
+
+   Completion is context-aware:
+   each command offers only values that make sense for it.
+   For instance, :command:`workshop start` autocompletes
+   from *Stopped* workshops only,
+   :command:`workshop stop` from *Ready* ones,
+   and :command:`workshop connect` autocompletes available plugs
+   and then the matching slots.
+   See :ref:`ref_workshop__cli_completion` for the full list.
+
+
 As the command output suggests, your newly defined workshop is *Off*,
 so it needs to be launched.
 
