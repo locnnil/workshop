@@ -45,3 +45,33 @@ execute: |
   workshop_exec refresh
   workshop_exec info
   retry 5 curl -w '\n' http://127.0.0.1:8989/api
+
+
+  ## Wire jupyter to a uv-managed Python environment
+
+  cat > workshop.yaml <<EOF
+  name: dev
+  base: ubuntu@24.04
+  sdks:
+    - name: ollama
+      channel: vulkan
+    - name: uv
+    - name: jupyter
+    - name: system
+      plugs:
+        jupyter:
+          interface: tunnel
+          endpoint: 127.0.0.1:8989
+  connections:
+    - plug: jupyter:venv
+      slot: uv:venv
+  EOF
+
+  # Apply the new definition cleanly so SDKs are installed in declaration order.
+  workshop_exec remove
+  workshop_exec launch
+  workshop_exec connections --all | MATCH 'dev/jupyter:venv\s+dev/uv:venv'
+
+  # Smoke-test uv from inside the workshop.
+  workshop_exec exec dev -- uv --version
+  workshop_exec exec dev -- bash -lc 'echo "UV_LINK_MODE=$UV_LINK_MODE"' | MATCH 'UV_LINK_MODE=copy'

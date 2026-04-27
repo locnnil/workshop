@@ -1,0 +1,71 @@
+summary: Test 'How to manage Python environments with the uv SDK' to ensure it's operational
+restore: |
+  rm -rf ~/pyproj
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  # Set up a minimal Python project at /project (host bind-mount).
+
+  mkdir pyproj/
+  chown -R ubuntu:ubuntu pyproj/
+  cd pyproj/
+  cp ../workshop.yaml workshop.yaml
+  cat > pyproject.toml <<'EOF'
+  [project]
+  name = "demo"
+  version = "0.1.0"
+  requires-python = ">=3.10"
+  dependencies = []
+  EOF
+  chown ubuntu:ubuntu pyproject.toml workshop.yaml
+
+
+  # Launch the workshop with both uv and jupyter SDKs connected.
+
+  workshop_exec launch
+  workshop_exec connections --all | MATCH 'pyenv/jupyter:venv\s+pyenv/uv:venv'
+
+
+  # Verify the SDK exposes uv and the documented environment.
+
+  workshop_exec exec pyenv -- uv --version
+  workshop_exec exec pyenv -- bash -lc 'echo "UV_LINK_MODE=$UV_LINK_MODE"' | MATCH 'UV_LINK_MODE=copy'
+  workshop_exec exec pyenv -- test -d /home/workshop/.cache/uv
+  workshop_exec exec pyenv -- test -d /home/workshop/uv-venv
+
+
+  # Confirm the pip alias is in place (update-alternatives -> uv pip).
+
+  workshop_exec exec pyenv -- bash -lc 'readlink -f $(which pip)' | MATCH 'uv-pip'
+
+
+  # Default uv sync places the venv at /project/.venv.
+
+  workshop_exec exec pyenv -- bash -lc 'cd /project && uv sync'
+  workshop_exec exec pyenv -- test -d /project/.venv
+  workshop_exec exec pyenv -- bash -lc 'cd /project && uv run python -c "import sys; print(sys.prefix)"' | MATCH '/project/\.venv'
+
+
+  # Pin the project venv with UV_PROJECT_ENVIRONMENT (rationale: explicit,
+  # predictable location regardless of nested workspace layout, and shared
+  # across workshops mounting the same project directory).
+
+  workshop_exec exec pyenv -- bash -lc '
+    set -e
+    cd /project
+    rm -rf .venv pinned-venv
+    UV_PROJECT_ENVIRONMENT=/project/pinned-venv uv sync
+    test -d /project/pinned-venv
+    UV_PROJECT_ENVIRONMENT=/project/pinned-venv uv run python -c "import sys; print(sys.prefix)"
+  ' | MATCH '/project/pinned-venv'
+
+
+  # uv add is network-dependent; retry to absorb flakes.
+
+  retry 5 sudo -u ubuntu -- workshop exec pyenv -- bash -lc 'cd /project && uv add requests'
+  workshop_exec exec pyenv -- bash -lc 'cd /project && uv run python -c "import requests; print(requests.__version__)"'
+
+
+  # Clean up.
+
+  workshop_exec remove

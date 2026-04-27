@@ -239,6 +239,80 @@ Now, JupyterLab is available at the plug address:
    :ref:`how_forward_ports`.
 
 
+.. _tut_jupyter_uv_venv:
+
+Wire jupyter to a uv-managed Python environment
+-----------------------------------------------
+
+So far, :samp:`jupyter:venv` auto-connects to the :samp:`system:mount` slot,
+which gives Jupyter a private host directory for its virtual environment.
+A more interesting wiring uses the :samp:`uv` SDK,
+the standard Python tooling SDK in |ws_markup|;
+:samp:`uv` exposes a :samp:`venv` slot
+that other Python-based SDKs can plug into,
+so Jupyter and uv share a single environment.
+
+Edit the workshop definition to add :samp:`uv`
+*before* :samp:`jupyter` in the :samp:`sdks:` list,
+so that :samp:`uv`'s :samp:`setup-project` hook
+prepares the shared virtual environment
+before any consuming SDK installs into it.
+Then declare the connection in a top-level :samp:`connections:` block:
+
+.. code-block:: yaml
+   :caption: workshop.yaml
+   :emphasize-lines: 6,13-15
+
+   name: dev
+   base: ubuntu@24.04
+   sdks:
+     - name: ollama
+       channel: vulkan/stable
+     - name: uv
+     - name: jupyter
+     - name: system
+       plugs:
+         jupyter:
+           interface: tunnel
+           endpoint: 127.0.0.1:8989
+   connections:
+     - plug: jupyter:venv
+       slot: uv:venv
+
+
+Apply the new definition by removing and relaunching the workshop;
+this gives :program:`workshop` a clean slate
+to install the SDKs in the order you've declared:
+
+.. code-block:: console
+
+   $ workshop remove
+   $ workshop launch
+
+
+:samp:`dev/jupyter:venv` now connects to :samp:`dev/uv:venv`
+instead of falling back to :samp:`dev/system:mount`:
+
+.. code-block:: console
+   :emphasize-lines: 6
+
+   $ workshop connections --all
+
+     Interface  Plug                Slot                      Notes
+     gpu        dev/ollama:gpu      dev/system:gpu            -
+     mount      dev/jupyter:venv    dev/uv:venv               -
+     mount      dev/ollama:models   dev/system:mount          -
+     mount      dev/uv:cache       dev/system:mount          -
+     tunnel     -                   dev/ollama:ollama-server  -
+     tunnel     dev/system:jupyter  dev/jupyter:jupyter       -
+
+
+This is your first taste of slot/plug coordination
+between two non-system SDKs;
+for the full Python workflow with :program:`uv`,
+see :ref:`how_manage_python_environments`.
+
+
 Next steps
 ----------
 

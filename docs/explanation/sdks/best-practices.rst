@@ -523,26 +523,14 @@ The :samp:`jupyter` SDK shows this pattern:
       workshop-target: $SDK/venv
 
 
-To establish the connection between these SDKs,
-the workshop definition must specify the relationship:
-
-.. code-block:: yaml
-   :caption: workshop.yaml
-
-   connections:
-     - plug: jupyter:venv
-       slot: uv:venv
-
-
-When both SDKs are installed in the workshop,
-:samp:`jupyter`'s :samp:`setup-project` hook can install packages
-into the virtual environment provided by :samp:`uv`,
-avoiding duplication and ensuring consistent Python package management
-across all Python-based SDKs in the workshop.
-
-The best part is that when :samp:`uv` isn't installed and there's no connection,
-:samp:`jupyter` still works perfectly fine
-using the host directory that |ws_markup| automatically provides for the plug.
+|ws_markup| users wire the two together
+through a :samp:`connections:` block in their workshop definition;
+when no compatible slot is available,
+the consuming SDK falls back to the host directory
+that |ws_markup| automatically provides for the plug,
+so a Python-based SDK still works on its own.
+For the details of how this works,
+see :ref:`how_manage_python_environments`.
 
 This pattern extends beyond Python or its virtual environments
 to encompass various shared resources,

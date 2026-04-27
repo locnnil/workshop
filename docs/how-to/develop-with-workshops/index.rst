@@ -30,11 +30,12 @@ Integrate with development workflows
 ------------------------------------
 
 These guides cover using workshops alongside
-version control, CI/CD, and AI-powered development tools:
+version control, CI/CD, AI-powered development tools, and language tooling:
 
 .. toctree::
    :maxdepth: 1
 
    Use workshops with Git <use-git>
+   Manage Python environments <manage-python-environments>
    Run GitHub Actions locally <run-github-actions-locally>
    Use workshops with AI agents <use-workshops-with-ai-agents>
