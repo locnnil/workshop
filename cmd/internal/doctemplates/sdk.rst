@@ -35,7 +35,7 @@ Shell completion
 ----------------
 
 The :program:`sdk` CLI ships completion scripts
-for Bash, Zsh, Fish, and PowerShell.
+for Bash, Zsh, and Fish.
 
 .. note::
 
@@ -69,13 +69,6 @@ Fish:
    $ sdk completion fish | source
 
 
-PowerShell:
-
-.. code-block:: console
-
-   $ sdk completion powershell | Out-String | Invoke-Expression
-
-
 For per-shell installation that persists across new sessions,
 follow the instructions printed by the shell-specific help command.
 For example, for Bash:
@@ -83,18 +76,6 @@ For example, for Bash:
 .. code-block:: console
 
    $ sdk completion bash --help
-
-
-What gets completed
-~~~~~~~~~~~~~~~~~~~
-
-Beyond subcommand and flag names,
-the :program:`sdk` CLI completes flag values for :command:`sdk info`:
-
-- :option:`!--base` completes the supported bases
-  (for example, :samp:`ubuntu@22.04`, :samp:`ubuntu@24.04`).
-
-- :option:`!--arch` completes the allowed architectures, plus :samp:`all`.
 
 
 See also

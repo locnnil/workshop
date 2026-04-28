@@ -40,7 +40,7 @@ Shell completion
 ----------------
 
 The :program:`workshop` CLI ships completion scripts
-for Bash, Zsh, Fish, and PowerShell.
+for Bash, Zsh, and Fish.
 
 .. note::
 
@@ -73,13 +73,6 @@ Fish:
    $ workshop completion fish | source
 
 
-PowerShell:
-
-.. code-block:: console
-
-   $ workshop completion powershell | Out-String | Invoke-Expression
-
-
 For per-shell installation that persists across new sessions,
 follow the instructions printed by the shell-specific help command.
 For example, for Bash:
@@ -99,18 +92,12 @@ the :program:`workshop` CLI completes arguments and flag values dynamically:
   for example, :command:`workshop start` lists only *Stopped* workshops,
   while :command:`workshop stop` lists only *Ready* ones.
 
-- Project directory paths
-  for the global :option:`!--project` (:option:`!-p`) flag.
-
 - Plugs and slots for :command:`workshop connect`
   and :command:`workshop disconnect`:
   the first argument completes available plugs,
   the second completes valid slots for the chosen plug.
 
 - Recent change IDs for :command:`workshop tasks`.
-
-- Choice values for flags such as :option:`!--unicode`
-  on :command:`workshop warnings`.
 
 
 See also

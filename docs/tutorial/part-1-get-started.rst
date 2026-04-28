@@ -204,7 +204,6 @@ list the workshops in the project directory:
    :command:`workshop stop` from *Ready* ones,
    and :command:`workshop connect` autocompletes available plugs
    and then the matching slots.
-   See :ref:`ref_workshop__cli_completion` for the full list.
 
 
 As the command output suggests, your newly defined workshop is *Off*,
