@@ -62,7 +62,7 @@ execute: |
 
   # uv add is network-dependent; retry to absorb flakes.
 
-  retry 5 sudo -u ubuntu -- workshop exec pyenv -- bash -lc 'cd /project && uv add requests'
+  retry 5 workshop_exec exec pyenv -- bash -lc 'cd /project && uv add requests'
   workshop_exec exec pyenv -- bash -lc 'cd /project && uv run python -c "import requests; print(requests.__version__)"'
 
 
