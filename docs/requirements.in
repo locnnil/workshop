@@ -8,3 +8,4 @@
 # Workshop-specific Sphinx extensions not in starter pack
 sphinx-copybutton
 sphinxcontrib-mermaid
+requests>=2.33.0
