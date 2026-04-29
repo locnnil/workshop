@@ -3,14 +3,20 @@
 package lxdbackend_integration_test
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha3"
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/canonical/lxd/shared/api"
@@ -323,4 +329,294 @@ func (s *snapshotSuite) snapshotFormat(c *check.C, snapshot workshop.Snapshot) a
 	delete(inst.Config, "user.workshop.sha3-384")
 
 	return inst
+}
+
+// Launches 2 workshops from scratch and another from a snapshot of the first,
+// then checks that the third workshop is indistinguishable from the other two.
+func (s *snapshotSuite) TestLxdBackendSnapshotDiff(c *check.C) {
+	if os.Geteuid() != 0 {
+		c.Skip("requires root to mount and compare workshop filesystems")
+	}
+
+	for _, base := range workshop.SupportedBases {
+		c.Logf("Testing snapshot integrity for base %q", base)
+		s.snapshotDiff(c, base)
+	}
+}
+
+func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
+	// Download base image.
+	image, err := s.bd.GetBase(s.ctx, base)
+	c.Assert(err, check.IsNil)
+	err = s.bd.DownloadBase(s.ctx, image, nil)
+	c.Assert(err, check.IsNil)
+
+	rev := revert.New()
+	defer rev.Fail()
+
+	// Launch first workshop.
+	wf1 := &workshop.File{
+		Name: "test1",
+		Base: base,
+	}
+	baseOnly := workshop.Snapshot{Image: image}
+	r := s.launchWorkshop(c, wf1, baseOnly)
+	revert.Copy(rev, r)
+
+	// Start first workshop to take snapshot.
+	err = s.bd.StartWorkshop(s.ctx, "test1")
+	c.Assert(err, check.IsNil)
+	snapshot := baseOnly
+	snapshot.Sdks = []sdk.ContentID{{
+		Name:     "system",
+		Sha3_384: "6b499970ebf370d4dbc4e9a005c042dee003c19a9420a78944bcbf32653d257f80f7c56bad55b4c967dca68a1ea92be7",
+		IsVolume: true,
+	}}
+	err1 := s.bd.TakeSnapshot(s.ctx, "test1", snapshot)
+	mount1, err2 := s.rootfsMount("test1")
+	err3 := s.bd.StopWorkshop(s.ctx, "test1", true)
+	c.Assert(cmp.Or(err1, err2, err3), check.IsNil)
+
+	// Launch second workshop.
+	wf2 := &workshop.File{
+		Name: "test2",
+		Base: base,
+	}
+	r = s.launchWorkshop(c, wf2, baseOnly)
+	revert.Copy(rev, r)
+
+	// Start second workshop to run cloud-init.
+	err = s.bd.StartWorkshop(s.ctx, "test2")
+	c.Assert(err, check.IsNil)
+	mount2, err1 := s.rootfsMount("test2")
+	err2 = s.bd.StopWorkshop(s.ctx, "test2", true)
+	c.Assert(cmp.Or(err1, err2), check.IsNil)
+
+	// Launch third workshop from snapshot.
+	wf3 := &workshop.File{
+		Name: "test3",
+		Base: base,
+	}
+	r = s.launchWorkshop(c, wf3, snapshot)
+	revert.Copy(rev, r)
+
+	// Start third workshop to run cloud-init (again).
+	err = s.bd.StartWorkshop(s.ctx, "test3")
+	c.Assert(err, check.IsNil)
+	snapshot2 := snapshot
+	snapshot2.Sdks = append(snapshot2.Sdks, sdk.ContentID{
+		Name:     "test-sdk",
+		Sha3_384: "d024fbe91c6b99d0064306d52006c17a5d0406822ff253fbbe6a934ca9be50d3ff9a6ec3bac3be8396006029a1ff453a",
+		IsVolume: false,
+	})
+	err1 = s.bd.TakeSnapshot(s.ctx, "test3", snapshot2)
+	mount3, err2 := s.rootfsMount("test3")
+	err3 = s.bd.StopWorkshop(s.ctx, "test3", true)
+	c.Assert(cmp.Or(err1, err2, err3), check.IsNil)
+
+	// Mount each rootfs for comparison
+	workdir := c.MkDir()
+	for i := range 3 {
+		err := os.Mkdir(filepath.Join(workdir, fmt.Sprint(i)), os.ModePerm)
+		c.Assert(err, check.IsNil)
+	}
+	var roots []string
+	var files []uniqueFiles
+	for i, m := range []mount{mount1, mount2, mount3} {
+		if m.Fstype != "zfs" {
+			c.Skip("workshop storage pool is not using ZFS")
+		}
+		target := filepath.Join(workdir, fmt.Sprint(i))
+		err := syscall.Mount(m.Source, target, m.Fstype, 0, "")
+		c.Assert(err, check.IsNil)
+		defer func() {
+			err1 := syscall.Unmount(target, 0)
+			c.Check(err1, check.IsNil)
+		}()
+
+		root := filepath.Join(target, m.Fsroot)
+		roots = append(roots, root)
+		files = append(files, extractUniqueFiles(c, root))
+	}
+
+	// Ensure certain files are unique.
+	c.Check(files[0].hostname, check.Not(check.Equals), files[1].hostname)
+	c.Check(files[0].instanceID, check.Not(check.Equals), files[1].instanceID)
+	c.Check(files[0].machineID, check.Not(check.Equals), files[1].machineID)
+	c.Check(files[0].sshKey, check.Not(check.Equals), files[1].sshKey)
+
+	c.Check(files[0].hostname, check.Not(check.Equals), files[2].hostname)
+	c.Check(files[0].instanceID, check.Not(check.Equals), files[2].instanceID)
+	c.Check(files[0].machineID, check.Not(check.Equals), files[2].machineID)
+	c.Check(files[0].sshKey, check.Not(check.Equals), files[2].sshKey)
+
+	// Check for unexpected differences.
+	output, err := exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[0], roots[1]).CombinedOutput()
+	c.Check(err, check.IsNil, check.Commentf("%s", output))
+
+	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[0], roots[2]).CombinedOutput()
+	c.Check(err, check.IsNil, check.Commentf("%s", output))
+
+	// Restore first workshop from its own snapshot.
+	err = syscall.Unmount(filepath.Join(workdir, "0"), 0)
+	c.Assert(err, check.IsNil)
+	_ = s.launchWorkshop(c, wf1, snapshot)
+
+	// Restart it to give cloud-init a chance to run.
+	err = s.bd.StartWorkshop(s.ctx, "test1")
+	c.Assert(err, check.IsNil)
+	mount1, err1 = s.rootfsMount("test1")
+	err2 = s.bd.StopWorkshop(s.ctx, "test1", true)
+	c.Assert(cmp.Or(err1, err2), check.IsNil)
+
+	// Remount the rootfs.
+	if mount1.Fstype != "zfs" {
+		c.Skip("workshop storage pool is not using ZFS")
+	}
+	err = syscall.Mount(mount1.Source, filepath.Join(workdir, "0"), mount1.Fstype, 0, "")
+	c.Assert(err, check.IsNil)
+	restored := extractUniqueFiles(c, roots[0])
+
+	// Check that only LXD-managed attributes are preserved. Ideally the
+	// machine-id and SSH key should be preserved too, but in the meantime we
+	// should enforce the current behaviour.
+	c.Check(files[0].hostname, check.Equals, restored.hostname)
+	c.Check(files[0].instanceID, check.Equals, restored.instanceID)
+	c.Check(files[0].machineID, check.Not(check.Equals), restored.machineID)
+	c.Check(files[0].sshKey, check.Not(check.Equals), restored.sshKey)
+
+	// Check for unexpected differences.
+	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[1], roots[0]).CombinedOutput()
+	c.Check(err, check.IsNil, check.Commentf("%s", output))
+
+	// Refresh first workshop from a snapshot of third workshop.
+	err = syscall.Unmount(filepath.Join(workdir, "0"), 0)
+	c.Assert(err, check.IsNil)
+	_ = s.launchWorkshop(c, wf1, snapshot2)
+
+	// Restart first workshop to run cloud-init.
+	err = s.bd.StartWorkshop(s.ctx, "test1")
+	c.Assert(err, check.IsNil)
+	mount1, err1 = s.rootfsMount("test1")
+
+	err2 = s.bd.StopWorkshop(s.ctx, "test1", true)
+	c.Assert(cmp.Or(err1, err2), check.IsNil)
+
+	// Remount the rootfs.
+	if mount1.Fstype != "zfs" {
+		c.Skip("workshop storage pool is not using ZFS")
+	}
+	err = syscall.Mount(mount1.Source, filepath.Join(workdir, "0"), mount1.Fstype, 0, "")
+	c.Assert(err, check.IsNil)
+	refreshed := extractUniqueFiles(c, roots[0])
+
+	// Check that only LXD-managed attributes are preserved.
+	c.Check(files[0].hostname, check.Equals, refreshed.hostname)
+	c.Check(files[0].instanceID, check.Equals, refreshed.instanceID)
+	c.Check(files[0].machineID, check.Not(check.Equals), refreshed.machineID)
+	c.Check(files[0].sshKey, check.Not(check.Equals), refreshed.sshKey)
+
+	c.Check(files[2].machineID, check.Not(check.Equals), refreshed.machineID)
+	c.Check(files[2].sshKey, check.Not(check.Equals), refreshed.sshKey)
+
+	// Check for unexpected differences.
+	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[2], roots[0]).CombinedOutput()
+	c.Check(err, check.IsNil, check.Commentf("%s", output))
+}
+
+type mount struct {
+	Fstype string `json:"fstype"`
+	Source string `json:"source"`
+	Fsroot string `json:"fsroot"`
+}
+
+// rootfsMount returns the source ZFS dataset, and subdirectory within that, of
+// the given container's rootfs.
+func (s *snapshotSuite) rootfsMount(name string) (mount, error) {
+	args := workshop.ExecArgs{
+		Command: []string{"findmnt", "--json", "--mountpoint=/", "--nofsroot", "--output=fsroot,fstype,source"},
+		WorkDir: "/",
+		Timeout: time.Second,
+	}
+	output, err := helper.ExecOutput(s.ctx, s.bd, name, args)
+	if err != nil {
+		return mount{}, err
+	}
+
+	var result struct {
+		Filesystems []mount `json:"filesystems"`
+	}
+	if err := json.Unmarshal([]byte(output), &result); err != nil {
+		return mount{}, err
+	}
+	if len(result.Filesystems) != 1 {
+		return mount{}, fmt.Errorf("expected 1 filesystem, found:\n%s", output)
+	}
+
+	return result.Filesystems[0], nil
+}
+
+type uniqueFiles struct {
+	hostname   string
+	instanceID string
+	machineID  string
+	sshKey     string
+}
+
+// extractUniqueFiles prepares a rootfs for diff comparison. It removes files
+// that are likely be different (most of which are inconsequential) and returns
+// the contents of the files that really ought to be different.
+func extractUniqueFiles(c *check.C, path string) uniqueFiles {
+	hostname, err := os.ReadFile(filepath.Join(path, "etc", "hostname"))
+	c.Assert(err, check.IsNil)
+	instanceID, err := os.ReadFile(filepath.Join(path, "var", "lib", "cloud", "data", "instance-id"))
+	c.Assert(err, check.IsNil)
+	machineID, err := os.ReadFile(filepath.Join(path, "etc", "machine-id"))
+	c.Assert(err, check.IsNil)
+	sshKey, err := os.ReadFile(filepath.Join(path, "etc", "ssh", "ssh_host_ed25519_key.pub"))
+	c.Assert(err, check.IsNil)
+
+	files := []string{
+		"etc/hostname",
+		"etc/machine-id",
+		"etc/sudoers.d/90-cloud-init-users",
+		"var/cache/ldconfig/aux-cache",
+		"var/lib/workshop/run/workshop.socket.untrusted",
+		"var/log/cloud-init.log",
+		"var/log/cloud-init-output.log",
+		"var/log/unattended-upgrades/unattended-upgrades-shutdown.log",
+		"var/log/wtmp",
+	}
+	for _, file := range files {
+		local, err := filepath.Localize(file)
+		c.Assert(err, check.IsNil)
+
+		err = os.Remove(filepath.Join(path, local))
+		if !errors.Is(err, os.ErrNotExist) {
+			c.Assert(err, check.IsNil)
+		}
+	}
+
+	dirs := []string{
+		"etc/ssh",
+		"var/cache/snapd",
+		"var/lib/cloud",
+		"var/lib/snapd",
+		"var/log/journal",
+		"var/tmp",
+	}
+	for _, dir := range dirs {
+		local, err := filepath.Localize(dir)
+		c.Assert(err, check.IsNil)
+
+		err = os.RemoveAll(filepath.Join(path, local))
+		c.Assert(err, check.IsNil)
+	}
+
+	return uniqueFiles{
+		hostname:   string(hostname),
+		instanceID: string(instanceID),
+		machineID:  string(machineID),
+		sshKey:     string(sshKey),
+	}
 }
