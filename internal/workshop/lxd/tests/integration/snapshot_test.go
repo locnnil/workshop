@@ -19,6 +19,7 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -61,7 +62,6 @@ func (s *snapshotSuite) SetUpSuite(c *check.C) {
 	dirs.ExecDir = c.MkDir()
 	dirs.SocketPath = filepath.Join(dirs.BaseDir, "workshop.socket")
 	c.Assert(dirs.CreateDirs(), check.IsNil)
-	c.Assert(os.MkdirAll(workshop.AptCacheDir(s.project.ProjectId, "test"), 0755), check.IsNil)
 	c.Assert(os.WriteFile(filepath.Join(dirs.ExecDir, "workshopctl"), nil, 0644), check.IsNil)
 
 	var err error
@@ -84,6 +84,34 @@ func (s *snapshotSuite) TearDownSuite(c *check.C) {
 	s.restoreLookupUsr()
 	s.restoreUserEnv()
 	s.restoreImageServer()
+}
+
+// This suite deliberately doesn't override the default devices, so the test
+// snapshots match the real ones more closely. As a consequence we have to do a
+// bit of extra work to launch a workshop.
+func (s *snapshotSuite) launchWorkshop(c *check.C, file *workshop.File, snapshot workshop.Snapshot) *revert.Reverter {
+	err := os.MkdirAll(workshop.AptCacheDir(s.project.ProjectId, file.Name), 0755)
+	c.Assert(err, check.IsNil)
+
+	rev := revert.New()
+	defer rev.Fail()
+
+	err = s.bd.LaunchOrRebuildWorkshop(s.ctx, file, snapshot)
+	c.Assert(err, check.IsNil)
+	rev.Add(func() {
+		reverr := s.bd.RemoveWorkshop(s.ctx, file.Name)
+		c.Check(reverr, check.IsNil)
+	})
+
+	fs, err := s.bd.WorkshopFs(s.ctx, file.Name)
+	c.Assert(err, check.IsNil)
+	err = fs.MkdirAll(dirs.WorkshopRunDir, 0755)
+	fs.Close()
+	c.Assert(err, check.IsNil)
+
+	clone := rev.Clone()
+	rev.Success()
+	return clone
 }
 
 //go:embed snapshot-format.yaml
@@ -115,22 +143,20 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 		},
 	}
 	snapshot := workshop.Snapshot{Image: image}
-	err = s.bd.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
-	c.Assert(err, check.IsNil)
-	defer helper.RemoveTestWorkshop(c, s.ctx, s.bd)
+	rev := s.launchWorkshop(c, wf, snapshot)
+	defer rev.Fail()
 
 	// Validate post-launch metadata.
 	launched := s.workshopFormat(c, wf, snapshot)
 	c.Check(launched, testutil.JsonEquals, format["launched"])
 
-	// Start workshop. Run dir is needed for workshop.socket.
-	fs, err := s.bd.WorkshopFs(s.ctx, wf.Name)
-	c.Assert(err, check.IsNil)
-	err = fs.MkdirAll(dirs.WorkshopRunDir, 0755)
-	fs.Close()
-	c.Assert(err, check.IsNil)
+	// Start workshop.
 	err = s.bd.StartWorkshop(s.ctx, wf.Name)
 	c.Assert(err, check.IsNil)
+	defer func() {
+		reverr := s.bd.StopWorkshop(s.ctx, wf.Name, true)
+		c.Check(reverr, check.IsNil)
+	}()
 
 	// Validate post-start metadata.
 	started := s.workshopFormat(c, wf, snapshot)
