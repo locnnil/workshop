@@ -40,18 +40,48 @@ and also has a number of global flags:
 Shell completion
 ----------------
 
-To configure shell completion,
-follow the instructions offered by :command:`sdk completion`:
+The :program:`sdk` CLI ships completion scripts
+for Bash, Zsh, and Fish.
 
-.. code-block:: console
+.. note::
 
-   $ sdk completion -h
+   When |ws_markup| is installed via snap,
+   completion for Bash, Zsh, and Fish is enabled automatically
+   for both :program:`workshop` and :program:`sdk`;
+   no further configuration is needed for these shells.
 
-For example, in your :file:`~/.bashrc` file:
+
+To enable completion for the current shell session,
+source the script for your shell.
+
+Bash:
 
 .. code-block:: console
 
    $ source <(sdk completion bash)
+
+
+Zsh:
+
+.. code-block:: console
+
+   $ source <(sdk completion zsh)
+
+
+Fish:
+
+.. code-block:: console
+
+   $ sdk completion fish | source
+
+
+For per-shell installation that persists across new sessions,
+follow the instructions printed by the shell-specific help command.
+For example, for Bash:
+
+.. code-block:: console
+
+   $ sdk completion bash --help
 
 
 See also
