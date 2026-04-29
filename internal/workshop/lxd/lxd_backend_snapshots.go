@@ -1,6 +1,7 @@
 package lxdbackend
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"crypto/sha3"
@@ -329,6 +330,10 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		}
 	})
 
+	if err := s.resetMachineID(snapshotConn, snapshotName); err != nil {
+		return err
+	}
+
 	if err := s.commitPartialSnapshot(snapshotConn, snapshotName); err != nil {
 		return err
 	}
@@ -431,6 +436,34 @@ func (s *Backend) checkPartialSnapshot(snapshotConn lxd.InstanceServer, snapshot
 		return err
 	}
 	return workshop.ErrSnapshotAlreadyExists
+}
+
+func (s *Backend) resetMachineID(snapshotConn lxd.InstanceServer, name string) error {
+	fs, err := s.instanceFs(snapshotConn, name)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	// There are a few ways to reset the machine-id: delete it, clear it, or
+	// replace it with "uninitialized." To match the base image, we clear it.
+	// This prevents systemd from treating the launch as a "first boot," which
+	// triggers service presets that we don't particularly want.
+	if err := fs.AtomicWriteTo(bytes.NewReader(nil), "/etc/machine-id", 0444); err != nil {
+		return err
+	}
+
+	// Remove old cloud-init data. Without this, the instance-id of the current
+	// workshop may be present in the snapshot. If the current workshop is
+	// rebuilt from a descendant of the snapshot, cloud-init skips most of the
+	// setup logic, even if the descendant has a different instance-id. This
+	// means the workshop's SSH keys can embed the wrong hostname. Removing the
+	// cloud-init data avoids this issue, at the cost of rerunning all modules
+	// when the workshop is next started. This doesn't seem to delay the boot
+	// in practice. In future, we might want to adopt a more intricate approach
+	// to preserve SSH keys and machine IDs on refresh. Cleaning the old data
+	// is the simplest correct thing to do for now.
+	return fs.RemoveAll("/var/lib/cloud")
 }
 
 func (s *Backend) commitPartialSnapshot(snapshotConn lxd.InstanceServer, name string) error {
