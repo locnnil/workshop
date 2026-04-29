@@ -397,11 +397,12 @@ func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer
 	// containers. Finally, it clears volatile.idmap.next and
 	// volatile.last_state.idmap. All other options are unchanged. We
 	// preserve the LXD-managed options and forget the other ones.
-	req.Config = maps.Clone(req.Config)
-	for k, v := range rebuilt.Config {
-		if _, ok := req.Config[k]; !ok && optionDomain(k) != customOption {
-			req.Config[k] = v
-		}
+	maps.DeleteFunc(rebuilt.Config, func(k, v string) bool {
+		return optionDomain(k) == customOption
+	})
+	if rebuilt.Config != nil {
+		maps.Copy(rebuilt.Config, req.Config)
+		req.Config = rebuilt.Config
 	}
 
 	req.Architecture = rebuilt.Architecture
