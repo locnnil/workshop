@@ -919,7 +919,11 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error
 		return fsutil.Fs{}, fmt.Errorf("context key project-id not found")
 	}
 
-	sftp, err := conn.GetInstanceFileSFTP(InstanceName(name, projectId))
+	return s.instanceFs(conn, InstanceName(name, projectId))
+}
+
+func (s *Backend) instanceFs(conn lxd.InstanceServer, name string) (fsutil.Fs, error) {
+	sftp, err := conn.GetInstanceFileSFTP(name)
 	if err != nil {
 		return fsutil.Fs{}, err
 	}

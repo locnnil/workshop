@@ -371,17 +371,17 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	userDataDir := workshop.UserDataRootDir(usr.HomeDir, env)
 	mount := workshop.SdkMount(userDataDir, projectId, name, setup)
 
-	if mount.MakeWhere {
-		if err := s.mkdir(ctx, name, mount.Where, mount.Mode); err != nil {
-			return err
-		}
-	}
-
 	conn, err := s.LxdClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Disconnect()
+
+	if mount.MakeWhere {
+		if err := s.mkdir(conn, InstanceName(name, projectId), mount.Where, mount.Mode); err != nil {
+			return err
+		}
+	}
 
 	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
@@ -421,8 +421,8 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	return op.WaitContext(ctx)
 }
 
-func (s *Backend) mkdir(ctx context.Context, name string, path string, perm os.FileMode) error {
-	fs, err := s.WorkshopFs(ctx, name)
+func (s *Backend) mkdir(conn lxd.InstanceServer, name string, path string, perm os.FileMode) error {
+	fs, err := s.instanceFs(conn, name)
 	if err != nil {
 		return err
 	}
