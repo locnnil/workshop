@@ -313,15 +313,40 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		Type: api.InstanceTypeContainer,
 	}
 
-	if snapshot.IsBase() {
-		req.Source = api.InstanceSource{
-			Type:        api.SourceTypeImage,
-			Fingerprint: snapshot.Image.Fingerprint,
-		}
-		return s.launchOrRebuildFromImage(conn, snapshotConn, req)
+	if !snapshot.IsBase() {
+		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
 	}
 
-	return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
+	req.Source = api.InstanceSource{
+		Type:        api.SourceTypeImage,
+		Fingerprint: snapshot.Image.Fingerprint,
+	}
+	if err := s.launchOrRebuildFromImage(conn, snapshotConn, req); err != nil {
+		return err
+	}
+
+	// Ubuntu 20.04 was released before cloud-init added support for LXD. The
+	// current images contain a more recent version of cloud-init, but the
+	// image metadata.yaml contains templated seed data files. See
+	// https://docs.cloud-init.io/en/latest/development/dir_layout.html#seed.
+	// This forces cloud-init to use the NoCloud data source instead of LXD.
+	//
+	// The seed files contain a hostname and instance-id, both set to the
+	// container name. This is OK when launching a new workshop, or rebuilding
+	// a workshop from an image (although the instance-id is different for
+	// 22.04 and up), but when rebuilding a workshop from a snapshot, it
+	// results in both the hostname and instance-id being taken from the
+	// snapshot. There's no way to remove the seed files before starting the
+	// instance for the first time, but we can force cloud-init to use the LXD
+	// data source by adding a config file.
+	fs, err := s.instanceFs(conn, req.Name)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	forceLXD := []byte("datasource_list: [LXD]\n")
+	return fs.WriteFile("/etc/cloud/cloud.cfg.d/90_workshop.cfg", forceLXD, 0644)
 }
 
 func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost) error {
@@ -1012,12 +1037,10 @@ apt:
 
     # Bypass confirmation prompts
     APT::Get::Assume-Yes "1";
+grub_dpkg:
+  enabled: false
+ssh_genkeytypes: [ed25519]
 write_files:
-- content: |
-    # Workaround for https://bugs.launchpad.net/snapd/+bug/2104066
-    [Service]
-    Environment=SNAPD_STANDBY_WAIT=1m
-  path: /etc/systemd/system/snapd.service.d/override.conf
 - content: |
     [DHCPv4]
     SendRelease=false
@@ -1032,8 +1055,6 @@ runcmd:
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
-  - systemctl daemon-reload
-  - systemctl restart snapd.service
   # Required to load above DHCP config.
   - networkctl reload
 `
