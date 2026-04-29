@@ -24,6 +24,7 @@ Releases
 .. toctree::
    :hidden:
 
+   Workshop v0.1.30 <v0.1.30>
    Workshop v0.1.29 <v0.1.29>
    Workshop v0.1.28 <v0.1.28>
    Workshop v0.1.27 <v0.1.27>
@@ -53,10 +54,11 @@ but you can confidently use the pre-release versions.
 
 Latest version:
 
-- :doc:`Workshop v0.1.29 <v0.1.29>`
+- :doc:`Workshop v0.1.30 <v0.1.30>`
 
 Recent versions:
 
+- :doc:`Workshop v0.1.29 <v0.1.29>`
 - :doc:`Workshop v0.1.28 <v0.1.28>`
 - :doc:`Workshop v0.1.27 <v0.1.27>`
 - :doc:`Workshop v0.1.26 <v0.1.26>`
@@ -157,7 +159,7 @@ to download and install the latest snap:
 
 .. code-block:: console
 
-   $ sudo snap install --dangerous --classic ./workshop_0.1.29_amd64.snap
+   $ sudo snap install --dangerous --classic ./workshop_0.1.30_amd64.snap
 
 
 Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
