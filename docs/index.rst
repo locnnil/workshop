@@ -104,7 +104,6 @@ In this documentation
    * - **Development**
      - :ref:`Connect VS Code <how_vscode_connect_remote>` •
        :ref:`JetBrains Gateway <how_jetbrains_gateway>` •
-       :ref:`VS Code in browser <how_vscode_run_in_browser>` •
        :ref:`JupyterLab in browser <how_jupyterlab_run_in_browser>` •
        :ref:`Use with Git <how_git_workshops>` •
        :ref:`Run GitHub Actions locally <how_run_github_actions_locally>` •

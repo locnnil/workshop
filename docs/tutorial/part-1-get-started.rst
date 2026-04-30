@@ -447,7 +447,7 @@ Next, we'll explore the remaining aspects of your daily workshop usage.
 
    |ws_markup| also integrates with modern IDEs.
    For instance, see these guides:
-   :ref:`how_vscode_run_in_browser`, :ref:`how_vscode_connect_remote`.
+   :ref:`how_vscode_connect_remote`.
 
 
 .. _tut_shell:
