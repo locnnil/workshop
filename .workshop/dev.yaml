@@ -2,13 +2,10 @@ name: dev
 base: ubuntu@24.04
 sdks:
   - name: go
-    channel: all/edge
+    channel: 1.26/stable
   - name: project-tools
   - name: system
     plugs:
-      fake-store:
-        interface: tunnel
-        endpoint: 8080
       sphinx-build:
         interface: tunnel
         endpoint: 8000
