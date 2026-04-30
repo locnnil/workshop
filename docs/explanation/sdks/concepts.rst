@@ -25,7 +25,7 @@ and made available via the SDK Store,
 but some are specific to a particular project or user.
 A single workshop can include multiple SDKs from different sources.
 SDKs are distributed through channels similar to
-`snap channels <https://snapcraft.io/docs/channels>`_.
+`snap channels <https://snapcraft.io/docs/channels/>`_.
 
 
 .. _exp_sdk_definition:

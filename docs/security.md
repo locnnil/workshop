@@ -48,7 +48,7 @@ limited capabilities on the host, due to the confinement of the workshop.
 In Workshop, the interface mechanism plays a role in maintaining security by
 controlling access between the workshop's components and the host system; the
 implementation is largely similar to `snapd`'s [interface
-manager](https://snapcraft.io/docs/interface-management):
+manager](https://snapcraft.io/docs/interface-management/):
 
 * Interfaces define and control what resources a workshop can use, ensuring that
   permissions are explicitly granted and limited in scope.
@@ -91,7 +91,7 @@ The easiest way to report a security issue is through GitHub, filing a private
 security report with a description of the issue, affected versions, the steps to
 reproduce the issue, and, if known, ways of mitigating it. See [Privately
 reporting a security
-vulnerability](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-a-vulnerability/privately-reporting-a-security-vulnerability)
+vulnerability](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/privately-reporting-a-security-vulnerability)
 for instructions.
 
 Our GitHub admins will be notified of the issue and will work with you to
@@ -110,7 +110,7 @@ concerns in [GitHub issues](https://github.com/canonical/workshop/issues).
 
 Transport encryption
 - CLI ↔ daemon: local Unix domain socket (no TLS required).
-- Outbound traffic: HTTPS/TLS for simplestreams [image downloads](https://cloud-images.ubuntu.com/releases)
+- Outbound traffic: HTTPS/TLS for simplestreams [image downloads](https://cloud-images.ubuntu.com/releases/)
 and public LXD remotes via the Go TLS stack (through the LXD client).
 - Mutual TLS (public LXD remotes): enable by supplying X.509 materials 
 in `/var/lib/workshop/tls` (`server.crt`, `client.crt`, `client.key`, `client.ca`).

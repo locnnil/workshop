@@ -31,7 +31,7 @@ Install |sdk_markup|
 --------------------
 
 Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+using the `--classic <https://snapcraft.io/docs/install-modes/>`_ option:
 
 .. code-block:: console
 
