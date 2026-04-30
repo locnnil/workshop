@@ -68,10 +68,14 @@ type ExecArgs struct {
 	action        bool
 }
 
-var shortExecHelp = "Run a command and wait for it to complete"
+var shortExecHelp = "Run an ad-hoc shell command in a workshop"
 var longExecHelp = `
 The "exec" subcommand runs an arbitrary command in the specified workshop,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
+
+Use "exec" for one-off shell commands typed on the command line.
+To invoke a named script defined in the workshop's "actions:" section instead,
+use "workshop run".
 
 To accept an "exec" command, the workshop must be "Ready" or "Waiting".
 A command can run in two modes that determine how it handles standard streams:
@@ -123,10 +127,14 @@ Notes:
   the default non-privileged user in a workshop.
 `
 
-var shortRunHelp = "Run a workshop action and wait for it to complete"
+var shortRunHelp = "Run a named action from the workshop definition"
 var longRunHelp = `
 The "run" subcommand runs an action specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
+
+Use "run" to invoke a named action defined in the workshop's "actions:" section.
+To list available actions, use "workshop actions".
+To run an ad-hoc shell command instead, use "workshop exec".
 
 To accept a "run" command, the workshop must be "Ready" or "Waiting".
 A command can run in two modes that determine how it handles standard streams:
@@ -164,7 +172,7 @@ Notes:
   for running the action in the workshop; reasonable defaults are provided.
 `
 
-var shortActionsHelp = "List workshop actions"
+var shortActionsHelp = "List the named actions defined in a workshop"
 var longActionsHelp = `
 This command enumerates all actions in the workshop, printing a YAML map.
 `
@@ -174,7 +182,7 @@ func (c *CmdExec) Command() *cobra.Command {
 		Use:     "exec [flags] [<WORKSHOP>] [--] <COMMAND>...",
 		Args:    cobra.MinimumNArgs(1),
 		Short:   shortExecHelp,
-		GroupID: GrpUtilise,
+		GroupID: GrpExec,
 		Long:    longExecHelp,
 		Example: `
 Run the "go build main.go" command under the "nimble" workshop
@@ -240,7 +248,7 @@ func (c *CmdShell) Command() *cobra.Command {
 		Use:     "shell [<WORKSHOP>]",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   shortShellHelp,
-		GroupID: GrpUtilise,
+		GroupID: GrpExec,
 		Long:    longShellHelp,
 		Example: `
 Open the default login shell of the "workshop" user into the "nimble" workshop
@@ -276,7 +284,7 @@ func (c *CmdRun) Command() *cobra.Command {
 		Use:     "run [flags] [<WORKSHOP>] [--] <ACTION> <ARGUMENTS>...",
 		Args:    cobra.MinimumNArgs(1),
 		Short:   shortRunHelp,
-		GroupID: GrpUtilise,
+		GroupID: GrpActions,
 		Long:    longRunHelp,
 		Example: `
 Run the "build" action under the "nimble" workshop
@@ -692,7 +700,7 @@ func (c *CmdActions) Command() *cobra.Command {
 		Use:     "actions [<WORKSHOP>]",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   shortActionsHelp,
-		GroupID: GrpExplore,
+		GroupID: GrpActions,
 		Long:    longActionsHelp,
 		Example: `
 List actions for the "nimble" workshop in the current project directory:

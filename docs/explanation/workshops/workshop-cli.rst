@@ -47,8 +47,7 @@ There are several categories of commands that vary by their purpose:
      - Begin and end the run-time lifecycle of an existing workshop.
 
    * - Explore, troubleshoot
-     - :command:`actions`,
-       :command:`changes`,
+     - :command:`changes`,
        :command:`connections`,
        :command:`info`,
        :command:`list`,
@@ -58,11 +57,16 @@ There are several categories of commands that vary by their purpose:
        :command:`warnings`
      - Enumerate workshops, list their details and recent activities.
 
-   * - Utilize
+   * - Run shell commands
      - :command:`exec`,
-       :command:`shell`,
+       :command:`shell`
+     - Run ad-hoc shell commands or open an interactive shell inside a workshop.
+
+   * - List and run named actions
+     - :command:`actions`,
        :command:`run`
-     - Run commands inside a workshop.
+     - List and invoke the named actions defined in a workshop's
+       :samp:`actions:` section.
 
 
 For an end-to-end example of putting these commands to use,
