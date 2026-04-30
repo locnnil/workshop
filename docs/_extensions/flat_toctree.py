@@ -153,12 +153,36 @@ def flatten_toctree(app, doctree, fromdocname):
 
 
 def inject_flat_toctree_data(app, pagename, templatename, context, doctree):
-    """Inject flat-toctree paths as JavaScript data into every page."""
+    """Inject flat-toctree data as JavaScript globals on every page.
+
+    Two globals are emitted:
+      window.FLAT_TOCTREE_PATHS    — sorted list of project-relative docnames
+                                     of toctree parents that render as
+                                     non-clickable headings in the sidebar.
+      window.FLAT_TOCTREE_PAGE_DIR — the current page's project-relative URL
+                                     directory (matches dirhtml output), used
+                                     by the client-side resolver. Stable
+                                     across RTD URL prefixes (/latest/,
+                                     /en/latest/, custom domains, ...).
+    """
     paths = getattr(app.env, 'flat_toctree_paths', None)
-    if paths:
-        data = json.dumps(sorted(paths))
-        script = f'<script>window.FLAT_TOCTREE_PATHS = {data};</script>'
-        context['body'] = context.get('body', '') + script
+    if not paths:
+        return
+    # In dirhtml, an `index` docname maps to its parent directory
+    # (e.g. `how-to/index` -> `/how-to/`), while any other docname maps to a
+    # directory of the same name
+    # (e.g. `reference/some-leaf` -> `/reference/some-leaf/`).
+    if posixpath.basename(pagename) == 'index':
+        page_dir = posixpath.dirname(pagename)
+    else:
+        page_dir = pagename
+    script = (
+        '<script>'
+        f'window.FLAT_TOCTREE_PATHS = {json.dumps(sorted(paths))};'
+        f'window.FLAT_TOCTREE_PAGE_DIR = {json.dumps(page_dir)};'
+        '</script>'
+    )
+    context['body'] = context.get('body', '') + script
 
 
 def setup(app):
