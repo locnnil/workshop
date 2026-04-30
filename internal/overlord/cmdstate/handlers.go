@@ -20,9 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -383,18 +385,23 @@ func (m *CommandManager) doInstallAction(task *state.Task, tomb *tomb.Tomb) erro
 		return errors.New("action not found")
 	}
 
+	keys := slices.Sorted(maps.Keys(args.Environment))
 	path := filepath.Join(dirs.WorkshopActionsDir, name)
 	command := []string{"sudo",
 		"-u",
 		"#" + strconv.Itoa(args.UserId),
 		"-g", "#" + strconv.Itoa(args.GroupId),
-		"--preserve-env",
+	}
+	for _, k := range keys {
+		command = append(command, "--preserve-env="+k)
+	}
+	command = append(command,
 		"--",
 		"bash",
 		"-elo",
 		"pipefail",
 		path,
-	}
+	)
 	args.Command = append(command, args.Command[1:]...)
 
 	wfs, err := m.backend.WorkshopFs(ctx, w)

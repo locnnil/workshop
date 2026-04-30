@@ -60,8 +60,8 @@ and includes a number of mandatory and optional keys:
      - Workshop's base image
        that provides the underlying OS capabilities.
 
-       It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`
-       or :samp:`ubuntu@24.04`.
+       It can be :samp:`ubuntu@20.04`, :samp:`ubuntu@22.04`,
+       :samp:`ubuntu@24.04`, or :samp:`ubuntu@26.04`.
 
    * - :samp:`sdks`
      - array
