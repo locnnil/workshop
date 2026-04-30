@@ -22,6 +22,8 @@ VALE_CONFIG      ?= $(SPHINX_DIR)/vale.ini
 PA11Y_CMD        ?= $(SPHINX_DIR)/node_modules/pa11y/bin/pa11y.js --config $(SPHINX_DIR)/pa11y.json
 CONFIRM_SUDO     ?= N
 CHECK_PATH       ?= $(filter-out $(DOCS_VENVDIR),$(wildcard *))
+LYCHEE_CONFIG    ?= ../lychee.toml
+LYCHEE_VERSION   ?= 0.24.1
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -32,7 +34,7 @@ help:
 	@echo "* only serve:                                make serve"
 	@echo "* clean built doc files:                     make clean-doc"
 	@echo "* clean full environment:                    make clean"
-	@echo "* check links:                               make linkcheck"
+	@echo "* check links (lychee):                      make linkcheck"
 	@echo "* check markdown:                            make lint-md"
 	@echo "* check spelling:                            make spelling"
 	@echo "* check spelling (without building again):   make spellcheck"
@@ -47,7 +49,7 @@ help:
 .PHONY: help full-help html epub pdf linkcheck spelling spellcheck woke \
         vale pa11y run serve install pa11y-install   \
         vale-install pdf-prep pdf-prep-force clean clean-doc \
-        update lint-md
+        update lint-md lychee-install
 
 full-help: $(DOCS_VENVDIR)
 	@. $(DOCS_VENV); $(SPHINX_BUILD) -M help "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS) $(O)
@@ -72,6 +74,46 @@ pa11y-install:
 			mkdir -p $(SPHINX_DIR)/node_modules/ ; \
 			npm install --prefix $(SPHINX_DIR) pa11y; \
 		}
+
+lychee-install:
+	@command -v lychee >/dev/null 2>&1 || { \
+			OS=$$(uname -s); \
+			if [ "$$OS" = "Linux" ]; then \
+				echo "Installing lychee via snap..."; \
+				sudo snap install lychee || { \
+					echo "snap failed, trying wget binary fallback..."; \
+					ARCH=$$(uname -m); \
+					TARBALL="lychee-$$ARCH-unknown-linux-gnu.tar.gz"; \
+					wget -q "https://github.com/lycheeverse/lychee/releases/download/lychee-v$(LYCHEE_VERSION)/$$TARBALL" -O /tmp/$$TARBALL || { \
+						echo "ERROR: Failed to download lychee v$(LYCHEE_VERSION) binary."; \
+						echo "Please install manually from https://github.com/lycheeverse/lychee/releases"; \
+						exit 1; \
+					}; \
+					tar -xzf /tmp/$$TARBALL -C /tmp; \
+					sudo mv /tmp/lychee /usr/local/bin/lychee; \
+					rm -f /tmp/$$TARBALL; \
+					echo "lychee installed via wget binary fallback."; \
+				}; \
+			elif [ "$$OS" = "Darwin" ]; then \
+				echo "Installing lychee via brew..."; \
+				brew install lychee || { \
+					echo "ERROR: brew install failed."; \
+					echo "Please install manually from https://github.com/lycheeverse/lychee/releases"; \
+					exit 1; \
+				}; \
+			else \
+				echo "ERROR: Unsupported OS: $$OS"; \
+				echo "Please install lychee manually from https://github.com/lycheeverse/lychee/releases"; \
+				exit 1; \
+			fi; \
+		}
+	@INSTALLED=$$(lychee --version 2>/dev/null | awk '{print $$2}'); \
+		BASELINE="$(LYCHEE_VERSION)"; \
+		echo "lychee available: v$$INSTALLED (pinned baseline v$$BASELINE)"; \
+		OLDER=$$(printf '%s\n' "$$BASELINE" "$$INSTALLED" | sort -V | head -1); \
+		if [ "$$OLDER" = "$$INSTALLED" ] && [ "$$INSTALLED" != "$$BASELINE" ]; then \
+			echo "WARNING: Installed lychee $$INSTALLED is older than pinned $$BASELINE — results may differ"; \
+		fi
 
 pymarkdownlnt-install: install
 	@. $(DOCS_VENV); test -d $(DOCS_VENVDIR)/lib/python*/site-packages/pymarkdown || pip install pymarkdownlnt==0.9.35
@@ -102,9 +144,18 @@ clean-doc:
 	git clean -fx "$(DOCS_BUILDDIR)"
 	rm -rf $(SPHINX_DIR)/.doctrees
 
-linkcheck: install
-	. $(DOCS_VENV) ; $(SPHINX_BUILD) -b linkcheck -q "$(DOCS_SOURCEDIR)" "$(DOCS_BUILDDIR)" $(SPHINX_OPTS) || { grep --color -F "[broken]" "$(DOCS_BUILDDIR)/output.txt"; exit 1; }
-	exit 0
+linkcheck: lychee-install
+	@echo "Running lychee link checker..."
+	@mkdir -p $(DOCS_BUILDDIR)
+	@lychee --config $(LYCHEE_CONFIG) -vv --format json $(DOCS_SOURCEDIR) > $(DOCS_BUILDDIR)/lychee-output.json 2> $(DOCS_BUILDDIR)/lychee-debug.log; \
+		RC=$$?; \
+		if [ ! -s $(DOCS_BUILDDIR)/lychee-output.json ]; then \
+			echo "ERROR: lychee produced no JSON output. See $(DOCS_BUILDDIR)/lychee-debug.log"; \
+			cat $(DOCS_BUILDDIR)/lychee-debug.log; \
+			exit 1; \
+		fi; \
+		lychee --config $(LYCHEE_CONFIG) --no-progress $(DOCS_SOURCEDIR) | tee $(DOCS_BUILDDIR)/lychee-output.txt; \
+		exit $$RC
 
 pa11y: pa11y-install html
 	find $(DOCS_BUILDDIR) -name *.html -print0 | xargs -n 1 -0 $(PA11Y_CMD)

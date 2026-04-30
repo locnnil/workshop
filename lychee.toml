@@ -1,0 +1,43 @@
+# lychee.toml — Lychee link checker configuration
+# Used by `make linkcheck` and the lychee CI workflows.
+# Pinned version: lychee v0.24.1 (see LYCHEE_VERSION in docs/Makefile)
+
+# Runtime — gentle defaults, avoid thundering-herd 429s
+max_retries = 3
+max_concurrency = 8
+timeout = 20
+
+# Browser-like User-Agent reduces bot-blocking false positives
+user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0"
+
+# Treat 429 as non-broken so rate-limited URLs don't fail the run
+accept = ["100..=103", "200..=299", "429"]
+
+# .rst is not in lychee defaults
+extensions = ["md", "rst"]
+
+# GITHUB_TOKEN is auto-read from env by lychee — do not embed.
+
+exclude = [
+    # Local references — not reachable from the link checker
+    "^http://localhost",
+    "^http://127\\.0\\.0\\.1",
+    "^file://",
+
+    # Templated URLs in code samples — `$VAR`, `${VAR}`, or URL-encoded `$%7BVAR%7D`
+    "\\$\\{",
+    "\\$%7B",
+    "\\$[A-Z]",
+
+    # Internal Canonical repos that don't yet exist publicly
+    "^https://github\\.com/canonical/sdkcraft",
+    "^https://github\\.com/canonical/workshop",
+    "^https://github\\.com/canonical/sdks",
+    "^https://github\\.com/canonical/reference-workshops",
+
+    # Read the Docs anchor checks — flaky; fragments only checked when listed
+    "^https://.*\\.readthedocs-hosted\\.com/.*#\\w+$",
+
+    # API endpoints that reject HEAD/GET (405 Method Not Allowed) but are valid references
+    "^https://api\\.snapcraft\\.io/api/",
+]

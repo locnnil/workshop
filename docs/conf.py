@@ -165,32 +165,6 @@ templates_path = ["_templates"]
 redirects = {}
 
 
-###########################
-# Link checker exceptions #
-###########################
-
-# A regex list of URLs that are ignored by 'make linkcheck'
-#
-# TODO: Remove or adjust the ACME entry after you update the contributing guide
-
-linkcheck_ignore = [
-    "http://localhost:*",
-    "https://github.com/canonical/sdkcraft",
-    "https://github.com/canonical/workshop",
-    "https://github.com/canonical/sdks",
-    "https://github.com/canonical/reference-workshops",
-    r"^https://.*\.readthedocs-hosted\.com/.*#\w+$",
-]
-
-
-# A regex list of URLs where anchors are ignored by 'make linkcheck'
-
-linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
-
-# give linkcheck multiple tries on failure
-# linkcheck_timeout = 30
-linkcheck_retries = 3
-
 ########################
 # Configuration extras #
 ########################

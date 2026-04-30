@@ -48,16 +48,38 @@ jobs:
             exit 1
           fi
 
-      - name: Install documentation dependencies
+      - name: Install lychee
+        env:
+          LYCHEE_VERSION: "0.24.1"
         run: |
-          cd "$DOCS_DIR"
-          make install
+          ARCH=$(uname -m)
+          TARBALL="lychee-${ARCH}-unknown-linux-gnu.tar.gz"
+          wget -q "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/${TARBALL}" -O "/tmp/${TARBALL}"
+          tar -xzf "/tmp/${TARBALL}" -C /tmp
+          sudo mv /tmp/lychee /usr/local/bin/lychee
+          rm -f "/tmp/${TARBALL}"
+          lychee --version
 
-      - name: Run linkcheck
+      - name: Run lychee (detailed JSON to stdout)
         run: |
-          set -o pipefail
-          cd "$DOCS_DIR"
-          make linkcheck 2>&1 | tee ../linkcheck-output.txt
+          mkdir -p "$DOCS_DIR/_build"
+          set +e
+          lychee --config ./lychee.toml -vv --format json ./docs \
+            > "$DOCS_DIR/_build/lychee-output.json" \
+            2> "$DOCS_DIR/_build/lychee-debug.log"
+          rc=$?
+          set -e
+          # Lychee exits non-zero when broken links exist; we still want the
+          # JSON for the redirect fixer. Only abort on hard failures (exit > 2)
+          # or empty JSON output (indicating a crash).
+          if [ "$rc" -gt 2 ] || [ ! -s "$DOCS_DIR/_build/lychee-output.json" ]; then
+            echo "lychee failed (exit $rc); debug log:"
+            cat "$DOCS_DIR/_build/lychee-debug.log"
+            exit 1
+          fi
+          cp "$DOCS_DIR/_build/lychee-output.json" ./lychee-output.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create temp directory
         run: |
@@ -207,6 +229,6 @@ jobs:
           name: linkcheck-redirect-fixes
           if-no-files-found: warn
           path: |
-            linkcheck-output.txt
+            lychee-output.json
             workflow-log.txt
             ${{ env.TEMP_DIR }}/redirect_fixes_summary.md
