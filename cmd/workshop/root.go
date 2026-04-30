@@ -23,7 +23,8 @@ const (
 	GrpExplore  = "explore-troubleshoot"
 	GrpChanges  = "changes-tasks"
 	GrpConnect  = "connect"
-	GrpUtilise  = "utilise"
+	GrpExec     = "exec"
+	GrpActions  = "actions"
 	GrpWarnings = "warnings"
 	GrpMisc     = "misc"
 )
@@ -65,8 +66,11 @@ func (c *CmdRoot) Command() *cobra.Command {
 		ID:    GrpConnect,
 		Title: "Create, manage, list, and drop interface connections:",
 	}, {
-		ID:    GrpUtilise,
-		Title: "Run commands inside a workshop:",
+		ID:    GrpExec,
+		Title: "Run shell commands inside a workshop:",
+	}, {
+		ID:    GrpActions,
+		Title: "List and run named workshop actions:",
 	}, {
 		ID:    GrpWarnings,
 		Title: "List and acknowledge warnings:",

@@ -9,7 +9,7 @@ workshop exec
 
 .. @artefact workshop exec
 
-Run a command and wait for it to complete.
+Run an ad-hoc shell command in a workshop.
 
 .. rubric:: Usage
 
@@ -22,6 +22,10 @@ Run a command and wait for it to complete.
 
 The "exec" subcommand runs an arbitrary command in the specified workshop,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
+
+Use "exec" for one-off shell commands typed on the command line.
+To invoke a named script defined in the workshop's "actions:" section instead,
+use "workshop run".
 
 To accept an "exec" command, the workshop must be "Ready" or "Waiting".
 A command can run in two modes that determine how it handles standard streams:

@@ -9,7 +9,7 @@ workshop run
 
 .. @artefact workshop run
 
-Run a workshop action and wait for it to complete.
+Run a named action from the workshop definition.
 
 .. rubric:: Usage
 
@@ -22,6 +22,10 @@ Run a workshop action and wait for it to complete.
 
 The "run" subcommand runs an action specified in the workshop definition file,
 waiting for it to complete. If a timeout elapses before that, it's terminated.
+
+Use "run" to invoke a named action defined in the workshop's "actions:" section.
+To list available actions, use "workshop actions".
+To run an ad-hoc shell command instead, use "workshop exec".
 
 To accept a "run" command, the workshop must be "Ready" or "Waiting".
 A command can run in two modes that determine how it handles standard streams:
@@ -99,6 +103,7 @@ Forward arguments to an action that consumes them
 .. code-block:: console
 
    $ workshop run dev -- tests -run TestFoo ./pkg/...
+
 
 
 .. rubric:: Flags
