@@ -22,8 +22,8 @@ VALE_CONFIG      ?= $(SPHINX_DIR)/vale.ini
 PA11Y_CMD        ?= $(SPHINX_DIR)/node_modules/pa11y/bin/pa11y.js --config $(SPHINX_DIR)/pa11y.json
 CONFIRM_SUDO     ?= N
 CHECK_PATH       ?= $(filter-out $(DOCS_VENVDIR),$(wildcard *))
-LYCHEE_CONFIG    ?= ../lychee.toml
-LYCHEE_VERSION   ?= 0.24.1
+LYCHEE_CONFIG    ?= lychee.toml
+LYCHEE_VERSION   ?= $(shell cat .lychee-version 2>/dev/null | tr -d '[:space:]')
 
 # Put it first so that "make" without argument is like "make help".
 help:
