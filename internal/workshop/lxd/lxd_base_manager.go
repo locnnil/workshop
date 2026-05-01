@@ -25,6 +25,11 @@ import (
 var (
 	ConnectSimpleStreams = lxd.ConnectSimpleStreams
 	imageServer          = "simplestreams:https://cloud-images.ubuntu.com/releases"
+
+	// However many backend instances are created, downloads are always a single
+	// instance map with the LXD backend.
+	imageLock        sync.Mutex
+	currentDownloads = map[string]*downloadOp{}
 )
 
 func (b *Backend) GetBase(ctx context.Context, base string) (workshop.BaseImage, error) {

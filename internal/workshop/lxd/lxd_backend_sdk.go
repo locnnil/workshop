@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -20,6 +21,16 @@ import (
 	"github.com/canonical/workshop/internal/timeutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
+
+var (
+	volumeGuardsLock sync.Mutex
+	volumeGuards     = map[string]*volumeGuard{}
+)
+
+type volumeGuard struct {
+	c       chan struct{}
+	counter int32
+}
 
 // LockVolume ensures exclusive access to the specified volume. If there is an
 // ongoing operation on the volume, the calling goroutine will block until the

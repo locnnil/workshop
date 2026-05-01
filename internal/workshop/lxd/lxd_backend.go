@@ -13,7 +13,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -43,6 +42,9 @@ var (
 	storagePoolDriver   = "zfs"
 )
 
+//go:embed start_command.sh
+var startCommand string
+
 // isWSL checks if we're running on Windows Subsystem for Linux
 func isWSL() bool {
 	var utsname unix.Utsname
@@ -57,35 +59,7 @@ func isWSL() bool {
 	return strings.Contains(version, "microsoft") || strings.Contains(version, "wsl2")
 }
 
-type volumeGuard struct {
-	c       chan struct{}
-	counter int32
-}
-
-var (
-	// However many backend instances are created, downloads are always a single
-	// instance map with the LXD backend.
-	imageLock        sync.Mutex
-	currentDownloads map[string]*downloadOp
-
-	volumeGuardsLock sync.Mutex
-	volumeGuards     map[string]*volumeGuard
-)
-
-//go:embed start_command.sh
-var startCommand string
-
 func init() {
-	imageLock.Lock()
-	defer imageLock.Unlock()
-	if currentDownloads == nil {
-		currentDownloads = make(map[string]*downloadOp)
-	}
-
-	volumeGuardsLock.Lock()
-	defer volumeGuardsLock.Unlock()
-	volumeGuards = make(map[string]*volumeGuard)
-
 	if isWSL() {
 		storagePoolDriver = "btrfs"
 	}
