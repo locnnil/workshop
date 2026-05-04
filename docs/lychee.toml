@@ -1,6 +1,6 @@
 # lychee.toml — Lychee link checker configuration
 # Used by `make linkcheck` and the lychee CI workflows.
-# Pinned version: see docs/.lychee-version
+# Pinned version: see docs/lychee-version
 
 # Runtime — gentle defaults, avoid thundering-herd 429s
 max_retries = 3

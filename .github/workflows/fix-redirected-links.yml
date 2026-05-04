@@ -50,7 +50,7 @@ jobs:
 
       - name: Read pinned lychee version
         id: lychee_version
-        run: echo "version=$(tr -d '[:space:]' < "$DOCS_DIR/.lychee-version")" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(<"$DOCS_DIR/lychee-version")" >> "$GITHUB_OUTPUT"
 
       - name: Run lychee
         uses: lycheeverse/lychee-action@faea714062690f6c2e6f7f388469ec4fa6d9c4e1 # master pre-v2.8.1: PR #330 nested-tarball fix for lychee 0.24.x

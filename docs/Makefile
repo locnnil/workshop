@@ -23,7 +23,7 @@ PA11Y_CMD        ?= $(SPHINX_DIR)/node_modules/pa11y/bin/pa11y.js --config $(SPH
 CONFIRM_SUDO     ?= N
 CHECK_PATH       ?= $(filter-out $(DOCS_VENVDIR),$(wildcard *))
 LYCHEE_CONFIG    ?= lychee.toml
-LYCHEE_VERSION   ?= $(shell cat .lychee-version 2>/dev/null | tr -d '[:space:]')
+LYCHEE_VERSION   ?= $(shell cat lychee-version 2>/dev/null | tr -d '[:space:]')
 
 # Put it first so that "make" without argument is like "make help".
 help:
