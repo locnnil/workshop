@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import tempfile
 import time
@@ -24,7 +23,7 @@ import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 
 ALLOWED_EXTENSIONS = {".rst", ".md", ".txt"}
@@ -111,32 +110,23 @@ def parse_redirect_codes(value: str) -> set[str]:
     return codes or set(DEFAULT_REDIRECT_CODES)
 
 
-def find_linkcheck_output(docs_dir: Path) -> Optional[Path]:
-    candidates = [
-        docs_dir / "_build" / "output.txt",
-        docs_dir / "_build" / "linkcheck" / "output.txt",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return None
+def find_lychee_output(docs_dir: Path) -> Optional[Path]:
+    candidate = docs_dir / "_build" / "lychee-output.json"
+    return candidate if candidate.exists() else None
 
 
-def read_linkcheck_text(docs_dir: Path) -> str:
-    output_path = find_linkcheck_output(docs_dir)
+def read_lychee_json(docs_dir: Path) -> dict:
+    output_path = find_lychee_output(docs_dir)
     if output_path:
-        log(f"Using linkcheck output file: {output_path}")
-        return output_path.read_text(encoding="utf-8", errors="replace")
+        log(f"Using lychee output file: {output_path}")
+        return json.loads(output_path.read_text(encoding="utf-8"))
     if not sys.stdin.isatty():
-        log("Reading linkcheck output from stdin.")
+        log("Reading lychee JSON from stdin.")
         stdin_data = sys.stdin.read()
         if stdin_data.strip():
-            return stdin_data
-        raise FileNotFoundError(
-            "linkcheck output not found; run 'make linkcheck' or pipe output to stdin"
-        )
+            return json.loads(stdin_data)
     raise FileNotFoundError(
-        "linkcheck output not found; run 'make linkcheck' or pipe output to stdin"
+        "lychee JSON output not found; run 'make linkcheck' or pipe lychee --format json to stdin"
     )
 
 
@@ -153,24 +143,6 @@ def is_in_docs(path: Path, docs_dir: Path) -> bool:
         return True
     except ValueError:
         return False
-
-
-def extract_status_code(text: str) -> Optional[str]:
-    match = re.search(r"\b(30\d)\b", text)
-    if match:
-        return match.group(1)
-    return None
-
-
-def extract_urls(text: str) -> Optional[Tuple[str, str]]:
-    url_pattern = r"https?://[^\s)]+"
-    match = re.search(
-        rf"(?P<old>{url_pattern})\s+(?:to|->)\s+(?P<new>{url_pattern})",
-        text,
-    )
-    if not match:
-        return None
-    return sanitize_url(match.group("old")), sanitize_url(match.group("new"))
 
 
 def sanitize_url(url: str) -> str:
@@ -212,60 +184,84 @@ def determine_status_code(url: str, timeout: float = 5.0) -> Optional[str]:
     return None
 
 
-def parse_redirect_lines(
-    lines: Iterable[str],
+def parse_redirect_map(
+    payload: dict,
     docs_dir: Path,
     allowed_codes: set[str],
 ) -> Tuple[List[RedirectEntry], List[str]]:
+    """Walk lychee's redirect_map and produce RedirectEntry list.
+
+    lychee JSON shape (v0.24, with -vv detailed_stats):
+      {
+        "redirect_map": {
+          "<source_file>": [
+            {
+              "origin": "<original_url>",
+              "redirects": [
+                {"url": "<hop_url>", "code": 301},
+                ...
+              ]
+            },
+            ...
+          ],
+        },
+      }
+
+    The first hop's status code determines whether the redirect is
+    permanent (fixable) or temporary; the last hop's URL is the final
+    destination written to the source file.
+
+    Source line numbers are not provided; line_no is set to 0 so
+    apply_changes_to_file falls back to its "find unique occurrence" path.
+    """
     entries: List[RedirectEntry] = []
     warnings: List[str] = []
-    for raw_line in lines:
-        if "[redirected" not in raw_line:
+    redirect_map = payload.get("redirect_map") or {}
+
+    for source, items in redirect_map.items():
+        file_path = normalize_path(source, docs_dir)
+        if not is_in_docs(file_path, docs_dir):
             continue
-        file_match = re.match(
-            r"^(?P<file>.+?):\s*line\s*(?P<line>\d+):\s*\[redirected[^\]]*\]\s*(?P<rest>.+)$",
-            raw_line,
-        )
-        if not file_match:
-            file_match = re.match(
-                r"^(?P<file>.+?):(?P<line>\d+):\s*\[redirected[^\]]*\]\s*(?P<rest>.+)$",
-                raw_line,
+        for item in items or []:
+            old_url = sanitize_url(item.get("origin", ""))
+            chain = item.get("redirects") or []
+            if not old_url or not chain:
+                warnings.append(
+                    f"Missing origin or chain for {source}: {item}"
+                )
+                continue
+
+            first_code = chain[0].get("code")
+            status_code = str(first_code) if first_code is not None else None
+            new_url = sanitize_url(chain[-1].get("url", ""))
+
+            if not new_url:
+                warnings.append(
+                    f"Missing final URL in redirect chain for {source}: {item}"
+                )
+                continue
+            if status_code and status_code not in allowed_codes:
+                continue
+            if status_code is None:
+                status_code = determine_status_code(old_url)
+                if status_code is None and allowed_codes:
+                    warnings.append(
+                        f"Skipping redirect with unknown status: {old_url}"
+                    )
+                    continue
+                if status_code not in allowed_codes:
+                    continue
+
+            entries.append(
+                RedirectEntry(
+                    file_path=file_path,
+                    line_no=0,
+                    status_code=status_code,
+                    old_url=old_url,
+                    new_url=new_url,
+                    raw_line=f"{source} -> {old_url} -> {new_url} [{status_code}]",
+                )
             )
-        if not file_match:
-            warnings.append(f"Unrecognized redirect line: {raw_line.strip()}")
-            continue
-
-        file_path = normalize_path(file_match.group("file"), docs_dir)
-        line_no = int(file_match.group("line"))
-        rest = file_match.group("rest")
-
-        urls = extract_urls(rest)
-        if not urls:
-            warnings.append(f"Missing URLs in redirect line: {raw_line.strip()}")
-            continue
-        old_url, new_url = urls
-
-        status_code = extract_status_code(rest)
-        if status_code is None:
-            status_code = determine_status_code(old_url)
-        if status_code and status_code not in allowed_codes:
-            continue
-        if status_code is None and allowed_codes:
-            warnings.append(
-                f"Skipping redirect with unknown status code: {raw_line.strip()}"
-            )
-            continue
-
-        entries.append(
-            RedirectEntry(
-                file_path=file_path,
-                line_no=line_no,
-                status_code=status_code,
-                old_url=old_url,
-                new_url=new_url,
-                raw_line=raw_line.strip(),
-            )
-        )
     return entries, warnings
 
 
@@ -322,11 +318,18 @@ def apply_changes_to_file(
         return applied_changes, errors
 
     for entry in changes:
-        if entry.line_no < 1 or entry.line_no > len(lines):
-            errors.append(f"Line {entry.line_no} out of range for {file_path}")
+        if 1 <= entry.line_no <= len(lines):
+            target_line = lines[entry.line_no - 1]
+        elif entry.line_no == 0:
+            # Sentinel from lychee parser — no source position available;
+            # fall through to unique-occurrence scan below.
+            target_line = ""
+        else:
+            errors.append(
+                f"Line {entry.line_no} out of range for {file_path}"
+            )
             continue
-        target_line = lines[entry.line_no - 1]
-        if entry.old_url in target_line:
+        if target_line and entry.old_url in target_line:
             new_line = target_line.replace(entry.old_url, entry.new_url)
             if new_line == target_line:
                 continue
@@ -510,16 +513,12 @@ def main() -> int:
             return 1
 
     try:
-        linkcheck_text = read_linkcheck_text(docs_dir)
+        payload = read_lychee_json(docs_dir)
     except Exception as exc:
         log(str(exc))
         return 1
 
-    entries, warnings = parse_redirect_lines(
-        linkcheck_text.splitlines(),
-        docs_dir,
-        redirect_codes,
-    )
+    entries, warnings = parse_redirect_map(payload, docs_dir, redirect_codes)
     log(f"Redirect entries parsed: {len(entries)}")
     if not entries:
         write_summary(

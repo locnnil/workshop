@@ -183,13 +183,13 @@ update it as needed.
 
 **Voice and audience**
 
-Target audience is developers and DevOps professionals (see [Canonical personas](https://docs.google.com/document/u/0/d/1TT-038yu7F9u-XyW_us7N_eV5Dpr_OoJ1MK1sQyXi3M/edit)) seeking to:
+Target audience is developers and DevOps professionals seeking to:
 
 * Achieve specific goals without much overhead and roundabout musings
 * Perform and conceive complex ad-hoc tasks and workflows that require precision and depth
 * Attain understanding of Workshop's key capabilities beneficial for their scenarios
 
-Content follows the Diátaxis framework and [Canonical's documentation roadmap](https://docs.google.com/document/d/1zH4bedBvGy_46pqYtpVTVrh6b8DJV_DKR13SJLcrzvE/edit#heading=h.2qjvsmguhapb), providing:
+Content follows the Diátaxis framework, providing:
 
 * Concise tutorials for common, starter-level actions and scenarios, eliminating the need to invent custom steps and allowing novice users to journey along the hot path effortlessly
 * Elaborate explanations of the thinking behind Workshop's design, including design decisions, related concepts, and how it should be used

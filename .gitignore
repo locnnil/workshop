@@ -20,6 +20,11 @@ gendocs
 docs-gendocs
 linkcheck-output.txt
 
+# Lychee link checker
+.lycheecache
+docs/_build/lychee-output.json
+docs/_build/lychee-output.txt
+
 # sentitive files
 *.crt
 *.key

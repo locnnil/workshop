@@ -48,16 +48,27 @@ jobs:
             exit 1
           fi
 
-      - name: Install documentation dependencies
-        run: |
-          cd "$DOCS_DIR"
-          make install
+      - name: Read pinned lychee version
+        id: lychee_version
+        run: echo "version=$(<"$DOCS_DIR/lychee-version")" >> "$GITHUB_OUTPUT"
 
-      - name: Run linkcheck
+      - name: Run lychee
+        uses: lycheeverse/lychee-action@faea714062690f6c2e6f7f388469ec4fa6d9c4e1 # master pre-v2.8.1: PR #330 nested-tarball fix for lychee 0.24.x
+        with:
+          workingDirectory: ./docs
+          args: --config lychee.toml -vv .
+          format: json
+          output: ./_build/lychee-output.json
+          fail: false
+          lycheeVersion: v${{ steps.lychee_version.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify lychee output exists
         run: |
-          set -o pipefail
-          cd "$DOCS_DIR"
-          make linkcheck 2>&1 | tee ../linkcheck-output.txt
+          if [ ! -s "$DOCS_DIR/_build/lychee-output.json" ]; then
+            echo "lychee produced no output — treating as a crash"
+            exit 1
+          fi
 
       - name: Create temp directory
         run: |
@@ -193,8 +204,7 @@ jobs:
             --title "docs: Fix ${COUNT} redirected links found by linkcheck" \
             --body-file "${TEMP_DIR}/redirect_fixes_pr_body.md" \
             --base main \
-            --label "documentation" \
-            --label "automated"
+            --label "documentation"
         env:
           BRANCH: ${{ steps.branch_name.outputs.branch }}
           COUNT: ${{ steps.pr_meta.outputs.count }}
@@ -207,6 +217,6 @@ jobs:
           name: linkcheck-redirect-fixes
           if-no-files-found: warn
           path: |
-            linkcheck-output.txt
+            ${{ env.DOCS_DIR }}/_build/lychee-output.json
             workflow-log.txt
             ${{ env.TEMP_DIR }}/redirect_fixes_summary.md

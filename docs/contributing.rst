@@ -398,7 +398,7 @@ Custom agents
 
 The ``.github/agents/`` subdirectory contains
 `custom agent prompts
-<https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents>`__
+<https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/create-custom-agents>`__
 for specific review and maintenance tasks:
 
 - ``code-review.agent.md``:
