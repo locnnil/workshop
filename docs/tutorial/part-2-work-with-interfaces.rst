@@ -280,14 +280,11 @@ Then declare the connection in a top-level :samp:`connections:` block:
        slot: uv:venv
 
 
-Apply the new definition by removing and relaunching the workshop;
-this gives :program:`workshop` a clean slate
-to install the SDKs in the order you've declared:
+Apply the new definition by refreshing the workshop:
 
 .. code-block:: console
 
-   $ workshop remove
-   $ workshop launch
+   $ workshop refresh
 
 
 :samp:`dev/jupyter:venv` now connects to :samp:`dev/uv:venv`
@@ -302,7 +299,7 @@ instead of falling back to :samp:`dev/system:mount`:
      gpu        dev/ollama:gpu      dev/system:gpu            -
      mount      dev/jupyter:venv    dev/uv:venv               -
      mount      dev/ollama:models   dev/system:mount          -
-     mount      dev/uv:cache       dev/system:mount          -
+     mount      dev/uv:cache        dev/system:mount          -
      tunnel     -                   dev/ollama:ollama-server  -
      tunnel     dev/system:jupyter  dev/jupyter:jupyter       -
 

@@ -67,9 +67,8 @@ execute: |
       slot: uv:venv
   EOF
 
-  # Apply the new definition cleanly so SDKs are installed in declaration order.
-  workshop_exec remove
-  workshop_exec launch
+  # Apply the new definition.
+  workshop_exec refresh
   workshop_exec connections --all | MATCH 'dev/jupyter:venv\s+dev/uv:venv'
 
   # Smoke-test uv from inside the workshop.
