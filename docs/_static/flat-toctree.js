@@ -10,17 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Convert docnames to a Set for O(1) lookup
     var docnameSet = new Set(window.FLAT_TOCTREE_PATHS);
 
-    // Get current page's docname from the URL path
-    var currentPath = window.location.pathname;
-    // Extract the path after the build directory, handling /path/, /path/index.html, etc.
-    // Remove trailing /index.html or just trailing /
-    currentPath = currentPath.replace(/\/index\.html$/, '').replace(/\/$/, '');
-    // Extract the path components (e.g., /how-to/ becomes 'how-to')
-    var pathParts = currentPath.split('/').filter(function(p) { return p.length > 0; });
-    var currentDocname = pathParts.join('/');
+    // Current page's project-relative URL directory, injected by the Sphinx extension.
+    // Robust against URL prefixes like /latest/, /en/latest/, custom domains, etc.
+    var currentPageDir = (typeof window.FLAT_TOCTREE_PAGE_DIR === 'string')
+        ? window.FLAT_TOCTREE_PAGE_DIR
+        : '';
 
-    // Helper to resolve a relative href to an absolute docname based on current page
-    function resolveHrefToDocname(href, currentDoc) {
+    // Resolve a sidebar href to an absolute docname, anchored on the current page directory.
+    function resolveHrefToDocname(href, currentPageDir) {
         // Remove leading './'
         href = href.replace(/^\.\//, '');
 
@@ -34,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // If it starts with '../', resolve relative to current document
         if (href.startsWith('../')) {
-            var currentParts = currentDoc.split('/');
+            var currentParts = currentPageDir.split('/');
             var hrefParts = href.split('/');
 
             for (var i = 0; i < hrefParts.length; i++) {
@@ -52,12 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return currentParts.join('/');
         }
 
-        // If it's a simple relative path (no ../ or /), it's relative to current page's directory
-        // For a page like 'how-to', the href 'customize-workshops/' becomes 'how-to/customize-workshops'
+        // Simple relative path (no ../, no leading /): join with the current page directory.
+        // E.g. on /how-to/ (currentPageDir='how-to'), href 'customize-workshops/' -> 'how-to/customize-workshops'.
         if (!href.startsWith('/') && href.indexOf('../') === -1) {
-            // Current page IS a directory (e.g., 'how-to' means we're in the how-to directory)
-            if (currentDoc) {
-                return currentDoc + '/' + href;
+            if (currentPageDir) {
+                return currentPageDir + '/' + href;
             }
             return href;
         }
@@ -88,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!href) return;
 
         // Convert href to absolute docname
-        var docname = resolveHrefToDocname(href, currentDocname);
+        var docname = resolveHrefToDocname(href, currentPageDir);
 
         if (docnameSet.has(docname)) {
             // This link should be non-clickable
