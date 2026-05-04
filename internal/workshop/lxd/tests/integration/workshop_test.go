@@ -456,20 +456,35 @@ func (f *wsOps) TestLxdBackendImportSdkConflict(c *check.C) {
 			c.Assert(err, check.IsNil)
 			defer file.Close()
 
-			vol := lxd.StoragePoolVolumeBackupArgs{
+			args := lxd.StoragePoolVolumeBackupArgs{
 				BackupFile: file,
 				Name:       sdk.VolumeName(meta.Name, meta.Revision),
 			}
-			op, err := conn.CreateStoragePoolVolumeFromTarball("workshop", vol)
+			op, err := conn.CreateStoragePoolVolumeFromTarball("workshop", args)
 			if err == nil {
-				c.Check(lxdbackend.IsImportSdkOperation(op.Get()), check.Equals, true)
+				isImport, err1 := lxdbackend.IsImportSdkOperation(op.Get(), args.Name)
+				c.Assert(err1, check.IsNil)
+				c.Check(isImport, check.Equals, true, check.Commentf("%#v", op.Get()))
 				err = op.Wait()
 			}
 			if lxdbackend.IsImportSdkConflict(err) {
 				atomic.AddInt32(&existCnt, 1)
-			} else if c.Check(err, check.IsNil) {
-				atomic.AddInt32(&successCnt, 1)
+				return
+			} else if !c.Check(err, check.IsNil) {
+				return
 			}
+
+			atomic.AddInt32(&successCnt, 1)
+
+			volume, etag, err := conn.GetStoragePoolVolume("workshop", "custom", args.Name)
+			c.Assert(err, check.IsNil)
+			volume.Config["user.kind"] = "sdk"
+			op, err = conn.UpdateStoragePoolVolume("workshop", "custom", args.Name, volume.Writable(), etag)
+			c.Assert(err, check.IsNil)
+			isImport, err := lxdbackend.IsImportSdkOperation(op.Get(), args.Name)
+			c.Assert(err, check.IsNil)
+			c.Check(isImport, check.Equals, true, check.Commentf("%#v", op.Get()))
+			c.Assert(op.Wait(), check.IsNil)
 		})
 	}
 	wg.Wait()
