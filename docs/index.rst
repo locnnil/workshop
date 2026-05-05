@@ -37,15 +37,14 @@ that previously took hours to configure in a few commands,
 and be sure that it stays operational.
 It assists in issue reproduction,
 enables hands-on code reviews,
-and turns environment updates into manageable transactions,
-reducing the need to battle with your tooling every day.
+and turns environment updates into manageable transactions.
 
 **For those who build and maintain complex, error-prone workspaces**.
 AI/ML, robotics, IoT, EdTech, and similar domains
 typically use less-than-trivial project layouts
 that depend on multiple Linux distributions or images,
 a plethora of SDKs from many vendors,
-and a grocery list of libraries and languages.
+and a wide range of libraries and languages.
 That's where |ws_markup| thrives.
 
 ----
@@ -85,7 +84,8 @@ In this documentation
        :ref:`Parts <exp_sdk_parts>` •
        :ref:`Design best practices <exp_sdk_best_practices>` •
        :ref:`SDKs vs Dockerfiles <exp_dockerfile_vs_sdk>` •
-       :ref:`Definition file <ref_sdk_definition>`
+       :ref:`Definition file <ref_sdk_definition>` •
+       :ref:`Reference implementations <ref_implementations>`
 
    * - **Interfaces**
      - :ref:`Concepts <exp_interface_concepts>` •
@@ -134,6 +134,7 @@ How this documentation is organised
 
 This documentation follows the `Diátaxis documentation framework <https://diataxis.fr/>`_,
 organizing content by the type of information users need.
+The four sections serve different purposes:
 
 :doc:`Tutorial <tutorial/index>`: Hands-on learning path for new |ws_markup| users,
 progressing from basic operations through interface usage to SDK development.
@@ -165,14 +166,6 @@ it also follows the tooling paradigm exemplified by
 `Snap <https://snapcraft.io/docs/>`_,
 and implemented with
 `Craft CLI <https://craft-cli.readthedocs.io/en/latest/>`_.
-
-Talk to us if you have a project in AI/ML, robotics, or any other field
-where setting up an environment is a daily or weekly activity
-that can easily shave hours off your schedule.
-Tell us about the frustrating parts of your journey,
-and we'll see what |ws_markup| can do for you.
-Let us know if you have an SDK or framework to try with |ws_markup|:
-we'll help you get it out there.
 
 .. rubric:: Get involved
 
