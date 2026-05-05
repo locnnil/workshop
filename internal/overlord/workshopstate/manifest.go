@@ -125,6 +125,37 @@ func (w *WorkshopManager) RefreshManifests(ctx context.Context, project workshop
 	}
 }
 
+func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string, names []string) ([]Manifest, []bool, error) {
+	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
+
+	manifests := make([]Manifest, 0, len(names))
+	running := make([]bool, 0, len(names))
+	for _, name := range names {
+		wp, err := w.backend.Workshop(ctx, name)
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
+
+		if err := conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
+			return nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
+		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
+		if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+			return nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
+
+		installed := make([]sdk.Setup, 0, len(wp.Sdks))
+		for _, sk := range wp.SdksByInstallOrder() {
+			installed = append(installed, sk.Setup)
+		}
+		manifests = append(manifests, Manifest{File: wp.File, Image: wp.Image, Sdks: installed})
+
+		running = append(running, wp.Running)
+	}
+
+	return manifests, running, nil
+}
+
 type artifactFinder struct {
 	*WorkshopManager
 	user        *user.User

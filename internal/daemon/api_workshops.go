@@ -436,8 +436,8 @@ func launch(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *wo
 		return nil, nil, err
 	}
 
-	taskset, err := mgr.LaunchMany(ctx, project, manifests)
-	return manifests, taskset, err
+	tasksets, err := mgr.LaunchMany(ctx, project, manifests)
+	return manifests, tasksets, err
 }
 
 func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
@@ -448,28 +448,47 @@ func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
 	return conflict.ParseRefreshSetting(reqData.Options.RefreshOption)
 }
 
-func refresh(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]workshopstate.Manifest, []*state.TaskSet, error) {
+func refresh(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) (current, latest []workshopstate.Manifest, tasksets []*state.TaskSet, err error) {
 	refreshOption, err := refreshOption(reqData)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
+	project, err := mgr.Project(ctx, pid)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	current, latest, err = mgr.RefreshManifests(ctx, project, reqData.Names, refreshOption)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	tasksets, err = mgr.RefreshMany(ctx, project, current, latest, refreshOption)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return current, latest, tasksets, nil
+}
+
+func remove(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]workshopstate.Manifest, []*state.TaskSet, error) {
 	project, err := mgr.Project(ctx, pid)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	current, latest, err := mgr.RefreshManifests(ctx, project, reqData.Names, refreshOption)
+	current, running, err := mgr.RemoveManifests(ctx, pid, reqData.Names)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	taskset, err := mgr.RefreshMany(ctx, project, current, latest, refreshOption)
+	tasksets, err := mgr.RemoveMany(ctx, project, current, running)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return latest, taskset, nil
+	return current, tasksets, nil
 }
 
 var validActions = []string{
@@ -522,8 +541,8 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	var change *state.Change
-	var manifests []workshopstate.Manifest
-	var taskset []*state.TaskSet
+	var current, latest []workshopstate.Manifest
+	var tasksets []*state.TaskSet
 
 	if mode.Resume() {
 		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], projectId, mode, reqData.Action)
@@ -534,21 +553,21 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
 			change.Set("verbose", reqData.Options.Verbose)
-			manifests, taskset, err = launch(r.Context(), wsmgr, &reqData, projectId)
+			latest, tasksets, err = launch(r.Context(), wsmgr, &reqData, projectId)
 		case "refresh":
 			change = newWorkshopChange(st, "refresh", user, projectId, reqData.Action, reqData.Names)
 			change.Set("wait-setup", conflict.ChangeSetup{Mode: mode.String()})
 			change.Set("verbose", reqData.Options.Verbose)
-			manifests, taskset, err = refresh(r.Context(), wsmgr, &reqData, projectId)
+			current, latest, tasksets, err = refresh(r.Context(), wsmgr, &reqData, projectId)
 		case "start":
 			change = newWorkshopChange(st, "start", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId)
+			tasksets, err = wsmgr.StartMany(r.Context(), reqData.Names, projectId)
 		case "stop":
 			change = newWorkshopChange(st, "stop", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId)
+			tasksets, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId)
 		case "remove":
 			change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
-			taskset, err = wsmgr.RemoveMany(r.Context(), reqData.Names, projectId)
+			current, tasksets, err = remove(r.Context(), wsmgr, &reqData, projectId)
 		default:
 			return statusBadRequest("internal error: action passed validation but was not matched during dispatch")
 		}
@@ -561,12 +580,16 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("%w", err)
 	}
 
-	for _, m := range manifests {
-		change.Set(handlersetup.WorkshopBaseKey(m.File.Name), m.Image)
-		change.Set(handlersetup.WorkshopSdksKey(m.File.Name), m.Sdks)
+	for _, m := range current {
+		change.Set(handlersetup.WorkshopBaseKey(m.File.Name, handlersetup.OldWorkshop), m.Image)
+		change.Set(handlersetup.WorkshopSdksKey(m.File.Name, handlersetup.OldWorkshop), m.Sdks)
 	}
-	for _, tset := range taskset {
-		change.AddAll(tset)
+	for _, m := range latest {
+		change.Set(handlersetup.WorkshopBaseKey(m.File.Name, handlersetup.NewWorkshop), m.Image)
+		change.Set(handlersetup.WorkshopSdksKey(m.File.Name, handlersetup.NewWorkshop), m.Sdks)
+	}
+	for _, taskset := range tasksets {
+		change.AddAll(taskset)
 	}
 	if len(change.Tasks()) == 0 {
 		change.SetStatus(state.DoneStatus)

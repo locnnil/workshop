@@ -41,27 +41,17 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-func SdkSetup(task *state.Task, w string) (sdk.Setup, error) {
+func SdkSetup(task *state.Task, w string, age Age) (sdk.Setup, error) {
 	st := task.State()
 	st.Lock()
 	defer st.Unlock()
 
-	// Some tasks, notably uninstall-sdk, store the sdk.Setup directly,
-	// since it isn't stored anywhere else. Note that the uninstall-sdk
-	// handler only needs the SDK name, but the cleanup handler needs more.
-	var setup sdk.Setup
-	if err := task.Get("sdk-setup", &setup); err == nil {
-		return setup, nil
-	}
-
-	// Tasks like install-sdk can reuse the sdk.Setup
-	// from the launch or refresh Change.
 	var sk string
 	if err := task.Get("sdk", &sk); err != nil {
 		return sdk.Setup{}, err
 	}
 
-	setups, err := WorkshopSdks(task.Change(), w)
+	setups, err := WorkshopSdks(task.Change(), w, age)
 	if err != nil {
 		return sdk.Setup{}, err
 	}
@@ -93,14 +83,14 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	rec, err := SdkSetup(task, w)
+	rec, err := SdkSetup(task, w, NewWorkshop)
 	if err != nil {
 		return err
 	}
 
 	st := task.State()
 	st.Lock()
-	base, err := WorkshopBase(task.Change(), w)
+	base, err := WorkshopBase(task.Change(), w, NewWorkshop)
 	st.Unlock()
 	if err != nil {
 		return err
@@ -266,7 +256,11 @@ func (m *SdkManager) doInstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	sdkSetup, err := SdkSetup(task, w)
+	age := NewWorkshop
+	if task.Kind() == "uninstall-sdk" {
+		age = OldWorkshop
+	}
+	sdkSetup, err := SdkSetup(task, w, age)
 	if err != nil {
 		return err
 	}
@@ -305,7 +299,11 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	sdkSetup, err := SdkSetup(task, w)
+	age := OldWorkshop
+	if task.Kind() == "install-sdk" {
+		age = NewWorkshop
+	}
+	sdkSetup, err := SdkSetup(task, w, age)
 	if err != nil {
 		return err
 	}
@@ -431,7 +429,11 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		return nil
 	}
 
-	sdkSetup, err := SdkSetup(task, w)
+	age := OldWorkshop
+	if task.Kind() == "install-sdk" {
+		age = NewWorkshop
+	}
+	sdkSetup, err := SdkSetup(task, w, age)
 	if err != nil {
 		logger.Noticef("On SdkManager.Cleanup: the %q task is not associated with a SDK setup", task.ID())
 		return nil

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/tomb.v2"
@@ -202,32 +203,41 @@ func UserProjectWorkshop(task *state.Task) (string, *workshop.Project, string, e
 	return user, &prj, name, nil
 }
 
-func WorkshopBase(change *state.Change, w string) (workshop.BaseImage, error) {
+type Age string
+
+const (
+	// OldWorkshop indicates the state of the workshop before a Change.
+	OldWorkshop = Age("old")
+	// NewWorkshop indicates the planned state of the workshop after a Change.
+	NewWorkshop = Age("new")
+)
+
+func WorkshopBase(change *state.Change, w string, age Age) (workshop.BaseImage, error) {
 	var image workshop.BaseImage
-	if err := change.Get(WorkshopBaseKey(w), &image); err != nil {
-		return workshop.BaseImage{}, fmt.Errorf("internal error: %q workshop base image not found (change ID: %s)", w, change.ID())
+	if err := change.Get(WorkshopBaseKey(w, age), &image); err != nil {
+		return workshop.BaseImage{}, fmt.Errorf("internal error: %q workshop %s base image not found (change ID: %s)", w, age, change.ID())
 	}
 	return image, nil
 }
 
-func WorkshopBaseKey(w string) string {
-	return w + "_base"
+func WorkshopBaseKey(w string, age Age) string {
+	return strings.Join([]string{w, string(age), "base"}, "_")
 }
 
-func WorkshopSdks(change *state.Change, w string) ([]sdk.Setup, error) {
+func WorkshopSdks(change *state.Change, w string, age Age) ([]sdk.Setup, error) {
 	var sdks []sdk.Setup
-	if err := change.Get(WorkshopSdksKey(w), &sdks); err != nil {
-		return nil, fmt.Errorf("internal error: %q workshop SDKs not found (change ID: %s)", w, change.ID())
+	if err := change.Get(WorkshopSdksKey(w, age), &sdks); err != nil {
+		return nil, fmt.Errorf("internal error: %q workshop %s SDKs not found (change ID: %s)", w, age, change.ID())
 	}
 	return sdks, nil
 }
 
-func WorkshopSdksKey(w string) string {
-	return w + "_sdks"
+func WorkshopSdksKey(w string, age Age) string {
+	return strings.Join([]string{w, string(age), "sdks"}, "_")
 }
 
 func WorkshopSnapshot(change *state.Change, w, lastIntact string) (*workshop.Snapshot, error) {
-	image, err := WorkshopBase(change, w)
+	image, err := WorkshopBase(change, w, NewWorkshop)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +247,7 @@ func WorkshopSnapshot(change *state.Change, w, lastIntact string) (*workshop.Sna
 		return &snapshot, nil
 	}
 
-	sdks, err := WorkshopSdks(change, w)
+	sdks, err := WorkshopSdks(change, w, NewWorkshop)
 	if err != nil {
 		return nil, err
 	}

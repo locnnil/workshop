@@ -317,8 +317,8 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopDefinitionFound(c *check.
 	t1 := s.state.NewTask("create-workshop", "...")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
-	chg.Set("ws_sdks", []sdk.Setup{})
+	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -342,8 +342,8 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	t1.Set("workshop-file", wsJammy)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
-	chg.Set("ws_sdks", []sdk.Setup{})
+	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -371,8 +371,8 @@ func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	t1.Set("workshop-file", wsJammy)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
-	chg.Set("ws_sdks", []sdk.Setup{})
+	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -404,8 +404,8 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"}
-	chg.Set("ws_base", image)
-	chg.Set("ws_sdks", []sdk.Setup{})
+	chg.Set("ws_new_base", image)
+	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
 
 	s.state.Unlock()
@@ -442,7 +442,7 @@ func (s *workshopHandlers) TestDownloadBase(c *check.C) {
 	t1 := s.state.NewTask("download-base", "...")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage1234"})
+	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage1234"})
 	chg.AddTask(t1)
 
 	s.state.Unlock()

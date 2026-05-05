@@ -46,7 +46,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 
 	st := task.State()
 	st.Lock()
-	image, err := WorkshopBase(task.Change(), w)
+	image, err := WorkshopBase(task.Change(), w, NewWorkshop)
 	st.Unlock()
 	if err != nil {
 		return err

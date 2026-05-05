@@ -258,7 +258,7 @@ func (s *sdkStateSuite) TestDoInstallSdkSuccess(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -315,7 +315,7 @@ func (s *sdkStateSuite) TestDoInstallSdkFailedPolicyCheck(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{testSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{testSdk.Setup})
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -367,7 +367,7 @@ func (s *sdkStateSuite) TestDoInstallSdkBadInterfacesFound(c *check.C) {
 	setWorkshopProject("ws", s.project, t)
 
 	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -411,7 +411,7 @@ func (s *sdkStateSuite) TestUndoInstallSdkSuccess(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("project-id", s.project.ProjectId)
 	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	chg.AddTask(t)
 	chg.AddTask(terr)
 
@@ -456,8 +456,8 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
-	chg.Set("ws_sdks", []sdk.Setup{newSdk})
+	chg.Set("ws_new_base", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk})
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -530,8 +530,8 @@ func (s *sdkStateSuite) TestSnapshotSdkTwice(c *check.C) {
 
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", image)
-	chg.Set("ws_sdks", sdks)
+	chg.Set("ws_new_base", image)
+	chg.Set("ws_new_sdks", sdks)
 	chg.AddTask(t1)
 	chg.AddTask(t2)
 
@@ -556,8 +556,8 @@ func (s *sdkStateSuite) TestSnapshotSdkTwice(c *check.C) {
 
 	chg = s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
-	chg.Set("ws_base", image)
-	chg.Set("ws_sdks", sdks[:1])
+	chg.Set("ws_new_base", image)
+	chg.Set("ws_new_sdks", sdks[:1])
 	chg.AddTask(t)
 
 	s.state.Unlock()
@@ -598,8 +598,8 @@ func (s *sdkStateSuite) TestSnapshotSkippedPostResume(c *check.C) {
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
 	chg.Set("project-id", s.project.ProjectId)
-	chg.Set("ws_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
-	chg.Set("ws_sdks", sdks)
+	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
+	chg.Set("ws_new_sdks", sdks)
 	chg.Set("wait-setup", conflict.ChangeSetup{Mode: conflict.ChangeWaitOnError.String()})
 	chg.AddTask(t1)
 	chg.AddTask(t2)
@@ -649,13 +649,13 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterCooldownOK(c *check.C) {
 	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("uninstall-sdk", "...")
 	t.Set("sdk", oldSdk.Name)
-	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
 	newSdk := oldSdk
 	newSdk.Revision = sdk.R(2)
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 	s.state.Unlock()
@@ -698,7 +698,7 @@ func (s *sdkStateSuite) TestSDKVolumeRemovedAfterFailedLaunch(c *check.C) {
 
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t, t2)
 	chg.AddTask(t)
 	chg.AddTask(t2)
@@ -739,7 +739,7 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupAfterSuccessfulLaunch(c *check.C
 
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 	s.state.Unlock()
@@ -772,13 +772,13 @@ func (s *sdkStateSuite) TestSDKVolumeNotRemovedBeforeCooldown(c *check.C) {
 	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("uninstall-sdk", "...")
 	t.Set("sdk", oldSdk.Name)
-	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
 	newSdk := oldSdk
 	newSdk.Revision = sdk.R(2)
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 	s.state.Unlock()
@@ -818,19 +818,19 @@ func (s *sdkStateSuite) TestTaskSDKVolumeExitCleanupIfUsedAgain(c *check.C) {
 	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("uninstall-sdk", "...")
 	t.Set("sdk", oldSdk.Name)
-	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
 	newSdk := oldSdk
 	newSdk.Revision = sdk.R(2)
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 
 	other := s.state.NewChange("launch", "...")
 	other.Set("user", "testuser")
-	other.Set("ws2_sdks", []sdk.Setup{oldSdk.Setup})
+	other.Set("ws2_new_sdks", []sdk.Setup{oldSdk.Setup})
 	t2 := s.state.NewTask("install-sdk", "t2")
 	t2.Set("sdk", oldSdk.Name)
 	setWorkshopProject("ws2", s.project, t2)
@@ -869,19 +869,19 @@ func (s *sdkStateSuite) TestTaskSDKVolumeRetriesCleanupIfBlockingChangesArePrese
 	s.mockSdk(c, oldSdk)
 	t := s.state.NewTask("uninstall-sdk", "...")
 	t.Set("sdk", oldSdk.Name)
-	t.Set("sdk-setup", oldSdk.Setup)
 
 	chg := s.state.NewChange("sample", "...")
 	chg.Set("user", "testuser")
 	newSdk := oldSdk
 	newSdk.Revision = sdk.R(2)
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg.Set("ws_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t)
 	chg.AddTask(t)
 
 	other := s.state.NewChange("launch", "...")
 	other.Set("user", "testuser")
-	other.Set("ws2_sdks", []sdk.Setup{oldSdk.Setup})
+	other.Set("ws2_new_sdks", []sdk.Setup{oldSdk.Setup})
 	t2 := s.state.NewTask("install-sdk", "t2")
 	t2.Set("sdk", oldSdk.Name)
 	t2.SetToWait(state.DoStatus)
@@ -939,11 +939,9 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 
 	t1 := s.state.NewTask("uninstall-sdk", "t1")
 	t1.Set("sdk", oldSdk.Name)
-	t1.Set("sdk-setup", oldSdk.Setup)
 
 	t2 := s.state.NewTask("uninstall-sdk", "t2")
 	t2.Set("sdk", oldSdk.Name)
-	t2.Set("sdk-setup", oldSdk.Setup)
 	t2.WaitFor(t1)
 
 	// Add both tasks to their own changes
@@ -951,13 +949,15 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	chg1.Set("user", "testuser")
 	newSdk := oldSdk
 	newSdk.Revision = sdk.R(2)
-	chg1.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg1.Set("ws_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg1.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
 
 	chg2 := s.state.NewChange("refresh", "chg2")
 	chg2.Set("user", "testuser")
-	chg2.Set("ws2_sdks", []sdk.Setup{newSdk.Setup})
+	chg2.Set("ws2_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg2.Set("ws2_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws2", s.project, t2)
 	chg2.AddTask(t2)
 
@@ -1003,7 +1003,7 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 	t.Set("sdk", oldSdk.Name)
 	chg := s.state.NewChange("launch", "chg")
 	chg.Set("user", "testuser")
-	chg.Set("ws2_sdks", []sdk.Setup{oldSdk.Setup})
+	chg.Set("ws2_new_sdks", []sdk.Setup{oldSdk.Setup})
 	setWorkshopProject("ws2", s.project, t)
 	chg.AddTask(t)
 
@@ -1022,12 +1022,12 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 
 	t1 := s.state.NewTask("uninstall-sdk", "t1")
 	t1.Set("sdk", oldSdk.Name)
-	t1.Set("sdk-setup", oldSdk.Setup)
 	chg1 := s.state.NewChange("refresh", "chg1")
 	chg1.Set("user", "testuser")
 	newSdk := oldSdk
 	newSdk.Revision = sdk.R(2)
-	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg1.Set("ws_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg1.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
 
@@ -1047,11 +1047,11 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 
 	t2 := s.state.NewTask("uninstall-sdk", "t2")
 	t2.Set("sdk", oldSdk.Name)
-	t2.Set("sdk-setup", oldSdk.Setup)
 	t2.WaitFor(t1)
 	chg2 := s.state.NewChange("refresh", "chg2")
 	chg2.Set("user", "testuser")
-	chg.Set("ws2_sdks", []sdk.Setup{newSdk.Setup})
+	chg2.Set("ws2_old_sdks", []sdk.Setup{oldSdk.Setup})
+	chg2.Set("ws2_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws2", s.project, t2)
 	chg2.AddTask(t2)
 
@@ -1098,12 +1098,12 @@ func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 
 	t1 := s.state.NewTask("uninstall-sdk", "t1")
 	t1.Set("sdk", sdkProject.Name)
-	t1.Set("sdk-setup", sdkProject.Setup)
 	chg1 := s.state.NewChange("refresh", "chg1")
 	chg1.Set("user", "testuser")
 	newSdk := sdkProject
 	newSdk.Revision = sdk.R(-2)
-	chg1.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	chg1.Set("ws_old_sdks", []sdk.Setup{sdkProject.Setup})
+	chg1.Set("ws_new_sdks", []sdk.Setup{newSdk.Setup})
 	setWorkshopProject("ws", s.project, t1)
 	chg1.AddTask(t1)
 
