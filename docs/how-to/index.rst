@@ -59,13 +59,9 @@ or the |ws_markup| installation:
    Fix workshops <fix-workshops/index>
 
 
-Study examples
---------------
+See also
+--------
 
-.. @artefact SDK
+Reference:
 
-These examples showcase different SDK patterns and workshop implementations.
-Studying them helps to better understand SDK design and workshop creation:
-
-- https://github.com/canonical/sdks
-- https://github.com/canonical/reference-workshops
+- :ref:`ref_implementations`

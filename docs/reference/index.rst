@@ -46,6 +46,21 @@ However, both definition types have different purposes and structure:
    Definition files <definition-files/index>
 
 
+Reference implementations
+-------------------------
+
+.. @artefact SDK
+
+This catalogue lists publicly maintained reference SDK and workshop implementations,
+grouped by domain:
+
+.. toctree::
+   :titlesonly:
+   :class: flat-toctree
+
+   reference-implementations
+
+
 Structure and behavior
 ----------------------
 

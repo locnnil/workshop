@@ -32,9 +32,11 @@ exclude = [
     # Internal Canonical repos that don't yet exist publicly
     "^https://github\\.com/canonical/sdkcraft",
     "^https://github\\.com/canonical/workshop",
-    "^https://github\\.com/canonical/sdks",
     "^https://github\\.com/canonical/reference-workshops",
     "^https://github.com/canonical/launch-workshop",
+
+    # Individual SDK repos (`*-sdk`, plus `zephyr-sdk-ng`); see docs/how-to/index.rst
+    "^https://github\\.com/canonical/.*-sdk(-ng)?$",
 
     # Read the Docs anchor checks — flaky; fragments only checked when listed
     "^https://.*\\.readthedocs-hosted\\.com/.*#\\w+$",
