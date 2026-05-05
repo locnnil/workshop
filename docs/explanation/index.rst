@@ -18,9 +18,9 @@ it is important to understand how these concepts fit together.
 Architecture
 ------------
 
-The architecture section provides a detailed overview of Workshop's design,
-its components
-and how they work together to provide isolated development environments.
+|ws_markup|'s architecture combines a set of system components
+with well-defined runtime behavior
+to provide container-isolated development environments.
 
 .. toctree::
    :titlesonly:

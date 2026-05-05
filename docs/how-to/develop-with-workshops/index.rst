@@ -5,8 +5,9 @@
 How to develop with workshops
 =============================
 
-These articles cover the aspects of using |ws_markup| with developer tooling,
-from connecting your favourite IDE to integrating with version control and CI/CD.
+|ws_markup| integrates with developer tooling,
+from connecting your favourite IDE
+to running version control and CI/CD pipelines inside a workshop.
 
 
 Use IDEs and editors
@@ -27,8 +28,8 @@ and access it in your browser:
 Integrate with development workflows
 ------------------------------------
 
-These guides cover using workshops alongside
-version control, CI/CD, AI-powered development tools, and language tooling:
+Workshops are intended to integrate with version control, CI/CD,
+and AI-powered development workflows:
 
 .. toctree::
    :maxdepth: 1

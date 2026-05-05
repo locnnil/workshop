@@ -6,7 +6,9 @@
 How to use workshops
 ====================
 
-These how-to guides describe various scenarios of using |ws_markup| daily:
+Day-to-day |ws_markup| usage covers a handful of recurring scenarios:
+adding actions, forwarding ports, moving projects, and running multiple
+workshops in parallel:
 
 .. toctree::
    :maxdepth: 1

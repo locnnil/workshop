@@ -8,18 +8,18 @@ SDKs
 
 .. @artefact SDK
 
-These topics cover the many aspects of defining and using SDKs
-with |ws_markup| and |sdk_markup|.
+SDKs are the pre-built, reusable blocks of functionality
+involved in the definition, design, distribution,
+and day-to-day operation of a workshop.
 
 
 Understanding SDKs
 ------------------
 
-SDKs are packages of software dependencies
-distributed through the SDK Store or defined locally.
-These articles explain what SDKs are,
-how they encapsulate functionality,
-and how their internal structure is organised:
+At their core, SDKs are bundles of software dependencies
+distributed through the SDK Store or defined locally;
+they can pre-package libraries, tools, and configurations
+or install them directly into a workshop.
 
 .. toctree::
    :maxdepth: 1

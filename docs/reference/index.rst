@@ -17,8 +17,7 @@ that may be required to use |ws_markup| and |sdk_markup|.
 Command-line interfaces
 -----------------------
 
-These articles share the usage details of the command-line tools
-provided by |ws_markup| and |sdk_markup|:
+|ws_markup| and |sdk_markup| ship with a small set of command-line tools:
 
 .. toctree::
    :titlesonly:
@@ -51,8 +50,9 @@ Reference implementations
 
 .. @artefact SDK
 
-This catalogue lists publicly maintained reference SDK and workshop implementations,
-grouped by domain:
+Publicly maintained reference SDK and workshop implementations
+span multiple domains and can be studied to understand the steps and decisions
+involved in their design and implementation:
 
 .. toctree::
    :titlesonly:
@@ -64,11 +64,9 @@ grouped by domain:
 Structure and behavior
 ----------------------
 
-These topics provide detailed guidance on various aspects
-of operating an SDK or a workshop at run-time.
 Workshops are largely made of SDKs;
-to understand how a workshop runs and the status it has,
-it's crucial to know how SDKs are structured and operated:
+understanding how a workshop runs and the status it carries
+starts with how SDKs are structured and operated at run-time:
 
 .. toctree::
    :titlesonly:

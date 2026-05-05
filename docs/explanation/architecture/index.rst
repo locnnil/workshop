@@ -6,8 +6,8 @@
 Architecture
 ============
 
-This section provides a thorough overview of |ws_markup|'s core architecture
-and runtime behavior.
+|ws_markup|'s core architecture combines a set of system components
+with well-defined runtime behavior.
 Understanding these fundamentals is key
 to effectively using and managing |ws_markup| environments.
 
