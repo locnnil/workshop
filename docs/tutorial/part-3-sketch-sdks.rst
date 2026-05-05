@@ -64,7 +64,7 @@ For instance, you may have a HuggingFace SDK without :program:`huggingface-cli`.
 Should you create and publish an SDK just for your personal setup? Probably not.
 
 In this guide, we'll add
-`jupyter-console <https://jupyter-console.readthedocs.io/>`_,
+`jupyter-console <https://jupyter-console.readthedocs.io/en/latest/>`_,
 an interactive Python environment
 that can run notebook-style code directly in the terminal.
 Let's explore how to integrate this utility into your workshop

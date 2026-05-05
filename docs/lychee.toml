@@ -40,4 +40,10 @@ exclude = [
 
     # API endpoints that reject HEAD/GET (405 Method Not Allowed) but are valid references
     "^https://api\\.snapcraft\\.io/api/",
+
+    # Auth-gated destinations — lychee can't follow these anonymously and they
+    # redirect to login pages. They aren't broken; just unreachable to the bot.
+    "^https://canonical-workshop\\.readthedocs-hosted\\.com/",
+    "^https://discourse\\.canonical\\.com/c/",
+    "^https://console\\.cloud\\.google\\.com/",
 ]

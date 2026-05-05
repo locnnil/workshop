@@ -312,7 +312,7 @@ The steps to produce a Workshop release are as follows.
 Build the snaps locally
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-`Snapcraft <https://documentation.ubuntu.com/snapcraft/>`_
+`Snapcraft <https://documentation.ubuntu.com/snapcraft/stable/>`_
 is used to build, package, and publish ``workshop`` snaps.
 All these processes run in a self-launched
 `LXD <https://documentation.ubuntu.com/lxd/latest/>`_ container.
@@ -450,7 +450,7 @@ Structure and style
 ~~~~~~~~~~~~~~~~~~~
 
 We use the `Canonical documentation starter pack
-<https://github.com/canonical/sphinx-docs-starter-pack>`_
+<https://github.com/canonical/sphinx-stack>`_
 together with a custom Workshop in-project SDK in ``.workshop/``
 to run and build our documentation;
 our preferred markup is reStructuredText (reST),
@@ -462,13 +462,13 @@ See the relevant documentation before making changes:
   (project-specific conventions and patterns)
 
 - `Starter pack
-  <https://canonical-starter-pack.readthedocs-hosted.com/stable/>`_
+  <https://canonical-sphinx-stack.readthedocs-hosted.com/latest/>`_
 
 - `reST style guide
-  <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/style-guide/>`_
+  <https://canonical-sphinx-stack.readthedocs-hosted.com/latest/reference/style-guide/>`_
 
 - `reST cheat sheet
-  <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/doc-cheat-sheet/>`_
+  <https://canonical-sphinx-stack.readthedocs-hosted.com/latest/reference/doc-cheat-sheet/>`_
 
 
 .. _contributing_doc_dependencies:

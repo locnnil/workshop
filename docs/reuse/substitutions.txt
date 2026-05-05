@@ -1,2 +1,0 @@
-.. |ws_markup| replace:: :program:`Workshop`
-.. |sdk_markup| replace:: :program:`SDKcraft`

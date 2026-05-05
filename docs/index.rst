@@ -1,5 +1,5 @@
 :slug: home-page
-:relatedlinks: [Workshop](https://github.com/canonical/workshop/), [SDKcraft](https://github.com/canonical/sdkcraft/), [LXD](https://documentation.ubuntu.com/lxd/), [Snap](https://snapcraft.io/docs/)
+:relatedlinks: [Workshop](https://github.com/canonical/workshop/), [SDKcraft](https://github.com/canonical/sdkcraft/), [LXD](https://documentation.ubuntu.com/lxd/default/), [Snap](https://snapcraft.io/docs/)
 
 .. _home:
 
@@ -163,7 +163,7 @@ It uses `LXD`_ as the underlying container technology;
 it also follows the tooling paradigm exemplified by
 `Snap <https://snapcraft.io/docs/>`_,
 and implemented with
-`Craft CLI <https://craft-cli.readthedocs.io/>`_.
+`Craft CLI <https://craft-cli.readthedocs.io/en/latest/>`_.
 
 Talk to us if you have a project in AI/ML, robotics, or any other field
 where setting up an environment is a daily or weekly activity
@@ -186,7 +186,7 @@ we'll help you get it out there.
 
 .. rubric:: Governance and policies
 
-- `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
+- `Code of conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
 - :ref:`Security policy <security>`
 
 .. rubric:: Feedback and support

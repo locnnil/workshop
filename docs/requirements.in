@@ -1,11 +1,8 @@
-# Direct documentation dependencies for Workshop
-# This file is compiled to requirements.txt using uv
+# Direct documentation dependencies for Workshop.
 #
-# NOTE: Dependencies already provided by the sphinx-docs-starter-pack
-# (canonical/sphinx-docs-starter-pack/docs/requirements.txt) should NOT
-# be listed here. Only add Workshop-specific dependencies.
+# Dependencies already provided by the Sphinx Stack
+# (canonical/sphinx-stack/docs/requirements.txt) must NOT be listed here.
+# Only add Workshop-specific dependencies.
 
-# Workshop-specific Sphinx extensions not in starter pack
-sphinx-copybutton
+# Mermaid diagrams in Sphinx docs (not bundled in the Sphinx Stack).
 sphinxcontrib-mermaid
-requests>=2.33.0
