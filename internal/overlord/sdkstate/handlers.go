@@ -478,9 +478,7 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 	}
 
 	if time.Since(cooldownStart) < sdkVolumeCooldownTime {
-		remaining := sdkVolumeCooldownTime - time.Since(cooldownStart)
-		return fmt.Errorf("cooldown period for %q SDK volume has not elapsed yet, time remaining: %s",
-			sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), remaining.Round(time.Second))
+		return &state.Retry{}
 	}
 
 	// Check if there are any tasks in progress that use the same SDK volume.
