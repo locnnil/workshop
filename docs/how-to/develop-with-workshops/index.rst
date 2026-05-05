@@ -1,5 +1,3 @@
-.. _how_develop_workshops:
-
 .. meta::
    :description: How-to guides on usage of workshops
                  with well-known developer tools.
@@ -35,8 +33,8 @@ version control, CI/CD, AI-powered development tools, and language tooling:
 .. toctree::
    :maxdepth: 1
 
-   Use workshops with Git <use-git>
    Manage Python environments <manage-python-environments>
    Run GitHub Actions locally <run-github-actions-locally>
    Run workshops in GitHub Actions <run-workshops-in-github-actions>
    Use workshops with AI agents <use-workshops-with-ai-agents>
+   Use workshops with Git <use-git>

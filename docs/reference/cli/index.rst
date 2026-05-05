@@ -1,5 +1,3 @@
-.. _ref_cli:
-
 .. meta::
    :description: Overview of command-line interfaces for Workshop, including
                  user and SDK author tools, with links to detailed command references.

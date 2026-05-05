@@ -13,6 +13,8 @@ To start using |ws_markup| and |sdk_markup|,
 it is important to understand how these concepts fit together.
 
 
+.. _exp_arch:
+
 Architecture
 ------------
 
@@ -26,6 +28,8 @@ and how they work together to provide isolated development environments.
 
    architecture/index
 
+
+.. _exp_workshop:
 
 Workshops and projects
 ----------------------
@@ -46,6 +50,8 @@ where multiple workshop definitions can be placed.
    workshops/index
 
 
+.. _exp_sdks:
+
 SDKs
 ----
 
@@ -60,6 +66,8 @@ to create tailored development environments.
 
    sdks/index
 
+
+.. _exp_interfaces:
 
 Interfaces
 ----------

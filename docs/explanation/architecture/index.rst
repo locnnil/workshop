@@ -1,4 +1,7 @@
-.. _exp_arch:
+.. meta::
+   :description: Workshop architecture documentation, providing access to
+                 explanations of system components and runtime behavior
+                 that underpin Workshop environments.
 
 Architecture
 ============

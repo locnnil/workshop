@@ -12,6 +12,8 @@ provide technical background
 that may be required to use |ws_markup| and |sdk_markup|.
 
 
+.. _ref_cli:
+
 Command-line interfaces
 -----------------------
 
@@ -24,6 +26,8 @@ provided by |ws_markup| and |sdk_markup|:
 
    CLI <cli/index>
 
+
+.. _ref_definitions:
 
 Definition file formats
 -----------------------

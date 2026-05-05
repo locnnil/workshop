@@ -1,5 +1,3 @@
-.. _exp_sdks:
-
 .. meta::
    :description: Workshop SDK documentation, providing access to
                  explanations of SDK concepts, data storage, lifecycle hooks,
@@ -40,8 +38,8 @@ and what design patterns lead to maintainable, reusable packages:
 .. toctree::
    :maxdepth: 1
 
-   SDKs versus Dockerfiles <sdk-vs-dockerfile>
    Design best practices <best-practices>
+   SDKs versus Dockerfiles <sdk-vs-dockerfile>
 
 
 Operations and tooling

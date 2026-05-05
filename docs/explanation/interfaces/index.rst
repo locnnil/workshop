@@ -1,5 +1,3 @@
-.. _exp_interfaces:
-
 .. meta::
    :description: Workshop interfaces documentation, providing
                  access to explanations of interface concepts and specific

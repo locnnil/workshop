@@ -1,5 +1,3 @@
-.. _how_use_workshops:
-
 .. meta::
    :description: How-to guides on daily usage of workshops, including adding actions,
                  forwarding ports, moving projects, and using multiple workshops

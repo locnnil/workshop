@@ -14,6 +14,8 @@ cover the needs and corner cases
 that arise when you use |ws_markup| and |sdk_markup|.
 
 
+.. _how_use_workshops:
+
 Customize workshops
 -------------------
 
@@ -27,6 +29,8 @@ such as moving projects within the filesystem or adding custom actions:
    Customize workshops <customize-workshops/index>
 
 
+.. _how_develop_workshops:
+
 Develop with workshops
 ----------------------
 
@@ -39,6 +43,8 @@ such as integrating IDEs, using Git, or running CI/CD workflows with workshops:
 
    Develop with workshops <develop-with-workshops/index>
 
+
+.. _how_fix_workshops:
 
 Fix workshops
 -------------
