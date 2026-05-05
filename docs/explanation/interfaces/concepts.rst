@@ -131,6 +131,10 @@ whereas the :ref:`camera <exp_camera_interface>`,
 :ref:`desktop <exp_desktop_interface>`, and :ref:`SSH <exp_ssh_interface>`
 interfaces require manual connection.
 
+To know how each kind of connection is treated
+when a workshop is launched, refreshed, or restored,
+see :ref:`exp_workshop_connection_lifecycle`.
+
 
 .. _exp_plug_bindings:
 
