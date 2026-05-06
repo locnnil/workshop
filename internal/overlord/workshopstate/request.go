@@ -16,6 +16,7 @@ package workshopstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -283,14 +284,13 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, project workshop.Proj
 func (w *WorkshopManager) bestSnapshot(ctx context.Context, manifest Manifest) (*workshop.Snapshot, error) {
 	snapshot := workshop.SdkSnapshot(manifest.Format, manifest.Image, manifest.Sdks)
 	for range manifest.Sdks {
-		found, err := w.backend.HasSnapshot(ctx, snapshot)
-		if err != nil {
+		if _, err := w.backend.Snapshot(ctx, snapshot); errors.Is(err, workshop.ErrSnapshotNotFound) {
+			snapshot.Sdks = snapshot.Sdks[:len(snapshot.Sdks)-1]
+		} else if err != nil {
 			return nil, err
-		}
-		if found {
+		} else {
 			break
 		}
-		snapshot.Sdks = snapshot.Sdks[:len(snapshot.Sdks)-1]
 	}
 	return &snapshot, nil
 }

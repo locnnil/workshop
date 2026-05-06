@@ -46,6 +46,7 @@ type FakeWorkshop struct {
 	*workshop.Workshop
 	Devices            map[string]map[string]string
 	WorkshopFilesystem fsutil.Fs
+	CurrentSnapshot    workshop.Snapshot
 }
 
 type FakeVolume struct {
@@ -293,6 +294,7 @@ func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.
 	ws.File = file
 	ws.Format = f.FormatRevision()
 	ws.Image = snapshot.Image
+	ws.CurrentSnapshot = snapshot
 	return nil
 }
 
@@ -841,11 +843,38 @@ func (f *FakeWorkshopBackend) SetFormatRevision(format sdk.Revision) func() {
 	return func() { f.formatRevision = old }
 }
 
-func (f *FakeWorkshopBackend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
+func (f *FakeWorkshopBackend) Snapshot(ctx context.Context, snapshot workshop.Snapshot) (*workshop.SnapshotInfo, error) {
 	f.snapshotLock.Lock()
-	defer f.snapshotLock.Unlock()
+	idx := f.snapshotIdx(snapshot)
+	f.snapshotLock.Unlock()
+	if idx < 0 {
+		return nil, workshop.ErrSnapshotNotFound
+	}
 
-	return f.snapshotIdx(snapshot) >= 0, nil
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
+	workshops := make(map[string][]string)
+	for pid, wps := range f.Workshops {
+		for name, wp := range wps {
+			if wp.CurrentSnapshot.IsBasedOn(snapshot) {
+				workshops[pid] = append(workshops[pid], name)
+			}
+		}
+	}
+	for pid, wps := range f.StashedWorkshops {
+		for name, wp := range wps {
+			name = strings.TrimPrefix(name, "stash-")
+			if slices.Contains(workshops[pid], name) {
+				continue
+			}
+
+			if wp.CurrentSnapshot.IsBasedOn(snapshot) {
+				workshops[pid] = append(workshops[pid], name)
+			}
+		}
+	}
+	return &workshop.SnapshotInfo{Snapshot: snapshot, Workshops: workshops}, nil
 }
 
 func (f *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
@@ -858,6 +887,19 @@ func (f *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, sna
 	if err != nil {
 		return err
 	}
+
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	f.workshopLock.Lock()
+	wp := f.Workshops[projectId][name]
+	f.workshopLock.Unlock()
+	if wp == nil {
+		return workshop.ErrWorkshopNotLaunched
+	}
+	wp.CurrentSnapshot = snapshot
 
 	f.snapshotLock.Lock()
 	defer f.snapshotLock.Unlock()

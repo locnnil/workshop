@@ -1048,6 +1048,7 @@ func (f *wsOps) TestLxdBackendSnapshotOK(c *check.C) {
 	for i := range 4 {
 		name := fmt.Sprint("test", i+2)
 		args := &lxd.InstanceCopyArgs{Name: lxdbackend.InstanceName(name, f.project.ProjectId)}
+		inst.Config[workshop.ConfigWorkshopName] = name
 		op, err := conn.CopyInstance(conn, *inst, args)
 		c.Assert(err, check.IsNil)
 		c.Assert(op.Wait(), check.IsNil)
@@ -1067,9 +1068,8 @@ func (f *wsOps) TestLxdBackendSnapshotOK(c *check.C) {
 		}},
 	}
 
-	exists, err := f.bd.HasSnapshot(f.ctx, snapshot)
-	c.Assert(err, check.IsNil)
-	c.Check(exists, check.Equals, false)
+	_, err = f.bd.Snapshot(f.ctx, snapshot)
+	c.Check(err, testutil.ErrorIs, workshop.ErrSnapshotNotFound)
 
 	defer func() { _ = f.bd.RemoveSnapshot(f.ctx, snapshot) }()
 	var wg sync.WaitGroup
@@ -1088,9 +1088,13 @@ func (f *wsOps) TestLxdBackendSnapshotOK(c *check.C) {
 				c.Errorf("unexpected error: %v", err)
 			}
 
-			exists, err := f.bd.HasSnapshot(f.ctx, snapshot)
+			info, err := f.bd.Snapshot(f.ctx, snapshot)
 			c.Assert(err, check.IsNil)
-			c.Check(exists, check.Equals, true)
+			c.Check(info.Snapshot, check.DeepEquals, snapshot)
+			workshops := map[string][]string{
+				f.project.ProjectId: {"test", "test2", "test3", "test4", "test5"},
+			}
+			c.Check(info.Workshops, testutil.DeepUnsortedMatches, workshops)
 		})
 	}
 	wg.Wait()
@@ -1266,7 +1270,7 @@ func (f *wsOps) TestLxdBackendSnapshotHashCollision(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(op.Wait(), check.IsNil)
 
-	_, err = f.bd.HasSnapshot(f.ctx, snapshot)
+	_, err = f.bd.Snapshot(f.ctx, snapshot)
 	c.Check(err, check.ErrorMatches, `hash collision detected: "system-.*" snapshot has "ubuntu@22.04" base; required: "ubuntu@24.04"`)
 
 	inst.Config[workshop.ConfigWorkshopBase] = "ubuntu@24.04"

@@ -63,3 +63,4 @@ FakeWorkshop:
   Workshop: '*workshop.Workshop'
   Devices: map[string]map[string]string
   WorkshopFilesystem:
+  CurrentSnapshot: workshop.Snapshot

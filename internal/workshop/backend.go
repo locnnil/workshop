@@ -51,6 +51,7 @@ var (
 	ErrVolumeNotFound        = errors.New("volume not found")
 	ErrVolumeAlreadyExists   = errors.New("volume already exists")
 	ErrVolumeInUse           = errors.New("volume is in use")
+	ErrSnapshotNotFound      = errors.New("snapshot not found")
 	ErrSnapshotAlreadyExists = errors.New("snapshot already exists")
 	ErrSdkProfileNotFound    = errors.New("sdk profile not found")
 	ErrIncompatibleBackend   = errors.New("incompatible backend")
@@ -122,6 +123,18 @@ func (s Snapshot) Equal(other Snapshot) bool {
 	return s.Format == other.Format && s.Image == other.Image && slices.Equal(s.Sdks, other.Sdks)
 }
 
+// IsBasedOn returns true if other is a prefix of s.
+func (s Snapshot) IsBasedOn(other Snapshot) bool {
+	if s.Format != other.Format || s.Image != other.Image {
+		return false
+	}
+	if len(s.Sdks) < len(other.Sdks) {
+		return false
+	}
+	s.Sdks = s.Sdks[:len(other.Sdks)]
+	return slices.Equal(s.Sdks, other.Sdks)
+}
+
 // BaseOnly identifies a "snapshot" which consists of a base image only.
 func BaseOnly(format sdk.Revision, name, fingerprint string) Snapshot {
 	return Snapshot{Format: format, Image: BaseImage{Name: name, Fingerprint: fingerprint}}
@@ -140,6 +153,12 @@ func SdkSnapshot(format sdk.Revision, image BaseImage, sdks []sdk.Setup) Snapsho
 // IsBase returns whether the snapshot is just a base image.
 func (s Snapshot) IsBase() bool {
 	return len(s.Sdks) == 0
+}
+
+type SnapshotInfo struct {
+	Snapshot
+	// Project ID / Workshop pairs that are based on the snapshot.
+	Workshops map[string][]string
 }
 
 type SdkManager interface {
@@ -216,8 +235,11 @@ type Backend interface {
 	// Number representing workshop and snapshot compatibility level.
 	FormatRevision() sdk.Revision
 
-	// Check if the given snapshot already exists.
-	HasSnapshot(ctx context.Context, snapshot Snapshot) (bool, error)
+	// Look up the given snapshot. On success, returns the given snapshot and
+	// the workshops that are based on it. On failure, returns an error. In the
+	// unlikely event the error is caused by a snapshot conflict (i.e. a name
+	// collision), also returns the conflicting snapshot.
+	Snapshot(ctx context.Context, snapshot Snapshot) (*SnapshotInfo, error)
 
 	// Launch a clean workshop instance. If the workshop exists, wipe out
 	// its rootfs and rebuild it from the given snapshot (which may be just

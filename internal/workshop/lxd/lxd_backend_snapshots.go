@@ -124,29 +124,29 @@ func optionDomain(key string) configDomain {
 	}
 }
 
-func (s *Backend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
+func (s *Backend) Snapshot(ctx context.Context, snapshot workshop.Snapshot) (*workshop.SnapshotInfo, error) {
 	if snapshot.IsBase() {
-		return false, errors.New("internal error: snapshots require at least one SDK")
+		return nil, errors.New("internal error: snapshots require at least one SDK")
 	}
 
 	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer conn.Disconnect()
 
 	digest, err := s.HashSnapshot(snapshot)
 	if err != nil {
-		return false, fmt.Errorf("internal error: hashing snapshot info: %w", err)
+		return nil, fmt.Errorf("internal error: hashing snapshot info: %w", err)
 	}
 
 	name := sdkSnapshotName(snapshot, digest)
 	inst, _, err := snapshotConn.GetInstance(name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return false, nil
+		return nil, workshop.ErrSnapshotNotFound
 	}
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Check for in-progress snapshots. In this case we could wait for it to
@@ -155,24 +155,60 @@ func (s *Backend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (
 	// should coordinate their snapshots, not just those which happen to call
 	// HasSnapshot and TakeSnapshot at the same time.
 	if inst.Config[workshop.ConfigWorkshopSnapshotType] != "sdk" {
-		return false, nil
+		return nil, workshop.ErrSnapshotNotFound
 	}
 
-	if err := detectHashCollision(inst, snapshot); err != nil {
-		return false, err
+	other, err := detectHashCollision(inst, snapshot)
+	if err != nil {
+		if other == nil {
+			return nil, err
+		}
+		return &workshop.SnapshotInfo{Snapshot: *other}, err
 	}
-	return true, nil
+
+	workshops := map[string][]string{}
+
+	usedBy, err := conn.GetInstances(lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters:      []string{fmt.Sprintf("config.user.workshop.snapshot-%v=%s", len(snapshot.Sdks), name)},
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, inst := range usedBy {
+		projectId := inst.Config[workshop.ConfigProjectId]
+		name := inst.Config[workshop.ConfigWorkshopName]
+		workshops[projectId] = append(workshops[projectId], name)
+	}
+
+	// Check for stashed workshops as well.
+	usedBy, err = snapshotConn.GetInstances(lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters:      []string{fmt.Sprintf("config.user.workshop.snapshot-%v=%s", len(snapshot.Sdks), name)},
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, inst := range usedBy {
+		projectId := inst.Config[workshop.ConfigProjectId]
+		name := inst.Config[workshop.ConfigWorkshopName]
+		if !slices.Contains(workshops[projectId], name) {
+			workshops[projectId] = append(workshops[projectId], name)
+		}
+	}
+
+	return &workshop.SnapshotInfo{Snapshot: snapshot, Workshops: workshops}, nil
 }
 
-func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) error {
+func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) (*workshop.Snapshot, error) {
 	saved, err := identifySnapshot(inst)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := compareSnapshots(inst.Name, *saved, snapshot); err != nil {
-		return fmt.Errorf("hash collision detected: %w", err)
+		return saved, fmt.Errorf("hash collision detected: %w", err)
 	}
-	return nil
+	return saved, nil
 }
 
 func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
@@ -273,11 +309,23 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	}
 	defer conn.Disconnect()
 
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return workshop.ErrWorkshopNotLaunched
 		}
+		return err
+	}
+
+	// Mark the snapshot as "in use" by this workshop. This can be done when
+	// installing the SDK to avoid an extra UpdateInstance, but is easier to do
+	// here since we already know the snapshot name.
+	inst.Config[fmt.Sprintf("user.workshop.snapshot-%v", len(snapshot.Sdks))] = snapshotName
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	if err := op.Wait(); err != nil {
 		return err
 	}
 
@@ -453,7 +501,7 @@ func (s *Backend) checkPartialSnapshot(snapshotConn lxd.InstanceServer, snapshot
 		return err
 	}
 
-	if err := detectHashCollision(inst, snapshot); err != nil {
+	if _, err := detectHashCollision(inst, snapshot); err != nil {
 		return err
 	}
 	return workshop.ErrSnapshotAlreadyExists
@@ -516,6 +564,22 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		inst = &api.Instance{}
 	} else if err != nil {
 		return err
+	}
+
+	if req.Config == nil {
+		req.Config = make(map[string]string, len(snapshot.Sdks))
+	} else {
+		req.Config = maps.Clone(req.Config)
+	}
+	for i := range snapshot.Sdks {
+		partial := snapshot
+		partial.Sdks = partial.Sdks[:i+1]
+
+		digest, err := s.HashSnapshot(partial)
+		if err != nil {
+			return err
+		}
+		req.Config[fmt.Sprintf("user.workshop.snapshot-%v", i+1)] = sdkSnapshotName(partial, digest)
 	}
 
 	newApi := conn.HasExtension("instance_refresh_config")
