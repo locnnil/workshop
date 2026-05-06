@@ -28,7 +28,7 @@ must *connect* to the resources they expect.
 Such connections are uniformly established via the interface system.
 
 To achieve this, |ws_markup| implements a counterpart to :program:`snapd`'s
-`interface manager <https://snapcraft.io/docs/interface-management>`__,
+`interface manager <https://snapcraft.io/docs/interface-management/>`__,
 which controls whether an SDK can use resources beyond its confines.
 You can think of specific interfaces as resource *types*:
 filesystem, hardware, computing, and so on.

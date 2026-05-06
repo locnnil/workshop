@@ -134,7 +134,7 @@ Each SDK is described with the following keys:
        operations.
 
        It uses a
-       `snap-like format <https://snapcraft.io/docs/channels>`__
+       `snap-like format <https://snapcraft.io/docs/channels/>`__
        of :samp:`<TRACK>/<RISK>/<BRANCH>`.
        The default is :samp:`latest/stable`
        (with no branch).

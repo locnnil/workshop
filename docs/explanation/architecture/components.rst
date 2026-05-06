@@ -274,7 +274,7 @@ Images
 By default, |ws_markup| fetches base images,
 such as Ubuntu 22.04 LTS, Ubuntu 24.04 LTS, or Ubuntu 26.04 LTS,
 from the official
-`Ubuntu cloud image repository <https://cloud-images.ubuntu.com/releases>`_.
+`Ubuntu cloud image repository <https://cloud-images.ubuntu.com/releases/>`_.
 
 
 

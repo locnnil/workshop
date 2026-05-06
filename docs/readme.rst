@@ -13,7 +13,7 @@ Workshop
    until an official public release is announced.
 
 
-.. image:: https://readthedocs.com/projects/canonical-workshop/badge/?version=stable&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
+.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=stable&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
    :target: https://canonical-workshop.readthedocs-hosted.com/stable/?badge=stable
    :alt: Documentation status
 
@@ -83,7 +83,7 @@ Install Workshop
 ~~~~~~~~~~~~~~~~
 
 Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes>`_ option:
+using the `--classic <https://snapcraft.io/docs/install-modes/>`_ option:
 
 .. code-block:: console
 
@@ -100,9 +100,9 @@ Alternatively, you can download the latest Workshop snap from the
 `Releases <https://github.com/canonical/workshop/releases/>`_
 page on GitHub and install it,
 using the options
-`--dangerous <https://snapcraft.io/docs/install-modes>`_
+`--dangerous <https://snapcraft.io/docs/install-modes/>`_
 and
-`--classic <https://snapcraft.io/docs/install-modes>`_,
+`--classic <https://snapcraft.io/docs/install-modes/>`_,
 for example:
 
 .. code-block:: console
@@ -134,7 +134,7 @@ Community and Support
 
 Use the following resources for communication, support, and feedback:
 
-- `Code of conduct <https://ubuntu.com/community/ethos/code-of-conduct>`__
+- `Code of conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
 
 - `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
 
