@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"gopkg.in/tomb.v2"
 	"gopkg.in/yaml.v3"
@@ -250,6 +251,33 @@ func WorkshopSnapshot(change *state.Change, w, lastIntact string) (*workshop.Sna
 
 	snapshot := workshop.SdkSnapshot(image, sdks[:idx+1])
 	return &snapshot, nil
+}
+
+// SdkVolumeLastUsed returns the most recent Task of the given Change that
+// stopped using the given SDK volume.
+func SdkVolumeLastUsed(change *state.Change, setup sdk.Setup) (string, time.Time, error) {
+	var lastUsed taskTime
+	if err := change.Get(SdkVolumeLastUsedKey(setup.Name, setup.Revision), &lastUsed); err != nil {
+		return "", time.Time{}, err
+	}
+	return lastUsed.Task, lastUsed.Time, nil
+}
+
+// SetSdkVolumeLastUsed records the most recent Task of the given Change that
+// stopped using the given SDK volume, and a timestamp set to shortly before
+// that happened.
+func SetSdkVolumeLastUsed(change *state.Change, setup sdk.Setup, task string, time time.Time) {
+	lastUsed := taskTime{Task: task, Time: time}
+	change.Set(SdkVolumeLastUsedKey(setup.Name, setup.Revision), lastUsed)
+}
+
+func SdkVolumeLastUsedKey(sk string, revision sdk.Revision) string {
+	return sdk.VolumeName(sk, revision) + "_last-used"
+}
+
+type taskTime struct {
+	Task string    `json:"task"`
+	Time time.Time `json:"time"`
 }
 
 func BackendContext(tomb *tomb.Tomb, user string, projectId string) (context.Context, context.CancelFunc) {

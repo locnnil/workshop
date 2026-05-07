@@ -1913,7 +1913,9 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
 	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
 
-	for i := 0; i < 6; i = i + 1 {
+	// More Ensure calls than usual to prevent FakeSdkVolumeCooldownTime
+	// from racing with the outstanding cleanup handlers.
+	for range 12 {
 		c.Check(s.d.overlord.StateEngine().Ensure(), check.IsNil)
 		s.d.overlord.StateEngine().Wait()
 	}

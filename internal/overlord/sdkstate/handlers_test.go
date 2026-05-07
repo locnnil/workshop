@@ -1018,7 +1018,6 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 
 	defer sdkstate.FakeSdkVolumeCooldownTime(time.Hour)()
 	t1time := time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
-	defer state.MockTime(t1time)()
 	defer sdkstate.MockTime(t1time)()
 
 	t1 := s.state.NewTask("uninstall-sdk", "t1")
@@ -1041,11 +1040,9 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 	s.state.Lock()
 
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
-	c.Check(t1.ReadyTime().Equal(t1time), check.Equals, true)
 
 	// Advance time and set up final uninstall.
 	t2time := t1time.Add(time.Hour - time.Second)
-	defer state.MockTime(t2time)()
 	defer sdkstate.MockTime(t2time)()
 
 	t2 := s.state.NewTask("uninstall-sdk", "t2")
@@ -1065,10 +1062,8 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 	s.state.Lock()
 
 	c.Check(t2.Status(), check.Equals, state.DoneStatus)
-	c.Check(t2.ReadyTime().Equal(t2time), check.Equals, true)
 
 	// Advance time again..
-	defer state.MockTime(t2time.Add(2 * time.Second))()
 	defer sdkstate.MockTime(t2time.Add(2 * time.Second))()
 
 	// Run the first post-cooldown cleanup for ws, and the first cleanup for
@@ -1083,6 +1078,9 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
 
 	c.Check(t1.IsClean(), check.Equals, true)
 	c.Check(t2.IsClean(), check.Equals, false)
+
+	_, err := s.backend.Sdk(s.ctx, oldSdk.Setup)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {

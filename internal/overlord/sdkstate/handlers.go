@@ -305,7 +305,7 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	sk, err := sdkName(task)
+	sdkSetup, err := SdkSetup(task, w)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 	rev := revert.New()
 	defer rev.Fail()
 
-	if err := m.repo.RemoveSdk(project.ProjectId, w, sk); err != nil {
+	if err := m.repo.RemoveSdk(project.ProjectId, w, sdkSetup.Name); err != nil {
 		return err
 	}
 	cleanupCtx := context.WithoutCancel(ctx)
@@ -324,12 +324,21 @@ func (m *SdkManager) doUninstallSdk(task *state.Task, tomb *tomb.Tomb) error {
 		cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 30*time.Second)
 		defer cancel()
 
-		if reverr := m.registerSdk(cleanupCtx, w, sk); reverr != nil {
-			logger.Noticef("On doUninstallSdk: cannot re-register %q SDK on cleanup: %v", sk, reverr)
+		if reverr := m.registerSdk(cleanupCtx, w, sdkSetup.Name); reverr != nil {
+			logger.Noticef("On doUninstallSdk: cannot re-register %q SDK on cleanup: %v", sdkSetup.Name, reverr)
 		}
 	})
 
-	if err := m.backend.UninstallSdk(ctx, w, sk); err != nil {
+	if sdkSetup.IsVolume() && sdkSetup.Source != sdk.SystemSource {
+		// Record when the volume was last used in this change. The cleanup logic
+		// won't remove an SDK for a fixed window of time after this point.
+		st := task.State()
+		st.Lock()
+		SetSdkVolumeLastUsed(task.Change(), sdkSetup, task.ID(), timeNow())
+		st.Unlock()
+	}
+
+	if err := m.backend.UninstallSdk(ctx, w, sdkSetup.Name); err != nil {
 		return err
 	}
 
@@ -402,8 +411,6 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 	return nil
 }
 
-type SdkVolumeCooldownTimeKey string
-
 // doDeleteUnusedSdkVolumes is a cleanup handler that deletes unused SDK volumes.
 // It is called periodically to ensure that SDK volumes that are no longer
 // needed are removed from the system. The cleanup is done only if there are no
@@ -420,13 +427,13 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 	user, prj, w, err := UserProjectWorkshop(task)
 	if err != nil {
 		// Log as an internal error, no need to retry again.
-		logger.Debugf("On SdkManager.Cleanup: internal error: %v", err)
+		logger.Noticef("On SdkManager.Cleanup: internal error: %v", err)
 		return nil
 	}
 
 	sdkSetup, err := SdkSetup(task, w)
 	if err != nil {
-		logger.Debugf("On SdkManager.Cleanup: the %q task is not associated with a SDK setup", task.ID())
+		logger.Noticef("On SdkManager.Cleanup: the %q task is not associated with a SDK setup", task.ID())
 		return nil
 	}
 
@@ -441,57 +448,50 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 	st.Lock()
 	defer st.Unlock()
 
-	if task.Kind() == "install-sdk" && task.Status() == state.DoneStatus {
-		// If the launch or refresh was successful, no need to clean up the SDK volume.
+	// Check the last Task in this Change to uninstall the SDK. If there isn't
+	// one, there's no need to clean up. If there's a later Task, we let it
+	// handle the cleanup instead.
+	taskID, lastUsed, err := SdkVolumeLastUsed(task.Change(), sdkSetup)
+	if err != nil || taskID != task.ID() {
+		if err != nil && !errors.Is(err, state.ErrNoState) {
+			logger.Noticef("On SdkManager.Cleanup: internal error: %v", err)
+		}
 		return nil
 	}
 
-	vk := SdkVolumeCooldownTimeKey(sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
-	cooldownStart, ok := st.Cached(vk).(time.Time)
-	if !ok {
-		// No cooldown start time cached means that clean up has just started or
-		// workshopd was restarted.
-		st.Cache(vk, task.ReadyTime())
-		// We need to return here to give other competing cleanup tasks a chance
-		// to find out who was the last one to initiate the cleanup.
-		return fmt.Errorf("new cooldown start time for %q SDK volume: %v", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), task.ReadyTime())
-	} else {
-		// Imagine the situation when a change with multiple tasks that use this
-		// volume is in progress. Every uninstall-sdk task will initiate a
-		// cleanup after the change is ready. All cleanups are unarranged and
-		// can run concurrently. We need to ensure that only one of them will
-		// continue to track the volume cooldown time.
-		readyTime := task.ReadyTime()
-		if readyTime.Before(cooldownStart) {
-			// Another more recent task initiated cleanup for this SDK
-			// volume, no need to continue.
-			return nil
-		}
-		if readyTime.After(cooldownStart) {
-			// Update the cooldown start time to the current task ready time.
-			st.Cache(vk, readyTime)
-			// We need to return here to give other competing cleanup tasks
-			// a chance to find out who was the last one to initiate the
-			// cleanup.
-			return fmt.Errorf("new cooldown start time for %q SDK volume: %v", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision), readyTime)
-		}
-	}
-
-	if timeNow().Sub(cooldownStart) < sdkVolumeCooldownTime {
-		return &state.Retry{}
-	}
-
-	// Check if there are any tasks in progress that use the same SDK volume.
-	// Remember, cleanup tasks are attempted on every Ensure call, which can be
-	// either periodic or triggered by a new API request. If it's the latter,
-	// there could be a chance that the volume will be used again.
+	// Check for changes that might use the same SDK volume. If one is in
+	// progress and retrieve-sdk is done already, removing the SDK will break
+	// the install-sdk task. If another task uninstalled the SDK after us, we
+	// can let it handle the cleanup.
 	changes := st.Changes()
 	blocking := []string{"launch", "refresh", "remove"}
 	for _, change := range changes {
 		// Other changes like "exec" do not affect SDK volumes, so we can skip them.
-		if slices.Contains(blocking, change.Kind()) && !change.IsReady() {
+		if !slices.Contains(blocking, change.Kind()) {
+			continue
+		}
+		if !change.IsReady() {
 			return &state.Retry{}
 		}
+
+		taskID, time, err := SdkVolumeLastUsed(change, sdkSetup)
+		if errors.Is(err, state.ErrNoState) {
+			continue
+		}
+		if err != nil {
+			logger.Noticef("On SdkManager.Cleanup: internal error: %v", err)
+			return nil
+		}
+
+		// Just compare task IDs lexicographically; it doesn't really matter
+		// which one handles the cleanup as long as there's consensus.
+		if time.After(lastUsed) || (time.Equal(lastUsed) && taskID > task.ID()) {
+			return nil
+		}
+	}
+
+	if timeNow().Sub(lastUsed) < sdkVolumeCooldownTime {
+		return &state.Retry{}
 	}
 
 	// Delete volume ignores ErrVolumeNotFound.
@@ -502,7 +502,6 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		} else {
 			logger.Debugf("On SdkManager.Cleanup: the %q SDK volume was deleted", sdk.VolumeName(sdkSetup.Name, sdkSetup.Revision))
 		}
-		st.Cache(vk, nil)
 		return nil
 	}
 
