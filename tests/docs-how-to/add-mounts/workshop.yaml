@@ -1,0 +1,19 @@
+name: dev
+base: ubuntu@24.04
+sdks:
+  - name: uv
+    plugs:
+      data:
+        interface: mount
+        workshop-target: /home/workshop/data
+      shared:
+        interface: mount
+        workshop-target: /home/workshop/shared
+      readonly:
+        interface: mount
+        workshop-target: /home/workshop/readonly
+        read-only: true
+  - name: jupyter
+connections:
+  - plug: jupyter:venv
+    slot: uv:venv
