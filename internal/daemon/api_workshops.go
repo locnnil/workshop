@@ -581,10 +581,12 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	for _, m := range current {
+		change.Set(handlersetup.WorkshopFormatKey(m.File.Name, handlersetup.OldWorkshop), m.Format)
 		change.Set(handlersetup.WorkshopBaseKey(m.File.Name, handlersetup.OldWorkshop), m.Image)
 		change.Set(handlersetup.WorkshopSdksKey(m.File.Name, handlersetup.OldWorkshop), m.Sdks)
 	}
 	for _, m := range latest {
+		change.Set(handlersetup.WorkshopFormatKey(m.File.Name, handlersetup.NewWorkshop), m.Format)
 		change.Set(handlersetup.WorkshopBaseKey(m.File.Name, handlersetup.NewWorkshop), m.Image)
 		change.Set(handlersetup.WorkshopSdksKey(m.File.Name, handlersetup.NewWorkshop), m.Sdks)
 	}

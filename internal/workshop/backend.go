@@ -113,23 +113,24 @@ type BaseImageManager interface {
 // backend-specific details. For example snapshot names in LXD are subject to
 // length limits and a restricted character set.
 type Snapshot struct {
-	Image BaseImage
-	Sdks  []sdk.ContentID
+	Format sdk.Revision
+	Image  BaseImage
+	Sdks   []sdk.ContentID
 }
 
 func (s Snapshot) Equal(other Snapshot) bool {
-	return s.Image == other.Image && slices.Equal(s.Sdks, other.Sdks)
+	return s.Format == other.Format && s.Image == other.Image && slices.Equal(s.Sdks, other.Sdks)
 }
 
 // BaseOnly identifies a "snapshot" which consists of a base image only.
-func BaseOnly(name, fingerprint string) Snapshot {
-	return Snapshot{Image: BaseImage{Name: name, Fingerprint: fingerprint}}
+func BaseOnly(format sdk.Revision, name, fingerprint string) Snapshot {
+	return Snapshot{Format: format, Image: BaseImage{Name: name, Fingerprint: fingerprint}}
 }
 
 // SdkSnapshot identifies a snapshot consisting of a base image and a sequence
 // of installed SDKs.
-func SdkSnapshot(image BaseImage, sdks []sdk.Setup) Snapshot {
-	snapshot := Snapshot{Image: image, Sdks: make([]sdk.ContentID, 0, len(sdks))}
+func SdkSnapshot(format sdk.Revision, image BaseImage, sdks []sdk.Setup) Snapshot {
+	snapshot := Snapshot{Format: format, Image: image, Sdks: make([]sdk.ContentID, 0, len(sdks))}
 	for _, s := range sdks {
 		snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(s))
 	}
@@ -211,6 +212,9 @@ type Backend interface {
 
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
+
+	// Number representing workshop and snapshot compatibility level.
+	FormatRevision() sdk.Revision
 
 	// Check if the given snapshot already exists.
 	HasSnapshot(ctx context.Context, snapshot Snapshot) (bool, error)

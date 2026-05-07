@@ -196,7 +196,7 @@ func (s *sdkStateSuite) SetUpTest(c *check.C) {
 		{Name: "test", Channel: "latest/stable"},
 		{Name: "test-broken", Channel: "latest/stable"},
 	}}
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -456,7 +456,8 @@ func (s *sdkStateSuite) TestRetrieveSystemSdkSuccess(c *check.C) {
 	chg := s.state.NewChange("sample", "...")
 	setWorkshopProject("ws", s.project, t)
 	chg.Set("user", "testuser")
-	chg.Set("ws_new_base", workshop.BaseOnly("ubuntu@22.04", "fakeimage123"))
+	chg.Set("ws_new_format", sdk.R(1))
+	chg.Set("ws_new_base", workshop.BaseOnly(sdk.R(1), "ubuntu@22.04", "fakeimage123"))
 	chg.Set("ws_new_sdks", []sdk.Setup{newSdk})
 	chg.AddTask(t)
 
@@ -518,8 +519,8 @@ func (s *sdkStateSuite) TestSnapshotSdkTwice(c *check.C) {
 		Revision: sdk.R(2),
 		Sha3_384: "f77092aae283a4d8ffe7ae51017569d6c999afdbe7c4264ab82f44e79a82151994de9b90ae43216dee70aaec91b23647",
 	}}
-	snapshot1 := workshop.SdkSnapshot(image, sdks[:1])
-	snapshot2 := workshop.SdkSnapshot(image, sdks)
+	snapshot1 := workshop.SdkSnapshot(sdk.R(1), image, sdks[:1])
+	snapshot2 := workshop.SdkSnapshot(sdk.R(1), image, sdks)
 
 	t1 := s.state.NewTask("snapshot-sdk", "...")
 	t1.Set("sdk", "test")
@@ -530,6 +531,7 @@ func (s *sdkStateSuite) TestSnapshotSdkTwice(c *check.C) {
 
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", image)
 	chg.Set("ws_new_sdks", sdks)
 	chg.AddTask(t1)
@@ -556,6 +558,7 @@ func (s *sdkStateSuite) TestSnapshotSdkTwice(c *check.C) {
 
 	chg = s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", image)
 	chg.Set("ws_new_sdks", sdks[:1])
 	chg.AddTask(t)
@@ -598,6 +601,7 @@ func (s *sdkStateSuite) TestSnapshotSkippedPostResume(c *check.C) {
 	chg := s.state.NewChange("launch", "...")
 	chg.Set("user", "testuser")
 	chg.Set("project-id", s.project.ProjectId)
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
 	chg.Set("ws_new_sdks", sdks)
 	chg.Set("wait-setup", conflict.ChangeSetup{Mode: conflict.ChangeWaitOnError.String()})

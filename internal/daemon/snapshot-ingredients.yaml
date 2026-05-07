@@ -21,6 +21,7 @@ Workshop:
   Project: workshop.Project
   File: '*workshop.File'
   Name: string
+  Format: sdk.Revision
   Image: workshop.BaseImage
   Running: bool
   Sdks: map[string]workshop.SdkInstallation

@@ -216,7 +216,7 @@ func (s *manifestSuite) createWFile(c *check.C, ws, base string, sdks []workshop
 
 func (s *manifestSuite) launchWorkshopWithSDKs(c *check.C, ws, base string, sdks []workshop.SdkRecord) *workshop.Workshop {
 	wf := s.createWFile(c, ws, base, sdks)
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -284,6 +284,9 @@ func (s *manifestSuite) TestRefreshOK(c *check.C) {
 	err = os.WriteFile(workshop.Filepath(s.project.Path, "test-2"), []byte(fileText), 0644)
 	c.Assert(err, check.IsNil)
 
+	// Update format revision number
+	s.backend.SetFormatRevision(sdk.R(2))
+
 	// Retrieve manifests.
 	current, latest, err := s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
@@ -298,6 +301,8 @@ func (s *manifestSuite) TestRefreshOK(c *check.C) {
 		Sdks: sdks,
 	})
 	c.Check(latest[0].File, check.DeepEquals, current[0].File)
+	c.Check(current[0].Format, check.Equals, sdk.R(1))
+	c.Check(latest[0].Format, check.Equals, sdk.R(2))
 	c.Check(current[0].Image, check.Equals, workshop.BaseImage{Name: "ubuntu@20.04", Fingerprint: "fakeimage123"})
 	c.Check(latest[0].Image, check.Equals, current[0].Image)
 
@@ -312,6 +317,8 @@ func (s *manifestSuite) TestRefreshOK(c *check.C) {
 		Base: "ubuntu@22.04",
 		Sdks: sdks,
 	})
+	c.Check(current[1].Format, check.Equals, sdk.R(1))
+	c.Check(latest[1].Format, check.Equals, sdk.R(2))
 	c.Check(current[1].Image, check.Equals, current[0].Image)
 	c.Check(latest[1].Image, check.Equals, workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
 

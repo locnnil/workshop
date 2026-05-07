@@ -41,9 +41,10 @@ import (
 // Manifest lists the components needed to construct a workshop. It augments
 // the workshop definition with specific versions of the base image and SDKs.
 type Manifest struct {
-	File  *workshop.File
-	Image workshop.BaseImage
-	Sdks  []sdk.Setup
+	File   *workshop.File
+	Format sdk.Revision
+	Image  workshop.BaseImage
+	Sdks   []sdk.Setup
 }
 
 func (m *Manifest) maybeRevision(sk string) sdk.Revision {
@@ -148,7 +149,7 @@ func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string,
 		for _, sk := range wp.SdksByInstallOrder() {
 			installed = append(installed, sk.Setup)
 		}
-		manifests = append(manifests, Manifest{File: wp.File, Image: wp.Image, Sdks: installed})
+		manifests = append(manifests, Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed})
 
 		running = append(running, wp.Running)
 	}
@@ -242,9 +243,10 @@ func (a *artifactFinder) launchOrRefreshManifests(ctx context.Context, names []s
 			return nil, nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
 
+		format := a.backend.FormatRevision()
 		installOrder := sdkInstallOrder(files[i])
 		sdks := ordered(installOrder, storeSdks[i], localSdks)
-		latest = append(latest, Manifest{File: files[i], Image: images[i], Sdks: sdks})
+		latest = append(latest, Manifest{File: files[i], Format: format, Image: images[i], Sdks: sdks})
 	}
 
 	return current, latest, nil
@@ -278,7 +280,7 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 	for _, sk := range wp.SdksByInstallOrder() {
 		installed = append(installed, sk.Setup)
 	}
-	return &Manifest{File: wp.File, Image: wp.Image, Sdks: installed}, nil
+	return &Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed}, nil
 }
 
 func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {

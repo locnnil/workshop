@@ -281,7 +281,7 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, project workshop.Proj
 }
 
 func (w *WorkshopManager) bestSnapshot(ctx context.Context, manifest Manifest) (*workshop.Snapshot, error) {
-	snapshot := workshop.SdkSnapshot(manifest.Image, manifest.Sdks)
+	snapshot := workshop.SdkSnapshot(manifest.Format, manifest.Image, manifest.Sdks)
 	for range manifest.Sdks {
 		found, err := w.backend.HasSnapshot(ctx, snapshot)
 		if err != nil {
@@ -296,8 +296,8 @@ func (w *WorkshopManager) bestSnapshot(ctx context.Context, manifest Manifest) (
 }
 
 func hasUpdates(current, latest Manifest) bool {
-	currentSnapshot := workshop.SdkSnapshot(current.Image, current.Sdks)
-	finalSnapshot := workshop.SdkSnapshot(latest.Image, latest.Sdks)
+	currentSnapshot := workshop.SdkSnapshot(current.Format, current.Image, current.Sdks)
+	finalSnapshot := workshop.SdkSnapshot(latest.Format, latest.Image, latest.Sdks)
 	if !currentSnapshot.Equal(finalSnapshot) {
 		return true
 	}

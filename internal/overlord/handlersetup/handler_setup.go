@@ -212,6 +212,18 @@ const (
 	NewWorkshop = Age("new")
 )
 
+func WorkshopFormat(change *state.Change, w string, age Age) (sdk.Revision, error) {
+	var format sdk.Revision
+	if err := change.Get(WorkshopFormatKey(w, age), &format); err != nil {
+		return sdk.Revision{}, fmt.Errorf("internal error: %q workshop %s format not found (change ID: %s)", w, age, change.ID())
+	}
+	return format, nil
+}
+
+func WorkshopFormatKey(w string, age Age) string {
+	return strings.Join([]string{w, string(age), "format"}, "_")
+}
+
 func WorkshopBase(change *state.Change, w string, age Age) (workshop.BaseImage, error) {
 	var image workshop.BaseImage
 	if err := change.Get(WorkshopBaseKey(w, age), &image); err != nil {
@@ -237,13 +249,18 @@ func WorkshopSdksKey(w string, age Age) string {
 }
 
 func WorkshopSnapshot(change *state.Change, w, lastIntact string) (*workshop.Snapshot, error) {
+	format, err := WorkshopFormat(change, w, NewWorkshop)
+	if err != nil {
+		return nil, err
+	}
+
 	image, err := WorkshopBase(change, w, NewWorkshop)
 	if err != nil {
 		return nil, err
 	}
 
 	if lastIntact == "" {
-		snapshot := workshop.Snapshot{Image: image}
+		snapshot := workshop.SdkSnapshot(format, image, nil)
 		return &snapshot, nil
 	}
 
@@ -259,7 +276,7 @@ func WorkshopSnapshot(change *state.Change, w, lastIntact string) (*workshop.Sna
 		return nil, fmt.Errorf("internal error: %q workshop has no %q SDK", w, lastIntact)
 	}
 
-	snapshot := workshop.SdkSnapshot(image, sdks[:idx+1])
+	snapshot := workshop.SdkSnapshot(format, image, sdks[:idx+1])
 	return &snapshot, nil
 }
 

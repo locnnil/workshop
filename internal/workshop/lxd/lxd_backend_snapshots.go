@@ -165,9 +165,6 @@ func (s *Backend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (
 }
 
 func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) error {
-	if inst.Config[workshop.ConfigWorkshopSnapshotFormat] != SnapshotFormatRevision.String() {
-		return fmt.Errorf("hash collision detected: %q snapshot taken by incompatible Workshop version", inst.Name)
-	}
 	saved, err := identifySnapshot(inst)
 	if err != nil {
 		return err
@@ -179,6 +176,11 @@ func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) error {
 }
 
 func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
+	format, err := sdk.ParseRevision(inst.Config[workshop.ConfigWorkshopSnapshotFormat])
+	if err != nil {
+		return nil, err
+	}
+
 	sdks := make([]sdk.ContentID, len(inst.Devices))
 	length := 0
 	maxInstallOrder := 0
@@ -207,6 +209,7 @@ func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
 	}
 
 	return &workshop.Snapshot{
+		Format: format,
 		Image: workshop.BaseImage{
 			Name:        inst.Config[workshop.ConfigWorkshopBase],
 			Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
@@ -217,6 +220,9 @@ func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
 
 // compareSnapshots is like reflect.DeepEqual with specific error messages.
 func compareSnapshots(name string, actual, expected workshop.Snapshot) error {
+	if actual.Format != expected.Format {
+		return fmt.Errorf("%q snapshot has format revision %s; required: %s", name, actual.Format, expected.Format)
+	}
 	if actual.Image.Name != expected.Image.Name {
 		return fmt.Errorf("%q snapshot has %q base; required: %q", name, actual.Image.Name, expected.Image.Name)
 	}
@@ -282,9 +288,9 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	}
 	config := map[string]string{
 		"security.protection.start":            "true",
+		workshop.ConfigWorkshopSnapshotFormat:  snapshot.Format.String(),
 		workshop.ConfigWorkshopBase:            snapshot.Image.Name,
 		workshop.ConfigWorkshopBaseFingerprint: snapshot.Image.Fingerprint,
-		workshop.ConfigWorkshopSnapshotFormat:  SnapshotFormatRevision.String(),
 		workshop.ConfigWorkshopSha3_384:        digest,
 	}
 	mergeConfig(inst.Config, nil, config, newApi)
@@ -859,8 +865,22 @@ func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.
 // - SDK config and devices (e.g. volume mounts)
 // - Direct modifications (e.g. mkdir /var/lib/workshop/run)
 // If something like this changes, bump the revision number so that workshops
-// constructed using the next release of Workshop see the changes.
-var SnapshotFormatRevision = sdk.R(1)
+// constructed using the next release of Workshop are updated on refresh.
+//
+// Some care needs to be taken with workshops using the old format. If a launch
+// or refresh is in progress, it should either continue in a manner consistent
+// with the old format, or fail if that isn't possible for some reason. For
+// example, after changing the format of installed SDKs, the install-sdk task
+// should either use a format consistent with the target workshop, or fail for
+// workshops stuck on the old format.
+//
+// Another issue is the restore command. In most cases this simply rebuilds
+// from the last snapshot, but if that snapshot doesn't exist then it will
+// replay some of the install-sdk and setup-base tasks. These can be handled in
+// the same way as in-progress launches and refreshes.
+func (s *Backend) FormatRevision() sdk.Revision {
+	return sdk.R(1)
+}
 
 func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {
 	digest, err := hex.DecodeString(snapshot.Image.Fingerprint)
@@ -869,7 +889,7 @@ func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {
 	}
 
 	hash := sha3.New384()
-	if _, err := fmt.Fprintf(hash, "%s %s\x00%s", SnapshotFormatRevision, snapshot.Image.Name, digest); err != nil {
+	if _, err := fmt.Fprintf(hash, "%s %s\x00%s", snapshot.Format, snapshot.Image.Name, digest); err != nil {
 		return "", err
 	}
 

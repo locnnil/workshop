@@ -38,6 +38,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -318,7 +319,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, snapshot.Image.Fingerprint)
+	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, snapshot.Format, snapshot.Image.Fingerprint)
 	if err != nil {
 		return err
 	}
@@ -792,6 +793,11 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
 	}
 
+	format, err := sdk.ParseRevision(inst.Config[workshop.ConfigWorkshopSnapshotFormat])
+	if err != nil {
+		return nil, err
+	}
+
 	image := workshop.BaseImage{
 		Name:        f.Base,
 		Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
@@ -825,6 +831,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		Backend:  b,
 		Project:  p,
 		Name:     f.Name,
+		Format:   format,
 		Image:    image,
 		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
 		Sdks:     sdks,
@@ -1019,7 +1026,7 @@ func checkUseLegacyNvidia() (bool, error) {
 	return legacyNvidia, nil
 }
 
-func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, baseFingerprint string) (map[string]string, error) {
+func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
   - default
@@ -1086,7 +1093,7 @@ runcmd:
 		"security.nesting":               "true",
 		"user.user-data":                 cloudInitConfig,
 		"user.network-config":            cloudInitNetwork,
-		"user.workshop.format-revision":  SnapshotFormatRevision.String(),
+		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
 		"user.workshop.file":             string(f),

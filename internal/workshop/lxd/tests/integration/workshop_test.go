@@ -157,7 +157,7 @@ func (f *wsOps) TestLxdBackendWorkshopStashUnstash(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = f.bd.DownloadBase(f.ctx, image, nil)
 	c.Assert(err, check.IsNil)
-	snapshot := workshop.Snapshot{Image: image}
+	snapshot := workshop.BaseOnly(f.bd.FormatRevision(), image.Name, image.Fingerprint)
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -829,7 +829,7 @@ func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	wf := &workshop.File{Name: "test", Base: "ubuntu@24.04"}
-	snapshot := workshop.Snapshot{Image: image}
+	snapshot := workshop.BaseOnly(f.bd.FormatRevision(), image.Name, image.Fingerprint)
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
@@ -862,7 +862,7 @@ func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = f.bd.DownloadBase(f.ctx, image, nil)
 	c.Assert(err, check.IsNil)
-	snapshot := workshop.Snapshot{Image: image}
+	snapshot := workshop.BaseOnly(f.bd.FormatRevision(), image.Name, image.Fingerprint)
 	err = f.bd.LaunchOrRebuildWorkshop(f.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -940,7 +940,7 @@ func (f *wsOps) TestLxdBackendWorkshopRestoreResetsSdkConfiguration(c *check.C) 
 	c.Check(info.Meta, check.Equals, saved)
 	c.Check(info.Workshops, check.DeepEquals, map[string][]string{f.project.ProjectId: {"test"}})
 
-	snapshot := workshop.SdkSnapshot(w.Image, []sdk.Setup{meta.Setup})
+	snapshot := workshop.SdkSnapshot(w.Format, w.Image, []sdk.Setup{meta.Setup})
 	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -1055,6 +1055,7 @@ func (f *wsOps) TestLxdBackendSnapshotOK(c *check.C) {
 	}
 
 	snapshot := workshop.Snapshot{
+		Format: f.bd.FormatRevision(),
 		Image: workshop.BaseImage{
 			Name:        "ubuntu@24.04",
 			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
@@ -1105,6 +1106,7 @@ func (f *wsOps) TestLxdBackendSnapshotConflict(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	snapshot := workshop.Snapshot{
+		Format: f.bd.FormatRevision(),
 		Image: workshop.BaseImage{
 			Name:        "ubuntu@24.04",
 			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
@@ -1186,6 +1188,7 @@ func (f *wsOps) TestLxdBackendSnapshotInterrupted(c *check.C) {
 	snapshotConn := conn.UseProject("workshop-snapshots." + f.usr.Username)
 
 	snapshot := workshop.Snapshot{
+		Format: f.bd.FormatRevision(),
 		Image: workshop.BaseImage{
 			Name:        "ubuntu@24.04",
 			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",
@@ -1233,6 +1236,7 @@ func (f *wsOps) TestLxdBackendSnapshotHashCollision(c *check.C) {
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
 
 	snapshot := workshop.Snapshot{
+		Format: f.bd.FormatRevision(),
 		Image: workshop.BaseImage{
 			Name:        "ubuntu@24.04",
 			Fingerprint: "0b9429c9855cb158b90159bb818e6f98eab9b5b1260ace11b30ddb936e4f78979abc7cdc5e4e9fad51e3e290a2190ac2",

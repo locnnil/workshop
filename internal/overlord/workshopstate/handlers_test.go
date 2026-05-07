@@ -146,7 +146,7 @@ func (s *workshopHandlers) TestStopPeriodicProgressUpdate(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsFocal)
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 
@@ -189,7 +189,7 @@ func (s *workshopHandlers) TestUndoStash(c *check.C) {
 		{Name: "test2", Channel: "latest/stable"},
 	}}
 
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 
@@ -238,7 +238,7 @@ func (s *workshopHandlers) TestRemoveWorkshop(c *check.C) {
 	userDataDir := workshop.UserDataRootDir(s.user.HomeDir, nil)
 
 	for _, wf := range wFiles {
-		snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+		snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 		err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 		c.Check(err, check.IsNil)
 
@@ -317,6 +317,7 @@ func (s *workshopHandlers) TestCreateWorkshopNoWorkshopDefinitionFound(c *check.
 	t1 := s.state.NewTask("create-workshop", "...")
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
 	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
@@ -342,6 +343,7 @@ func (s *workshopHandlers) TestCreateWorkshopWithSystemSdk(c *check.C) {
 	t1.Set("workshop-file", wsJammy)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
 	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
@@ -371,6 +373,7 @@ func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	t1.Set("workshop-file", wsJammy)
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"})
 	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)
@@ -404,6 +407,7 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	setWorkshopProject("ws", s.project, t1)
 	chg.Set("user", "testuser")
 	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"}
+	chg.Set("ws_new_format", sdk.R(1))
 	chg.Set("ws_new_base", image)
 	chg.Set("ws_new_sdks", []sdk.Setup{})
 	chg.AddTask(t1)

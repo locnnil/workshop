@@ -50,6 +50,7 @@ type Workshop struct {
 	// file in the project directory due to user's edits, etc.
 	File    *File
 	Name    string
+	Format  sdk.Revision
 	Image   BaseImage
 	Running bool
 	// Installed SDKs.

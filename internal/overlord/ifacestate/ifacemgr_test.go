@@ -143,7 +143,7 @@ func (s *interfaceManagerSuite) launchWorkshop(c *check.C, ws string, sdks []sdk
 	err = yaml.Unmarshal(workshopFile.Bytes(), &wf)
 	c.Assert(err, check.IsNil)
 
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 	err = s.wsbackend.LaunchOrRebuildWorkshop(ctx, &wf, snapshot)
 	c.Assert(err, check.IsNil)
 

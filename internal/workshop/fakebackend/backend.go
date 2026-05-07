@@ -125,6 +125,8 @@ type FakeWorkshopBackend struct {
 
 	AttachVolumeCalls []AttachVolumeCall
 
+	formatRevision sdk.Revision
+
 	snapshotLock         sync.Mutex
 	LaunchOrRebuildCalls []LaunchOrRebuildCall
 	SnapshotCalls        []SnapshotCall
@@ -257,6 +259,7 @@ func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.
 			Name:     file.Name,
 			Running:  false,
 			Project:  *prj,
+			Format:   f.FormatRevision(),
 			Image:    snapshot.Image,
 			File:     file,
 			Sdks:     map[string]workshop.SdkInstallation{},
@@ -288,6 +291,7 @@ func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.
 	}
 
 	ws.File = file
+	ws.Format = f.FormatRevision()
 	ws.Image = snapshot.Image
 	return nil
 }
@@ -822,6 +826,19 @@ func (s *FakeWorkshopBackend) detachVolume(ctx context.Context, name, what, wher
 	volume.Mounts = slices.Delete(volume.Mounts, idx, idx+1)
 	s.Volumes[what] = volume
 	return err
+}
+
+func (f *FakeWorkshopBackend) FormatRevision() sdk.Revision {
+	if f.formatRevision.Unset() {
+		return sdk.R(1)
+	}
+	return f.formatRevision
+}
+
+func (f *FakeWorkshopBackend) SetFormatRevision(format sdk.Revision) func() {
+	old := f.formatRevision
+	f.formatRevision = format
+	return func() { f.formatRevision = old }
 }
 
 func (f *FakeWorkshopBackend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
