@@ -22,7 +22,13 @@ Restore workshops to the state of the last launch or refresh.
 
 This command restores the container filesystem of the workshops listed
 as arguments to the point of the last launch or refresh,
-then resets the connections and mounts to default settings.
+then resets the interface connections to default settings:
+
+- Connections added at runtime with "workshop connect" are dropped,
+  and the workshop returns to its definition's auto-connect defaults.
+
+- A connection removed with "workshop disconnect" without "--forget"
+  stays disconnected after restore.
 
 Notes:
 
