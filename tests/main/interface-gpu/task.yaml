@@ -12,22 +12,26 @@ execute: |
   workshop_exec connections ws-gpu | MATCH "^gpu.+ws-gpu/test-sdk-gpu:gpu.+:gpu.+\-$"
 
   echo "Check the GPU interface plug can be connected and disconnected manually"
-  workshop_exec disconnect ws-gpu/test-sdk-gpu:gpu  
+  workshop_exec disconnect ws-gpu/test-sdk-gpu:gpu
   workshop_exec connect ws-gpu/test-sdk-gpu:gpu
   workshop_exec connections ws-gpu | MATCH "^gpu.+ws-gpu/test-sdk-gpu:gpu.+:gpu.+manual$"
 
   echo "Ensure a GPU device is created when connected"
 
-  # Ideally, check that a GPU device exists in the workshop (as a side effect of
-  # the interface being connected). However, given the VM env without a card0,
-  # ensure that the LXD profile contains a gpu device with a proper
-  # configuration.  
+  # The GPU device configuration depends on whether LXD supports the CDI
+  # extension and whether physical GPUs are present. In CI VMs without a GPU:
+  # - Without CDI: a legacy 'physical' device with uid/gid is created.
+  # - With CDI: no device is created (CDI cannot enumerate absent hardware).
   project_id=$(cat .workshop.lock)
-  lxc profile show --project workshop.ubuntu ws-gpu-"$project_id"-test-sdk-gpu | yq '.devices.test-sdk-gpu_gpu' > output.log
-  MATCH "type: gpu" < output.log
-  MATCH "gputype: physical" < output.log
-  MATCH 'uid: "1000"' < output.log
-  MATCH 'gid: "1000"' < output.log
+  profile="ws-gpu-${project_id}-test-sdk-gpu"
+
+  if ! lxc query /1.0 | grep -q gpu_cdi_hotplug; then
+    lxc profile show --project workshop.ubuntu "$profile" | yq '.devices.test-sdk-gpu_gpu' > output.log
+    MATCH "type: gpu" < output.log
+    MATCH "gputype: physical" < output.log
+    MATCH 'uid: "1000"' < output.log
+    MATCH 'gid: "1000"' < output.log
+  fi
 
   echo "Check a user cannot install a GPU slot (violates slot declaration)"
   workshop_exec launch ws-gpu-fail > launch.log || true

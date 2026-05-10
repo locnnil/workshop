@@ -1,8 +1,10 @@
 package builtin_test
 
 import (
+	"context"
 	"os/user"
 
+	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -19,6 +21,7 @@ type sshAgentSuite struct {
 
 	restoreUserLookup func()
 	restoreUserEnv    func()
+	restoreLxdInfo    func()
 }
 
 var _ = check.Suite(&sshAgentSuite{
@@ -34,9 +37,13 @@ func (s *sshAgentSuite) SetUpTest(c *check.C) {
 	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
 		return map[string]string{"SSH_AUTH_SOCK": "/tmp/dir/ssh"}, nil
 	})
+	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, bool, error) {
+		return &api.Resources{}, false, nil
+	})
 }
 
 func (s *sshAgentSuite) TearDownTest(c *check.C) {
+	s.restoreLxdInfo()
 	s.restoreUserEnv()
 	s.restoreUserLookup()
 }

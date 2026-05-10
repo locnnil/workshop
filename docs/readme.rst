@@ -7,7 +7,7 @@ Workshop
    All code, documentation, and materials in this repository
    are company-private and must not be shared outside Canonical
    without prior authorization.
-   
+
    Do not redistribute or discuss this content or the project externally
    (at public forums, in social media, with customers)
    until an official public release is announced.

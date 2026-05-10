@@ -1,8 +1,10 @@
 package builtin_test
 
 import (
+	"context"
 	"os/user"
 
+	"github.com/canonical/lxd/shared/api"
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -18,6 +20,7 @@ type cameraSuite struct {
 	projectId         string
 	restoreUserLookup func()
 	restoreUserEnv    func()
+	restoreLxdInfo    func()
 }
 
 var _ = check.Suite(&cameraSuite{
@@ -32,9 +35,13 @@ func (s *cameraSuite) SetUpSuite(c *check.C) {
 	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
 		return nil, nil
 	})
+	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, bool, error) {
+		return &api.Resources{}, false, nil
+	})
 }
 
 func (s *cameraSuite) TearDownSuite(c *check.C) {
+	s.restoreLxdInfo()
 	s.restoreUserEnv()
 	s.restoreUserLookup()
 }

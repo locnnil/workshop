@@ -894,7 +894,7 @@ func (b *Backend) Remove(ctx context.Context, sdkRef sdk.Ref) error {
 	return cmp.Or(err, err2)
 }
 
-// NewSpecification returns a new mount specification.
+// NewSpecification returns a new SDK specification.
 func (b *Backend) NewSpecification(user string, sdk string) (interfaces.Specification, error) {
 	return NewSpecification(user, sdk)
 }

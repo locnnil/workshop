@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	checkNvidiaRuntime  = checkNvidia
+	checkNvidiaRuntime  = checkUseLegacyNvidia
 	startCommandTimeout = 1 * time.Minute
 	storagePoolDriver   = "zfs"
 )
@@ -988,12 +988,16 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 	return device
 }
 
-func checkNvidia() (bool, error) {
+func checkUseLegacyNvidia() (bool, error) {
 	conn, err := lxd.ConnectLXDUnix("", nil)
 	if err != nil {
 		return false, ErrorLxdBackend(err)
 	}
 	defer conn.Disconnect()
+
+	if conn.HasExtension("gpu_cdi") && conn.HasExtension("gpu_cdi_amd") && conn.HasExtension("gpu_cdi_hotplug") {
+		return false, nil
+	}
 
 	resources, err := conn.GetServerResources()
 	if err != nil {
@@ -1002,14 +1006,14 @@ func checkNvidia() (bool, error) {
 
 	// Check if nvidia card(s) are present as this requires additional
 	// configuration for the GPU interfaces runtime passthrough.
-	nvidiaRuntime := false
+	legacyNvidia := false
 	for _, card := range resources.GPU.Cards {
 		if card.Nvidia != nil {
-			nvidiaRuntime = true
+			legacyNvidia = true
 			break
 		}
 	}
-	return nvidiaRuntime, nil
+	return legacyNvidia, nil
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, baseFingerprint string) (map[string]string, error) {
@@ -1075,20 +1079,6 @@ runcmd:
 		return map[string]string{}, err
 	}
 
-	nvidiaRuntime, err := checkNvidiaRuntime()
-	if err != nil {
-		return nil, err
-	}
-
-	// nvidia.* properties must be set at launch as otherwise it requires a
-	// container restart to take effect.
-	cfgNvidiaDriverCapabilities := ""
-	cfgNvidiaRuntime := ""
-	if nvidiaRuntime {
-		cfgNvidiaDriverCapabilities = "all"
-		cfgNvidiaRuntime = "true"
-	}
-
 	// Include all options we might change, even those with default values,
 	// so that workshops can be rebuilt.
 	cfg := map[string]string{
@@ -1102,14 +1092,25 @@ runcmd:
 		"user.workshop.name":             file.Name,
 		"user.workshop.file":             string(f),
 		"user.workshop.base-fingerprint": baseFingerprint,
-		"nvidia.driver.capabilities":     cfgNvidiaDriverCapabilities,
-		"nvidia.runtime":                 cfgNvidiaRuntime,
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
 		// directory. We create an explicit mount for /tmp here (one such dymanic
 		// directory) to allow us to mount X11 sockets reliably.
 		// See: https://github.com/lxc/lxc/issues/434
 		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
+	}
+
+	// TODO: Remove when switched to LXD 6.8
+	legacyNvidia, err := checkNvidiaRuntime()
+	if err != nil {
+		return nil, err
+	}
+
+	// nvidia.* properties must be set at launch as otherwise it requires a
+	// container restart to take effect.
+	if legacyNvidia {
+		cfg["nvidia.driver.capabilities"] = "all"
+		cfg["nvidia.runtime"] = "true"
 	}
 	return cfg, nil
 }
