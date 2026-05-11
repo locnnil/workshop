@@ -15,8 +15,8 @@ without modifying the SDKs themselves
 or running lengthy :command:`workshop exec` commands.
 
 
-Adding actions
---------------
+Add actions
+-----------
 
 To add actions,
 edit your :file:`workshop.yaml` file,
@@ -90,8 +90,8 @@ so flags with spaces or wildcards reach the action intact.
    in the :program:`bash` manual.
 
 
-Running actions
----------------
+Run actions
+-----------
 
 To execute an action,
 use the :command:`workshop run` command.

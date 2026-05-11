@@ -22,8 +22,8 @@ at the same time, the workshops share a single project directory
 mounted at :file:`/project/`.
 
 
-Setting up definitions
-----------------------
+Set up definitions
+------------------
 
 .. @artefact workshop name
 
@@ -98,8 +98,8 @@ as described in a section below.
    it reports an error.
 
 
-Launching and managing workshops
---------------------------------
+Launch and manage workshops
+---------------------------
 
 .. @artefact workshop launch
 
@@ -196,8 +196,8 @@ When you no longer need the workshops, remove them:
    $ workshop remove frontend backend
 
 
-Sharing in-project tools
-------------------------
+Share in-project tools
+----------------------
 
 .. @artefact in-project SDK
 

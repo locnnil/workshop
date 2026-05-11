@@ -17,8 +17,8 @@ forwarding every connection that reaches the plug address to the slot address.
 This how-to guide walks you through three common scenarios.
 
 
-Exposing workshop services
---------------------------
+Expose workshop services
+------------------------
 
 This scenario was covered earlier in the
 :ref:`tutorial section on interfaces <tut_interfaces>`.
@@ -62,8 +62,8 @@ or the tunnel will fail to activate.
    :samp:`localhost`, :samp:`ip6-localhost`, and :samp:`ip6-loopback`.
 
 
-Sharing host services
----------------------
+Share host services
+-------------------
 
 When a service runs on the host and code inside the workshop needs it,
 create the tunnel the other way around:
