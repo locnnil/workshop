@@ -141,6 +141,58 @@ For demonstration purposes, assume we want to work with AI models using the
 To do this, let's use the :samp:`ollama` SDK,
 which provides a local AI model server.
 
+.. @artefact sdk find
+
+Before adding an SDK to a workshop,
+search the SDK Store to confirm it exists
+and check its publisher and current version:
+
+.. code-block:: console
+
+   $ sdk find ollama
+
+     NAME    VERSION  PUBLISHER     SUMMARY
+     ollama  0.20.2   Dmitry Lyfar  Get up and running with large language models
+
+
+The query also matches an SDK's title, summary, description, or publisher,
+so a broader keyword like :samp:`sdk find ai`
+can surface AI-related SDKs on the Store.
+
+.. @artefact sdk info
+
+To see which channels and bases are available for a specific SDK,
+inspect its details:
+
+.. code-block:: console
+
+   $ sdk info ollama
+
+     name:       ollama
+     publisher:  Dmitry Lyfar (dlyfar)
+     license:    MIT
+
+     Get up and running with Llama 3.3, ...
+
+     CHANNELS
+       CHANNEL        VERSION  BUILD       BASE          REV   SIZE
+       latest/stable  0.20.2   2026-04-15  ubuntu@24.04    7  2.27GB
+                                           ubuntu@22.04    8  2.27GB
+       ...
+       cpu/stable     0.20.2   2026-04-15  ubuntu@24.04    2  15.22MB
+                                           ubuntu@22.04    5  15.22MB
+       cpu/candidate  ^
+       cpu/beta       ^
+       cpu/edge       ^
+
+
+The :samp:`CHANNELS` table lists each track
+(here, :samp:`latest`, :samp:`cpu`, :samp:`cuda`, :samp:`rocm`, and :samp:`vulkan`)
+at four risk levels (:samp:`stable`, :samp:`candidate`, :samp:`beta`, :samp:`edge`),
+the bases each revision supports, and its on-disk size.
+For this tutorial, we'll use :samp:`cpu/stable`,
+which runs on any machine without GPU hardware.
+
 .. @artefact project
 
 For the project directory, create a new Python repository:
@@ -174,8 +226,6 @@ create a workshop definition named :file:`workshop.yaml`:
 Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
 comes from the :samp:`cpu` track of the :samp:`cpu/stable` channel.
-Other tracks for :samp:`ollama` include :samp:`cuda`, :samp:`rocm`, and :samp:`vulkan`.
-These enable various levels of hardware acceleration.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
@@ -274,6 +324,27 @@ to see what went into your workshop:
 The output looks like the :ref:`definition <tut_define>`
 with extra details such as the :ref:`mounts <tut_interfaces>`;
 ignore these for now.
+
+.. @artefact sdk list
+
+While :command:`workshop info` shows the SDKs from *one* workshop's
+perspective, :command:`sdk list` reports every SDK volume currently
+stored on the machine, regardless of which workshop pulled it:
+
+.. code-block:: console
+
+   $ sdk list
+
+   NAME    VERSION  REV  SIZE
+   ollama  0.9.6    981  15.22MB
+   system  -          1  25.09kB
+
+
+Each row is a distinct SDK volume on disk.
+Until you launch a workshop that references an SDK,
+it won't appear here;
+after launch, |ws_markup| has pulled the SDK from the Store
+and the revision shown matches the one in :command:`workshop info`.
 
 .. @artefact workshop .lock
 
@@ -381,6 +452,10 @@ and refresh the workshop:
 
    $ workshop refresh
 
+
+After the refresh, :command:`sdk list` may show multiple revisions
+of :samp:`ollama` if the previous :samp:`cpu/stable` volume is still
+on disk alongside the freshly pulled :samp:`vulkan/stable` one.
 
 Running :command:`workshop refresh` is similar to a :ref:`launch <tut_launch>`.
 However, it ensures the workshop remains operational.
