@@ -156,7 +156,7 @@ and check its publisher and current version:
 
 
 The query also matches an SDK's title, summary, description, or publisher,
-so a broader keyword like :samp:`sdk find ai`
+so a broader keyword like :command:`sdk find ai`
 can surface AI-related SDKs on the Store.
 
 .. @artefact sdk info
@@ -314,7 +314,7 @@ to see what went into your workshop:
          installed:  (1)
        ollama:
          tracking:   cpu/stable
-         installed:  0.9.6  2025-11-19  (981)
+         installed:  0.20.2  2026-04-15  (5)
          mounts:
            models:
              host-source:      .../6b79e889/dev/mount/ollama/models
@@ -336,7 +336,7 @@ stored on the machine, regardless of which workshop pulled it:
    $ sdk list
 
    NAME    VERSION  REV  SIZE
-   ollama  0.9.6    981  15.22MB
+   ollama  0.20.2     5  15.22MB
    system  -          1  25.09kB
 
 
