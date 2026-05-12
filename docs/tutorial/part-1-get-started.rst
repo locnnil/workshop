@@ -168,7 +168,7 @@ create a workshop definition named :file:`workshop.yaml`:
    base: ubuntu@22.04
    sdks:
      - name: ollama
-       channel: cpu
+       channel: cpu/stable
 
 
 Here, the SDK is referenced as :samp:`ollama`,
@@ -373,7 +373,7 @@ and refresh the workshop:
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: vulkan
+       channel: vulkan/stable
 
 .. @artefact workshop refresh
 
@@ -503,7 +503,7 @@ Add an :samp:`actions` section to :file:`workshop.yaml`:
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: vulkan
+       channel: vulkan/stable
    actions:
      pull: ollama pull "$@"
 
