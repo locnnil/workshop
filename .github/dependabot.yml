@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # docs/requirements.txt is a compiled lockfile co-generated with
+  # canonical/sphinx-stack via `uv pip compile`. The refresher of record
+  # is .github/workflows/update-sphinx-stack.yaml; per-line bumps from
+  # Dependabot just reshuffle the whole lockfile (see PR #734).
+  - package-ecosystem: "pip"
+    directory: "/docs"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      go-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
