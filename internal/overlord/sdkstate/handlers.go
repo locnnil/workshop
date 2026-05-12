@@ -477,7 +477,7 @@ func (m *SdkManager) doDeleteUnusedSdkVolumes(task *state.Task, tomb *tomb.Tomb)
 		}
 	}
 
-	if time.Since(cooldownStart) < sdkVolumeCooldownTime {
+	if timeNow().Sub(cooldownStart) < sdkVolumeCooldownTime {
 		return &state.Retry{}
 	}
 

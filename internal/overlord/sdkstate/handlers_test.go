@@ -980,6 +980,111 @@ func (s *sdkStateSuite) TestSDKVolumeCleanupPerformedByLatestUser(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
+// Check that uninstall-sdk blocks cleanup for the cooldown period, even if
+// the clenanup handler for another Task runs immediately afterwards.
+func (s *sdkStateSuite) TestSDKVolumeCleanupBlockedBeforeUninstall(c *check.C) {
+	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
+
+	s.state.Lock()
+	oldSdk := sdk.Meta{
+		Setup: sdk.Setup{
+			Name:      "test",
+			PackageID: "a9J51jhjzpckN8VxhqoZ8dNKcZ7pOrBb",
+			Channel:   "latest/stable",
+			Revision:  sdk.R(1),
+			Sha3_384:  "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd",
+		},
+		SdkYAML: sdkYaml,
+	}
+	s.mockSdk(c, oldSdk)
+
+	// Ensure SDK is in use via ws2.
+	t := s.state.NewTask("install-sdk", "t")
+	t.Set("sdk", oldSdk.Name)
+	chg := s.state.NewChange("launch", "chg")
+	chg.Set("user", "testuser")
+	chg.Set("ws2_sdks", []sdk.Setup{oldSdk.Setup})
+	setWorkshopProject("ws2", s.project, t)
+	chg.AddTask(t)
+
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Check(t.Status(), check.Equals, state.DoneStatus)
+
+	defer sdkstate.FakeSdkVolumeCooldownTime(time.Hour)()
+	t1time := time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
+	defer state.MockTime(t1time)()
+	defer sdkstate.MockTime(t1time)()
+
+	t1 := s.state.NewTask("uninstall-sdk", "t1")
+	t1.Set("sdk", oldSdk.Name)
+	t1.Set("sdk-setup", oldSdk.Setup)
+	chg1 := s.state.NewChange("refresh", "chg1")
+	chg1.Set("user", "testuser")
+	newSdk := oldSdk
+	newSdk.Revision = sdk.R(2)
+	chg.Set("ws_sdks", []sdk.Setup{newSdk.Setup})
+	setWorkshopProject("ws", s.project, t1)
+	chg1.AddTask(t1)
+
+	// Uninstall SDK but don't clean it up (no fake time passes).
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+	c.Check(t1.ReadyTime().Equal(t1time), check.Equals, true)
+
+	// Advance time and set up final uninstall.
+	t2time := t1time.Add(time.Hour - time.Second)
+	defer state.MockTime(t2time)()
+	defer sdkstate.MockTime(t2time)()
+
+	t2 := s.state.NewTask("uninstall-sdk", "t2")
+	t2.Set("sdk", oldSdk.Name)
+	t2.Set("sdk-setup", oldSdk.Setup)
+	t2.WaitFor(t1)
+	chg2 := s.state.NewChange("refresh", "chg2")
+	chg2.Set("user", "testuser")
+	chg.Set("ws2_sdks", []sdk.Setup{newSdk.Setup})
+	setWorkshopProject("ws2", s.project, t2)
+	chg2.AddTask(t2)
+
+	// Uninstall SDK from ws2 and attempt another cleanup.
+	s.state.Unlock()
+	c.Check(s.se.Ensure(), check.IsNil)
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t2.Status(), check.Equals, state.DoneStatus)
+	c.Check(t2.ReadyTime().Equal(t2time), check.Equals, true)
+
+	// Advance time again..
+	defer state.MockTime(t2time.Add(2 * time.Second))()
+	defer sdkstate.MockTime(t2time.Add(2 * time.Second))()
+
+	// Run the first post-cooldown cleanup for ws, and the first cleanup for
+	// ws2. Even if ws wins the race, the SDK should not be deleted.
+	s.state.Unlock()
+	for range 6 {
+		c.Check(s.se.Ensure(), check.IsNil)
+		s.se.Wait()
+	}
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	c.Check(t1.IsClean(), check.Equals, true)
+	c.Check(t2.IsClean(), check.Equals, false)
+}
+
 func (s *sdkStateSuite) TestSDKVolumeExitCleanupOnNonvolume(c *check.C) {
 	s.state.Lock()
 	sdkProject := sdk.Meta{
