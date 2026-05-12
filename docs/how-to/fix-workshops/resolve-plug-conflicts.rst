@@ -17,9 +17,9 @@ but the same process works for any other interface that supports bindings.
 
 Suppose you have two SDKs that each declare a plug of the same interface,
 and the plugs are in conflict.
-Here, we use :samp:`torchaudio:hub` and :samp:`torchvision:hub`
+Here, we use fictional :samp:`torchaudio:hub` and :samp:`torchvision:hub`
 that both point to the :file:`~/.cache/torch/hub` directory on the host,
-where the SDKs store their models
+where the SDKs store their models.
 
 #. Create or open your workshop definition and list both SDKs:
 
