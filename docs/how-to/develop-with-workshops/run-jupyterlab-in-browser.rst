@@ -7,7 +7,7 @@
 How to run JupyterLab in your browser
 =====================================
 
-.. @tests redundant, should be covered by SDK itself / the tutorial
+.. @tests made redundant by tests/docs-tutorial/part-3/task.yaml
 
 .. @artefact workshop (container)
 

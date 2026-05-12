@@ -7,6 +7,8 @@
 Get started with workshops
 ==========================
 
+.. @tests in tests/docs-tutorial/part-1/task.yaml
+
 This is the first section of the :ref:`four-part series <tut_index>`;
 a practical introduction
 that takes you on a tour

@@ -7,7 +7,7 @@
 How to use JetBrains Gateway with Workshop
 ==========================================
 
-.. @tests fall outside of current test coverage capabilities
+.. @tests not applicable: requires JetBrains Gateway client and SSH key flow
 
 `JetBrains Gateway
 <https://www.jetbrains.com/remote-development/gateway/>`_

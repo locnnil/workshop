@@ -9,7 +9,7 @@
 How to run GitHub Actions locally
 =================================
 
-.. @tests fall outside of current test coverage capabilities
+.. @tests not applicable: requires GitHub Actions runner registration
 
 Running GitHub Actions locally
 provides a powerful way to develop, test, and debug CI/CD workflows.

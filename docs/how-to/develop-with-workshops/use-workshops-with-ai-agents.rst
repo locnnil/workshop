@@ -8,6 +8,8 @@
 How to use workshops with AI agents
 ===================================
 
+.. @tests not applicable: requires interactive AI agent login
+
 .. @artefact workshop (container)
 .. @artefact workshop definition
 

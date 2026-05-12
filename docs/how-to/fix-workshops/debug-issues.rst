@@ -7,7 +7,7 @@
 How to debug issues in workshops
 ================================
 
-.. @tests in tests/documentation/how-to-debug-issues/task.yaml
+.. @tests in tests/docs-how-to/debug-issues/task.yaml
 
 To trace the root cause
 of a workshop misbehaving at :command:`workshop refresh` or any other action,

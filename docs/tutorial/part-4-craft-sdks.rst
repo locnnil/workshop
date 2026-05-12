@@ -8,6 +8,8 @@
 Craft SDKs with |sdk_markup|
 ==============================
 
+.. @tests in tests/docs-tutorial/part-4/task.yaml
+
 .. @artefact sdkcraft (CLI)
 .. @artefact SDK
 .. @artefact interface

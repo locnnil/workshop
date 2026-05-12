@@ -7,7 +7,7 @@
 How to move projects around
 ===========================
 
-.. @tests fall outside of current test coverage capabilities
+.. @tests not applicable: project-relocation flow not covered by current harness
 
 .. @artefact project
 

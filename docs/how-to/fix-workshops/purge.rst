@@ -7,7 +7,7 @@
 How to purge malfunctioning workshops
 =====================================
 
-.. @tests fall outside of current test coverage capabilities
+.. @tests not applicable: full system purge not safe in CI
 
 Workshops can sometimes become unresponsive,
 encounter errors during start or stop operations,
