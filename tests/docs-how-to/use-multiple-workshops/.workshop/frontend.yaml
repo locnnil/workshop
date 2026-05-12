@@ -1,0 +1,13 @@
+name: frontend
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-tunnel
+    plugs:
+      api:
+        interface: tunnel
+        endpoint: localhost:8080
+  - name: system
+    slots:
+      api:
+        interface: tunnel
+        endpoint: localhost:8080

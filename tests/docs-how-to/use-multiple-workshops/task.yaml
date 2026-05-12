@@ -1,0 +1,31 @@
+summary: Test 'How to use multiple workshops in a project' to ensure cross-workshop tunneling is operational
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove frontend backend || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  # Launch both workshops at once
+
+  workshop_exec launch frontend backend
+  workshop_exec list | MATCH '^backend +Ready'
+  workshop_exec list | MATCH '^frontend +Ready'
+
+
+  # Backend tunnel auto-connects (system plug pairs with regular SDK slot)
+
+  workshop_exec connections backend | MATCH '^tunnel.+backend/system:api.+backend/test-sdk-tunnel:api.+-$'
+
+
+  # Frontend tunnel requires a manual step (regular SDK plug to system slot).
+  # Before connect: plug and slot exist but are unpaired (slot column is "-").
+
+  workshop_exec connections frontend | MATCH '^tunnel.+frontend/test-sdk-tunnel:api.+\-.+\-$'
+  workshop_exec connections frontend | MATCH '^tunnel.+\-.+frontend/system:api.+\-$'
+  workshop_exec connect frontend/test-sdk-tunnel:api
+  workshop_exec connections frontend | MATCH '^tunnel.+frontend/test-sdk-tunnel:api.+frontend/system:api.+manual$'
+
+
+  # Clean up
+
+  workshop_exec remove frontend backend
