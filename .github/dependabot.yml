@@ -9,6 +9,8 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 0
+    cooldown:
+      default-days: 7
     ignore:
       - dependency-name: "*"
 
@@ -16,6 +18,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       go-deps:
         patterns: ["*"]
@@ -24,6 +31,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       actions:
         patterns: ["*"]
