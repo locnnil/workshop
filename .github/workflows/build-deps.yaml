@@ -8,6 +8,9 @@ on:
       snap_workshop:
         description: "Workshop snap filename"
         value: ${{ jobs.build-workshop.outputs.snap_workshop }}
+      snap_workshop_arm64:
+        description: "Workshop arm64 snap filename"
+        value: ${{ jobs.build-workshop-arm64.outputs.snap_workshop_arm64 }}
 
 permissions:
   contents: read
@@ -44,6 +47,30 @@ jobs:
         with:
           name: snap_workshop
           path: ${{ steps.cache-workshop.outputs.cache-hit == 'true' && steps.snapcraft_workshop_cached.outputs.snap || steps.snapcraft_workshop.outputs.snap }}
+
+  build-workshop-arm64:
+    runs-on:
+      - self-hosted
+      - Linux
+      - noble
+      - ARM64
+      - medium
+    outputs:
+      snap_workshop_arm64: ${{ steps.snapcraft_workshop_arm64.outputs.snap }}
+    steps:
+      - name: Checkout Workshop
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build Workshop (arm64)
+        uses: canonical/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+        id: snapcraft_workshop_arm64
+      - name: Upload Workshop (arm64)
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: snap_workshop_arm64
+          path: ${{ steps.snapcraft_workshop_arm64.outputs.snap }}
 
   build-spread:
     runs-on: ubuntu-latest
@@ -95,7 +122,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-          filter: 'tree:0'
+          filter: "tree:0"
           persist-credentials: true
 
       - name: Detect staged SDKs
