@@ -46,4 +46,7 @@ exclude = [
     "^https://canonical-workshop\\.readthedocs-hosted\\.com/",
     "^https://discourse\\.canonical\\.com/c/",
     "^https://console\\.cloud\\.google\\.com/",
+
+    # gnu.org blocks bot User-Agents with 403; valid references
+    "^https://www\\.gnu\\.org/",
 ]
