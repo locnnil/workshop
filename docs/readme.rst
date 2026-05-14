@@ -13,8 +13,8 @@ Workshop
    until an official public release is announced.
 
 
-.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=stable&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
-   :target: https://canonical-workshop.readthedocs-hosted.com/stable/?badge=stable
+.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=latest&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
+   :target: https://documentation.ubuntu.com/canonical-workshop/latest/?badge=latest
    :alt: Documentation status
 
 **A tool for defining and handling ephemeral development environments**.
@@ -118,14 +118,14 @@ Documentation
 
 Refer to the
 `Tutorial
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/>`_
+<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/>`_
 in our docs for a detailed introduction to Workshop.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
 jump straight to the
 `SDK crafting guide
-<https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/part-4-craft-sdks/>`_
+<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
 
