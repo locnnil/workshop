@@ -14,7 +14,7 @@ sdk (CLI)
 |ws_markup| includes an :command:`sdk` command-line utility;
 it has a set of commands that make it easy to find and learn more about SDKs.
 
-There are several commands that vary by their purpose:
+There is one category of commands:
 
 .. list-table::
    :header-rows: 1
@@ -29,7 +29,9 @@ There are several commands that vary by their purpose:
      - :command:`find`,
        :command:`info`,
        :command:`list`
-     - Search the Store, enumerate local SDKs, and show their details and current usage.
+     - Search the SDK Store,
+       enumerate the SDKs available on your machine,
+       and inspect their details.
 
 
 .. note::

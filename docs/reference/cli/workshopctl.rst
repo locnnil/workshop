@@ -78,7 +78,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshopctl`
+- :ref:`exp_workshopctl_cli`
 
 
 Reference:

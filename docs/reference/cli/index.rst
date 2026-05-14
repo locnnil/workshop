@@ -8,11 +8,15 @@ Command-line interfaces
 =======================
 
 These articles share the details of the various command-line tools.
-Here, :program:`workshop` and :program:`sdk` are mainly intended for |ws_markup| users,
-while :program:`workshopctl` is operated by SDK authors who use |sdk_markup|:
+Of these,
+:program:`workshop` and :program:`sdk` are aimed at |ws_markup| users,
+:program:`sdkcraft` is the tool for SDK authors,
+and :program:`workshopctl` is invoked by SDK hooks
+inside a running workshop:
 
 .. @artefact workshop (CLI)
 .. @artefact sdk (CLI)
+.. @artefact sdkcraft (CLI)
 .. @artefact workshopctl
 
 .. toctree::
