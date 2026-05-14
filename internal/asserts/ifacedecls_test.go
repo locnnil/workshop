@@ -814,15 +814,15 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleErrors(c *check.C) {
 		stanza string
 		err    string
 	}{
-		{`iface: foo`, `plug rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+		{`iface: foo`, `plug rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  - allow`, `plug rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  - allow`, `plug rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  allow-installation: foo`, `allow-installation in plug rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  allow-installation: foo`, `allow-installation in plug rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  deny-installation: foo`, `deny-installation in plug rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  deny-installation: foo`, `deny-installation in plug rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  allow-connection: foo`, `allow-connection in plug rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  allow-connection: foo`, `allow-connection in plug rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
   allow-connection:
     - foo`, `alternative 1 of allow-connection in plug rule for interface "iface" must be a map`},
@@ -1203,15 +1203,15 @@ func (s *plugSlotRulesSuite) TestCompileSlotRuleErrors(c *check.C) {
 		stanza string
 		err    string
 	}{
-		{`iface: foo`, `slot rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+		{`iface: foo`, `slot rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  - allow`, `slot rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  - allow`, `slot rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  allow-installation: foo`, `allow-installation in slot rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  allow-installation: foo`, `allow-installation in slot rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  deny-installation: foo`, `deny-installation in slot rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  deny-installation: foo`, `deny-installation in slot rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
-  allow-connection: foo`, `allow-connection in slot rule for interface "iface" must be a map or one of the shortcuts 'true' or 'false'`},
+  allow-connection: foo`, `allow-connection in slot rule for interface "iface" must be a map or one of the shortcuts "true" or "false"`},
 		{`iface:
   allow-connection:
     - foo`, `alternative 1 of allow-connection in slot rule for interface "iface" must be a map`},

@@ -155,12 +155,12 @@ func parseBool(attrs map[string]any, key string, fallback bool) (bool, error) {
 	case string:
 		parsed, err := strconv.ParseBool(value)
 		if err != nil {
-			return false, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted values are 'true' or 'false'. String representations (e.g., '"true"') are also permitted`, value, key)
+			return false, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted values are "true" or "false". String representations (e.g., %q) are also permitted`, value, key, "true")
 		}
 		attrs[key] = parsed
 		return parsed, nil
 	default:
-		return false, fmt.Errorf(`unknown value type %T in key %q for mount interface plug. Accepted types are 'bool' or 'string'`, object, key)
+		return false, fmt.Errorf(`unknown value type %T in key %q for mount interface plug. Accepted types are "bool" or "string"`, object, key)
 	}
 }
 
@@ -177,12 +177,12 @@ func parseInt(attrs map[string]any, key string, fallback int64) (int64, error) {
 	case string:
 		parsed, err := strconv.ParseInt(value, 0, 64)
 		if err != nil {
-			return 0, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted types are 'int64'`, value, key)
+			return 0, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted types are "int64"`, value, key)
 		}
 		attrs[key] = parsed
 		return parsed, nil
 	default:
-		return 0, fmt.Errorf(`unknown value type %T in key %q for mount interface plug. Accepted types are 'int64' or 'string'`, object, key)
+		return 0, fmt.Errorf(`unknown value type %T in key %q for mount interface plug. Accepted types are "int64" or "string"`, object, key)
 	}
 }
 

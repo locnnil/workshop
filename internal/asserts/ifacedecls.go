@@ -880,7 +880,7 @@ func checkMapOrShortcut(v any) (m map[string]any, invert bool, err error) {
 func baseCompileRule(context string, rule any, target rule, subrules []string, compilers map[string]subruleCompiler, defaultOutcome, invertedOutcome map[string]any) error {
 	rMap, invert, err := checkMapOrShortcut(rule)
 	if err != nil {
-		return fmt.Errorf("%s must be a map or one of the shortcuts 'true' or 'false'", context)
+		return fmt.Errorf(`%s must be a map or one of the shortcuts "true" or "false"`, context)
 	}
 	if rMap == nil {
 		rMap = defaultOutcome // "true"
@@ -922,7 +922,7 @@ func baseCompileRule(context string, rule any, target rule, subrules []string, c
 			if err != nil || (cMap == nil && alternatives) {
 				efmt := "%s must be a map"
 				if !alternatives {
-					efmt = "%s must be a map or one of the shortcuts 'true' or 'false'"
+					efmt = `%s must be a map or one of the shortcuts "true" or "false"`
 				}
 				return fmt.Errorf(efmt, subctxt)
 			}
