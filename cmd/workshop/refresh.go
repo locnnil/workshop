@@ -70,7 +70,7 @@ $ workshop refresh --continue`,
 
 	cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error",
 		false,
-		"Pause the operation on error; to resume, use \"--continue\" or \"--abort\".")
+		`Pause the operation on error; to resume, use "--continue" or "--abort".`)
 	cmd.PersistentFlags().BoolVar(&c.Continue, "continue",
 		false,
 		"Continue the previously paused operation.")

@@ -410,7 +410,7 @@ func commonVars(f *pflag.FlagSet, flags *ExecFlags) {
 
 func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	if flags.Interactive && flags.NonInteractive {
-		return errors.New("\"-i\" incompatible with \"-I\"")
+		return errors.New(`"-i" incompatible with "-I"`)
 	}
 
 	cli, err := root.client()
@@ -660,10 +660,10 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 		switch sig {
 		case unix.SIGWINCH:
 			if !terminal {
-				logger.Debugf("Received \"SIGWINCH\" signal in non-terminal mode, ignoring")
+				logger.Debugf(`Received "SIGWINCH" signal in non-terminal mode, ignoring`)
 				break
 			}
-			logger.Debugf("Received \"%s\" signal, updating window geometry", sig)
+			logger.Debugf("Received %q signal, updating window geometry", sig)
 			width, height, err := ptyutil.GetSize(unix.Stdout)
 			if err != nil {
 				logger.Debugf("Cannot get terminal size: %v", err)
@@ -676,20 +676,20 @@ func execControlHandler(process *client.ExecProcess, terminal bool, stop <-chan 
 				break //nolint:staticcheck // SA4011 Keep "ineffective" break for consistency
 			}
 		case unix.SIGHUP:
-			logger.Debugf("Received \"SIGHUP\" signal, forwarding and exiting")
+			logger.Debugf(`Received "SIGHUP" signal, forwarding and exiting`)
 			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
-				logger.Debugf("Cannot forward signal \"%s\": %v", sig, err)
+				logger.Debugf("Cannot forward signal %q: %v", sig, err)
 				break
 			}
 			close(sighup)
 		case unix.SIGTERM, unix.SIGINT, unix.SIGQUIT, unix.SIGABRT,
 			unix.SIGTSTP, unix.SIGTTIN, unix.SIGTTOU, unix.SIGUSR1,
 			unix.SIGUSR2, unix.SIGSEGV, unix.SIGCONT:
-			logger.Debugf("Received \"%s\" signal, forwarding to running process", sig)
+			logger.Debugf("Received %q signal, forwarding to running process", sig)
 			err := process.SendSignal(sig.(unix.Signal))
 			if err != nil {
-				logger.Debugf("Cannot forward signal \"%s\": %v", sig, err)
+				logger.Debugf("Cannot forward signal %q: %v", sig, err)
 				break //nolint:staticcheck // SA4011 Keep "ineffective" break for consistency
 			}
 		}

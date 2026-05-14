@@ -288,7 +288,7 @@ func lastWarningTimestamp() (time.Time, error) {
 	f, err := os.Open(warnFilename())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return time.Time{}, fmt.Errorf("use \"workshop warnings\" to view the warnings before dismissing them")
+			return time.Time{}, fmt.Errorf(`use "workshop warnings" to view the warnings before dismissing them`)
 		}
 		return time.Time{}, fmt.Errorf("cannot open timestamp file: %v", err)
 
@@ -314,8 +314,8 @@ func maybePresentWarnings(count int, timestamp time.Time) {
 	}
 
 	fmt.Fprintf(Stderr,
-		i18n.NG("WARNING: There is %d new warning. See \"workshop warnings\".\n",
-			"WARNING: There are %d new warnings. See \"workshop warnings\".\n",
+		i18n.NG(`WARNING: There is %d new warning. See "workshop warnings".`+"\n",
+			`WARNING: There are %d new warnings. See "workshop warnings".`+"\n",
 			count),
 		count)
 }
