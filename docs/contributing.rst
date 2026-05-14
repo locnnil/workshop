@@ -171,6 +171,11 @@ Error messages
   Most of these can be found by searching for ``fmt.Errorf`` and ``errors.New``.
   Paths and other identifiers should be double-quoted if possible.
 
+- **Quote values consistently**:
+  Use ``%q`` for interpolated identifiers
+  and ``"..."`` inside backtick raw strings for literal flag and command references.
+  See :ref:`coding_style_guide` for details.
+
 - **Consider the user experience**:
   Error messages should be clear and actionable.
 
