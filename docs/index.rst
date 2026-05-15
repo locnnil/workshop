@@ -72,6 +72,7 @@ In this documentation
        :ref:`Connect <ref_workshop_connect>` •
        :ref:`Shell access <ref_workshop_shell>` •
        :ref:`Add actions <how_add_actions>` •
+       :ref:`Multi-workshop patterns <exp_multi_workshop_patterns>` •
        :ref:`Use multiple workshops <how_use_multiple_workshops>` •
        :ref:`Forward ports <how_forward_ports>` •
        :ref:`Status diagrams <ref_workshop_status>` •

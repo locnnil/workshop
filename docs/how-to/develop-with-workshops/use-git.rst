@@ -192,9 +192,9 @@ As with regular directories,
    $ git worktree move ../hotfix/ ../resolved/
    $ workshop list --global
 
-     Project                 Workshop  Status  Notes
-     /home/user/original     dev       Ready   -
-     /home/user/resolved     dev       Ready   -
+   PROJECT     WORKSHOP  STATUS  NOTES
+   ~/original  dev       Ready   -
+   ~/resolved  dev       Ready   -
 
 
 Similarly,
@@ -220,6 +220,7 @@ See also
 Explanation:
 
 - :ref:`exp_base`
+- :ref:`exp_multi_workshop_patterns`
 - :ref:`exp_projects`
 - :ref:`exp_workshop_definition`
 

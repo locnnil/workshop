@@ -426,6 +426,7 @@ See also
 
 Explanation:
 
+- :ref:`exp_multi_workshop_patterns`
 - :ref:`exp_workshop_definition`
 - :ref:`exp_workshop_definition_actions`
 

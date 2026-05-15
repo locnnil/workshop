@@ -345,6 +345,7 @@ See also
 
 Explanation:
 
+- :ref:`exp_multi_workshop_patterns`
 - :ref:`exp_projects`
 - :ref:`exp_tunnel_interface`
 - :ref:`exp_workshop_definition`
