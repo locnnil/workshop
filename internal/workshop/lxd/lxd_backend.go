@@ -13,7 +13,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -43,6 +42,9 @@ var (
 	storagePoolDriver   = "zfs"
 )
 
+//go:embed start_command.sh
+var startCommand string
+
 // isWSL checks if we're running on Windows Subsystem for Linux
 func isWSL() bool {
 	var utsname unix.Utsname
@@ -57,35 +59,7 @@ func isWSL() bool {
 	return strings.Contains(version, "microsoft") || strings.Contains(version, "wsl2")
 }
 
-type volumeGuard struct {
-	c       chan struct{}
-	counter int32
-}
-
-var (
-	// However many backend instances are created, downloads are always a single
-	// instance map with the LXD backend.
-	imageLock        sync.Mutex
-	currentDownloads map[string]*downloadOp
-
-	volumeGuardsLock sync.Mutex
-	volumeGuards     map[string]*volumeGuard
-)
-
-//go:embed start_command.sh
-var startCommand string
-
 func init() {
-	imageLock.Lock()
-	defer imageLock.Unlock()
-	if currentDownloads == nil {
-		currentDownloads = make(map[string]*downloadOp)
-	}
-
-	volumeGuardsLock.Lock()
-	defer volumeGuardsLock.Unlock()
-	volumeGuards = make(map[string]*volumeGuard)
-
 	if isWSL() {
 		storagePoolDriver = "btrfs"
 	}
@@ -339,15 +313,40 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		Type: api.InstanceTypeContainer,
 	}
 
-	if snapshot.IsBase() {
-		req.Source = api.InstanceSource{
-			Type:        api.SourceTypeImage,
-			Fingerprint: snapshot.Image.Fingerprint,
-		}
-		return s.launchOrRebuildFromImage(conn, snapshotConn, req)
+	if !snapshot.IsBase() {
+		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
 	}
 
-	return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot.Sdks)
+	req.Source = api.InstanceSource{
+		Type:        api.SourceTypeImage,
+		Fingerprint: snapshot.Image.Fingerprint,
+	}
+	if err := s.launchOrRebuildFromImage(conn, snapshotConn, req); err != nil {
+		return err
+	}
+
+	// Ubuntu 20.04 was released before cloud-init added support for LXD. The
+	// current images contain a more recent version of cloud-init, but the
+	// image metadata.yaml contains templated seed data files. See
+	// https://docs.cloud-init.io/en/latest/development/dir_layout.html#seed.
+	// This forces cloud-init to use the NoCloud data source instead of LXD.
+	//
+	// The seed files contain a hostname and instance-id, both set to the
+	// container name. This is OK when launching a new workshop, or rebuilding
+	// a workshop from an image (although the instance-id is different for
+	// 22.04 and up), but when rebuilding a workshop from a snapshot, it
+	// results in both the hostname and instance-id being taken from the
+	// snapshot. There's no way to remove the seed files before starting the
+	// instance for the first time, but we can force cloud-init to use the LXD
+	// data source by adding a config file.
+	fs, err := s.instanceFs(conn, req.Name)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	forceLXD := []byte("datasource_list: [LXD]\n")
+	return fs.WriteFile("/etc/cloud/cloud.cfg.d/90_workshop.cfg", forceLXD, 0644)
 }
 
 func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost) error {
@@ -397,11 +396,12 @@ func (s *Backend) launchOrRebuildFromImage(conn, snapshotConn lxd.InstanceServer
 	// containers. Finally, it clears volatile.idmap.next and
 	// volatile.last_state.idmap. All other options are unchanged. We
 	// preserve the LXD-managed options and forget the other ones.
-	req.Config = maps.Clone(req.Config)
-	for k, v := range rebuilt.Config {
-		if _, ok := req.Config[k]; !ok && optionDomain(k) != customOption {
-			req.Config[k] = v
-		}
+	maps.DeleteFunc(rebuilt.Config, func(k, v string) bool {
+		return optionDomain(k) == customOption
+	})
+	if rebuilt.Config != nil {
+		maps.Copy(rebuilt.Config, req.Config)
+		req.Config = rebuilt.Config
 	}
 
 	req.Architecture = rebuilt.Architecture
@@ -918,7 +918,11 @@ func (s *Backend) WorkshopFs(ctx context.Context, name string) (fsutil.Fs, error
 		return fsutil.Fs{}, fmt.Errorf("context key project-id not found")
 	}
 
-	sftp, err := conn.GetInstanceFileSFTP(InstanceName(name, projectId))
+	return s.instanceFs(conn, InstanceName(name, projectId))
+}
+
+func (s *Backend) instanceFs(conn lxd.InstanceServer, name string) (fsutil.Fs, error) {
+	sftp, err := conn.GetInstanceFileSFTP(name)
 	if err != nil {
 		return fsutil.Fs{}, err
 	}
@@ -1037,12 +1041,10 @@ apt:
 
     # Bypass confirmation prompts
     APT::Get::Assume-Yes "1";
+grub_dpkg:
+  enabled: false
+ssh_genkeytypes: [ed25519]
 write_files:
-- content: |
-    # Workaround for https://bugs.launchpad.net/snapd/+bug/2104066
-    [Service]
-    Environment=SNAPD_STANDBY_WAIT=1m
-  path: /etc/systemd/system/snapd.service.d/override.conf
 - content: |
     [DHCPv4]
     SendRelease=false
@@ -1057,8 +1059,6 @@ runcmd:
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
-  - systemctl daemon-reload
-  - systemctl restart snapd.service
   # Required to load above DHCP config.
   - networkctl reload
 `

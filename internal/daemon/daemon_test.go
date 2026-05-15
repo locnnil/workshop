@@ -938,8 +938,7 @@ func (s *daemonSuite) TestRestartExpectedRebootGiveUp(c *check.C) {
 
 func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
 	notifySocket := filepath.Join(c.MkDir(), "notify.socket")
-	os.Setenv("NOTIFY_SOCKET", notifySocket)
-	defer os.Setenv("NOTIFY_SOCKET", "")
+	defer systemd.FakeNotifySocket(notifySocket)()
 
 	restore := standby.FakeStandbyWait(5 * time.Millisecond)
 	defer restore()
@@ -973,8 +972,7 @@ func (s *daemonSuite) TestRestartIntoSocketModeNoNewChanges(c *check.C) {
 }
 
 func (s *daemonSuite) TestRestartIntoSocketModePendingChanges(c *check.C) {
-	os.Setenv("NOTIFY_SOCKET", c.MkDir())
-	defer os.Setenv("NOTIFY_SOCKET", "")
+	defer systemd.FakeNotifySocket(c.MkDir())()
 
 	restore := standby.FakeStandbyWait(5 * time.Millisecond)
 	defer restore()

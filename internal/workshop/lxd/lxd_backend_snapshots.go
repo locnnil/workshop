@@ -176,12 +176,12 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 	if snapshot.Config == nil {
 		snapshot.Config = map[string]string{}
 	}
-	var config map[string]string
+	var snapshotConfig, reqConfig map[string]string
 	if !newApi {
 		// The old API handles config options inconsistently. This
 		// computes the form required for UpdateInstance.
-		config = maps.Clone(snapshot.Config)
-		mergeConfig(config, inst.Config, req.Config, true)
+		snapshotConfig = maps.Clone(snapshot.Config)
+		reqConfig = req.Config
 	}
 	mergeConfig(snapshot.Config, inst.Config, req.Config, newApi)
 
@@ -210,11 +210,20 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		return nil
 	}
 
+	var etag string
+	if inst.Name == "" {
+		inst, etag, err = conn.GetInstance(req.Name)
+		if err != nil {
+			return err
+		}
+	}
+
 	// If the workshop already existed, it still has the old config options
 	// and devices. If it did not exist, the config and devices are mostly
 	// correct, but we still need to remove placeholder SDK devices.
-	req.Config = config
-	op, err := conn.UpdateInstance(req.Name, req.InstancePut, "")
+	mergeConfig(snapshotConfig, inst.Config, reqConfig, true)
+	req.Config = snapshotConfig
+	op, err := conn.UpdateInstance(req.Name, req.InstancePut, etag)
 	if err != nil {
 		return err
 	}

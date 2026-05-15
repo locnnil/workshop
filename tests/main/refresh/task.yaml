@@ -17,12 +17,8 @@ execute: |
   cd single
   workshop_exec exec -- sudo touch /var/cache/apt/archives/sentinel
 
-  echo "Check refresh supports project-level workshop definitions"
-  workshop_exec refresh
-
-  echo "Check apt cache is preserved across refreshes"
-  workshop_exec exec -- mountpoint /var/cache/apt/archives
-  workshop_exec exec -- sudo test -f /var/cache/apt/archives/sentinel
+  echo "Check refresh succeeds without updates"
+  workshop_exec refresh | MATCH 'no updates available for "ws-refresh"'
 
   echo "Check workshop refresh --no-wait"
   echo -e "sdks:\n  - name: test-sdk-health-waiting" >> workshop.yaml
@@ -33,16 +29,16 @@ execute: |
   # Check tests/lib/sdk/test-sdk-health-waiting/latest/stable/sdk/hooks/check-health for details
   sudo -u ubuntu 2>&1 -- expect -f ./health.exp
 
+  echo "Check apt cache is preserved across refreshes"
+  workshop_exec exec -- mountpoint /var/cache/apt/archives
+  workshop_exec exec -- sudo test -f /var/cache/apt/archives/sentinel
+
   echo "Check refresh supports multi-workshop projects"
   cd ../multi
-  workshop_exec refresh ws-refresh
+  workshop_exec refresh ws-refresh | MATCH 'no updates available for "ws-refresh"'
 
-  echo "Check refresh change is Done"
-  workshop_exec changes | MATCH "^[0-9]*[[:space:]]+Done[[:space:]]+[:, [:alnum:]]+[[:space:]]+Refresh \"ws-refresh\" workshop$"
-
-  echo "Check the workshop is in Ready state"
-  workshop_exec list | MATCH "^ws-refresh[[:space:]]+Ready[[:space:]]+-$"
-
+  echo "Update SDK"
+  sed -i 's/stable/edge/' .workshop/ws-refresh-sdk.yaml
   workshop_exec refresh ws-refresh-sdk
 
   echo "Check refresh change is Done"
@@ -50,9 +46,6 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
-
-  echo "Check workshop refresh when no updates are available"
-  workshop_exec refresh ws-refresh-sdk | MATCH "no updates available for \"ws-refresh-sdk\""
 
   list_snapshots() {
     local pid
