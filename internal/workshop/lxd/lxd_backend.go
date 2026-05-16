@@ -740,6 +740,10 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 	}
 	defer conn.Disconnect()
 
+	return s.workshop(ctx, conn, name, false)
+}
+
+func (s *Backend) workshop(ctx context.Context, conn lxd.InstanceServer, name string, stash bool) (*workshop.Workshop, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
@@ -761,7 +765,14 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 	}
 	p := projects[user][idx]
 
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
+	var instName string
+	if stash {
+		instName = instanceStashName(name, projectId)
+	} else {
+		instName = InstanceName(name, projectId)
+	}
+
+	inst, _, err := conn.GetInstance(instName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil, workshop.ErrWorkshopNotLaunched

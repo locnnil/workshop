@@ -126,35 +126,50 @@ func (w *WorkshopManager) RefreshManifests(ctx context.Context, project workshop
 	}
 }
 
-func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string, names []string) ([]Manifest, []bool, error) {
+func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string, names []string) (stashed, current []Manifest, running []bool, err error) {
 	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
 
-	manifests := make([]Manifest, 0, len(names))
-	running := make([]bool, 0, len(names))
+	stashed = make([]Manifest, 0, len(names))
+	current = make([]Manifest, 0, len(names))
+	running = make([]bool, 0, len(names))
 	for _, name := range names {
 		wp, err := w.backend.Workshop(ctx, name)
 		if err != nil {
-			return nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 
 		if err := conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
-			return nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
 		if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-			return nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 
 		installed := make([]sdk.Setup, 0, len(wp.Sdks))
 		for _, sk := range wp.SdksByInstallOrder() {
 			installed = append(installed, sk.Setup)
 		}
-		manifests = append(manifests, Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed})
+		current = append(current, Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed})
 
 		running = append(running, wp.Running)
+
+		stash, err := w.backend.StashedWorkshop(ctx, name)
+		if errors.Is(err, workshop.ErrWorkshopNotLaunched) {
+			continue
+		}
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		installed = make([]sdk.Setup, 0, len(stash.Sdks))
+		for _, sk := range stash.SdksByInstallOrder() {
+			installed = append(installed, sk.Setup)
+		}
+		stashed = append(stashed, Manifest{File: stash.File, Format: stash.Format, Image: stash.Image, Sdks: installed})
 	}
 
-	return manifests, running, nil
+	return stashed, current, running, nil
 }
 
 type artifactFinder struct {

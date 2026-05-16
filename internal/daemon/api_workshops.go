@@ -472,23 +472,23 @@ func refresh(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *w
 	return current, latest, tasksets, nil
 }
 
-func remove(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) ([]workshopstate.Manifest, []*state.TaskSet, error) {
+func remove(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *workshopReq, pid string) (stashed, current []workshopstate.Manifest, tasksets []*state.TaskSet, err error) {
 	project, err := mgr.Project(ctx, pid)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	current, running, err := mgr.RemoveManifests(ctx, pid, reqData.Names)
+	stashed, current, running, err := mgr.RemoveManifests(ctx, pid, reqData.Names)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	tasksets, err := mgr.RemoveMany(ctx, project, current, running)
+	tasksets, err = mgr.RemoveMany(ctx, project, current, running)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return current, tasksets, nil
+	return stashed, current, tasksets, nil
 }
 
 var validActions = []string{
@@ -541,7 +541,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	defer st.Unlock()
 
 	var change *state.Change
-	var current, latest []workshopstate.Manifest
+	var current, latest, stashed []workshopstate.Manifest
 	var tasksets []*state.TaskSet
 
 	if mode.Resume() {
@@ -567,7 +567,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 			tasksets, err = wsmgr.StopMany(r.Context(), reqData.Names, projectId)
 		case "remove":
 			change = newWorkshopChange(st, "remove", user, projectId, reqData.Action, reqData.Names)
-			current, tasksets, err = remove(r.Context(), wsmgr, &reqData, projectId)
+			stashed, current, tasksets, err = remove(r.Context(), wsmgr, &reqData, projectId)
 		default:
 			return statusBadRequest("internal error: action passed validation but was not matched during dispatch")
 		}
@@ -580,16 +580,19 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		return statusBadRequest("%w", err)
 	}
 
-	for _, m := range current {
-		change.Set(handlersetup.WorkshopFormatKey(m.File.Name, handlersetup.OldWorkshop), m.Format)
-		change.Set(handlersetup.WorkshopBaseKey(m.File.Name, handlersetup.OldWorkshop), m.Image)
-		change.Set(handlersetup.WorkshopSdksKey(m.File.Name, handlersetup.OldWorkshop), m.Sdks)
+	manifestsByAge := map[handlersetup.Age][]workshopstate.Manifest{
+		handlersetup.OldWorkshop: current,
+		handlersetup.NewWorkshop: latest,
+		handlersetup.OldStash:    stashed,
 	}
-	for _, m := range latest {
-		change.Set(handlersetup.WorkshopFormatKey(m.File.Name, handlersetup.NewWorkshop), m.Format)
-		change.Set(handlersetup.WorkshopBaseKey(m.File.Name, handlersetup.NewWorkshop), m.Image)
-		change.Set(handlersetup.WorkshopSdksKey(m.File.Name, handlersetup.NewWorkshop), m.Sdks)
+	for age, manifests := range manifestsByAge {
+		for _, m := range manifests {
+			change.Set(handlersetup.WorkshopFormatKey(m.File.Name, age), m.Format)
+			change.Set(handlersetup.WorkshopBaseKey(m.File.Name, age), m.Image)
+			change.Set(handlersetup.WorkshopSdksKey(m.File.Name, age), m.Sdks)
+		}
 	}
+
 	for _, taskset := range tasksets {
 		change.AddAll(taskset)
 	}

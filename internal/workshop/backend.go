@@ -73,6 +73,9 @@ func (e *ErrExec) Error() string {
 }
 
 type Stash interface {
+	// Loads a stashed workshop instance.
+	StashedWorkshop(ctx context.Context, name string) (*Workshop, error)
+
 	// Make a stash of the workshop. The workshop will be stopped and will not
 	// be available to other workshop operations, e.g. list, stop, start and so
 	// on. A new workshop with the same name can be launched for the same

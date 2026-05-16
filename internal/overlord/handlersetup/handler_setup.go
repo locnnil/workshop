@@ -210,6 +210,8 @@ const (
 	OldWorkshop = Age("old")
 	// NewWorkshop indicates the planned state of the workshop after a Change.
 	NewWorkshop = Age("new")
+	// OldStash indicates the state of the stash before a Change.
+	OldStash = Age("old-stash")
 )
 
 func WorkshopFormat(change *state.Change, w string, age Age) (sdk.Revision, error) {
