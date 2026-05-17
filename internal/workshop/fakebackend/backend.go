@@ -133,6 +133,7 @@ type FakeWorkshopBackend struct {
 	SnapshotCalls        []SnapshotCall
 	SnapshotCallback     func(ctx context.Context, name string, snapshot workshop.Snapshot) error
 	Snapshots            []FakeSnapshot
+	RemovedSnapshots     []workshop.Snapshot
 
 	BaseDir     string
 	SnapshotDir string
@@ -267,6 +268,7 @@ func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.
 			Profiles: map[string]workshop.SdkProfile{},
 		}
 		ws.Devices = map[string]map[string]string{}
+		ws.CurrentSnapshot = snapshot
 		return nil
 	}
 
@@ -951,6 +953,8 @@ func (f *FakeWorkshopBackend) RemoveSnapshot(ctx context.Context, snapshot works
 	defer f.snapshotLock.Unlock()
 
 	if idx := f.snapshotIdx(snapshot); idx >= 0 {
+		f.RemovedSnapshots = append(f.RemovedSnapshots, snapshot)
+
 		snapId := f.Snapshots[idx].Id
 		f.Snapshots = slices.Delete(f.Snapshots, idx, idx+1)
 		return os.RemoveAll(filepath.Join(f.SnapshotDir, fmt.Sprint(snapId)))

@@ -250,35 +250,54 @@ func WorkshopSdksKey(w string, age Age) string {
 	return strings.Join([]string{w, string(age), "sdks"}, "_")
 }
 
-func WorkshopSnapshot(change *state.Change, w, lastIntact string) (*workshop.Snapshot, error) {
-	format, err := WorkshopFormat(change, w, NewWorkshop)
-	if err != nil {
-		return nil, err
-	}
-
-	image, err := WorkshopBase(change, w, NewWorkshop)
-	if err != nil {
-		return nil, err
-	}
-
+func WorkshopSdkSnapshot(change *state.Change, w, lastIntact string) (*workshop.Snapshot, error) {
 	if lastIntact == "" {
-		snapshot := workshop.SdkSnapshot(format, image, nil)
-		return &snapshot, nil
+		return workshopBaseOnly(change, w, NewWorkshop)
 	}
 
-	sdks, err := WorkshopSdks(change, w, NewWorkshop)
+	snapshot, err := workshopSnapshot(change, w, NewWorkshop)
 	if err != nil {
 		return nil, err
 	}
 
-	idx := slices.IndexFunc(sdks, func(s sdk.Setup) bool {
+	idx := slices.IndexFunc(snapshot.Sdks, func(s sdk.ContentID) bool {
 		return s.Name == lastIntact
 	})
 	if idx < 0 {
 		return nil, fmt.Errorf("internal error: %q workshop has no %q SDK", w, lastIntact)
 	}
+	snapshot.Sdks = snapshot.Sdks[:idx+1]
 
-	snapshot := workshop.SdkSnapshot(format, image, sdks[:idx+1])
+	return snapshot, nil
+}
+
+func workshopSnapshot(change *state.Change, w string, age Age) (*workshop.Snapshot, error) {
+	base, err := workshopBaseOnly(change, w, age)
+	if err != nil {
+		return nil, err
+	}
+
+	sdks, err := WorkshopSdks(change, w, age)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot := workshop.SdkSnapshot(base.Format, base.Image, sdks)
+	return &snapshot, nil
+}
+
+func workshopBaseOnly(change *state.Change, w string, age Age) (*workshop.Snapshot, error) {
+	format, err := WorkshopFormat(change, w, age)
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := WorkshopBase(change, w, age)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshot := workshop.SdkSnapshot(format, image, nil)
 	return &snapshot, nil
 }
 
@@ -307,6 +326,89 @@ func SdkVolumeLastUsedKey(sk string, revision sdk.Revision) string {
 type taskTime struct {
 	Task string    `json:"task"`
 	Time time.Time `json:"time"`
+}
+
+// SnapshotLastUsed returns the most recent Task of the given Change that
+// stopped using the given snapshot or a descendant thereof.
+func SnapshotLastUsed(change *state.Change, snapshot workshop.Snapshot) (string, time.Time, error) {
+	var tasks []taskTimeWorkshop
+	if err := change.Get("snapshots-last-used", &tasks); err != nil {
+		return "", time.Time{}, err
+	}
+
+	var task string
+	var latest time.Time
+	for _, t := range tasks {
+		s, err := workshopSnapshot(change, t.Workshop, t.Age)
+		if err != nil {
+			return "", time.Time{}, err
+		}
+		if !s.IsBasedOn(snapshot) {
+			continue
+		}
+
+		if task == "" || t.Time.After(latest) || (t.Time.Equal(latest) && t.Task > task) {
+			task = t.Task
+			latest = t.Time
+		}
+	}
+
+	if task == "" {
+		return "", time.Time{}, state.ErrNoState
+	}
+	return task, latest, nil
+}
+
+// SnapshotLastUsedByTask returns the snapshot that the given Task stopped
+// using, if any.
+func SnapshotLastUsedByTask(task *state.Task) (*workshop.Snapshot, time.Time, error) {
+	change := task.Change()
+
+	var workshops []taskTimeWorkshop
+	if err := change.Get("snapshots-last-used", &workshops); err != nil {
+		return nil, time.Time{}, err
+	}
+
+	for _, w := range workshops {
+		if w.Task != task.ID() {
+			continue
+		}
+
+		snapshot, err := workshopSnapshot(change, w.Workshop, w.Age)
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+
+		// Each Task deals with at most one snapshot, so we return early.
+		return snapshot, w.Time, nil
+	}
+	return nil, time.Time{}, state.ErrNoState
+}
+
+// SetSnapshotLastUsed records the most recent Task of the given Change that
+// stopped using a snapshot. The given workshop name and age are used to
+// identify the specific snapshot (which is already stored in the Change; see
+// e.g. WorkshopSdks).
+func SetSnapshotLastUsed(change *state.Change, w string, age Age, task string, time time.Time) error {
+	var tasks []taskTimeWorkshop
+	if err := change.Get("snapshots-last-used", &tasks); err != nil && !errors.Is(err, state.ErrNoState) {
+		return err
+	}
+
+	tasks = append(tasks, taskTimeWorkshop{
+		taskTime: taskTime{Time: time, Task: task},
+		Workshop: w,
+		Age:      age,
+	})
+
+	change.Set("snapshots-last-used", tasks)
+	return nil
+}
+
+type taskTimeWorkshop struct {
+	taskTime
+	Workshop string `json:"workshop"`
+	Age      Age    `json:"age"`
 }
 
 func BackendContext(tomb *tomb.Tomb, user string, projectId string) (context.Context, context.CancelFunc) {

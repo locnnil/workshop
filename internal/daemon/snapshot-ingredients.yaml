@@ -57,6 +57,7 @@ FakeWorkshopBackend:
   SnapshotCalls:
   SnapshotCallback:
   Snapshots:
+  RemovedSnapshots:
   BaseDir:
   SnapshotDir:
 FakeWorkshop:

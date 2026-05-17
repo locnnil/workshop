@@ -393,7 +393,7 @@ func (m *SdkManager) doSnapshotSdk(task *state.Task, tomb *tomb.Tomb) error {
 	}
 
 	st.Lock()
-	snapshot, err := WorkshopSnapshot(change, w, sk)
+	snapshot, err := WorkshopSdkSnapshot(change, w, sk)
 	st.Unlock()
 	if err != nil {
 		return err

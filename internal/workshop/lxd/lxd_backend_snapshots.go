@@ -729,6 +729,9 @@ func (s *Backend) RemoveSnapshot(ctx context.Context, snapshot workshop.Snapshot
 		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
 	}
 
+	// For completeness we should probably check for collisions here. But if
+	// the given snapshot is being removed, it was recently part of a workshop
+	// and we already checked for collisions on launch.
 	return s.deleteSnapshot(snapshotConn, sdkSnapshotName(snapshot, digest))
 }
 
