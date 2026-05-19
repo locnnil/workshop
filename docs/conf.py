@@ -28,7 +28,7 @@ copyright = f"{datetime.date.today().year}"
 html_title = ""
 
 # Documentation website URL
-ogp_site_url = "https://canonical-workshop.readthedocs-hosted.com/"
+ogp_site_url = "https://documentation.ubuntu.com/canonical-workshop/"
 
 # Preview name of the documentation website
 ogp_site_name = project

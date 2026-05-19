@@ -920,8 +920,8 @@ These release notes cover new features and changes in Workshop vX.Y.Z.
 
 Workshop relies on Snap and LXD:
 
-- See the [Tutorial](https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/) for setup instructions.
-- Refer to the [Contribution Guide](https://canonical-workshop.readthedocs-hosted.com/stable/contributing/) for development prerequisites.
+- See the [Tutorial](https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/) for setup instructions.
+- Refer to the [Contribution Guide](https://documentation.ubuntu.com/canonical-workshop/latest/contributing/) for development prerequisites.
 
 ## What's new in Workshop vX.Y.Z
 
