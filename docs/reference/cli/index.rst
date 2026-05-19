@@ -10,9 +10,10 @@ Command-line interfaces
 These articles share the details of the various command-line tools.
 Of these,
 :program:`workshop` and :program:`sdk` are aimed at |ws_markup| users,
-:program:`sdkcraft` is the tool for SDK authors,
-and :program:`workshopctl` is invoked by SDK hooks
-inside a running workshop:
+while :program:`sdkcraft` and :program:`workshopctl` serve SDK authors:
+:program:`sdkcraft` for building and publishing SDKs on the host,
+and :program:`workshopctl` for SDK hooks to report state
+from inside a running workshop:
 
 .. @artefact workshop (CLI)
 .. @artefact sdk (CLI)

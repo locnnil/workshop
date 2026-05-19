@@ -13,12 +13,11 @@ workshopctl (CLI)
 .. @artefact workshopctl
 .. @artefact SDK hook
 
-|ws_markup| ships a small in-workshop counterpart to :command:`workshop`,
-the :command:`workshopctl` utility.
-It runs inside the workshop and is invoked by :ref:`SDK hooks <ref_sdk_hooks>`,
-not by end users directly,
-to report SDK state back to the |ws_markup| daemon
-over a restricted socket.
+:command:`workshopctl` is a small in-workshop utility that
+:ref:`SDK hooks <exp_sdk_hooks>` invoke to report SDK state
+back to the |ws_markup| daemon over a restricted socket.
+It runs inside a running workshop, not on the host,
+and is not intended for end users to call directly.
 
 There is one category of commands:
 
