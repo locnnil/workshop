@@ -175,8 +175,9 @@ Restore
 ~~~~~~~
 
 Finally, :command:`workshop restore` runs the same machinery as refresh,
-but uses the workshop's current definition
-as both the source and the target.
+but uses the workshop's state from the last successful launch or refresh
+as both the source and the target,
+ignoring any edits made to the workshop definition since then.
 The workshop must be in the *Ready* state.
 No SDK changes are applied;
 the container filesystem is rolled back
