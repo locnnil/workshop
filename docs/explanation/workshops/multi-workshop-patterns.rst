@@ -95,7 +95,7 @@ need different runtimes but the same source tree.
 Multiple projects, one workshop each
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here, you work on multiple related directories within a project.
+Here, you work on multiple related project directories.
 Each project directory has its own
 :file:`workshop.yaml`
 (or its own :file:`.workshop/` subdirectory)
