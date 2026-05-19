@@ -34,8 +34,9 @@ Before getting started, ensure you have:
   at :file:`workshop.yaml` or :file:`.workshop/<NAME>.yaml`
 
 - A `personal access token
-  <https://github.com/settings/tokens?type=beta>`_
-  with :samp:`Contents: read` permission on :samp:`canonical/workshop`
+  <https://github.com/settings/tokens?type=beta>`__
+  with :samp:`Contents: read` and :samp:`Metadata: read` permissions
+  on :samp:`canonical/workshop`
 
 
 Configure the workshop token
@@ -89,10 +90,10 @@ the action launches it automatically.
 For repositories with several workshops under :file:`.workshop/`,
 set the :samp:`workshop` input to the one you need.
 
-Pin the action to a major version (:samp:`@v0`)
-or a specific commit SHA;
-avoid :samp:`@main`,
-which can change unexpectedly.
+For production use, pin the action to a specific commit SHA.
+The :samp:`@v0` shorthand shown above tracks the latest :samp:`v0.*`
+release and can be moved between versions;
+:samp:`@main` is even less stable.
 
 
 Test across multiple workshops
@@ -103,7 +104,7 @@ parameterize the :samp:`workshop` input with a matrix:
 
 .. code-block:: yaml
    :caption: .github/workflows/matrix.yaml
-   :emphasize-lines: 6,15
+   :emphasize-lines: 6,13
 
    jobs:
      test:
@@ -142,8 +143,8 @@ with :command:`workshop connections`:
 
    $ workshop connections --all
 
-     Interface  Plug                  Slot              Notes
-     mount      dev/python:pip-cache  dev/system:mount  -
+     INTERFACE  PLUG              SLOT          NOTES
+     mount      python:pip-cache  system:mount  -
 
 
 Pass the matching :samp:`<SDK>:<PLUG>` lines to the :samp:`cache` input,
@@ -212,7 +213,7 @@ When integrating the action into your workflows:
   scoped to :samp:`canonical/workshop`
   with only :samp:`Contents: read` and :samp:`Metadata: read` permissions.
 
-- Pin the action to a major version (:samp:`@v0`) or a commit SHA
+- Pin the action to a commit SHA
   so a compromised tag cannot push unreviewed code into your workflows.
 
 - Rotate :samp:`WORKSHOP_TOKEN` immediately
