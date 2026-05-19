@@ -325,6 +325,17 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
+	fs, err := s.instanceFs(conn, req.Name)
+	if err != nil {
+		return err
+	}
+	defer fs.Close()
+
+	// Workaround https://github.com/canonical/lxd/issues/17983.
+	if err := fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service"); err != nil {
+		return err
+	}
+
 	// Ubuntu 20.04 was released before cloud-init added support for LXD. The
 	// current images contain a more recent version of cloud-init, but the
 	// image metadata.yaml contains templated seed data files. See
@@ -339,12 +350,6 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	// snapshot. There's no way to remove the seed files before starting the
 	// instance for the first time, but we can force cloud-init to use the LXD
 	// data source by adding a config file.
-	fs, err := s.instanceFs(conn, req.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
 	forceLXD := []byte("datasource_list: [LXD]\n")
 	return fs.WriteFile("/etc/cloud/cloud.cfg.d/90_workshop.cfg", forceLXD, 0644)
 }
