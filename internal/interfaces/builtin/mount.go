@@ -155,7 +155,7 @@ func parseBool(attrs map[string]any, key string, fallback bool) (bool, error) {
 	case string:
 		parsed, err := strconv.ParseBool(value)
 		if err != nil {
-			return false, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted values are "true" or "false". String representations (e.g., %q) are also permitted`, value, key, "true")
+			return false, fmt.Errorf(`unknown value %q in key %q for mount interface plug. Accepted values are the booleans true or false, or the strings "true" or "false"`, value, key)
 		}
 		attrs[key] = parsed
 		return parsed, nil

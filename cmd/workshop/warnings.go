@@ -314,8 +314,9 @@ func maybePresentWarnings(count int, timestamp time.Time) {
 	}
 
 	fmt.Fprintf(Stderr,
-		i18n.NG(`WARNING: There is %d new warning. See "workshop warnings".`+"\n",
-			`WARNING: There are %d new warnings. See "workshop warnings".`+"\n",
-			count),
+		i18n.NG(
+			`WARNING: There is %d new warning. See "workshop warnings".`,
+			`WARNING: There are %d new warnings. See "workshop warnings".`,
+			count)+"\n",
 		count)
 }
