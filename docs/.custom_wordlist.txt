@@ -41,6 +41,7 @@ Dockerfiles
 doCreateWorkshop
 EdTech
 elif
+enum
 env
 envvar
 Evals
