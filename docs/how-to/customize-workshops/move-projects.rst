@@ -41,8 +41,8 @@ Things change *after* you run :command:`workshop launch`:
    $ workshop launch --project /home/user/old/
 
 
-Moving a project
-----------------
+Move a project
+--------------
 
 This is the simplest scenario.
 Start in the same project directory where you launched the workshop:
@@ -79,8 +79,8 @@ so it's up to you to update any paths external to |ws_markup|
 that point to the project's previous location.
 
 
-Copying a project
------------------
+Copy a project
+--------------
 
 Now let's copy the project directory.
 Again, start with the workshop's location:
@@ -126,8 +126,8 @@ Again, it's up to you to update any paths external to |ws_markup|
 that should point to your new project.
 
 
-Removing a project
-------------------
+Remove a project
+----------------
 
 |ws_markup| doesn't handle file deletion automatically;
 make sure you remove all workshops
