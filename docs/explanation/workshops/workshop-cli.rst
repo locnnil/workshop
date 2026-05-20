@@ -31,42 +31,56 @@ There are several categories of commands that vary by their purpose:
      - What they do
 
    * - Create, update, delete
-     - :command:`connect`,
-       :command:`disconnect`,
-       :command:`launch`,
+     - :command:`launch`,
        :command:`refresh`,
-       :command:`remount`,
        :command:`remove`,
-       :command:`sketch-sdk`
-     - Control a workshop's existence;
-       not to be confused with starting or stopping a workshop.
-
-   * - Start, stop
-     - :command:`start`,
+       :command:`restore`,
+       :command:`start`,
        :command:`stop`
-     - Begin and end the run-time lifecycle of an existing workshop.
+     - Control a workshop's existence and runtime state,
+       from first launch to refresh, restore, and removal.
 
-   * - Explore, troubleshoot
+   * - Customize
+     - :command:`sketch-sdk`,
+       :command:`sketches`
+     - Augment a workshop with project-specific customizations
+       through sketch SDKs.
+
+   * - Enumerate
+     - :command:`info`,
+       :command:`list`
+     - List the workshops in a project and inspect their current details.
+
+   * - Track changes
      - :command:`changes`,
+       :command:`tasks`
+     - Review recent changes to the workshops in a project
+       and the tasks that make up each change.
+
+   * - Manage connections
+     - :command:`connect`,
        :command:`connections`,
-       :command:`info`,
-       :command:`list`,
-       :command:`okay`,
-       :command:`sketches`,
-       :command:`tasks`,
-       :command:`warnings`
-     - Enumerate workshops, list their details and recent activities.
+       :command:`disconnect`,
+       :command:`remount`
+     - Wire interface plugs and slots between SDKs,
+       list existing connections, and remount their sources.
 
    * - Run shell commands
      - :command:`exec`,
        :command:`shell`
-     - Run ad-hoc shell commands or open an interactive shell inside a workshop.
+     - Run an ad-hoc command in a workshop
+       or open an interactive shell inside it.
 
-   * - List and run named actions
+   * - Run named actions
      - :command:`actions`,
        :command:`run`
-     - List and invoke the named actions defined in a workshop's
-       :samp:`actions:` section.
+     - List and invoke the named actions
+       defined in a workshop's :samp:`actions:` section.
+
+   * - Manage warnings
+     - :command:`okay`,
+       :command:`warnings`
+     - List warnings raised by the daemon and acknowledge them.
 
 
 For an end-to-end example of putting these commands to use,
