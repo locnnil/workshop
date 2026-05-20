@@ -5,19 +5,23 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/canonical/workshop/internal/logger"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/workshop"
+	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
 type WorkshopManager struct {
-	backend workshop.Backend
-	state   *state.State
+	backend         workshop.Backend
+	state           *state.State
+	firewallChecker func(string) string
 }
 
 func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	manager := &WorkshopManager{
-		state: st,
+		state:           st,
+		firewallChecker: lxdbackend.CheckBridgeFirewall,
 	}
 
 	st.Lock()
@@ -43,6 +47,12 @@ func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 }
 
 func (m *WorkshopManager) StartUp() error {
+	if msg := m.firewallChecker(lxdbackend.NetworkBridgeName); msg != "" {
+		logger.Noticef("WARNING: %s", msg)
+		m.state.Lock()
+		m.state.Warnf("%s", msg)
+		m.state.Unlock()
+	}
 	return nil
 }
 

@@ -1,0 +1,64 @@
+summary: Check firewall warning when Docker blocks the bridge
+prepare: |
+  . "$TESTSLIB"/utils.sh
+
+  # Remove LXD so Docker is the first to enable ip_forward and sets FORWARD
+  # policy to DROP.
+  snap remove lxd --purge
+  sysctl -w net.ipv4.ip_forward=0
+
+  # Install Docker CE.
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+
+  ARCH=$(dpkg --print-architecture)
+  CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+  echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${CODENAME} stable" \
+    > /etc/apt/sources.list.d/docker.list
+
+  apt-get update
+  apt-get install -y docker-ce
+
+  # Bring LXD back and reinstall workshop with clean state.
+  setup_lxd
+  snap restart workshop
+restore: |
+  . "$TESTSLIB"/utils.sh
+
+  apt-get remove -y --purge docker-ce
+  rm -f /etc/apt/sources.list.d/docker.list /etc/apt/keyrings/docker.asc
+
+  # Flush leftover Docker nft rules, then restore LXD and workshop
+  # to clean state. LXD recreates its own rules on setup.
+  nft flush ruleset
+  snap remove lxd --purge
+  setup_lxd
+  rm -f /home/ubuntu/.cache/workshop/warnings.json
+  setup_workshop
+debug: |
+  nft list table ip filter
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check that Docker FORWARD DROP triggers a firewall warning"
+  workshop_exec list | MATCH "^WARNING: There is 1 new warning"
+  workshop_exec warnings |
+    tr -d '\n' |
+    sed -e 's,\s\+, ,g' |
+    MATCH 'firewall rules may be blocking network traffic on the workshopbr0 bridge.*Docker.*nft.*DOCKER-USER'
+
+  echo "Check that warning is consumed after reading"
+  workshop_exec list | NOMATCH "new warning"
+
+  echo "Check that applying the fix and restarting clears the warning"
+  nft insert rule ip filter DOCKER-USER iifname workshopbr0 accept
+  nft insert rule ip filter DOCKER-USER oifname workshopbr0 ct state related,established accept
+  snap restart workshop
+  workshop_exec list | NOMATCH "new warning"
+  workshop_exec okay
+  workshop_exec warnings | MATCH "^No further warnings.$"
+
+  echo "Clean up nft rules"
+  nft flush chain ip filter DOCKER-USER
