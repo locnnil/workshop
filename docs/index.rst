@@ -23,27 +23,28 @@
    Contribution <contributing>
 
 
-**A tool for defining and handling ephemeral development environments**.
+**Workshops are secure, fast, and composable development environments
+that come agent-ready**.
 
-**List your dependencies and components in YAML to define an environment**.
-The key pieces of a definition are SDKs,
-independent but connectable units of functionality
-created by software publishers and available on the SDK Store.
-|ws_markup| simplifies experiments with your environment layout.
+**Wrap complex, error-prone workspaces
+into reliable and reproducible definitions of languages, libraries, and tooling**.
+The key pieces of a definition are SDKs:
+independent, connectable units of functionality
+that publishers package and share on the SDK Store,
+and teams can define in their repositories.
 
-**It allows you to focus on adding value to your project**.
+**Workshops enable sandboxed experimentation,
+turn environment updates into manageable transactions,
+and ensure consistent, reproducible environments**.
 With |ws_markup|, you can launch a setup
-that previously took hours to configure in a few commands,
-and be sure that it stays operational.
-It assists in issue reproduction,
-enables hands-on code reviews,
-and turns environment updates into manageable transactions.
+that previously took hours to configure in a few commands
+and be sure it will work the same way every time,
+or tear it down and start from the last step without worrying about leftover state.
 
-**For those who build and maintain complex, error-prone workspaces**.
-AI/ML, robotics, IoT, EdTech, and similar domains
+**Agentic engineering, AI/ML, robotics, IoT, EdTech, and similar domains**
 typically use less-than-trivial project layouts
-that depend on multiple Linux distributions or images,
-a plethora of SDKs from many vendors,
+that rely on many Ubuntu versions or container images,
+a plethora of diverse tools and frameworks,
 and a wide range of libraries and languages.
 That's where |ws_markup| thrives.
 
@@ -169,14 +170,11 @@ and implemented with
 
 .. rubric:: Get involved
 
-- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
-- `Mattermost channel <https://chat.canonical.com/canonical/channels/workshop>`__
 - :ref:`Contribution and participation <contributing>`
 
 .. rubric:: Releases and roadmap
 
 - :ref:`Release notes <release_notes>`
-- `Product map <https://warthogs.atlassian.net/jira/software/c/projects/WSP/boards/1645>`__
 
 .. rubric:: Governance and policies
 
