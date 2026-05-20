@@ -27,6 +27,7 @@ and mount inside the running containers:
 
    concepts
    projects
+   multi-workshop-patterns
 
 
 Operations and tooling

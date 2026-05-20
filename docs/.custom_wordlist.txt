@@ -74,6 +74,7 @@ hardcoded
 hardlinking
 hostname
 hostnames
+hotfix
 hotplug
 html
 http
@@ -108,6 +109,7 @@ mkdir
 moby
 modularization
 modularize
+monorepo
 multibase
 Multibase
 Multipass
@@ -131,6 +133,7 @@ ros
 ROS
 rosdep
 runtime
+runtimes
 sandboxed
 schemas
 sdk
