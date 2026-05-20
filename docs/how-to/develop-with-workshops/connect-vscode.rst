@@ -7,7 +7,7 @@
 How to connect your local VS Code to a workshop
 ===============================================
 
-.. @tests redundant, should be covered by SDK itself
+.. @tests in tests/docs-how-to/connect-vscode/task.yaml
 
 .. @artefact workshop (container)
 

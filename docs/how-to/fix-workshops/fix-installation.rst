@@ -7,7 +7,7 @@
 How to troubleshoot |ws_markup|
 ===============================
 
-.. @tests fall outside of current test coverage capabilities
+.. @tests not applicable: snap installation flow not exercised in CI
 
 If you notice issues with workshops, projects, or |ws_markup| in general,
 it may be time to verify or update the installation or prerequisites.

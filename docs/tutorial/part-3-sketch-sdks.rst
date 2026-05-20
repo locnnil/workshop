@@ -7,6 +7,8 @@
 Customize with sketch SDKs
 ==========================
 
+.. @tests in tests/docs-tutorial/part-3/task.yaml
+
 This is the third section of the :ref:`four-part series <tut_index>`;
 it teaches you to create experimental SDKs quickly
 using the :command:`workshop sketch-sdk` command

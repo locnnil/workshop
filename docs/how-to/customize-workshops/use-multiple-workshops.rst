@@ -9,6 +9,8 @@
 How to use multiple workshops in a project
 ==========================================
 
+.. @tests in tests/docs-how-to/use-multiple-workshops/task.yaml
+
 .. @artefact project workshops
 .. @artefact workshop definition
 

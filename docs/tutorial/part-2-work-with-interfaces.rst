@@ -9,6 +9,8 @@
 Work with interfaces
 ====================
 
+.. @tests in tests/docs-tutorial/part-2/task.yaml
+
 This is the second section of the :ref:`four-part series <tut_index>`;
 it explains how to work with interfaces.
 It relies on the knowledge gained in the :ref:`tut_get_started` section,

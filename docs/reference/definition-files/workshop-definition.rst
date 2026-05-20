@@ -511,8 +511,11 @@ is bound to the :samp:`mod-cache` plug of the :samp:`go` SDK:
            bind: go:mod-cache
 
 
-This YAML file, besides using the :samp:`tensorflow`, :samp:`imagenet` and :samp:`cuda` SDKs,
-defines an additional slot under the :samp:`imagenet` SDK, a plug under :samp:`tensorflow`
+This YAML file,
+besides using the fictional
+:samp:`tensorflow`, :samp:`imagenet` and :samp:`cuda` SDKs,
+defines an additional slot under the :samp:`imagenet` SDK,
+a plug under :samp:`tensorflow`
 and two connections:
 
 - One that connects the :samp:`tensorflow:images` plug

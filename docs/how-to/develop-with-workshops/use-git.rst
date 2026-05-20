@@ -7,7 +7,7 @@
 How to use workshops with Git
 =============================
 
-.. @tests in tests/documentation/how-to-git/task.yaml
+.. @tests in tests/docs-how-to/git/task.yaml
 
 .. @artefact workshop (container)
 
