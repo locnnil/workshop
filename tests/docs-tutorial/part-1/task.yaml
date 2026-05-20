@@ -11,6 +11,13 @@ execute: |
 
   ## Define, add SDKs
 
+  sdk_exec find ollama | MATCH '^ollama[[:space:]]'
+
+  sdk_exec info ollama > sdk-info.log
+  MATCH '^name:[[:space:]]+ollama$' < sdk-info.log
+  MATCH '[[:space:]]+cpu/stable[[:space:]]' < sdk-info.log
+  MATCH '[[:space:]]+vulkan/stable[[:space:]]' < sdk-info.log
+
   mkdir ollama-python-project/
 
   chown -R ubuntu:ubuntu ollama-python-project/
@@ -26,6 +33,7 @@ execute: |
 
   workshop_exec launch
   workshop_exec info
+  sdk_exec list | MATCH '^ollama[[:space:]]'
   echo ".workshop.lock" >> .gitignore
 
   workshop_exec stop
@@ -36,6 +44,7 @@ execute: |
 
   sed -e "s/22.04/24.04/g" -e "s/cpu/vulkan/g" -i workshop.yaml
   workshop_exec refresh
+  sdk_exec list | MATCH '^ollama[[:space:]]'
 
 
   ## Execute commands
