@@ -157,11 +157,14 @@ Override this default with :envvar:`UV_PROJECT_ENVIRONMENT`
 when you want a single, explicit venv location
 regardless of where in the project tree :program:`uv` is invoked,
 or when several workshops share the same project directory
-and should reuse one venv:
+and should reuse one venv.
+
+For example, to place the venv at :file:`/project/pinned-venv`
+instead of the default :file:`/project/.venv`:
 
 .. code-block:: console
 
-   $ echo 'export UV_PROJECT_ENVIRONMENT=/project/.venv' >> ~/.profile
+   $ echo 'export UV_PROJECT_ENVIRONMENT=/project/pinned-venv' >> ~/.profile
    $ exec bash -l
    $ cd /project
    $ uv sync
