@@ -59,13 +59,13 @@ html_context = {
 }
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
-slug = ''
+slug = 'workshop/docs'
 
 #######################
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
 #######################
 
-html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
+html_baseurl = f"https://ubuntu.com/workshop/"
 sitemap_url_scheme = "{link}"
 sitemap_show_lastmod = True
 sitemap_excludes = [
@@ -73,6 +73,7 @@ sitemap_excludes = [
     "genindex/",
     "search/",
 ]
+sitemap_filename = "doc-sitemap.xml"
 
 ################################
 # Template and asset locations #
@@ -90,6 +91,7 @@ html_css_files = [
 html_js_files = [
     "flat-toctree.js",
     "js/bundle.js",
+    "js/overwrite_links.js",
 ]
 
 #############
