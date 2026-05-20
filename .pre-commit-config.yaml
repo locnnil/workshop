@@ -23,3 +23,10 @@ repos:
         language: system
         pass_filenames: false
         files: ^docs/.*\.(rst|md|txt|json)$
+
+      - id: quote-style
+        name: Check quotation style in fmt calls
+        entry: .github/scripts/check-quote-style.sh
+        language: system
+        types: [go]
+        exclude: '(_test\.go$|^internal/jsonutil/safejson/)'

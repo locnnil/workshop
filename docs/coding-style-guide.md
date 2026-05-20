@@ -34,7 +34,7 @@ The guide is evidence-based, derived from actual PR discussions between maintain
 return fmt.Errorf("cannot connect plugs and slots across different workshops")
 
 // From cmd/workshop/list.go
-return fmt.Errorf("cannot list: \"--project\" incompatible with \"--global\"")
+return fmt.Errorf(`cannot list: "--project" incompatible with "--global"`)
 
 // From internal/daemon/api_workshops.go
 return statusBadRequest("project-id required")
@@ -46,6 +46,45 @@ return statusBadRequest("project-id required")
 return fmt.Errorf("Cannot connect plugs.") // Starts with capital, has punctuation
 return fmt.Errorf("Error") // Not descriptive enough
 ```
+
+
+---
+
+**Quoting values in messages**
+
+**Pattern**: Interpolate dynamic values with `%q`. Wrap literal references (a fixed flag like `--global`, a command like `workshop list`, an enum keyword like `Ready`, an env var name like `SSH_AUTH_SOCK`, a JSON key, an attribute name) in double quotes inside a backtick raw string. Do not use single quotes for any kind of quoting in user-facing prose. Do not use `\"` escapes in double-quoted Go literals when the template contains literal double quotes; switch the delimiter to backticks instead. The same rules apply to Cobra `Short`/`Long`/`Example` strings and flag descriptions.
+
+**Good**:
+
+```go
+// Dynamic value: %q quotes the interpolated identifier.
+return fmt.Errorf("workshop name %q too long", file.Name)
+
+// Literal flag names inside a template: backtick raw string with literal double quotes.
+return fmt.Errorf(`cannot list: "--project" incompatible with "--global"`)
+
+// Flag description with literal command references.
+cmd.PersistentFlags().BoolVar(&c.WaitOnError, "wait-on-error", false,
+    `Pause the operation on error; to resume, use "--continue" or "--abort".`)
+
+// Wrapping an upstream error while quoting a literal config key.
+return fmt.Errorf(`internal error: cannot read "forget" flag: %w`, err)
+```
+
+**Avoid**:
+
+```go
+// Escaped double quotes inside a double-quoted template.
+return fmt.Errorf("cannot list: \"--project\" incompatible with \"--global\"")
+
+// Single quotes around a literal keyword.
+return fmt.Errorf("%s must be a map or one of the shortcuts 'true' or 'false'", context)
+
+// Dynamic identifier rendered with %s instead of %q.
+return fmt.Errorf("workshop %s not found", name)
+```
+
+**Rationale**: `%q` is backed by `strconv.Quote`, the same primitive as `strutil.Quoted`, so dynamic values render consistently across error messages, log output, and list helpers. Reserving backticks as Go raw-string delimiters and double quotes for both literals and `%q` output keeps every quoted artifact in the final message visually uniform. The `docs/contributing.rst` Error messages guidance (path and identifier double-quoting) is the precedent.
 
 
 ---
