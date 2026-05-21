@@ -1,9 +1,13 @@
 name: Automatic tests
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
   schedule:
     - cron: "0 0 */2 * *"
   workflow_dispatch:
