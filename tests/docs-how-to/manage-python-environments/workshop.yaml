@@ -1,0 +1,8 @@
+name: pyenv
+base: ubuntu@24.04
+sdks:
+  - name: uv
+  - name: jupyter
+connections:
+  - plug: jupyter:venv
+    slot: uv:venv

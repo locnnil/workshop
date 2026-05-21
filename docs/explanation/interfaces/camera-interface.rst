@@ -85,7 +85,7 @@ To check if the interface is connected:
 
    $ workshop connections --all
 
-     Interface  Plug              Slot     Notes
+     INTERFACE  PLUG              SLOT              NOTES
      ...
      camera     ws/camera:camera  ws/system:camera  manual
 
