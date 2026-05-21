@@ -8,8 +8,8 @@
 Release notes and upgrade instructions
 ======================================
 
-This section provides an overview of new features, bug fixes,
-and backwards-incompatible changes in each version.
+Each version brings new features, bug fixes,
+and occasionally backwards-incompatible changes.
 
 Where necessary,
 these release notes also include specific upgrade instructions for each version.
