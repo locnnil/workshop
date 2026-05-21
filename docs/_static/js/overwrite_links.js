@@ -1,6 +1,6 @@
  // Replace oldDomain with newDomain
  const oldDomain = 'documentation.ubuntu.com/canonical-workshop';
- const newDomain = 'ubuntu.com/workshop';
+ const newDomain = 'ubuntu.com/workshop/docs';
 
  // Use a MutationObserver to wait for the RTD flyout element to appear in the DOM
  const observer = new MutationObserver(function(mutations, obs) {

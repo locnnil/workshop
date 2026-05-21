@@ -65,7 +65,7 @@ slug = 'workshop/docs'
 # Sitemap configuration: https://sphinx-sitemap.readthedocs.io/
 #######################
 
-html_baseurl = f"https://ubuntu.com/workshop/"
+html_baseurl = f"https://ubuntu.com/workshop/docs/"
 sitemap_url_scheme = "{link}"
 sitemap_show_lastmod = True
 sitemap_excludes = [
