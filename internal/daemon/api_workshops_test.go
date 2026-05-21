@@ -2359,11 +2359,12 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", "system-1"})
 }
 
-func updateSdkStoreRev(name string, rev int, meta string) func() {
+func updateSdkStoreRev(name string, rev int, meta, digest string) func() {
 	oldrev := apiSuiteSdks[name]
 
 	newrev := oldrev
 	newrev.Revision = sdk.R(rev)
+	newrev.Sha3_384 = digest
 	newrev.SdkYAML = meta
 	apiSuiteSdks[name] = newrev
 
@@ -2393,7 +2394,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
-	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2)()
+	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2, "fa5db9e2bc81f9d102707caef2a53b3c99b2b84dbad64cfe5a4d1a95971614d7294ba7b9c6f0477408c541a07ef0b567")()
 
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh"}`),
@@ -2511,7 +2512,7 @@ func (s *apiSuite) TestRefreshSaveAndRestoreState(c *check.C) {
 	s.b.ExecCalls = nil
 
 	// Refresh saves and restores state for updated SDKs.
-	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2)()
+	defer updateSdkStoreRev("test-sdk", 2, testsdk_r2, "fa5db9e2bc81f9d102707caef2a53b3c99b2b84dbad64cfe5a4d1a95971614d7294ba7b9c6f0477408c541a07ef0b567")()
 
 	requests = []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"transactional","refresh-option":"update"}}`),

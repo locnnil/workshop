@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
@@ -118,6 +119,25 @@ func RemoveTestWorkshop(c *check.C, ctx context.Context, bd workshop.Backend) {
 	_ = bd.StopWorkshop(ctx, "test", true)
 	err := bd.RemoveWorkshop(ctx, "test")
 	c.Assert(err, check.IsNil)
+}
+
+func ExecOutput(ctx context.Context, bd workshop.Backend, name string, args workshop.ExecArgs) (string, error) {
+	var stdout, stderr strings.Builder
+	exec := workshop.Execution{
+		ExecArgs: args,
+		ExecControls: workshop.ExecControls{
+			Stdout: &stdout,
+			Stderr: &stderr,
+		},
+	}
+	exectx, err := bd.Exec(ctx, name, &exec)
+	if err != nil {
+		return "", err
+	}
+	if err := exectx.WaitExecution(ctx); err != nil {
+		return "", fmt.Errorf("%w\n%s", err, stderr.String())
+	}
+	return stdout.String(), err
 }
 
 func MockSdkTarball(c *check.C, sdkname, sdkYaml string) string {

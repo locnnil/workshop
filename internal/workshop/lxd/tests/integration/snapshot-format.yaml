@@ -199,9 +199,6 @@ snapshot:
   config:
     security.protection.start: 'true'
     user.workshop.base: ubuntu@24.04
-    user.workshop.name: test
-    user.workshop.project-id: '42424242'
-    user.workshop.sdk: local-sdk
     user.workshop.snapshot-type: sdk
   description: ''
   devices:

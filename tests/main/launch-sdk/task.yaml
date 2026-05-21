@@ -6,12 +6,12 @@ execute: |
   workshop_exec launch --verbose
   workshop_exec list | MATCH "ws-basic[[:space:]]*Ready[[:space:]]*-"
 
-  # Check setup-base is run using bash -x
-  workshop_exec tasks | MATCH "\\+ echo 'setup-base ran successfully\!'\$"
+  # Check setup-project is run using bash -x
+  workshop_exec tasks | MATCH "\\+ echo 'setup-project ran successfully\!'\$"
 
   # Ensure there is one installed SDK that was provided in the workshop definition
   workshop_exec info | yq ".sdks | length == 1"
-  workshop_exec info | yq '.sdks["test-sdk-basic"].tracking' | MATCH "latest/stable"
-  workshop_exec info | yq '.sdks["test-sdk-basic"].installed' | MATCH '^1\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+\([[:digit:]]+\)$'
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].tracking' | MATCH "latest/stable"
+  workshop_exec info | yq '.sdks["test-sdk-basic-2"].installed' | MATCH '^1\.0[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+\([[:digit:]]+\)$'
 
   workshop_exec remove

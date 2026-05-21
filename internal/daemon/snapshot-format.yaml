@@ -17,7 +17,7 @@ system:
     start-workshop: 1
     install-sdk: 1
     run-hook: 1
-  fs-calls: 4
+  fs-calls: 5
   exec-calls: []
 test-sdk-3:
   files:
@@ -34,7 +34,7 @@ test-sdk-3:
     install-sdk: 2
     run-hook: 2
     snapshot-sdk: 1
-  fs-calls: 7
+  fs-calls: 9
   exec-calls: []
 test-sdk-2:
   files:
@@ -52,7 +52,7 @@ test-sdk-2:
     install-sdk: 3
     run-hook: 3
     snapshot-sdk: 2
-  fs-calls: 10
+  fs-calls: 13
   exec-calls:
     - ["sudo", "--user=#0", "--group=#0", "--preserve-env=SDK", "--preserve-env=WORKSHOP_COOKIE", "--", "bash", "-l", "-c", 'exec -- "$0" "$@"', "bash", "-o", "errexit", "-o", "pipefail", "/var/lib/workshop/sdk/test-sdk-2/sdk/hooks/setup-base"]
 test-sdk:
@@ -72,7 +72,7 @@ test-sdk:
     install-sdk: 4
     run-hook: 4
     snapshot-sdk: 3
-  fs-calls: 13
+  fs-calls: 17
   exec-calls:
     - ["sudo", "--user=#0", "--group=#0", "--preserve-env=SDK", "--preserve-env=WORKSHOP_COOKIE", "--", "bash", "-l", "-c", 'exec -- "$0" "$@"', "bash", "-o", "errexit", "-o", "pipefail", "/var/lib/workshop/sdk/test-sdk-2/sdk/hooks/setup-base"]
     - ["sudo", "--user=#0", "--group=#0", "--preserve-env=SDK", "--preserve-env=WORKSHOP_COOKIE", "--", "bash", "-l", "-c", 'exec -- "$0" "$@"', "bash", "-o", "errexit", "-o", "pipefail", "/var/lib/workshop/sdk/test-sdk/sdk/hooks/setup-base"]

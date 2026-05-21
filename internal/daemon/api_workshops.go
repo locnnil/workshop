@@ -422,8 +422,8 @@ func launch(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *wo
 		return nil, nil, err
 	}
 
-	taskset := mgr.LaunchMany(project, manifests)
-	return manifests, taskset, nil
+	taskset, err := mgr.LaunchMany(ctx, project, manifests)
+	return manifests, taskset, err
 }
 
 func refreshOption(reqData *workshopReq) (conflict.RefreshOption, error) {
@@ -450,7 +450,7 @@ func refresh(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *w
 		return nil, nil, err
 	}
 
-	taskset, err := mgr.RefreshMany(project, current, latest, refreshOption)
+	taskset, err := mgr.RefreshMany(ctx, project, current, latest, refreshOption)
 	if err != nil {
 		return nil, nil, err
 	}

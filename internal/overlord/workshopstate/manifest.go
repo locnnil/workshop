@@ -666,3 +666,20 @@ func sdkInstallOrder(file *workshop.File) []string {
 	}
 	return append(installOrder, sdk.Sketch)
 }
+
+func ordered(order []string, setups ...[]sdk.Setup) []sdk.Setup {
+	ordered := make([]sdk.Setup, 0, len(order))
+
+	for _, sk := range order {
+		for _, setup := range setups {
+			contains := func(sp sdk.Setup) bool { return sk == sp.Name }
+
+			idx := slices.IndexFunc(setup, contains)
+			if idx != -1 {
+				ordered = append(ordered, setup[idx])
+				break
+			}
+		}
+	}
+	return ordered
+}

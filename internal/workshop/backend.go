@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/user"
+	"slices"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -32,12 +33,13 @@ const (
 )
 
 var (
-	ErrWorkshopNotLaunched = errors.New("workshop not launched")
-	ErrVolumeNotFound      = errors.New("volume not found")
-	ErrVolumeAlreadyExists = errors.New("volume already exists")
-	ErrVolumeInUse         = errors.New("volume is in use")
-	ErrSdkProfileNotFound  = errors.New("sdk profile not found")
-	ErrIncompatibleBackend = errors.New("incompatible backend")
+	ErrWorkshopNotLaunched   = errors.New("workshop not launched")
+	ErrVolumeNotFound        = errors.New("volume not found")
+	ErrVolumeAlreadyExists   = errors.New("volume already exists")
+	ErrVolumeInUse           = errors.New("volume is in use")
+	ErrSnapshotAlreadyExists = errors.New("snapshot already exists")
+	ErrSdkProfileNotFound    = errors.New("sdk profile not found")
+	ErrIncompatibleBackend   = errors.New("incompatible backend")
 
 	User = user.User{
 		Uid:      "1000",
@@ -99,6 +101,10 @@ type BaseImageManager interface {
 type Snapshot struct {
 	Image BaseImage
 	Sdks  []sdk.ContentID
+}
+
+func (s Snapshot) Equal(other Snapshot) bool {
+	return s.Image == other.Image && slices.Equal(s.Sdks, other.Sdks)
 }
 
 // BaseOnly identifies a "snapshot" which consists of a base image only.
@@ -192,6 +198,9 @@ type Backend interface {
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
 
+	// Check if the given snapshot already exists.
+	HasSnapshot(ctx context.Context, snapshot Snapshot) (bool, error)
+
 	// Launch a clean workshop instance. If the workshop exists, wipe out
 	// its rootfs and rebuild it from the given snapshot (which may be just
 	// a base image). Configuration and devices of the rebuilt workshop
@@ -201,6 +210,9 @@ type Backend interface {
 	// Create a snapshot of the workshop's rootfs. The snapshot can be used
 	// by passing an identical Snapshot to LaunchOrRebuildWorkshop.
 	TakeSnapshot(ctx context.Context, name string, snapshot Snapshot) error
+
+	// Remove the given snapshot.
+	RemoveSnapshot(ctx context.Context, snapshot Snapshot) error
 
 	// Delete workshop. Stop the workshop forcefully if not in Stopped before deleting
 	RemoveWorkshop(ctx context.Context, name string) error

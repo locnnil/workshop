@@ -1,4 +1,4 @@
 name: ws-snap-remove-2a
 base: ubuntu@22.04
 sdks:
-  - name: test-sdk-basic
+  - name: test-sdk-basic-2

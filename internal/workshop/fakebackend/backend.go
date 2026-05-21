@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"net/http"
 	"os"
@@ -38,6 +39,11 @@ type FakeVolume struct {
 	What   string
 	Mounts []WorkshopVolumeMount
 	Size   uint64
+}
+
+type FakeSnapshot struct {
+	workshop.Snapshot
+	Id int
 }
 
 type WorkshopVolumeMount struct {
@@ -109,8 +115,10 @@ type FakeWorkshopBackend struct {
 	LaunchOrRebuildCalls []LaunchOrRebuildCall
 	SnapshotCalls        []SnapshotCall
 	SnapshotCallback     func(ctx context.Context, name string, snapshot workshop.Snapshot) error
+	Snapshots            []FakeSnapshot
 
-	BaseDir string
+	BaseDir     string
+	SnapshotDir string
 }
 
 var _ workshop.Backend = (*FakeWorkshopBackend)(nil)
@@ -125,6 +133,10 @@ func New(baseDir string) (*FakeWorkshopBackend, error) {
 
 	be.ExecCallback = DoExecDefault
 	be.BaseDir = baseDir
+	be.SnapshotDir = filepath.Join(baseDir, "snapshots")
+	if err := os.MkdirAll(be.SnapshotDir, 0755); err != nil {
+		return nil, err
+	}
 
 	return &be, nil
 }
@@ -167,12 +179,22 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 }
 
 func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
-	user, projectId, err := f.userProject(ctx)
+	_, projectId, err := f.userProject(ctx)
 	if err != nil {
 		return err
 	}
 
-	prj := f.project(user, projectId)
+	snapId := -1
+	if !snapshot.IsBase() {
+		f.snapshotLock.Lock()
+		idx := f.snapshotIdx(snapshot)
+		f.snapshotLock.Unlock()
+		if idx < 0 {
+			sk := snapshot.Sdks[len(snapshot.Sdks)-1].Name
+			return fmt.Errorf("internal error: %q snapshot not found", sk)
+		}
+		snapId = f.Snapshots[idx].Id
+	}
 
 	f.workshopLock.Lock()
 	if f.Workshops[projectId] == nil {
@@ -180,36 +202,26 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	}
 	ws, ok := f.Workshops[projectId][file.Name]
 	if !ok {
-		ws = &FakeWorkshop{Devices: map[string]map[string]string{}}
+		ws = &FakeWorkshop{}
 		f.Workshops[projectId][file.Name] = ws
 	}
 	f.workshopLock.Unlock()
 
-	if ok {
-		if err := f.rebuildWorkshop(ctx, file, snapshot, ws); err != nil {
-			return err
-		}
-	} else if !snapshot.IsBase() {
-		return fmt.Errorf("%q SDK is intact but workshop not launched", snapshot.Sdks[0].Name)
-	} else {
-		ws.Workshop = &workshop.Workshop{Backend: f,
-			Name:     file.Name,
-			Running:  false,
-			Project:  *prj,
-			Image:    snapshot.Image,
-			File:     file,
-			Sdks:     map[string]workshop.SdkInstallation{},
-			Profiles: map[string]workshop.SdkProfile{},
-		}
+	if err := f.resetWorkshop(ctx, file, snapshot, ws); err != nil {
+		return err
 	}
 
-	if snapshot.IsBase() {
-		wfspath, err := os.MkdirTemp(f.BaseDir, "*")
-		if err != nil {
+	wfspath, err := os.MkdirTemp(f.BaseDir, "*")
+	if err != nil {
+		return err
+	}
+	if snapId >= 0 {
+		snapPath := filepath.Join(f.SnapshotDir, fmt.Sprint(snapId))
+		if err := copyRegularFilesAndDirs(snapPath, wfspath); err != nil {
 			return err
 		}
-		ws.WorkshopFilesystem = fsutil.NewBasePathFs(wfspath)
 	}
+	ws.WorkshopFilesystem = fsutil.NewBasePathFs(wfspath)
 
 	f.snapshotLock.Lock()
 	defer f.snapshotLock.Unlock()
@@ -219,7 +231,27 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 	return nil
 }
 
-func (f *FakeWorkshopBackend) rebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot, ws *FakeWorkshop) error {
+func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot, ws *FakeWorkshop) error {
+	if ws.Workshop == nil {
+		user, projectId, err := f.userProject(ctx)
+		if err != nil {
+			return err
+		}
+		prj := f.project(user, projectId)
+
+		ws.Workshop = &workshop.Workshop{Backend: f,
+			Name:     file.Name,
+			Running:  false,
+			Project:  *prj,
+			Image:    snapshot.Image,
+			File:     file,
+			Sdks:     map[string]workshop.SdkInstallation{},
+			Profiles: map[string]workshop.SdkProfile{},
+		}
+		ws.Devices = map[string]map[string]string{}
+		return nil
+	}
+
 	// Remove project mount
 	if _, ok := ws.Devices[workshop.ConfigProjectPathDevice]; ok {
 		if err := f.RemoveWorkshopMount(ctx, ws.Name, workshop.ConfigProjectPathDevice); err != nil {
@@ -239,11 +271,6 @@ func (f *FakeWorkshopBackend) rebuildWorkshop(ctx context.Context, file *worksho
 	if len(devices) > 0 {
 		names := strutil.Quoted(devices)
 		return fmt.Errorf("devices must be detached before rebuilding workshop: %s", names)
-	}
-
-	// Sanity check.
-	if !snapshot.IsBase() && ws.Image != snapshot.Image {
-		return fmt.Errorf("%q SDK is intact but base image has changed", snapshot.Sdks[0].Name)
 	}
 
 	ws.File = file
@@ -783,13 +810,90 @@ func (s *FakeWorkshopBackend) detachVolume(ctx context.Context, name, what, wher
 	return err
 }
 
-func (s *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
-	s.snapshotLock.Lock()
-	defer s.snapshotLock.Unlock()
+func (f *FakeWorkshopBackend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
+	f.snapshotLock.Lock()
+	defer f.snapshotLock.Unlock()
 
-	s.SnapshotCalls = append(s.SnapshotCalls, SnapshotCall{Workshop: name, Snapshot: snapshot})
-	if s.SnapshotCallback != nil {
-		return s.SnapshotCallback(ctx, name, snapshot)
+	return f.snapshotIdx(snapshot) >= 0, nil
+}
+
+func (f *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
+	wfs, err := f.WorkshopFs(ctx, name)
+	if err != nil {
+		return err
 	}
+	wfspath, err := wfs.FsBackend.(*fsutil.BasePathFs).RealPath(".")
+	wfs.Close()
+	if err != nil {
+		return err
+	}
+
+	f.snapshotLock.Lock()
+	defer f.snapshotLock.Unlock()
+
+	f.SnapshotCalls = append(f.SnapshotCalls, SnapshotCall{Workshop: name, Snapshot: snapshot})
+	if f.SnapshotCallback != nil {
+		if err := f.SnapshotCallback(ctx, name, snapshot); err != nil {
+			return err
+		}
+	}
+
+	if f.snapshotIdx(snapshot) >= 0 {
+		return workshop.ErrSnapshotAlreadyExists
+	}
+
+	snapId := 0
+	if len(f.Snapshots) > 0 {
+		snapId = f.Snapshots[len(f.Snapshots)-1].Id + 1
+	}
+	f.Snapshots = append(f.Snapshots, FakeSnapshot{Snapshot: snapshot, Id: snapId})
+
+	snapPath := filepath.Join(f.SnapshotDir, fmt.Sprint(snapId))
+	return copyRegularFilesAndDirs(wfspath, snapPath)
+}
+
+func (f *FakeWorkshopBackend) RemoveSnapshot(ctx context.Context, snapshot workshop.Snapshot) error {
+	f.snapshotLock.Lock()
+	defer f.snapshotLock.Unlock()
+
+	if idx := f.snapshotIdx(snapshot); idx >= 0 {
+		snapId := f.Snapshots[idx].Id
+		f.Snapshots = slices.Delete(f.Snapshots, idx, idx+1)
+		return os.RemoveAll(filepath.Join(f.SnapshotDir, fmt.Sprint(snapId)))
+	}
+
 	return nil
+}
+
+func (f *FakeWorkshopBackend) snapshotIdx(snapshot workshop.Snapshot) int {
+	return slices.IndexFunc(f.Snapshots, func(s FakeSnapshot) bool {
+		return snapshot.Equal(s.Snapshot)
+	})
+}
+
+func copyRegularFilesAndDirs(source, target string) error {
+	return fs.WalkDir(os.DirFS(source), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		local, err := filepath.Localize(path)
+		if err != nil {
+			return err
+		}
+		src := filepath.Join(source, local)
+		tgt := filepath.Join(target, local)
+
+		if d.Type().IsRegular() {
+			return osutil.CopyFile(src, tgt, 0)
+		}
+		if !d.IsDir() {
+			// Ignore symlinks because we use them to simulate mounts.
+			return nil
+		}
+		if err := os.Mkdir(tgt, 0755); !errors.Is(err, os.ErrExist) {
+			return err
+		}
+		return nil
+	})
 }

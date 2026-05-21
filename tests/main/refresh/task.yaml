@@ -4,12 +4,12 @@ prepare: |
   apt-add-repository -y universe
   apt install expect -y --no-install-recommends
   workshop_exec launch --project single
-  workshop_exec launch ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
+  workshop_exec launch ws-refresh ws-refresh-sdk --project multi
 restore: |
   . "$TESTSLIB"/utils.sh
   apt remove -y expect
   workshop_exec remove --project single
-  workshop_exec remove ws-refresh ws-refresh-sdk ws-refresh-snapshots --project multi
+  workshop_exec remove ws-refresh ws-refresh-sdk --project multi
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -46,55 +46,3 @@ execute: |
 
   echo "Check the workshop is in Ready state"
   workshop_exec list | MATCH "^ws-refresh-sdk[[:space:]]+Ready[[:space:]]+-$"
-
-  list_snapshots() {
-    local pid
-    pid=$(cat .workshop.lock)
-
-    lxc list \
-      --project workshop-snapshots.ubuntu \
-      --format csv \
-      --columns user.workshop.sdk \
-      user.workshop.project-id="$pid" \
-      user.workshop.name=ws-refresh-snapshots \
-      user.workshop.snapshot-type=sdk
-  }
-
-  validate_snapshots() {
-    local expected_output="$1"
-    local output
-    output=$(list_snapshots)
-    [ "$expected_output" = "$output" ]
-  }
-
-  echo "Check workshop snapshots exist"
-  expected_snapshots="system
-  test-sdk-basic
-  test-sdk-gpu
-  test-sdk-mount"
-  validate_snapshots "$expected_snapshots"
-
-  echo "Check workshop snapshots updated after an SDK was removed"
-  # Annoyingly, yq snap is in strict mode and won't see these files.
-  cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks[-1])' | sponge .workshop/ws-refresh-snapshots.yaml
-  workshop_exec refresh ws-refresh-snapshots
-  expected_snapshots="system
-  test-sdk-basic
-  test-sdk-mount"
-  validate_snapshots "$expected_snapshots"
-
-  echo "Check workshop was rebuilt from a new image base"
-  cat .workshop/ws-refresh-snapshots.yaml | yq 'del(.sdks)' | sponge .workshop/ws-refresh-snapshots.yaml
-  cat .workshop/ws-refresh-snapshots.yaml | yq '(.base) |= sub("ubuntu@22.04"; "ubuntu@24.04")' | sponge .workshop/ws-refresh-snapshots.yaml
-
-  # Ensure there is no cached image so that refresh will take care of downloading it.
-  lxc image list --columns F --format csv os=ubuntu version=24.04 | xargs -r lxc image delete
-
-  workshop_exec refresh ws-refresh-snapshots
-  workshop_exec info ws-refresh-snapshots | MATCH ubuntu@24.04
-  workshop_exec exec ws-refresh-snapshots -- lsb_release -a | MATCH 24.04
-
-  echo "Check workshop refresh when no updates are available"
-  workshop_exec refresh ws-refresh-snapshots
-  expected_snapshots="system"
-  validate_snapshots "$expected_snapshots"

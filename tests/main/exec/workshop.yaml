@@ -1,7 +1,7 @@
 name: ws-exec
 base: ubuntu@22.04
 sdks:
-  - name: test-sdk-basic
+  - name: test-sdk-basic-2
   - name: test-sdk-environment
 actions:
   oneline: echo one line

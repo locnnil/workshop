@@ -18,9 +18,12 @@ import (
 
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/workshop/fakebackend"
 )
@@ -29,7 +32,7 @@ type requestSuite struct {
 	state   *state.State
 	user    *user.User
 	project workshop.Project
-	backend workshop.Backend
+	backend *fakebackend.FakeWorkshopBackend
 	mgr     *workshopstate.WorkshopManager
 	ctx     context.Context
 
@@ -210,33 +213,33 @@ connections:
 	}}
 
 	// No updates.
-	ts, err := s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err := s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.HasLen, 0)
 
 	// No updates but user requested --restore.
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshRestore)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshRestore)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 
 	// Updated SDK.
 	latest[0].Sdks[1].Revision = sdk.R(43)
 	latest[0].Sdks[1].Sha3_384 = "463f6529595798396cef8c91560f6726e02c00ea2f56e57f14dbff4a3d546a92a87618cd5bd6c148ad6308e7c612e78e"
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	latest[0].Sdks = slices.Clone(current[0].Sdks)
 
 	// Deleted SDK.
 	latest[0].Sdks = latest[0].Sdks[:3]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	latest[0].Sdks = slices.Clone(current[0].Sdks)
 
 	// Added SDK.
 	current[0].Sdks = slices.Delete(current[0].Sdks, 1, 2)
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	current[0].Sdks = slices.Clone(latest[0].Sdks)
@@ -251,7 +254,7 @@ connections:
 			"endpoint":  2345,
 		},
 	}
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	plugs["db"] = db
@@ -264,7 +267,7 @@ connections:
 		"interface": "tunnel",
 		"endpoint":  2345,
 	}
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	slots["postgres"] = postgres
@@ -272,12 +275,12 @@ connections:
 	// Rearranged implicit SDKs.
 	sdks := latest[0].File.Sdks
 	sdks[0], sdks[1] = sdks[1], sdks[0]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.HasLen, 0)
 
 	sdks[1], sdks[3] = sdks[3], sdks[1]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.HasLen, 0)
 	sdks[0], sdks[1], sdks[3] = sdks[3], sdks[0], sdks[1]
@@ -285,7 +288,7 @@ connections:
 	// Rearranged explicit SDKs.
 	sdks[1], sdks[2] = sdks[2], sdks[1]
 	latest[0].Sdks[1], latest[0].Sdks[2] = latest[0].Sdks[2], latest[0].Sdks[1]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	latest[0].Sdks[1], latest[0].Sdks[2] = latest[0].Sdks[2], latest[0].Sdks[1]
@@ -294,7 +297,7 @@ connections:
 	// Deleted connection.
 	connections := latest[0].File.Connections
 	latest[0].File.Connections = latest[0].File.Connections[:2]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	latest[0].File.Connections = connections
@@ -302,7 +305,7 @@ connections:
 	// Added connection.
 	connections = current[0].File.Connections
 	current[0].File.Connections = current[0].File.Connections[1:]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
 	current[0].File.Connections = connections
@@ -310,10 +313,376 @@ connections:
 	// Rearranged connections.
 	connections = latest[0].File.Connections
 	connections[0], connections[1], connections[2] = connections[1], connections[2], connections[0]
-	ts, err = s.mgr.RefreshMany(s.project, current, latest, conflict.RefreshUpdate)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.HasLen, 0)
 	connections[0], connections[1], connections[2] = connections[2], connections[0], connections[1]
+}
+
+func (s *requestSuite) TestLaunchManySnapshots(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	file := `name: dev
+base: ubuntu@22.04
+sdks:
+  - name: uv
+    channel: latest/stable
+  - name: go
+    channel: latest/stable
+  - name: rust
+    channel: latest/stable
+  - name: node
+    channel: latest/stable
+`
+
+	var wf workshop.File
+	err := yaml.Unmarshal([]byte(file), &wf)
+	c.Assert(err, check.IsNil)
+
+	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"}
+
+	uv := sdk.Setup{
+		Name:     "uv",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "97c599c33ff9273e280277f29b18b501c388a1eac7bac4317b89e601639b863de66b7e4b3bfc7b08e762905b31ad38e1",
+	}
+	golang := sdk.Setup{
+		Name:     "go",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "a814c86992000179fc3dd470db43c46cbcb0f84d164b721592b5b74e03440a8c245e17242ed1c5ce9392288883ce459b",
+	}
+	rust := sdk.Setup{
+		Name:     "rust",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e7e13b16b131f1a8bc3ef00601beb13031d82de118bf5204757d3f5d8fa3c69431d0944ed9ee8cfd479acb0b16a93941",
+	}
+	rust_r2 := sdk.Setup{
+		Name:     "rust",
+		Channel:  "latest/stable",
+		Revision: sdk.R(2),
+		Sha3_384: "657ff423b8eedeace42fa55a36a1625fe9f8eea4cc4712a50d55de5e14d1d5170a6e5f214cf23cc66f295afd0ecfa0ad",
+	}
+	node := sdk.Setup{
+		Name:     "node",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "4656e208fe96c2b29f30e2341ede0c5e1600657ee89e27ed9b382a27069804897095dc76f3d5123deac41608e70bca1d",
+	}
+
+	// Final snapshot already exists.
+	manifest := workshopstate.Manifest{
+		File:  &wf,
+		Image: image,
+		Sdks:  []sdk.Setup{uv, golang, rust, node},
+	}
+	s.backend.Snapshots = []fakebackend.FakeSnapshot{
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:1]), Id: 0},
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:2]), Id: 1},
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:3]), Id: 2},
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:4]), Id: 3},
+	}
+
+	tasksets, err := s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	newSdks := hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.HasLen, 0)
+
+	lastIntact := lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "node")
+
+	// Only an intermediate snapshot exists.
+	s.backend.Snapshots = s.backend.Snapshots[:2]
+
+	tasksets, err = s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"rust", "node"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "go")
+
+	// No snapshots exist.
+	s.backend.Snapshots = nil
+
+	tasksets, err = s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"uv", "go", "rust", "node"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "")
+
+	// Snapshots only exist for outdated workshop.
+	s.backend.Snapshots = []fakebackend.FakeSnapshot{
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:1]), Id: 0},
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:2]), Id: 1},
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:3]), Id: 2},
+		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:4]), Id: 3},
+	}
+	manifest.Sdks[2] = rust_r2
+
+	tasksets, err = s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	manifest.Sdks[2] = rust
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"rust", "node"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "go")
+
+	// Snapshots exist for permutation of SDKs.
+	wf.Sdks[1], wf.Sdks[2] = wf.Sdks[2], wf.Sdks[1]
+	manifest.Sdks[1], manifest.Sdks[2] = manifest.Sdks[2], manifest.Sdks[1]
+
+	tasksets, err = s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	manifest.Sdks[1], manifest.Sdks[2] = manifest.Sdks[2], manifest.Sdks[1]
+	wf.Sdks[1], wf.Sdks[2] = wf.Sdks[2], wf.Sdks[1]
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"rust", "go", "node"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "uv")
+
+	// Snapshots exist for outdated base image.
+	manifest.Image.Fingerprint = "fakeimage456"
+
+	tasksets, err = s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	manifest.Image.Fingerprint = "fakeimage123"
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"uv", "go", "rust", "node"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "")
+}
+
+func (s *requestSuite) TestRefreshManySaveRestore(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	file := `name: dev
+base: ubuntu@22.04
+sdks:
+  - name: uv
+    channel: latest/stable
+  - name: go
+    channel: latest/stable
+  - name: rust
+    channel: latest/stable
+  - name: node
+    channel: latest/stable
+`
+
+	var wf workshop.File
+	err := yaml.Unmarshal([]byte(file), &wf)
+	c.Assert(err, check.IsNil)
+
+	image := workshop.BaseImage{Name: "ubuntu@22.04", Fingerprint: "fakeimage123"}
+
+	uv := sdk.Setup{
+		Name:     "uv",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "97c599c33ff9273e280277f29b18b501c388a1eac7bac4317b89e601639b863de66b7e4b3bfc7b08e762905b31ad38e1",
+	}
+	golang := sdk.Setup{
+		Name:     "go",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "a814c86992000179fc3dd470db43c46cbcb0f84d164b721592b5b74e03440a8c245e17242ed1c5ce9392288883ce459b",
+	}
+	golang_r2 := sdk.Setup{
+		Name:     "go",
+		Channel:  "latest/stable",
+		Revision: sdk.R(2),
+		Sha3_384: "a104d9688e4b0b87d454fa1f37c037c081131cc991e0be39a096874cedbcf638aa02028ca528b5ee9d95d9be0c5df969",
+	}
+	rust := sdk.Setup{
+		Name:     "rust",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "e7e13b16b131f1a8bc3ef00601beb13031d82de118bf5204757d3f5d8fa3c69431d0944ed9ee8cfd479acb0b16a93941",
+	}
+	rust_r2 := sdk.Setup{
+		Name:     "rust",
+		Channel:  "latest/stable",
+		Revision: sdk.R(2),
+		Sha3_384: "657ff423b8eedeace42fa55a36a1625fe9f8eea4cc4712a50d55de5e14d1d5170a6e5f214cf23cc66f295afd0ecfa0ad",
+	}
+	node := sdk.Setup{
+		Name:     "node",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "4656e208fe96c2b29f30e2341ede0c5e1600657ee89e27ed9b382a27069804897095dc76f3d5123deac41608e70bca1d",
+	}
+	deno := sdk.Setup{
+		Name:     "deno",
+		Channel:  "latest/stable",
+		Revision: sdk.R(1),
+		Sha3_384: "9cb19574077f07a44d980e9e84bc155951f37d97fa527ae6007cb0252274d8b392523110d10101cef1f0bde11fd95dee",
+	}
+
+	// Updated SDKs.
+	current := workshopstate.Manifest{
+		File:  &wf,
+		Image: image,
+		Sdks:  []sdk.Setup{uv, golang, rust, node},
+	}
+	latest := workshopstate.Manifest{
+		File:  &wf,
+		Image: image,
+		Sdks:  []sdk.Setup{uv, golang_r2, rust_r2, node},
+	}
+	s.backend.Snapshots = []fakebackend.FakeSnapshot{
+		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:1]), Id: 0},
+		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:2]), Id: 1},
+		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:3]), Id: 2},
+		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:4]), Id: 3},
+	}
+
+	tasksets, err := s.mgr.RefreshMany(s.ctx, s.project, []workshopstate.Manifest{current}, []workshopstate.Manifest{latest}, conflict.RefreshUpdate)
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	saveSdks := hookSdks(c, tasksets[0], hookstate.SaveState)
+	c.Check(saveSdks, check.DeepEquals, []string{"uv", "go", "rust", "node"})
+	restoreSdks := hookSdks(c, tasksets[0], hookstate.RestoreState)
+	c.Check(restoreSdks, check.DeepEquals, []string{"uv", "go", "rust", "node"})
+
+	newSdks := hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"go", "rust", "node"})
+
+	lastIntact := lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "uv")
+
+	// Different SDKs.
+	fileDeno := `name: dev
+base: ubuntu@22.04
+sdks:
+  - name: uv
+    channel: latest/stable
+  - name: go
+    channel: latest/stable
+  - name: deno
+    channel: latest/stable
+`
+
+	var wfDeno workshop.File
+	err = yaml.Unmarshal([]byte(fileDeno), &wfDeno)
+	c.Assert(err, check.IsNil)
+
+	latest.File = &wfDeno
+	latest.Sdks = []sdk.Setup{uv, golang, deno}
+
+	tasksets, err = s.mgr.RefreshMany(s.ctx, s.project, []workshopstate.Manifest{current}, []workshopstate.Manifest{latest}, conflict.RefreshUpdate)
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	saveSdks = hookSdks(c, tasksets[0], hookstate.SaveState)
+	c.Check(saveSdks, check.DeepEquals, []string{"uv", "go"})
+	restoreSdks = hookSdks(c, tasksets[0], hookstate.RestoreState)
+	c.Check(restoreSdks, check.DeepEquals, []string{"uv", "go"})
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"deno"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "go")
+
+	// Original SDKs.
+	current.File = latest.File
+	current.Sdks = latest.Sdks
+	latest.File = &wf
+	latest.Sdks = []sdk.Setup{uv, golang, rust, node}
+	snapshot := fakebackend.FakeSnapshot{Snapshot: workshop.SdkSnapshot(image, current.Sdks), Id: 4}
+	s.backend.Snapshots = append(s.backend.Snapshots, snapshot)
+
+	tasksets, err = s.mgr.RefreshMany(s.ctx, s.project, []workshopstate.Manifest{current}, []workshopstate.Manifest{latest}, conflict.RefreshUpdate)
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	saveSdks = hookSdks(c, tasksets[0], hookstate.SaveState)
+	c.Check(saveSdks, check.DeepEquals, []string{"uv", "go"})
+	restoreSdks = hookSdks(c, tasksets[0], hookstate.RestoreState)
+	c.Check(restoreSdks, check.DeepEquals, []string{"uv", "go"})
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.HasLen, 0)
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "node")
+
+	// Rearranged SDKs.
+	current.File = latest.File
+	current.Sdks = latest.Sdks
+	latest.File.Sdks = slices.Clone(latest.File.Sdks)
+	latest.File.Sdks[1], latest.File.Sdks[2] = latest.File.Sdks[2], latest.File.Sdks[1]
+	latest.Sdks = slices.Clone(latest.Sdks)
+	latest.Sdks[1], latest.Sdks[2] = latest.Sdks[2], latest.Sdks[1]
+
+	tasksets, err = s.mgr.RefreshMany(s.ctx, s.project, []workshopstate.Manifest{current}, []workshopstate.Manifest{latest}, conflict.RefreshUpdate)
+	c.Assert(err, check.IsNil)
+	c.Assert(tasksets, check.HasLen, 1)
+
+	saveSdks = hookSdks(c, tasksets[0], hookstate.SaveState)
+	c.Check(saveSdks, check.DeepEquals, []string{"uv", "go", "rust", "node"})
+	restoreSdks = hookSdks(c, tasksets[0], hookstate.RestoreState)
+	c.Check(restoreSdks, check.DeepEquals, []string{"uv", "rust", "go", "node"})
+
+	newSdks = hookSdks(c, tasksets[0], hookstate.SetupBase)
+	c.Check(newSdks, check.DeepEquals, []string{"rust", "go", "node"})
+
+	lastIntact = lastIntactSdk(c, tasksets[0])
+	c.Check(lastIntact, check.Equals, "uv")
+}
+
+// List SDKs for which the given type of hook is part of the TaskSet.
+func hookSdks(c *check.C, tasks *state.TaskSet, hookType hookstate.WorkshopHookType) []string {
+	var sdks []string
+	for _, task := range tasks.Tasks() {
+		if task.Kind() != "run-hook" {
+			continue
+		}
+
+		var hook hookstate.HookSetup
+		c.Assert(task.Get("hook-setup", &hook), check.IsNil)
+		if hook.HookType == hookType {
+			sdks = append(sdks, hook.Sdk)
+		}
+	}
+	return sdks
+}
+
+func lastIntactSdk(c *check.C, taskset *state.TaskSet) string {
+	tasks := taskset.Tasks()
+	idx := slices.IndexFunc(tasks, func(t *state.Task) bool {
+		return t.Kind() == "create-workshop" || t.Kind() == "rebuild-workshop"
+	})
+	c.Assert(idx, testutil.IntGreaterEqual, 0)
+
+	s, err := handlersetup.MaybeLastIntactSdk(tasks[idx])
+	c.Assert(err, check.IsNil)
+	return s
 }
 
 func (s *requestSuite) TestStartMany(c *check.C) {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -113,15 +114,12 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	}
 	defer conn.Disconnect()
 
-	volume, _, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
-	if err != nil && !api.StatusErrorCheck(err, http.StatusNotFound) {
+	exists, err := s.checkPartialImportSdk(conn, name)
+	if err != nil {
 		return err
 	}
-	if err == nil {
-		if volume.Config["user.kind"] == "sdk" {
-			return workshop.ErrVolumeAlreadyExists
-		}
-		if err := s.cleanupPartialImportSdk(conn, name, ""); err != nil {
+	if exists {
+		if err := s.cleanupPartialImportSdk(conn, name); err != nil {
 			return err
 		}
 	}
@@ -144,7 +142,7 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 			// in a conflict, and we should retry. It's also possible that the
 			// current operation wins the race, and we can safely let the other
 			// one fail in the background.
-			if err := s.cleanupPartialImportSdk(conn, name, op.Get().ID); err != nil {
+			if err := s.cleanupPartialImportSdk(conn, name); err != nil {
 				return err
 			}
 			if _, err := tarball.Seek(0, io.SeekStart); err != nil {
@@ -157,8 +155,7 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 		break
 	}
 
-	var etag string
-	volume, etag, err = conn.GetStoragePoolVolume(storagePool, "custom", name)
+	volume, etag, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
 	if err != nil {
 		return err
 	}
@@ -183,27 +180,79 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 // database entry before extracting the tarball. However, once we're able to
 // identify the specific operation, it should be safe to reuse the volume
 // after the operation succeeds.
-func (s *Backend) cleanupPartialImportSdk(conn lxd.InstanceServer, name string, ignoreID string) error {
+func (s *Backend) cleanupPartialImportSdk(conn lxd.InstanceServer, name string) error {
 	ops, err := conn.GetOperations()
 	if err != nil {
 		return err
 	}
 
 	for _, op := range ops {
-		if op.ID == ignoreID || !IsImportSdkOperation(op) {
+		isImport, err := IsImportSdkOperation(op, name)
+		if err != nil {
+			return err
+		}
+		if !isImport {
 			continue
 		}
+
 		if _, _, err := conn.GetOperationWait(op.ID, -1); err != nil && !api.StatusErrorCheck(err) {
 			return err
 		}
 	}
 
+	// Maybe one of the operations completed the import. We can't delete it in
+	// that case, because other workshops might already be using it.
+	if _, err := s.checkPartialImportSdk(conn, name); err != nil {
+		return err
+	}
+
 	return s.deleteVolume(conn, name)
 }
 
-// Export this so the LXD candidate tests pick up description changes.
-func IsImportSdkOperation(op api.Operation) bool {
-	return op.Description == "Creating storage volume"
+func (s *Backend) checkPartialImportSdk(conn lxd.InstanceServer, name string) (bool, error) {
+	volume, _, err := conn.GetStoragePoolVolume(storagePool, "custom", name)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if volume.Config["user.kind"] == "sdk" {
+		return true, workshop.ErrVolumeAlreadyExists
+	}
+	return true, nil
+}
+
+// Export this so the LXD candidate tests pick up format changes.
+func IsImportSdkOperation(op api.Operation, name string) (bool, error) {
+	// TODO: use api.MetadataEntityURL constant.
+	// See https://github.com/canonical/lxd/pull/18033.
+	entityUrl, ok := op.Metadata["entity_url"].(string)
+	if !ok {
+		// TODO: return false, nil here when we bump LXD to 6.8+.
+		if op.Description == "Creating storage volume" {
+			return true, nil
+		}
+		if op.Description != "Updating storage volume" || len(op.Resources["storage_volume"]) != 1 {
+			return false, nil
+		}
+		entityUrl = op.Resources["storage_volume"][0]
+	}
+
+	u, err := url.Parse(entityUrl)
+	if err != nil {
+		return false, err
+	}
+	// We ignore the project here. For create it's `workshop.<USER>` but for
+	// update it's `default`. In any case, custom volumes all end up in the
+	// default project.
+	entityType, _, _, args, err := entity.ParseURL(*u)
+	if err != nil {
+		return false, err
+	}
+
+	matches := entityType == entity.TypeStorageVolume && slices.Equal(args, []string{storagePool, "custom", name})
+	return matches, nil
 }
 
 // Export this so the LXD candidate tests pick up error message changes.
@@ -511,6 +560,30 @@ func sdkToSnapshotDevice(installOrder int, sk sdk.ContentID) map[string]string {
 		"user.sdk.is-volume":     strconv.FormatBool(sk.IsVolume),
 		"user.sdk.install-order": strconv.FormatInt(int64(installOrder), 10),
 	}
+}
+
+func maybeSdkId(key string, device map[string]string) (int, *sdk.ContentID, error) {
+	name, found := strings.CutPrefix(key, workshop.SdkDeviceName(""))
+	if !found {
+		return 0, nil, nil
+	}
+
+	isVolume, err := strconv.ParseBool(device["user.sdk.is-volume"])
+	if err != nil {
+		return 0, nil, err
+	}
+	s := &sdk.ContentID{
+		Name:     name,
+		Sha3_384: device["user.sdk.sha3-384"],
+		IsVolume: isVolume,
+	}
+
+	installOrder, err := strconv.ParseInt(device["user.sdk.install-order"], 10, 0)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return int(installOrder), s, nil
 }
 
 func (s *Backend) UninstallSdk(ctx context.Context, name, sk string) error {
