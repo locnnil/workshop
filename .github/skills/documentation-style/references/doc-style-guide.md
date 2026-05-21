@@ -737,7 +737,6 @@ After code blocks:
 ```restructuredtext
 .. code-block:: console
 
-   $ sudo snap login
    $ sudo snap install --classic workshop
 
 
@@ -920,8 +919,8 @@ These release notes cover new features and changes in Workshop vX.Y.Z.
 
 Workshop relies on Snap and LXD:
 
-- See the [Tutorial](https://canonical-workshop.readthedocs-hosted.com/stable/tutorial/) for setup instructions.
-- Refer to the [Contribution Guide](https://canonical-workshop.readthedocs-hosted.com/stable/contributing/) for development prerequisites.
+- See the [Tutorial](https://ubuntu.com/workshop/docs/tutorial/) for setup instructions.
+- Refer to the [Contribution Guide](https://ubuntu.com/workshop/docs/contributing/) for development prerequisites.
 
 ## What's new in Workshop vX.Y.Z
 
@@ -952,7 +951,6 @@ Examples:
 ```restructuredtext
 .. code-block:: console
 
-   sudo snap login
    sudo snap install --classic workshop
 ```
 

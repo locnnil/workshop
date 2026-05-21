@@ -39,14 +39,13 @@ Releases
    Workshop v0.1.18 <v0.1.18>
 
 
-We provide two binaries: |ws_markup| and |sdk_markup|.
+A complete |ws_markup| installation comprises two snaps:
 
-- |ws_markup| (:samp:`amd64` and :samp:`arm64`) is designed for common users.
-- |sdk_markup| (:samp:`arm64` only) is intended for SDK publishers.
+- :program:`workshop` is designed for common users.
+- :program:`sdkcraft` is intended for SDK publishers.
 
 
-Currently, neither is publicly available,
-but you can confidently use the pre-release versions.
+Both are available for :samp:`amd64` and :samp:`arm64`.
 
 
 |ws_markup|
@@ -76,7 +75,7 @@ Older versions:
 
 
 - `Workshop v0.1.17 <https://github.com/canonical/workshop/releases/tag/v0.1.17>`_
-- Workshop v0.1.16 didn't go public
+- Workshop v0.1.16 was not released
 - `Workshop v0.1.15 <https://github.com/canonical/workshop/releases/tag/v0.1.15>`_
 - `Workshop v0.1.14 <https://github.com/canonical/workshop/releases/tag/v0.1.14>`_
 - `Workshop v0.1.13 <https://github.com/canonical/workshop/releases/tag/v0.1.13>`_
@@ -91,7 +90,7 @@ Older versions:
 - `Workshop v0.1.4 <https://github.com/canonical/workshop/releases/tag/v0.1.4>`_
 - `Workshop v0.1.3 <https://github.com/canonical/workshop/releases/tag/v0.1.3>`_
 - `Workshop v0.1.2 <https://github.com/canonical/workshop/releases/tag/v0.1.2>`_
-- Workshop v0.1.1 didn't go public
+- Workshop v0.1.1 was not released
 - `Workshop v0.1.0 <https://github.com/canonical/workshop/releases/tag/v0.1.0>`_
 
 
@@ -107,7 +106,7 @@ Recent versions:
 - `SDKcraft 0.1.13 <https://github.com/canonical/sdkcraft/releases/tag/0.1.13>`_
 - `SDKcraft 0.1.12 <https://github.com/canonical/sdkcraft/releases/tag/0.1.12>`_
 - `SDKcraft 0.1.11 <https://github.com/canonical/sdkcraft/releases/tag/0.1.11>`_
-- SDKcraft v0.1.10 didn't go public; also, version naming scheme dropped the "v"
+- SDKcraft v0.1.10 was not released; also, version naming scheme dropped the "v"
 - `SDKcraft v0.1.9 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.9>`_
 - `SDKcraft v0.1.8 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.8>`_
 - `SDKcraft v0.1.7 <https://github.com/canonical/sdkcraft/releases/tag/v0.1.7>`_
@@ -134,7 +133,7 @@ Releases follow the `semantic versioning <https://semver.org/>`_ scheme.
 Long-term support
 ~~~~~~~~~~~~~~~~~
 
-We only provide support for the latest version of |ws_markup|.
+We only provide support for the latest versions of |ws_markup| and |sdk_markup|.
 If you encounter issues with an older version,
 we recommend upgrading to the latest release first;
 see the next section for guidance.
@@ -145,25 +144,15 @@ see the next section for guidance.
 Upgrade instructions
 --------------------
 
-Authenticate to the Snap Store and refresh the snap
-using the `--classic <https://snapcraft.io/docs/install-modes/>`_ option:
+Refresh the snaps using the
+`--classic <https://snapcraft.io/docs/install-modes/>`_ option:
 
 .. code-block:: console
 
-   $ sudo snap login
    $ sudo snap refresh --classic workshop
+   $ sudo snap refresh --classic sdkcraft
 
 
-Alternatively, visit our `Releases_` page on GitHub
-to download and install the latest snap:
-
-.. code-block:: console
-
-   $ sudo snap install --dangerous --classic ./workshop_0.1.30_amd64.snap
-
-
-Snaps are available for the :samp:`amd64` and :samp:`arm64` architectures.
-
-For prerequisites and other details, see the `Getting Started
-<https://github.com/canonical/workshop?tab=readme-ov-file#getting-started>`_
+For prerequisites and other details, see the `Installation
+<https://github.com/canonical/workshop?tab=readme-ov-file#installation>`_
 section on GitHub, or follow the :ref:`tut_get_started` tutorial section.

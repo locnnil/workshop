@@ -88,22 +88,12 @@ To refresh an existing installation:
 Installation
 ~~~~~~~~~~~~
 
-Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes/>`_ option:
+Install the snap using the
+`--classic <https://snapcraft.io/docs/install-modes/>`_ option:
 
 .. code-block:: console
 
-   $ sudo snap login
    $ sudo snap install --classic workshop
-
-
-To get the newest features, install from the edge channel:
-:command:`sudo snap install --classic --edge workshop`.
-
-.. warning::
-
-   If this command fails, you may need an invitation;
-   contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
 
 
 .. _tut_define_launch:
@@ -154,7 +144,7 @@ and check its publisher and current version:
    $ sdk find ollama
 
      NAME    VERSION  PUBLISHER     SUMMARY
-     ollama  0.20.2   Dmitry Lyfar  Get up and running with large language models
+     ollama  0.20.2   Canonical     Get up and running with large language models
 
 
 The query also matches an SDK's title, summary, description, or publisher,
@@ -171,7 +161,7 @@ inspect its details:
    $ sdk info ollama
 
      name:       ollama
-     publisher:  Dmitry Lyfar (dlyfar)
+     publisher:  Canonical (canonical)
      license:    MIT
 
      Get up and running with Llama 3.3, ...

@@ -1,20 +1,8 @@
 Workshop
 ========
 
-.. warning::
-
-   Workshop is currently an internal Canonical project.
-   All code, documentation, and materials in this repository
-   are company-private and must not be shared outside Canonical
-   without prior authorization.
-
-   Do not redistribute or discuss this content or the project externally
-   (at public forums, in social media, with customers)
-   until an official public release is announced.
-
-
-.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=latest&token=a8c81a46da98f75a366a1eef905457dadfa50c23cf3a1c1929a81af05ffea85d
-   :target: https://documentation.ubuntu.com/canonical-workshop/latest/?badge=latest
+.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=latest
+   :target: https://ubuntu.com/workshop/docs/
    :alt: Documentation status
 
 **A tool for defining and handling ephemeral development environments**.
@@ -82,32 +70,12 @@ install a recent LXD version with ``snap``:
 Install Workshop
 ~~~~~~~~~~~~~~~~
 
-Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes/>`_ option:
+Install the snap using the
+`--classic <https://snapcraft.io/docs/install-modes/>`_ option:
 
 .. code-block:: console
 
-   sudo snap login
    sudo snap install --classic workshop
-
-To get the newest features, install from the edge channel:
-``sudo snap install --classic --edge workshop``.
-
-If this command fails, you may need an invitation;
-contact Dmitry Lyfar (dmitry.lyfar@canonical.com, @dlyfar on Mattermost).
-
-Alternatively, you can download the latest Workshop snap from the
-`Releases <https://github.com/canonical/workshop/releases/>`_
-page on GitHub and install it,
-using the options
-`--dangerous <https://snapcraft.io/docs/install-modes/>`_
-and
-`--classic <https://snapcraft.io/docs/install-modes/>`_,
-for example:
-
-.. code-block:: console
-
-   sudo snap install --dangerous --classic ./workshop_0.1.29_amd64.snap
 
 
 The downside of this method is that you will need to manually
@@ -118,14 +86,14 @@ Documentation
 
 Refer to the
 `Tutorial
-<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/>`_
+<https://ubuntu.com/workshop/docs/tutorial/>`_
 in our docs for a detailed introduction to Workshop.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
 jump straight to the
 `SDK crafting guide
-<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/part-4-craft-sdks/>`_
+<https://ubuntu.com/workshop/docs/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
 
@@ -136,9 +104,7 @@ Use the following resources for communication, support, and feedback:
 
 - `Code of conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
 
-- `Pulse reviews on Discourse <https://discourse.canonical.com/c/engineering/sdk/34>`__
-
-- `Mattermost channel <https://chat.canonical.com/canonical/channels/workshop>`__
+- `Discourse <https://discourse.ubuntu.com/>`__
 
 - `Product and documentation feedback <https://github.com/canonical/workshop/issues/>`__
 
