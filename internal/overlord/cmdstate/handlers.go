@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	connectTimeout   = 5 * time.Second
+	connectTimeout   = 10 * time.Second
 	handshakeTimeout = 5 * time.Second
 
 	wsControl = "control"
