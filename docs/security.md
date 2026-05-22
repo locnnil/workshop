@@ -25,7 +25,7 @@ managed by [GCP IAM](https://docs.cloud.google.com/iam/docs).
 
 Users can only access the workshops they have created; these workshops have
 limited capabilities on the host. To achieve this, LXD is used to add a level of
-confinement: everything users do ends up in a [non-privileged
+confinement: everything users do ends up in a [nonprivileged
 container](https://ubuntu.com/server/docs/how-to/containers/lxd-containers/)
 within a dedicated
 [project](https://documentation.ubuntu.com/lxd/latest/explanation/projects/),

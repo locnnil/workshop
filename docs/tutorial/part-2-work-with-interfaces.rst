@@ -305,7 +305,7 @@ instead of falling back to :samp:`dev/system:mount`:
 
 
 This is your first taste of slot/plug coordination
-between two non-system SDKs;
+between two nonsystem SDKs;
 for the full Python workflow with :program:`uv`,
 see :ref:`how_manage_python_environments`.
 

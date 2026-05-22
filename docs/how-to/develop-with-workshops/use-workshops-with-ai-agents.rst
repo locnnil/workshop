@@ -2,7 +2,7 @@
 
 .. meta::
    :description: How-to guide on using Workshop for parallel agentic coding,
-                 demonstrating multi-agent workflows with 'claude-code' and
+                 demonstrating multiagent workflows with 'claude-code' and
                  'copilot' SDKs in a shared sandbox environment.
 
 How to use workshops with AI agents
@@ -19,7 +19,7 @@ to work in sandboxed environments over a shared project repository,
 thus addressing security and privacy concerns
 while enabling a degree of creativity in your workflows.
 
-Today, developer teams routinely delegate multi-step tasks to agents,
+Today, developer teams routinely delegate multistep tasks to agents,
 run different models for planning and implementation,
 and coordinate fleets of agents across branches or repos.
 In practice,
@@ -238,7 +238,7 @@ Create a worktree for the first agent, :samp:`claude-code`:
    $ git worktree add claude
 
 
-Next, run the first agent in non-interactive mode with the shared prompt,
+Next, run the first agent in noninteractive mode with the shared prompt,
 specifying the model to use via an environment variable
 and the worktree as the working directory:
 
@@ -269,7 +269,7 @@ Create a worktree for the second agent:
    $ git worktree add copilot
 
 
-Run the second agent in non-interactive mode with the same prompt,
+Run the second agent in noninteractive mode with the same prompt,
 specifying the model to use via an environment variable
 and the new worktree as the working directory:
 
@@ -373,7 +373,7 @@ Next, create the implementation worktree:
    $ git worktree add implementation
 
 
-Run the implementation agent in non-interactive mode with the coder prompt,
+Run the implementation agent in noninteractive mode with the coder prompt,
 supplying the worktree as the working directory:
 
 .. code-block:: console

@@ -522,7 +522,7 @@ and two connections:
   to the newly defined :samp:`imagenet:images` slot.
 
 - Another that connects the :samp:`tensorflow:cuda` plug
-  to the pre-existing :samp:`cuda:libs`.
+  to the preexisting :samp:`cuda:libs`.
 
 .. code-block:: yaml
    :caption: .workshop/digits-cuda.yaml

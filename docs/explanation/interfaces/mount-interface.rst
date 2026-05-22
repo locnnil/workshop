@@ -21,7 +21,7 @@ a host location also allows persisting data outside the workshop.
 .. @artefact host data source
 
 The interface defines a target directory inside the workshop,
-to which a source directory is mounted at run-time.
+to which a source directory is mounted at runtime.
 Typically, it would provide resources to be consumed by the SDK,
 accumulated over time or created
 when the :command:`workshop launch` or :command:`workshop refresh` commands run:
@@ -54,7 +54,7 @@ of any directories created.
 
 
 Defining the plug in an SDK designates the target directory inside the workshop;
-a directory on the host system that |ws_markup| will create at run-time
+a directory on the host system that |ws_markup| will create at runtime
 will be mounted to it.
 
 This allows the workshops using this SDK to use the host directory
@@ -72,7 +72,7 @@ To let SDKs in a workshop access the host filesystem,
 |ws_markup| provides a mount interface slot
 that multiple mount interface plugs can access.
 
-When the SDK is installed at run-time during launch and refresh operations,
+When the SDK is installed at runtime during launch and refresh operations,
 |ws_markup| checks the following for each plug that targets the slot:
 
 - The plug can be installed.
@@ -172,7 +172,7 @@ for the target directory inside the workshop:
 
 
 First, the remount operation is attempted atomically;
-this usually succeeds if the new source is either a non-existent directory
+this usually succeeds if the new source is either a nonexistent directory
 or an empty directory on the same filesystem as the current source.
 Otherwise, the remount only occurs if the workshop has been stopped earlier,
 which prevents data corruption.

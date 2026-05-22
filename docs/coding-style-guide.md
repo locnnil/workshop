@@ -361,9 +361,9 @@ cmd := &cobra.Command{
 
 ---
 
-**Prefer existing attributes over re-iterating**
+**Prefer existing attributes over reiterating**
 
-**Pattern**: Use existing object attributes instead of re-iterating collections when the information is already available.
+**Pattern**: Use existing object attributes instead of reiterating collections when the information is already available.
 
 **Good**:
 

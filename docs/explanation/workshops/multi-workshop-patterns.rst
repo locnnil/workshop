@@ -170,7 +170,7 @@ At a glance
 Scenarios
 ---------
 
-The patterns above answer most multi-workshop cases.
+The patterns above answer most multiworkshop cases.
 The list below names the recurring ones,
 points to the pattern that fits,
 and links to the how-to that covers the mechanics.

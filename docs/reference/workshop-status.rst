@@ -104,7 +104,7 @@ Error
 -----
 
 The workshop failed at some stage,
-and its underlying container became non-operational.
+and its underlying container became nonoperational.
 
 .. mermaid::
    :alt: Error state

@@ -257,7 +257,7 @@ and the :ref:`tunnel interface <exp_tunnel_interface>` can bridge through it.
 The idea is to compose two independent tunnels:
 one that exposes a service from the backend workshop to the host,
 and another that lets the frontend workshop reach that host port.
-This is different from a regular intra-workshop connection,
+This is different from a regular intraworkshop connection,
 where a single tunnel links a plug to a slot inside the same workshop.
 Here, the host sits in the middle,
 and each workshop configures its own half of the bridge.

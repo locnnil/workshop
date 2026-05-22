@@ -131,12 +131,12 @@ it lists the components of the workshop to be instantiated at launch.
 
 A definition can list many moving parts;
 perhaps, the most important are SDKs,
-which are basic, pre-defined building blocks
+which are basic, predefined building blocks
 of your development environment.
 
 You reference SDKs from your workshop definition
 to specify what you want to include in your workshop.
-At run-time, |ws_markup| pulls and installs them,
+At runtime, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
 
@@ -299,7 +299,7 @@ To get a workshop ready for use, you launch it:
 Once the workshop is launched,
 you can start using it to build, debug, and run your code.
 
-After launching, check the run-time information
+After launching, check the runtime information
 to see what went into your workshop:
 
 .. @artefact workshop info
@@ -545,7 +545,7 @@ Besides running individual commands,
 you can open an interactive shell
 if you need to perform multiple operations within a session.
 |ws_markup| runs the login shell
-for the default non-privileged user,
+for the default nonprivileged user,
 who's also named :samp:`workshop`:
 
 .. @artefact workshop shell

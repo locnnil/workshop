@@ -32,9 +32,9 @@ A part defines a number of preset attributes and lifecycle stages in YAML;
 and iteratively resolves any dependencies between parts.
 Eventually, this results in a uniform SDK,
 ready for publishing and installation;
-such SDKs arrive to the users pre-built,
+such SDKs arrive to the users prebuilt,
 allowing to factor out build activities from :ref:`SDK hooks <exp_sdk_hooks>`
-that |ws_markup| executes inside the workshop at run-time.
+that |ws_markup| executes inside the workshop at runtime.
 
 
 Implementation notes

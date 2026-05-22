@@ -123,7 +123,7 @@ within the workshop environment.
 Then, :program:`workshopd` determines the overall
 :ref:`health status <exp_workshop_status>` of a workshop,
 such as *Ready*, *Pending* or *Error*;
-it depends on the run-time results of the :samp:`check-health` hook:
+it depends on the runtime results of the :samp:`check-health` hook:
 
 - *Ready* means success: the hook set SDK health to :samp:`okay`
   and gracefully exited with a zero code.
@@ -134,7 +134,7 @@ it depends on the run-time results of the :samp:`check-health` hook:
   or if 5 seconds pass without :samp:`set-health` being invoked,
   the SDK health is changed to :samp:`error`.
 
-- *Error*: the hook exited with a non-zero code
+- *Error*: the hook exited with a nonzero code
   or explicitly set SDK health to :samp:`error`.
 
 

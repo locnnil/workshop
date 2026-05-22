@@ -165,7 +165,7 @@ Examples
 
 This is a real-world example of an SDK definition file
 for a Go development environment.
-It involves a non-trivial layout of build and target architectures,
+It involves a nontrivial layout of build and target architectures,
 and also uses the :ref:`parts <ref_sdk_parts>` mechanism:
 
 .. literalinclude:: ../../examples/go-sdkcraft.yaml

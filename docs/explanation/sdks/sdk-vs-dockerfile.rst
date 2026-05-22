@@ -112,10 +112,10 @@ build commands are typically bundled as :samp:`RUN` instructions.
 In |sdk_markup| SDKs,
 the :samp:`setup-base` :ref:`hook <exp_sdk_hooks>`
 is responsible for building the workshop,
-but other hooks add extra functionality with run-time events and health checks.
+but other hooks add extra functionality with runtime events and health checks.
 
 A related Docker pattern applies :samp:`USER`
-to switch from root to a non-root user,
+to switch from root to a nonroot user,
 followed by :samp:`RUN` instructions for user-level setup:
 
 .. code-block:: docker
@@ -170,7 +170,7 @@ all data exchange is via the mount interface.
 To use this interface, your SDK defines a
 :ref:`mount interface plug <exp_mount_plug>`.
 When a workshop uses the SDK,
-an auto-assigned, non-customisable source directory on the host
+an auto-assigned, noncustomizable source directory on the host
 is mounted to the plug-defined target directory inside the workshop.
 What's more, its contents are preserved during refresh operations.
 In this way, |ws_markup| enables SDK data persistence and reuse
@@ -221,7 +221,7 @@ per each directory you want to retain during the workshop's lifecycle.
 
 This SDK defines two mount plugs;
 for each,
-|ws_markup| creates a source directory on the host at run-time.
+|ws_markup| creates a source directory on the host at runtime.
 Both :samp:`workshop-target` directories inside the workshop
 can be used by the SDK-specific logic
 implemented via :ref:`hooks <exp_sdk_hooks>` and other features.
@@ -243,7 +243,7 @@ Here's a corresponding workshop definition:
 
 The default host location
 that |ws_markup| mounts to the target
-is pre-defined as follows:
+is predefined as follows:
 
 .. code-block:: none
 
