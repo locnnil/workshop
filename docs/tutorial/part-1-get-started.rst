@@ -240,8 +240,8 @@ list the workshops in the project directory:
 
    $ workshop list
 
-     Project                  Workshop  Status  Notes
-     ~/ollama-python-project  dev       Off     -
+     WORKSHOP  STATUS  NOTES
+     dev       Off     -
 
 
 .. note::
@@ -656,7 +656,7 @@ with :command:`workshop changes`:
 
    $ workshop changes
 
-     ID  Status  Spawn               Ready               Summary
+     ID  STATUS  SPAWN               READY               SUMMARY
      1   Done    today at 09:26 CET  today at 09:27 CET  Launch "dev" workshop
      ...
      4   Done    today at 09:32 CET  today at 09:34 CET  Refresh "dev" workshop
@@ -677,7 +677,7 @@ pass the change ID to the command:
 
    $ workshop tasks 4
 
-     Status   Duration  Summary
+     STATUS   DURATION  SUMMARY
      Done    2m17.389s  Download "ubuntu@24.04" base image
      Done        113ms  Retrieve "system" SDK
      Done    2m59.777s  Retrieve "ollama" SDK from channel "vulkan/stable"

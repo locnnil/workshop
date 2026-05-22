@@ -57,7 +57,7 @@ run :command:`workshop tasks` without arguments:
 
    $ workshop tasks
 
-     Status    Duration  Summary
+     STATUS   DURATION  SUMMARY
      ...
 
 
@@ -69,7 +69,7 @@ by listing all *changes* in the workshop to find the one that failed:
 
    $ workshop changes
 
-     ID  Status  Spawn           Ready           Summary
+     ID  STATUS  SPAWN           READY           SUMMARY
      ...
      81  Error   today at 12:20  today at 12:21  Refresh workshops "dev-volatile"
 
@@ -82,7 +82,7 @@ this time supplying the change ID as the argument:
 
    $ workshop tasks 81
 
-     Status    Duration  Summary
+     STATUS    DURATION  SUMMARY
      Done          59ms  Retrieve "go" SDK from channel "latest/edge"
      Undone        42ms  Create SDK state storage
      Done          28ms  Run hook "save-state" for "go" SDK
