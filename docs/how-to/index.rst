@@ -58,11 +58,3 @@ and with the |ws_markup| installation itself:
    :class: flat-toctree
 
    Fix workshops <fix-workshops/index>
-
-
-See also
---------
-
-Reference:
-
-- :ref:`ref_implementations`

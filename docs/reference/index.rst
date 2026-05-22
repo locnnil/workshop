@@ -45,22 +45,6 @@ However, both definition types have different purposes and structure:
    Definition files <definition-files/index>
 
 
-Reference implementations
--------------------------
-
-.. @artefact SDK
-
-Publicly maintained reference SDK and workshop implementations
-span multiple domains and can be studied to understand the steps and decisions
-involved in their design and implementation:
-
-.. toctree::
-   :titlesonly:
-   :class: flat-toctree
-
-   reference-implementations
-
-
 Structure and behavior
 ----------------------
 
@@ -76,3 +60,16 @@ starts with how SDKs are structured and operated at run-time:
    workshops
    workshop-status
 
+
+
+Reference implementations
+-------------------------
+
+.. @artefact SDK
+
+These real-life examples on GitHub
+showcase different SDK patterns and workshop implementations.
+Study them to better understand SDK design and workshop creation:
+
+- https://github.com/canonical/sdks
+- https://github.com/canonical/reference-workshops

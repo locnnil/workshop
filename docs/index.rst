@@ -85,8 +85,7 @@ In this documentation
        :ref:`Parts <exp_sdk_parts>` •
        :ref:`Design best practices <exp_sdk_best_practices>` •
        :ref:`SDKs vs Dockerfiles <exp_dockerfile_vs_sdk>` •
-       :ref:`Definition file <ref_sdk_definition>` •
-       :ref:`Reference implementations <ref_implementations>`
+       :ref:`Definition file <ref_sdk_definition>`
 
    * - **Interfaces**
      - :ref:`Concepts <exp_interface_concepts>` •
