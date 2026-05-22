@@ -97,14 +97,14 @@ func (m *CommandManager) doExec(task *state.Task, tomb *tomb.Tomb) error {
 	e.websockets[wsStderr] = nil
 
 	// Store the execution object on the manager (for Connect).
-	m.executionsMutex.Lock()
+	m.executionsCond.L.Lock()
 	m.executions[task.ID()] = e
-	m.executionsMutex.Unlock()
 	m.executionsCond.Broadcast() // signal that Connects can start happening
+	m.executionsCond.L.Unlock()
 	defer func() {
-		m.executionsMutex.Lock()
+		m.executionsCond.L.Lock()
 		delete(m.executions, task.ID())
-		m.executionsMutex.Unlock()
+		m.executionsCond.L.Unlock()
 	}()
 
 	// Run the command! Killing the tomb will terminate the command.
