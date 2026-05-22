@@ -1,5 +1,5 @@
  // Replace oldDomain with newDomain
- const oldDomain = 'documentation.ubuntu.com/canonical-workshop';
+ const oldDomain = 'canonical-workshopubuntucom.readthedocs-hosted.com';
  const newDomain = 'ubuntu.com/workshop/docs';
 
  // Use a MutationObserver to wait for the RTD flyout element to appear in the DOM
