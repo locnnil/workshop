@@ -67,9 +67,10 @@ Reference implementations
 
 .. @artefact SDK
 
-These real-life examples on GitHub
-showcase different SDK patterns and workshop implementations.
+These real-life examples on GitHub,
+maintained by the |ws_markup| team,
+are meant to showcase different SDK patterns and workshop implementations.
 Study them to better understand SDK design and workshop creation:
 
-- https://github.com/canonical/sdks
+- https://github.com/canonical/reference-sdks
 - https://github.com/canonical/reference-workshops
