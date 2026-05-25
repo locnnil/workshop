@@ -200,7 +200,7 @@ func getWebsocket(transport *http.Transport, url string) (clientWebsocket, error
 		NetDialContext:   transport.DialContext,
 		Proxy:            transport.Proxy,
 		TLSClientConfig:  transport.TLSClientConfig,
-		HandshakeTimeout: 5 * time.Second,
+		HandshakeTimeout: 20 * time.Second,
 	}
 	conn, resp, err := dialer.Dial(url, nil)
 	if errors.Is(err, websocket.ErrBadHandshake) {

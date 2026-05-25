@@ -25,10 +25,9 @@ import (
 )
 
 type CommandManager struct {
-	executions      map[string]*execution
-	executionsCond  *sync.Cond
-	executionsMutex sync.Mutex
-	backend         workshop.Backend
+	executions     map[string]*execution
+	executionsCond *sync.Cond
+	backend        workshop.Backend
 }
 
 // New creates a new CommandManager.
@@ -71,11 +70,13 @@ func (m *CommandManager) Connect(r *http.Request, w http.ResponseWriter, task *s
 	stopWait := make(chan struct{})
 	defer func() {
 		// So waitExecution wakes up if it's stuck in Wait().
+		m.executionsCond.L.Lock()
 		close(stopWait)
 		m.executionsCond.Broadcast()
+		m.executionsCond.L.Unlock()
 	}()
 
-	executionCh := make(chan *execution)
+	executionCh := make(chan *execution, 1)
 	go func() {
 		e := m.waitExecution(task.ID(), stopWait)
 		if e != nil {
@@ -112,9 +113,7 @@ func (m *CommandManager) waitExecution(taskID string, stop <-chan struct{}) *exe
 		default:
 		}
 
-		m.executionsMutex.Lock()
 		e := m.executions[taskID]
-		m.executionsMutex.Unlock()
 		if e != nil {
 			return e
 		}
