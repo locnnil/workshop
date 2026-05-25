@@ -179,6 +179,7 @@ and implemented with
 
 - `Code of conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
 - :doc:`Security policy </security>`
+- `License <https://github.com/canonical/workshop/blob/main/LICENSE>`__
 
 .. rubric:: Feedback and support
 
