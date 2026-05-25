@@ -24,7 +24,7 @@ from :ref:`defining <tut_define>`, :ref:`launching <tut_launch>`,
 and :ref:`refreshing <tut_refresh>` it
 to :ref:`executing commands <tut_exec>` and
 :ref:`shelling <tut_shell>` into the workshop.
-The actions you're about to perform
+The steps you're about to perform
 cover most of your daily needs with |ws_markup|.
 
 
@@ -45,6 +45,11 @@ then ensure it runs.
 Prerequisites
 ~~~~~~~~~~~~~
 
+|ws_markup| is supported on Ubuntu
+and other :program:`snap`-enabled Linux distributions;
+it is also compatible with Windows Subsystem for Linux (WSL2),
+where it uses Btrfs instead of ZFS for storage.
+
 |ws_markup| relies on
 `LXD 6.6+ <https://canonical.com/lxd>`_
 for low-level operation
@@ -52,17 +57,14 @@ and uses its
 `REST API <https://documentation.ubuntu.com/lxd/latest/restapi_landing/>`_
 to handle individual *workshops*.
 
-If the :command:`snap install` command reports an issue with LXD,
-install a recent LXD version with :program:`snap`.
-
-To install it from scratch:
+To install it from scratch with :program:`snap`:
 
 .. code-block:: console
 
    $ sudo snap install --channel=6/stable lxd
 
 
-To refresh an existing installation:
+To refresh an existing :program:`snap` installation:
 
 .. code-block:: console
 
@@ -71,19 +73,18 @@ To refresh an existing installation:
 
 .. note::
 
-   For other ways to install LXD,
+   If you prefer another installation method,
    see the available installation options in
    `LXD documentation
-   <https://documentation.ubuntu.com/lxd/latest/installing/>`_.
-   Also, you need to ensure the
+   <https://documentation.ubuntu.com/lxd/latest/installing/>`__;
+   after installation,
+   make sure the
    `LXD daemon
-   <https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`_
+   <https://documentation.ubuntu.com/lxd/latest/explanation/lxd_lxc/#lxd-daemon>`__
    is enabled and running.
-   Again, refer to LXD documentation
+   If in doubt, refer to LXD documentation
    and your distribution's manuals for guidance.
 
-   |ws_markup| is compatible with Windows Subsystem for Linux (WSL2).
-   On WSL, |ws_markup| automatically uses Btrfs instead of ZFS for storage.
 
 Installation
 ~~~~~~~~~~~~
@@ -130,11 +131,12 @@ it lists the components of the workshop to be instantiated at launch.
 
 A definition can list many moving parts;
 perhaps, the most important are SDKs,
-which are basic, pre-defined units of a workshop's functionality.
+which are basic, predefined building blocks
+of your development environment.
 
 You reference SDKs from your workshop definition
 to specify what you want to include in your workshop.
-At run-time, |ws_markup| pulls and installs them,
+At runtime, |ws_markup| pulls and installs them,
 providing the dependencies and packages required for your work,
 while keeping the SDKs themselves isolated and manageable.
 
@@ -227,7 +229,7 @@ create a workshop definition named :file:`workshop.yaml`:
 
 Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
-comes from the :samp:`cpu` track of the :samp:`cpu/stable` channel.
+comes from the :samp:`cpu/stable` channel of the the :samp:`cpu` track.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
@@ -238,8 +240,8 @@ list the workshops in the project directory:
 
    $ workshop list
 
-     Project                  Workshop  Status  Notes
-     ~/ollama-python-project  dev       Off     -
+     WORKSHOP  STATUS  NOTES
+     dev       Off     -
 
 
 .. note::
@@ -297,7 +299,7 @@ To get a workshop ready for use, you launch it:
 Once the workshop is launched,
 you can start using it to build, debug, and run your code.
 
-After launching, check the run-time information
+After launching, check the runtime information
 to see what went into your workshop:
 
 .. @artefact workshop info
@@ -345,15 +347,15 @@ stored on the machine, regardless of which workshop pulled it:
 Each row is a distinct SDK volume on disk.
 Until you launch a workshop that references an SDK,
 it won't appear here;
-after launch, |ws_markup| has pulled the SDK from the Store
+at launch, |ws_markup| has pulled the SDK from the SDK Store
 and the revision shown matches the one in :command:`workshop info`.
 
 .. @artefact workshop .lock
 
-After launch, |ws_markup| starts tracking the project directory.
-The workshop stays operational with no extra steps on your part
-by using a hidden :file:`.lock` file that must remain in the project directory
-and not be copied or stored externally, e.g., in a repository.
+After launch, |ws_markup| tracks the project directory
+using a hidden :file:`.lock` file
+that must remain in the project directory
+and **not be copied or stored externally**, e.g., in a repository.
 
 You only need to launch a workshop once after defining it;
 after any substantial changes to it,
@@ -464,11 +466,18 @@ However, it ensures the workshop remains operational.
 If issues occur, a refresh rolls back to a previous stable condition,
 whereas a failed launch has no condition to revert to and just fails.
 
-To discard any changes made since the last successful launch or refresh,
-run :command:`workshop restore`.
-Unlike the automatic rollback on a failed refresh, this is a deliberate action
+SDKs in a workshop diagnose themselves during launch and refresh;
+if an SDK fails to set up,
+the entire change is rolled back to keep the workshop operational.
+
+Finally,
+to discard **any changes made inside the workshop**
+since the last successful launch or refresh,
+run :command:`workshop restore`.
+Unlike the automatic rollback on a failed refresh,
+this is a deliberate action
 that reverts the workshop to the most recent snapshot
-and resets connections and mounts to their defaults.
+and resets it to its default state.
 
 Now that you can launch, refresh, start and stop a workshop,
 let's move on to more practical purposes.
@@ -536,7 +545,7 @@ Besides running individual commands,
 you can open an interactive shell
 if you need to perform multiple operations within a session.
 |ws_markup| runs the login shell
-for the default non-privileged user,
+for the default nonprivileged user,
 who's also named :samp:`workshop`:
 
 .. @artefact workshop shell
@@ -647,7 +656,7 @@ with :command:`workshop changes`:
 
    $ workshop changes
 
-     ID  Status  Spawn               Ready               Summary
+     ID  STATUS  SPAWN               READY               SUMMARY
      1   Done    today at 09:26 CET  today at 09:27 CET  Launch "dev" workshop
      ...
      4   Done    today at 09:32 CET  today at 09:34 CET  Refresh "dev" workshop
@@ -668,7 +677,7 @@ pass the change ID to the command:
 
    $ workshop tasks 4
 
-     Status   Duration  Summary
+     STATUS   DURATION  SUMMARY
      Done    2m17.389s  Download "ubuntu@24.04" base image
      Done        113ms  Retrieve "system" SDK
      Done    2m59.777s  Retrieve "ollama" SDK from channel "vulkan/stable"

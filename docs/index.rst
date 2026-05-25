@@ -129,8 +129,8 @@ In this documentation
        :ref:`workshopctl CLI <ref_workshopctl__cli>`
 
 
-How this documentation is organised
-------------------------------------
+How this documentation is organized
+-----------------------------------
 
 This documentation follows the `Diátaxis documentation framework <https://diataxis.fr/>`_,
 organizing content by the type of information users need.

@@ -497,11 +497,11 @@ The exception is :samp:`setup-project`,
 which runs as the :samp:`workshop` user
 in the :file:`/project/` directory.
 
-A hook can signal an error by returning a non-zero exit code;
+A hook can signal an error by returning a nonzero exit code;
 a zero code indicates success.
 The options :samp:`errexit` and :samp:`pipefail`
 are set by default,
-so most commands which return a non-zero exit code
+so most commands which return a nonzero exit code
 cause the hook to exit with the same code.
 If :option:`!--verbose` is passed to :command:`workshop launch` or :command:`workshop refresh`,
 the option :samp:`xtrace` is also set.
@@ -527,7 +527,7 @@ SDK state
 
 An SDK can store any data specific to it within the workshop.
 For this purpose, an environment variable named :envvar:`$SDK_STATE_DIR`
-is exposed by |ws_markup| at run-time;
+is exposed by |ws_markup| at runtime;
 it resolves to an internal directory in the workshop,
 which :samp:`save-state` and :samp:`restore-state`
 can use to preserve and recover the data respectively.
@@ -539,7 +539,7 @@ can use to preserve and recover the data respectively.
   It is not accessible to the :samp:`workshop` user, the SDK itself,
   or in the workshop definition.
 
-  The state directory is a dedicated volume created by |ws_markup| at run-time
+  The state directory is a dedicated volume created by |ws_markup| at runtime
   for each SDK in every workshop,
   and is removed when the workshop stops.
   The :samp:`*-state` hooks can use it

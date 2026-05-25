@@ -68,7 +68,7 @@ A workshop's lifecycle can see it switch between several statuses:
 
    * - *Error*
      - Not operational;
-       the workshop is in a non-functional state due to an error.
+       the workshop is in a nonfunctional state due to an error.
 
 
 Status diagrams in the `See also`_ section below
@@ -249,7 +249,7 @@ SDKs
 The :samp:`sdks` section brings in the features and tools,
 layering them on top of the base image.
 Each SDK listed here is a bundle of code, data, and configurations,
-pre-packaged with |sdk_markup| to be used with |ws_markup|;
+prepackaged with |sdk_markup| to be used with |ws_markup|;
 see :ref:`exp_sdk_concepts` for details.
 
 This layering is not just conceptual;

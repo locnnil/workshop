@@ -34,7 +34,7 @@ We provide two binaries: |ws_markup| and |sdk_markup|.
 
 
 Currently, neither is publicly available,
-but you can confidently use the pre-release versions.
+but you can confidently use the prerelease versions.
 
 
 |ws_markup|

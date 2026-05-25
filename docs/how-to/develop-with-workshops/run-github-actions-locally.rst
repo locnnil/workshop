@@ -269,7 +269,7 @@ The specific steps depend on the workflow.
 
 For the above example:
 commit the updated workflow to the :samp:`main` branch,
-find it in the Actions tab of the repository,
+find it in the :guilabel:`Actions` tab of the repository,
 and select :guilabel:`Run workflow`.
 Pick whichever branch you like,
 as long as the runner is set to :samp:`workshop`.

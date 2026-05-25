@@ -115,7 +115,7 @@ add them to the list of explicitly tracked items.
 
 With your dependencies accounted for,
 restoring your build system after cloning the repo elsewhere
-is as simple as re-launching the workshop from a new
+is as simple as relaunching the workshop from a new
 *project directory*.
 
 But what if you need to maintain multiple branches

@@ -57,7 +57,7 @@ run :command:`workshop tasks` without arguments:
 
    $ workshop tasks
 
-     Status    Duration  Summary
+     STATUS   DURATION  SUMMARY
      ...
 
 
@@ -69,7 +69,7 @@ by listing all *changes* in the workshop to find the one that failed:
 
    $ workshop changes
 
-     ID  Status  Spawn           Ready           Summary
+     ID  STATUS  SPAWN           READY           SUMMARY
      ...
      81  Error   today at 12:20  today at 12:21  Refresh workshops "dev-volatile"
 
@@ -82,7 +82,7 @@ this time supplying the change ID as the argument:
 
    $ workshop tasks 81
 
-     Status    Duration  Summary
+     STATUS    DURATION  SUMMARY
      Done          59ms  Retrieve "go" SDK from channel "latest/edge"
      Undone        42ms  Create SDK state storage
      Done          28ms  Run hook "save-state" for "go" SDK
@@ -191,7 +191,7 @@ comment out SDKs one by one in the workshop definition
 and refresh the workshop after each change.
 
 When the issue reappears,
-the cause is likely the SDK you just re-enabled,
+the cause is likely the SDK you just reenabled,
 or its interaction with other SDKs.
 Investigate it using the :command:`workshop tasks` command
 to view detailed error information.
@@ -223,7 +223,7 @@ then refresh the workshop to apply the change.
 List and suppress warnings
 --------------------------
 
-|ws_markup| occasionally encounters non-blocking or transient problems,
+|ws_markup| occasionally encounters nonblocking or transient problems,
 such as broken mount points.
 These are registered as *warnings* in a system-wide log,
 which can be accessed with :command:`workshop warnings`:

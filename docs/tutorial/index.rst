@@ -10,7 +10,7 @@ Tutorial
 
 Anyone new to |ws_markup| should start here.
 
-The tutorial is broken into four main parts:
+The tutorial has four main parts:
 you will learn to build development environments,
 customize them, and share the updates with others.
 The tutorial introduces key tools, concepts,

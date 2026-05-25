@@ -561,7 +561,7 @@ Numbered lists: Use pound signs for auto-numbering:
 #. Third step
 ```
 
-Multi-line list items: Separate items with a blank line for visibility if at least one item is multi-line:
+Multiline list items: Separate items with a blank line for visibility if at least one item is multiline:
 
 ```restructuredtext
 - First item with a longer description
@@ -728,7 +728,7 @@ Separate `list-table` rows with blank lines:
      - :ref:`Concepts <exp_workshop_concepts>` • ...
 ```
 
-Section gaps: Include a non-cumulative two-line gap (two blank lines) after code samples, lists, tables, and before headings for visual clarity.
+Section gaps: Include a noncumulative two-line gap (two blank lines) after code samples, lists, tables, and before headings for visual clarity.
 
 Examples from the documentation:
 
@@ -977,7 +977,7 @@ Pattern: Show command with prompt, followed by output (if relevant):
      Launched dev
 ```
 
-Command prompts: Use the non-selectable `$` prompt. The `console` lexer in `.. code-block::` automatically handles this, making the prompt non-selectable during copy operations.
+Command prompts: Use the nonselectable `$` prompt. The `console` lexer in `.. code-block::` automatically handles this, making the prompt nonselectable during copy operations.
 
 Root access: When root access is required, include `sudo` explicitly:
 
@@ -992,11 +992,11 @@ Command output: Indent output with two spaces and separate it from the command w
 ```restructuredtext
 .. code-block:: console
 
-   $ workshop list
+   $ workshop list --global
 
-   Name    Status   Base           SDKs
-   dev     Running  ubuntu@22.04   go, python
-   test    Stopped  ubuntu@24.04   rust
+   PROJECT          WORKSHOP  STATUS   NOTES
+   ~/myproject      dev       Running  -
+   ~/otherproject   test      Stopped  -
 ```
 
 Comments in commands: Use two forms for comments:
