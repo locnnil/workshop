@@ -38,4 +38,5 @@ version control, CI/CD, AI-powered development tools, and language tooling:
    Use workshops with Git <use-git>
    Manage Python environments <manage-python-environments>
    Run GitHub Actions locally <run-github-actions-locally>
+   Run workshops in GitHub Actions <run-workshops-in-github-actions>
    Use workshops with AI agents <use-workshops-with-ai-agents>

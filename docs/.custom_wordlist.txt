@@ -9,6 +9,7 @@ backend
 basename
 Btrfs
 bugfix
+cacheable
 Caddy
 Caddyfile
 Canonical's
@@ -191,6 +192,7 @@ unicode
 unix
 unmounts
 unparam
+unreviewed
 unstashing
 untrusted
 Untrusted
