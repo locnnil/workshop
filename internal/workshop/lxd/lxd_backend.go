@@ -48,6 +48,10 @@ const (
 
 	networkName = "workshopbr0"
 	networkType = "bridge"
+
+	// NetworkBridgeName is the name of the LXD bridge network used by
+	// workshops, exported for use by other packages (e.g. firewall checks).
+	NetworkBridgeName = networkName
 )
 
 var (
