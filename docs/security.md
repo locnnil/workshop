@@ -17,9 +17,7 @@ SDKcraft is an instance of
 installed, and run as a snap; it neither needs nor requires elevated privileges
 to work and securely confines the SDK build process to a container.
 
-Packaged SDKs are uploaded to the SDK Store. Currently, it's implemented using
-[GCP](https://console.cloud.google.com/storage/browser/sdkstore), so access is
-managed by [GCP IAM](https://docs.cloud.google.com/iam/docs).
+Packaged SDKs are uploaded to the SDK Store.
 
 ## Isolation
 
