@@ -273,7 +273,7 @@ Stash and restore
 -----------------
 
 You can temporarily stash the sketch SDK
-to revert your workshop to its pre-sketching state:
+to revert your workshop to its presketching state:
 
 .. code-block:: console
 

@@ -113,3 +113,9 @@ Contributions
 -------------
 
 To join the development effort, see `How to contribute <contributing.rst>`_.
+
+
+License
+-------
+
+Workshop is released under the `GPL-3.0 license <../LICENSE>`_.

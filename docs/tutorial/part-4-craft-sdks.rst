@@ -291,7 +291,7 @@ and the :samp:`ollama-server` slot exposes the Ollama API on port 11434.
    this restriction prevents SDKs
    from accessing any arbitrary data on the host filesystem.
    However, users who add your SDK to their workshops
-   will be able to remount the plug elsewhere at run-time.
+   will be able to remount the plug elsewhere at runtime.
 
 
 Add hooks
@@ -432,7 +432,7 @@ otherwise, it reports the error output from the failed command.
 In general, the hook should set the health to :samp:`okay`
 and return a zero code if its health checks succeed.
 To signal an error, set the health to :samp:`error`
-or return a non-zero code.
+or return a nonzero code.
 
 You can also set the health to :samp:`waiting`
 to signal that the hook should be retried for a few seconds.
@@ -444,7 +444,7 @@ the health is eventually set to :samp:`error` automatically.
    The use of :command:`sudo -u workshop` here is important
    because only the :samp:`setup-project` hook runs as a normal user by default;
    other hooks, like :samp:`check-health`, run as root.
-   Running commands as the non-root user
+   Running commands as the nonroot user
    helps preserve the correct environment variables and file ownership,
    and can be easier than adjusting permissions afterwards.
 

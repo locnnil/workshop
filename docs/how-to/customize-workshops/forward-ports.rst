@@ -14,7 +14,7 @@ How to forward ports with tunneling
 Port-forwarding in |ws_markup| is done with the *tunnel interface*.
 Tunnels pair a *plug* (the listening side) with a *slot* (the service side),
 forwarding every connection that reaches the plug address to the slot address.
-This how-to guide walks you through three common scenarios.
+Three common scenarios cover most day-to-day port-forwarding needs.
 
 
 Expose workshop services

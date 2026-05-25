@@ -11,8 +11,9 @@ How to connect your local VS Code to a workshop
 
 .. @artefact workshop (container)
 
-This article shows how to use Visual Studio Code with Workshop
-by connecting your local VS Code to a remote workshop environment.
+A local VS Code instance can connect to a remote workshop environment
+via the :samp:`vscode-remote` SDK,
+giving you the full VS Code experience against |ws_markup|.
 
 First, you'll need to have the `remote development extension pack
 <https://code.visualstudio.com/docs/remote/remote-overview>`__

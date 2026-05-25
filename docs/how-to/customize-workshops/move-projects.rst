@@ -53,7 +53,7 @@ Start in the same project directory where you launched the workshop:
 
    $ workshop list --global
 
-     Project                 Workshop  Status  Notes
+     PROJECT                 WORKSHOP  STATUS  NOTES
      /home/user/old          golang    Ready   -
 
 
@@ -64,7 +64,7 @@ Move the project directory and check the workshop:
    $ mv /home/user/old/ /home/user/new/
    $ workshop list --global
 
-     Project                 Workshop  Status  Notes
+     PROJECT                 WORKSHOP  STATUS  NOTES
      /home/user/new          golang    Ready   -
 
 
@@ -89,7 +89,7 @@ Again, start with the workshop's location:
 
    $ workshop list --global
 
-     Project                 Workshop  Status  Notes
+     PROJECT                 WORKSHOP  STATUS  NOTES
      /home/user/old          golang    Ready   -
 
 
@@ -101,7 +101,7 @@ Copy the project directory and check the workshops:
 
    $ workshop list --global
 
-     Project                 Workshop  Status  Notes
+     PROJECT                 WORKSHOP  STATUS  NOTES
      /home/user/old          golang    Ready   -
 
 
@@ -114,7 +114,7 @@ but what happens if you do it yourself?
    $ workshop launch --project /home/user/new/
    $ workshop list --global
 
-     Project                 Workshop  Status  Notes
+     PROJECT                 WORKSHOP  STATUS  NOTES
      /home/user/old          golang    Ready   -
      /home/user/new          golang    Ready   -
 

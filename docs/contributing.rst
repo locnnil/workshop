@@ -336,7 +336,7 @@ to give permission to access its resources:
    sudo usermod -a -G lxd $USER
 
 
-Log out and re-open your user session for the new group to become active,
+Log out and reopen your user session for the new group to become active,
 then initialize LXD:
 
 .. code-block:: console
@@ -413,7 +413,7 @@ for specific review and maintenance tasks:
 
 - ``doc-review.agent.md``:
   A technical documentation reviewer
-  that performs a multi-stage review process
+  that performs a multistage review process
   including build validation, content analysis, and style checking,
   referencing this contribution guide
   and the :ref:`documentation style guide <doc_style_guide>`.

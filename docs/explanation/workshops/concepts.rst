@@ -68,11 +68,126 @@ A workshop's lifecycle can see it switch between several statuses:
 
    * - *Error*
      - Not operational;
-       the workshop is in a non-functional state due to an error.
+       the workshop is in a nonfunctional state due to an error.
 
 
 Status diagrams in the `See also`_ section below
 provide more details of valid transitions.
+
+
+.. _exp_workshop_lifecycle:
+
+Launch, refresh, and restore
+----------------------------
+
+.. @artefact workshop launch
+.. @artefact workshop refresh
+.. @artefact workshop restore
+
+Three commands move a workshop between the statuses listed above:
+
+- :command:`workshop launch` builds a workshop for the first time
+- :command:`workshop refresh` updates an existing workshop
+  to match its current definition
+- :command:`workshop restore` rolls a workshop back
+  to the state it had right after its last successful launch or refresh.
+
+
+The table below summarizes when to use each command
+and what it does to the workshop and to its interface connections:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 30 30 25
+
+   * - Command
+     - Use case
+     - Workshop effect
+     - Connections effect
+
+   * - :command:`workshop launch`
+     - The workshop has never been built
+       and is in the *Off* state.
+     - Builds the workshop from scratch,
+       installing the base image and each SDK in order.
+     - All auto-connect candidates are evaluated
+       and connected for the first time.
+
+   * - :command:`workshop refresh`
+     - The definition has changed
+       and you want those changes applied to the running workshop.
+     - Reuses snapshots for SDKs whose configuration is unchanged;
+       reinstalls the rest from scratch.
+     - Re-evaluates auto-connect against the new definition;
+       **any connections established manually after launch are dropped**.
+
+   * - :command:`workshop restore`
+     - You want to discard runtime drift in the workshop
+       and return it to a known-good state.
+     - Rolls the workshop filesystem back
+       to the snapshot taken at the last successful launch or refresh.
+     - Re-evaluates auto-connect against the unchanged definition;
+       **any connections established manually since the snapshot are dropped**.
+
+
+.. _exp_workshop_launch:
+
+Launch
+~~~~~~
+
+First, :command:`workshop launch` is the one-time builder.
+It applies the workshop definition layer by layer,
+taking a ZFS snapshot after each SDK
+so that later operations can reuse the work;
+see :ref:`exp_workshop_definition_sdks` for the layering details.
+
+Once a workshop has been launched,
+running :command:`workshop launch` against it again fails with no effect.
+To apply changes from the definition to a launched workshop,
+use :command:`workshop refresh`.
+
+
+.. _exp_workshop_refresh:
+
+Refresh
+~~~~~~~
+
+Next, :command:`workshop refresh` updates an existing workshop
+to match its current definition file.
+The workshop must be in the *Ready* state.
+
+Refresh is incremental:
+SDKs whose configuration is unchanged
+are kept as-is and restored from their snapshots
+without re-running their :samp:`setup-base` hook,
+while SDKs that have been **added, removed, or changed in the definition**
+go through a fresh installation.
+
+The :samp:`save-state` hook of each surviving SDK
+runs before the rebuild,
+and the matching :samp:`restore-state` hook runs after it,
+so SDK state kept by these hooks carries across the refresh.
+
+
+.. _exp_workshop_restore:
+
+Restore
+~~~~~~~
+
+Finally, :command:`workshop restore` runs the same machinery as refresh,
+but uses the workshop's state from the last successful launch or refresh
+as both the source and the target,
+ignoring any edits made to the workshop definition since then.
+The workshop must be in the *Ready* state.
+No SDK changes are applied;
+the container filesystem is rolled back
+to the snapshot it had right after the last successful launch or refresh,
+discarding any changes made inside the workshop since then.
+
+Restore is the right tool
+when the workshop has inadvertently drifted at runtime
+(for example, packages installed ad-hoc inside the container)
+and you want a clean slate without rebuilding from scratch.
 
 
 .. _exp_workshop_definition:
@@ -134,7 +249,7 @@ SDKs
 The :samp:`sdks` section brings in the features and tools,
 layering them on top of the base image.
 Each SDK listed here is a bundle of code, data, and configurations,
-pre-packaged with |sdk_markup| to be used with |ws_markup|;
+prepackaged with |sdk_markup| to be used with |ws_markup|;
 see :ref:`exp_sdk_concepts` for details.
 
 This layering is not just conceptual;
@@ -255,6 +370,66 @@ which is set by :samp:`workshop-target`.
 
 Mind that the connection established in this way
 is no different from those created via the command line.
+
+
+.. _exp_workshop_connection_lifecycle:
+
+Connections across refresh and restore
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Interface connections fall into three observable categories,
+each treated differently when a workshop is refreshed or restored:
+
+- *Auto-connections* are established at launch
+  from the SDK's auto-connect rules
+  and from the :samp:`connections` section of the workshop definition.
+
+- *Manual runtime connections* are added with :command:`workshop connect`
+  after the workshop has been launched
+  and are not present in the workshop definition.
+
+- *Manual disconnects of an auto-connection* are made
+  with :command:`workshop disconnect`
+  against a connection that the workshop established by itself.
+
+
+The table below summarizes how each category is treated
+by :command:`workshop refresh` and :command:`workshop restore`:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - Connection type and state
+     - After :command:`workshop refresh`
+     - After :command:`workshop restore`
+
+   * - Auto-connection still valid in the new definition
+     - Re-established
+     - Re-established
+
+   * - Auto-connection whose plug or slot is removed in the new definition
+     - Dropped
+     - Not applicable; definition doesn't change
+
+   * - Manual runtime connection added with :command:`workshop connect`
+     - Dropped
+     - Dropped
+
+   * - Manually disconnected auto-connection
+     - Stays disconnected
+     - Stays disconnected
+
+
+The practical consequence is that
+runtime use of :command:`workshop connect`
+should be reserved for short-lived experimentation:
+to make a connection that survives a refresh,
+add it to the :samp:`connections` section of the workshop definition.
+Conversely, a deliberate :command:`workshop disconnect`
+is preserved across refreshes and restores,
+so once a default auto-connection has been turned off,
+it stays off until explicitly reconnected.
 
 
 .. _exp_workshop_definition_actions:
@@ -423,5 +598,8 @@ Reference:
 - :ref:`ref_workshop_actions`
 - :ref:`ref_workshop_connections`
 - :ref:`ref_workshop_definition`
+- :ref:`ref_workshop_launch`
+- :ref:`ref_workshop_refresh`
+- :ref:`ref_workshop_restore`
 - :ref:`ref_workshop_run`
 - :ref:`ref_workshop_status`

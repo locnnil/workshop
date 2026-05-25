@@ -13,9 +13,8 @@ Workshops can sometimes become unresponsive,
 encounter errors during start or stop operations,
 or become orphaned if their project directory is removed prematurely.
 
-This guide provides comprehensive steps
-to thoroughly purge such workshops,
-ensuring the removal of their containers, metadata, and files.
+A thorough purge involves removing the workshop's containers, metadata,
+and files in a deliberate sequence.
 
 
 Standard removal procedure

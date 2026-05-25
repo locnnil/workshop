@@ -46,7 +46,7 @@ To let SDKs in a workshop access the host's cameras,
 |ws_markup| provides a camera interface slot
 that multiple camera interface plugs can access.
 
-When the SDK is installed at run-time during launch and refresh operations,
+When the SDK is installed at runtime during launch and refresh operations,
 |ws_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interfaces_validation>`;
 if it does,

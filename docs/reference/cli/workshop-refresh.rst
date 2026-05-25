@@ -22,7 +22,13 @@ Update workshops according to their definitions.
 
 This command updates the workshops listed as arguments. For each workshop,
 it checks the workshop definition and applies any required updates
-to the base image, SDKs and interface connections.
+to the base image, SDKs, and interface connections:
+
+- Connections added at runtime with "workshop connect" are dropped,
+  and the workshop returns to its definition's auto-connect defaults.
+
+- A connection removed with "workshop disconnect" without "--forget"
+  stays disconnected after refresh.
 
 The "--wait-on-error" option pauses the refresh if an error occurs.
 Thus, you can fix the error and resume the operation or abort and revert it.

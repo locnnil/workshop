@@ -2,7 +2,7 @@
 
 .. meta::
    :description: How-to guide on using Workshop for parallel agentic coding,
-                 demonstrating multi-agent workflows with 'claude-code' and
+                 demonstrating multiagent workflows with 'claude-code' and
                  'copilot' SDKs in a shared sandbox environment.
 
 How to use workshops with AI agents
@@ -19,7 +19,7 @@ to work in sandboxed environments over a shared project repository,
 thus addressing security and privacy concerns
 while enabling a degree of creativity in your workflows.
 
-Today, developer teams routinely delegate multi-step tasks to agents,
+Today, developer teams routinely delegate multistep tasks to agents,
 run different models for planning and implementation,
 and coordinate fleets of agents across branches or repos.
 In practice,
@@ -29,17 +29,16 @@ and approval policies,
 so |ws_markup| as a consistent container boundary is a safer baseline
 than relying on every tool to self-sandbox correctly.
 
-This guide demonstrates how to run heterogeneous AI coding SDKs
-in separate Git worktrees over a shared codebase.
-Using Git worktrees is a best practice recommended by
+Running heterogeneous AI coding SDKs
+in separate Git worktrees over a shared codebase
+is a best practice recommended by
 `Anthropic <https://code.claude.com/docs/en/common-workflows#run-parallel-sessions-with-worktrees>`__,
 `OpenAI <https://developers.openai.com/codex/app/worktrees>`__,
 and
 `Cursor <https://cursor.com/blog/agent-best-practices#native-worktree-support>`__.
 
-The guide walks through two scenarios
-that build a minimal Flask app with a few HTTP routes.
-Each scenario compares agent outputs
+Two scenarios below build a minimal Flask app with a few HTTP routes.
+Each compares agent outputs
 and synthesizes the optimal approach in different ways:
 
 - Scenario 1: Parallel exploration.
@@ -55,7 +54,8 @@ and synthesizes the optimal approach in different ways:
 Prerequisites
 -------------
 
-This guide builds on :ref:`how_git_workshops` and :ref:`how_add_actions`,
+Working with AI agents in workshops builds on :ref:`how_git_workshops`
+and :ref:`how_add_actions`,
 particularly the use of Git worktrees with workshops.
 Worktrees help isolate and track different agents' runs and outcomes
 while sharing the same project directory and the workshops in it.
@@ -238,7 +238,7 @@ Create a worktree for the first agent, :samp:`claude-code`:
    $ git worktree add claude
 
 
-Next, run the first agent in non-interactive mode with the shared prompt,
+Next, run the first agent in noninteractive mode with the shared prompt,
 specifying the model to use via an environment variable
 and the worktree as the working directory:
 
@@ -269,7 +269,7 @@ Create a worktree for the second agent:
    $ git worktree add copilot
 
 
-Run the second agent in non-interactive mode with the same prompt,
+Run the second agent in noninteractive mode with the same prompt,
 specifying the model to use via an environment variable
 and the new worktree as the working directory:
 
@@ -373,7 +373,7 @@ Next, create the implementation worktree:
    $ git worktree add implementation
 
 
-Run the implementation agent in non-interactive mode with the coder prompt,
+Run the implementation agent in noninteractive mode with the coder prompt,
 supplying the worktree as the working directory:
 
 .. code-block:: console

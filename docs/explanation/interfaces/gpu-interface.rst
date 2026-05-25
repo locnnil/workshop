@@ -46,7 +46,7 @@ To let SDKs in a workshop access the host's GPUs,
 |ws_markup| provides a GPU interface slot
 that multiple GPU interface plugs can access.
 
-When the SDK is installed at run-time during launch and refresh operations,
+When the SDK is installed at runtime during launch and refresh operations,
 |ws_markup| checks that the plug targeting the slot
 passes :ref:`validation <exp_interfaces_validation>`;
 if it does,

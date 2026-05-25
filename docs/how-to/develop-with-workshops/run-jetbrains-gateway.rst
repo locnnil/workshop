@@ -13,8 +13,9 @@ How to use JetBrains Gateway with Workshop
 <https://www.jetbrains.com/remote-development/gateway/>`_
 allows you to connect to remote development environments
 while using your favorite JetBrains IDEs (IntelliJ IDEA, PyCharm, and so on).
-This guide explains how to use JetBrains Gateway with |ws_markup|
-for remote development by connecting to your workshop.
+A workshop can serve as the remote development target
+for JetBrains Gateway,
+letting you use your favorite JetBrains IDEs against |ws_markup|.
 
 
 Prerequisites

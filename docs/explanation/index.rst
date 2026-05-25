@@ -13,12 +13,14 @@ To start using |ws_markup| and |sdk_markup|,
 it is important to understand how these concepts fit together.
 
 
+.. _exp_arch:
+
 Architecture
 ------------
 
-The architecture section provides a detailed overview of Workshop's design,
-its components
-and how they work together to provide isolated development environments.
+|ws_markup|'s architecture combines a set of system components
+with well-defined runtime behavior
+to provide container-isolated development environments.
 
 .. toctree::
    :titlesonly:
@@ -26,6 +28,8 @@ and how they work together to provide isolated development environments.
 
    architecture/index
 
+
+.. _exp_workshop:
 
 Workshops and projects
 ----------------------
@@ -46,6 +50,8 @@ where multiple workshop definitions can be placed.
    workshops/index
 
 
+.. _exp_sdks:
+
 SDKs
 ----
 
@@ -60,6 +66,8 @@ to create tailored development environments.
 
    sdks/index
 
+
+.. _exp_interfaces:
 
 Interfaces
 ----------
@@ -80,4 +88,4 @@ Security considerations
 
 This overview discusses the security aspects of |ws_markup| and |sdk_markup|,
 such as isolation, privileges, relevant risks, and interface mechanics.
-See :ref:`Security policy <security>`.
+See :doc:`Security policy </security>`.

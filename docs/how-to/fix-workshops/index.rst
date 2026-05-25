@@ -1,5 +1,3 @@
-.. _how_fix_workshops:
-
 .. meta::
    :description: How-to guides on fixing workshops, including debugging
                  issues, troubleshooting installations, and purging workshops.
@@ -7,8 +5,9 @@
 How to fix workshops
 ====================
 
-These how-to guides help you troubleshoot
-and resolve issues with your workshops.
+Troubleshooting a misbehaving workshop
+usually starts with tracing the root cause,
+then either repairing it in place or rebuilding from scratch.
 
 
 Diagnose and resolve issues

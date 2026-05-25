@@ -33,7 +33,7 @@ Notes:
 - To rebuild a removed workshop from scratch, use "workshop launch".
 
 - For mount interface plugs,
-  non-default sources set by "workshop remount" aren't removed.
+  nondefault sources set by "workshop remount" aren't removed.
 
 
 .. rubric:: Examples

@@ -270,8 +270,8 @@ Some guidelines for environment variables:
 Parts or hooks?
 ---------------
 
-The decision between shipping pre-built content
-and, alternatively, installing it dynamically at run-time through hooks
+The decision between shipping prebuilt content
+and, alternatively, installing it dynamically at runtime through hooks
 affects SDK size, startup time, and flexibility.
 Different content types have different optimal strategies.
 
@@ -304,7 +304,7 @@ In general, binary artifacts are best shipped as parts when you need to:
 This approach ensures consistent environments
 and avoids eventual dependency conflicts.
 
-The :samp:`uv` SDK shows this approach by shipping pre-built Rust binaries:
+The :samp:`uv` SDK shows this approach by shipping prebuilt Rust binaries:
 
 .. code-block:: yaml
    :caption: uv/sdkcraft.yaml
