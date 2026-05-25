@@ -232,6 +232,38 @@ func (a *Action) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// ValidateFile validates a workshop File struct.
+func ValidateFile(file *File) error {
+	if !workshopName.MatchString(file.Name) {
+		return fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them")
+	}
+	if len(file.Name) > MAX_WORKSHOP_NAME_LENGTH {
+		return fmt.Errorf("workshop name %q too long", file.Name)
+	}
+
+	if !slices.Contains(SupportedBases, file.Base) {
+		return fmt.Errorf("base %q not supported", file.Base)
+	}
+
+	if err := validateSdks(file.Sdks); err != nil {
+		return err
+	}
+
+	if err := validateBinding(file.Sdks); err != nil {
+		return err
+	}
+
+	if err := validateConnections(file); err != nil {
+		return err
+	}
+
+	if err := validateActions(file); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func readWorkshop(path string) (*File, error) {
 	var err error
 	var file File
@@ -252,30 +284,7 @@ func readWorkshop(path string) (*File, error) {
 		return nil, err
 	}
 
-	if !workshopName.MatchString(file.Name) {
-		return nil, fmt.Errorf("a workshop's name must: (1) start with a letter, (2) only include digits, lowercase letters, and hyphens joining them")
-	}
-	if len(file.Name) > MAX_WORKSHOP_NAME_LENGTH {
-		return nil, fmt.Errorf("workshop name %q too long", file.Name)
-	}
-
-	if !slices.Contains(SupportedBases, file.Base) {
-		return nil, fmt.Errorf("base %q not supported", file.Base)
-	}
-
-	if err = validateSdks(file.Sdks); err != nil {
-		return nil, err
-	}
-
-	if err = validateBinding(file.Sdks); err != nil {
-		return nil, err
-	}
-
-	if err = validateConnections(&file); err != nil {
-		return nil, err
-	}
-
-	if err = validateActions(&file); err != nil {
+	if err := ValidateFile(&file); err != nil {
 		return nil, err
 	}
 
