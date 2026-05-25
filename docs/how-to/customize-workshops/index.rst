@@ -14,6 +14,7 @@ workshops in parallel:
    :maxdepth: 1
 
    Add actions to workshops <add-actions>
+   Add mounts <add-mounts>
    Forward ports <forward-ports>
    Move projects around <move-projects>
    Use multiple workshops <use-multiple-workshops>

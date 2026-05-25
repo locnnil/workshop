@@ -1,0 +1,70 @@
+summary: Test 'How to add mounts to a workshop' to ensure it's operational
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove || true
+  rm -rf /home/ubuntu/datasets /home/ubuntu/refdata
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  project_id=$(cat .workshop.lock)
+  share_root="/home/ubuntu/.local/share/workshop/id/$project_id/dev/mount/uv"
+
+  echo "Persist workshop-internal files on the host (auto-allocated source)"
+  test -d "$share_root/data"
+  workshop_exec exec -- bash -c "mountpoint -q /home/workshop/data && echo persisted > /home/workshop/data/file.txt"
+  test -f "$share_root/data/file.txt"
+  cat "$share_root/data/file.txt" | MATCH persisted
+
+  echo "Remount a host directory inside the workshop"
+  mkdir -p /home/ubuntu/datasets
+  echo hello > /home/ubuntu/datasets/file.txt
+  chown -R ubuntu:ubuntu /home/ubuntu/datasets
+  workshop_exec stop dev
+  workshop_exec remount dev/uv:shared /home/ubuntu/datasets
+  workshop_exec start dev
+  workshop_exec exec -- cat /home/workshop/shared/file.txt | MATCH hello
+
+  echo "Attach a host directory long-term"
+  workshop_exec info dev | yq '.sdks["uv"].mounts["shared"]' | MATCH "^host-source:.*~/datasets"
+  workshop_exec refresh
+  workshop_exec info dev | yq '.sdks["uv"].mounts["shared"]' | MATCH "^host-source:.*~/datasets"
+  workshop_exec exec -- cat /home/workshop/shared/file.txt | MATCH hello
+
+  echo "Expose a host directory read-only"
+  mkdir -p /home/ubuntu/refdata
+  echo reference > /home/ubuntu/refdata/note.txt
+  chown -R ubuntu:ubuntu /home/ubuntu/refdata
+  workshop_exec stop dev
+  workshop_exec remount dev/uv:readonly /home/ubuntu/refdata
+  workshop_exec start dev
+  workshop_exec exec -- cat /home/workshop/readonly/note.txt | MATCH reference
+  workshop_exec exec -- sudo touch /home/workshop/readonly/x && exit 1 || true
+  workshop_exec exec -- mountpoint -q /home/workshop/readonly
+
+  echo "Share a directory between SDKs (uv:venv -> jupyter:venv)"
+  workshop_exec connections dev | MATCH "^mount.+dev/jupyter:venv.+dev/uv:venv"
+  workshop_exec exec -- mountpoint -q /var/lib/workshop/sdk/jupyter/venv
+
+  echo "Reset a remount back to the auto-allocated source"
+  workshop_exec disconnect dev/uv:shared --forget
+  workshop_exec connect dev/uv:shared :mount
+  workshop_exec exec -- mountpoint -q /home/workshop/shared
+  workshop_exec exec -- test ! -f /home/workshop/shared/file.txt
+  workshop_exec exec -- bash -c "echo reset > /home/workshop/shared/marker.txt"
+  test -f "$share_root/shared/marker.txt"
+  cat "$share_root/shared/marker.txt" | MATCH reset
+
+  echo "Manual connection state survives refresh and start/stop"
+  workshop_exec connections dev | MATCH "^mount.+dev/uv:shared.+:mount.+manual$"
+  workshop_exec refresh
+  workshop_exec connections dev | MATCH "^mount.+dev/uv:shared.+:mount.+manual$"
+  workshop_exec stop dev
+  workshop_exec start dev
+  workshop_exec connections dev | MATCH "^mount.+dev/uv:shared.+:mount.+manual$"
+
+  echo "'workshop restore' resets connections and mounts to defaults"
+  workshop_exec restore dev
+  workshop_exec connections dev | MATCH "^mount.+dev/uv:shared.+:mount.+-$"
