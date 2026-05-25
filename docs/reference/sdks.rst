@@ -450,7 +450,7 @@ which can be defined when the SDK is built using |sdk_markup|:
 
    * - :samp:`setup-project`
 
-     - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`:
+     - At :ref:`ref_workshop_launch`, :ref:`ref_workshop_refresh`, :ref:`ref_workshop_restore`:
        after mounting the project directory
        and auto-connecting plugs and slots
        but before the workshop is set to *Ready*.
@@ -459,7 +459,7 @@ which can be defined when the SDK is built using |sdk_markup|:
 
    * - :samp:`save-state`
 
-     - At :ref:`ref_workshop_refresh`:
+     - At :ref:`ref_workshop_refresh`, :ref:`ref_workshop_restore`:
        before destroying the old workshop.
 
      - Saves SDK-specific data to the :ref:`state directory <ref_sdk_state>`.
@@ -467,7 +467,7 @@ which can be defined when the SDK is built using |sdk_markup|:
 
    * - :samp:`restore-state`
 
-     - At :ref:`ref_workshop_refresh`:
+     - At :ref:`ref_workshop_refresh`, :ref:`ref_workshop_restore`:
        after running :samp:`setup-project` hooks for *all* SDKs.
 
      - Restores SDK-specific data from the :ref:`state directory <ref_sdk_state>`.
@@ -477,7 +477,7 @@ which can be defined when the SDK is built using |sdk_markup|:
      - At :ref:`ref_workshop_launch`:
        after running :samp:`setup-project` hooks for *all* SDKs.
 
-       At :ref:`ref_workshop_refresh`:
+       At :ref:`ref_workshop_refresh`, :ref:`ref_workshop_restore`:
        after running :samp:`restore-state` hooks for *all* SDKs.
 
      - Sets the state of the SDK
