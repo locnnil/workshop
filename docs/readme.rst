@@ -119,3 +119,6 @@ License
 -------
 
 Workshop is released under the `GPL-3.0 license <../LICENSE>`_.
+
+The documentation is licensed under
+`CC-BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0/>`_.
