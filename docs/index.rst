@@ -178,7 +178,7 @@ and implemented with
 .. rubric:: Governance and policies
 
 - `Code of conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
-- :ref:`Security policy <security>`
+- :doc:`Security policy </security>`
 
 .. rubric:: Feedback and support
 

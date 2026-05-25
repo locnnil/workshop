@@ -1,11 +1,3 @@
-```{eval-rst}
-.. meta::
-   :description: Overview of security considerations for Workshop and SDKcraft,
-                 including privilege management and container technology.
-```
-
-(security)=
-
 # Security policy
 
 This is an overview of security considerations for Workshop and SDKcraft.

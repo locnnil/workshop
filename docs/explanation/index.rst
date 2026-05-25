@@ -88,4 +88,4 @@ Security considerations
 
 This overview discusses the security aspects of |ws_markup| and |sdk_markup|,
 such as isolation, privileges, relevant risks, and interface mechanics.
-See :ref:`Security policy <security>`.
+See :doc:`Security policy </security>`.
