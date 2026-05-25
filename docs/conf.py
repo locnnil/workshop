@@ -28,7 +28,7 @@ copyright = f"{datetime.date.today().year}"
 html_title = ""
 
 # Documentation website URL
-ogp_site_url = "https://documentation.ubuntu.com/canonical-workshop/"
+ogp_site_url = "https://ubuntu.com/workshop/docs/"
 
 # Preview name of the documentation website
 ogp_site_name = project
@@ -44,9 +44,7 @@ html_favicon = "_static/favicon.png"
 html_context = {
     "product_page": "documentation.ubuntu.com",
     "product_tag": "_static/tag.png",
-    "discourse": "https://discourse.canonical.com/",
-    "category": "engineering/workshops",
-    "mattermost": "https://chat.canonical.com/canonical/channels/workshop",
+    "discourse": "https://discourse.ubuntu.com/",
     "matrix": "https://matrix.to/#/#documentation:ubuntu.com",
     "github_url": "https://github.com/canonical/workshop",
     "repo_default_branch": "main",

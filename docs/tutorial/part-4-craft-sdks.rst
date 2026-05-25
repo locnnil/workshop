@@ -32,17 +32,12 @@ cover most of your daily needs with |sdk_markup|.
 Install |sdk_markup|
 --------------------
 
-Authenticate to the Snap Store and install the snap
-using the `--classic <https://snapcraft.io/docs/install-modes/>`_ option:
+Install the snap using the
+`--classic <https://snapcraft.io/docs/install-modes/>`_ option:
 
 .. code-block:: console
 
-   $ sudo snap login
    $ sudo snap install --classic sdkcraft
-
-
-To get the newest features, install from the edge channel:
-:command:`sudo snap install --classic --edge sdkcraft`.
 
 Prerequisites
 ~~~~~~~~~~~~~

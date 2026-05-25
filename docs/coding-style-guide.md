@@ -13,7 +13,7 @@
 
 This style guide documents Go-specific coding conventions used in the Workshop project. It captures patterns from code review discussions in merged PRs and established project standards. These guidelines complement Canonical's general coding standards with Workshop-specific decisions.
 
-The guide is evidence-based, derived from actual PR discussions between maintainers (primarily @dmitry-lyfar and @jonathan-conder) during code reviews.
+The guide is evidence-based, derived from actual PR discussions between maintainers during code reviews.
 
 ---
 

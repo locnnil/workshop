@@ -51,11 +51,11 @@ Environment setup
       workshop list
 
 #. ``Spread`` is the end-to-end testing tool for ``workshop``.
-   Install it from `our custom fork <https://github.com/dmitry-lyfar/spread>`_:
+   Install it from `GitHub <https://github.com/canonical/spread>`__:
 
    .. code-block:: console
 
-      git clone https://github.com/dmitry-lyfar/spread
+      git clone https://github.com/canonical/spread
       cd spread
       go install ./...
 
@@ -254,8 +254,7 @@ We use a ``go test``-compatible
 
 
 To run end-to-end tests and integration tests with
-`our custom fork <https://github.com/dmitry-lyfar/spread>`_
-of ``Spread``:
+`Spread <https://github.com/canonical/spread>`__:
 
 .. code-block:: console
 
