@@ -540,13 +540,8 @@ func maybeSdkInstallation(key string, device map[string]string) (*workshop.SdkIn
 	if err := s.Revision.UnmarshalText([]byte(device["user.sdk.revision"])); err != nil {
 		return nil, err
 	}
-	installedAt := device["user.sdk.installed-at"]
-	if installedAt == "" {
-		// TODO: remove this after a short transition period.
-		installedAt = device["user.sdk.install-time"]
-	}
-	installedUTC := (*timeutil.TimeUTC)(&s.InstalledAt)
-	if err := installedUTC.UnmarshalText([]byte(installedAt)); err != nil {
+	installedAt := (*timeutil.TimeUTC)(&s.InstalledAt)
+	if err := installedAt.UnmarshalText([]byte(device["user.sdk.installed-at"])); err != nil {
 		return nil, err
 	}
 
