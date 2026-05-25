@@ -18,6 +18,8 @@ extensions = ["md", "rst"]
 
 # GITHUB_TOKEN is auto-read from env by lychee — do not embed.
 
+# Patterns below are Rust regex (lychee uses the `regex` crate): escape literal
+# dots as `\.`; forward slashes are not metacharacters and stay unescaped.
 exclude = [
     # Local references — not reachable from the link checker
     "^http://localhost",
@@ -29,27 +31,22 @@ exclude = [
     "\\$%7B",
     "\\$[A-Z]",
 
-    # Internal Canonical repos that don't yet exist publicly
-    "^https://github\\.com/canonical/sdkcraft",
-    "^https://github\\.com/canonical/workshop",
-    "^https://github.com/canonical/sdks",
-    "^https://github\\.com/canonical/reference-workshops",
-    "^https://github.com/canonical/launch-workshop",
-
-    # Individual SDK repos (`*-sdk`, plus `zephyr-sdk-ng`); see docs/how-to/index.rst
-    "^https://github\\.com/canonical/.*-sdk(-ng)?$",
-
     # Read the Docs anchor checks — flaky; fragments only checked when listed
     "^https://.*\\.readthedocs-hosted\\.com/.*#\\w+$",
 
     # API endpoints that reject HEAD/GET (405 Method Not Allowed) but are valid references
     "^https://api\\.snapcraft\\.io/api/",
 
-    # Auth-gated destinations — lychee can't follow these anonymously and they
-    # redirect to login pages. They aren't broken; just unreachable to the bot.
-    "^https://discourse\\.canonical\\.com/c/",
-    "^https://console\\.cloud\\.google\\.com/",
-
     # gnu.org blocks bot User-Agents with 403; valid references
     "^https://www\\.gnu\\.org/",
+
+    # Transient overrides before public release
+    "^https://ubuntu\\.com/workshop/",
+    "^https://github\\.com/canonical/sdkcraft",
+    "^https://github\\.com/canonical/workshop",
+    "^https://github\\.com/canonical/sdks",
+    "^https://github\\.com/canonical/reference-workshops",
+    "^https://github\\.com/canonical/reference-sdks",
+    "^https://github\\.com/canonical/launch-workshop",
+    "^https://github\\.com/canonical/.*-sdk(-ng)?$",
 ]

@@ -466,13 +466,13 @@ See the relevant documentation before making changes:
   (project-specific conventions and patterns)
 
 - `Starter pack
-  <https://canonical-sphinx-stack.readthedocs-hosted.com/latest/>`_
+  <https://documentation.ubuntu.com/sphinx-stack/latest/>`_
 
 - `reST style guide
-  <https://canonical-sphinx-stack.readthedocs-hosted.com/latest/reference/style-guide/>`_
+  <https://documentation.ubuntu.com/sphinx-stack/latest/reference/style-guide/>`_
 
 - `reST cheat sheet
-  <https://canonical-sphinx-stack.readthedocs-hosted.com/latest/reference/doc-cheat-sheet/>`_
+  <https://documentation.ubuntu.com/sphinx-stack/latest/reference/doc-cheat-sheet/>`_
 
 
 .. _contributing_doc_dependencies:
