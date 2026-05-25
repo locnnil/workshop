@@ -12,7 +12,7 @@ How to fix plug conflicts with binding
 .. @artefact mount interface
 .. @artefact interface plug
 
-This guide shows how to bind plugs for the :samp:`mount` interface,
+The example below binds plugs for the :samp:`mount` interface,
 but the same process works for any other interface that supports bindings.
 
 Suppose you have two SDKs that each declare a plug of the same interface,

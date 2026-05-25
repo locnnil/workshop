@@ -1,5 +1,3 @@
-.. _exp_workshop:
-
 .. meta::
    :description: Workshop explanation documentation, providing access to
                  explanations of core workshop concepts, change tracking,
@@ -10,8 +8,7 @@ Workshops
 
 .. @artefact workshop (container)
 
-These articles explain the core idea behind |ws_markup|,
-specifically the eponymous *workshop*.
+The eponymous *workshop* is the core idea behind |ws_markup|.
 
 
 Core concepts

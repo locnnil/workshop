@@ -9,10 +9,10 @@
 Runtime behavior
 ================
 
-This section demonstrates how the system components of |ws_markup|
-work together to transform a workshop definition into a running container.
-It focuses on the dynamic processes and workflows
-that occur during workshop operations.
+|ws_markup|'s system components work together
+to transform a workshop definition into a running container,
+following a set of dynamic processes and workflows
+that drive workshop operations.
 
 .. note::
 

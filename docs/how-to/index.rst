@@ -14,11 +14,14 @@ cover the needs and corner cases
 that arise when you use |ws_markup| and |sdk_markup|.
 
 
+.. _how_use_workshops:
+
 Customize workshops
 -------------------
 
-These topics address daily |ws_markup|-related scenarios,
-such as moving projects within the filesystem or adding custom actions:
+Daily |ws_markup| usage may involve multiple one-off scenarios:
+moving projects within the filesystem, adding custom actions,
+or running multiple workshops side by side:
 
 .. toctree::
    :titlesonly:
@@ -27,11 +30,13 @@ such as moving projects within the filesystem or adding custom actions:
    Customize workshops <customize-workshops/index>
 
 
+.. _how_develop_workshops:
+
 Develop with workshops
 ----------------------
 
-These articles cover the aspects of using |ws_markup| with developer tooling,
-such as integrating IDEs, using Git, or running CI/CD workflows with workshops:
+|ws_markup| integrates with developer tooling;
+AI agents, IDEs, version control, and CI/CD workflows all work inside a workshop:
 
 .. toctree::
    :titlesonly:
@@ -40,26 +45,16 @@ such as integrating IDEs, using Git, or running CI/CD workflows with workshops:
    Develop with workshops <develop-with-workshops/index>
 
 
+.. _how_fix_workshops:
+
 Fix workshops
 -------------
 
-These topics help troubleshoot and resolve issues with your workshops
-or the |ws_markup| installation:
+Troubleshooting covers issues with running workshops
+and with the |ws_markup| installation itself:
 
 .. toctree::
    :titlesonly:
    :class: flat-toctree
 
    Fix workshops <fix-workshops/index>
-
-
-Study examples
---------------
-
-.. @artefact SDK
-
-These examples showcase different SDK patterns and workshop implementations.
-Studying them helps to better understand SDK design and workshop creation:
-
-- https://github.com/canonical/sdks
-- https://github.com/canonical/reference-workshops

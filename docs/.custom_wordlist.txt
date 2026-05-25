@@ -20,6 +20,7 @@ ci
 CLIs
 cmd
 colcon
+composable
 conder
 config
 ConnectionError

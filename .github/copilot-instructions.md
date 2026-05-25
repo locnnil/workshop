@@ -74,7 +74,7 @@ See [`docs/contributing.rst`](../docs/contributing.rst) for detailed standards. 
 These external repositories provide authoritative context for the Workshop project:
 
 - https://github.com/canonical/sdkcraft — SDKcraft utility codebase for packaging and publishing SDKs
-- https://github.com/canonical/sdks — Existing SDK implementations used in tests, documentation, and examples
+- Individual SDK implementations live as `canonical/<name>-sdk` repositories (e.g. `ollama-sdk`, `cuda-toolkit-sdk`, `zephyr-sdk`); see `docs/reference/reference-implementations.rst` for the curated themed list
 - https://github.com/canonical/reference-workshops — Reference workshop implementations demonstrating SDK usage patterns
 
 ## GitHub Actions Workflows

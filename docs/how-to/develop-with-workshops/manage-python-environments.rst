@@ -17,8 +17,8 @@ It ships :program:`uv` and :program:`uvx`,
 aliases :program:`pip` to :program:`uv pip` for compatibility,
 and exposes a virtual environment slot
 that other Python-based SDKs (such as :samp:`jupyter`) can plug into.
-This guide covers the typical day-to-day flow
-and how to control where the project virtual environment lives.
+The typical day-to-day flow boils down to running :program:`uv` commands
+against a project virtual environment whose location you control.
 
 
 Add the uv SDK to your workshop

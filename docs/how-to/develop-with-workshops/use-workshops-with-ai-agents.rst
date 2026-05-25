@@ -29,17 +29,16 @@ and approval policies,
 so |ws_markup| as a consistent container boundary is a safer baseline
 than relying on every tool to self-sandbox correctly.
 
-This guide demonstrates how to run heterogeneous AI coding SDKs
-in separate Git worktrees over a shared codebase.
-Using Git worktrees is a best practice recommended by
+Running heterogeneous AI coding SDKs
+in separate Git worktrees over a shared codebase
+is a best practice recommended by
 `Anthropic <https://code.claude.com/docs/en/common-workflows#run-parallel-sessions-with-worktrees>`__,
 `OpenAI <https://developers.openai.com/codex/app/worktrees>`__,
 and
 `Cursor <https://cursor.com/blog/agent-best-practices#native-worktree-support>`__.
 
-The guide walks through two scenarios
-that build a minimal Flask app with a few HTTP routes.
-Each scenario compares agent outputs
+Two scenarios below build a minimal Flask app with a few HTTP routes.
+Each compares agent outputs
 and synthesizes the optimal approach in different ways:
 
 - Scenario 1: Parallel exploration.
@@ -55,7 +54,8 @@ and synthesizes the optimal approach in different ways:
 Prerequisites
 -------------
 
-This guide builds on :ref:`how_git_workshops` and :ref:`how_add_actions`,
+Working with AI agents in workshops builds on :ref:`how_git_workshops`
+and :ref:`how_add_actions`,
 particularly the use of Git worktrees with workshops.
 Worktrees help isolate and track different agents' runs and outcomes
 while sharing the same project directory and the workshops in it.

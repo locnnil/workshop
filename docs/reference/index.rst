@@ -12,11 +12,12 @@ provide technical background
 that may be required to use |ws_markup| and |sdk_markup|.
 
 
+.. _ref_cli:
+
 Command-line interfaces
 -----------------------
 
-These articles share the usage details of the command-line tools
-provided by |ws_markup| and |sdk_markup|:
+|ws_markup| and |sdk_markup| ship with a small set of command-line tools:
 
 .. toctree::
    :titlesonly:
@@ -24,6 +25,8 @@ provided by |ws_markup| and |sdk_markup|:
 
    CLI <cli/index>
 
+
+.. _ref_definitions:
 
 Definition file formats
 -----------------------
@@ -45,11 +48,9 @@ However, both definition types have different purposes and structure:
 Structure and behavior
 ----------------------
 
-These topics provide detailed guidance on various aspects
-of operating an SDK or a workshop at run-time.
 Workshops are largely made of SDKs;
-to understand how a workshop runs and the status it has,
-it's crucial to know how SDKs are structured and operated:
+understanding how a workshop runs and the status it carries
+starts with how SDKs are structured and operated at run-time:
 
 .. toctree::
    :titlesonly:
@@ -59,3 +60,17 @@ it's crucial to know how SDKs are structured and operated:
    workshops
    workshop-status
 
+
+
+Reference implementations
+-------------------------
+
+.. @artefact SDK
+
+These real-life examples on GitHub,
+maintained by the |ws_markup| team,
+are meant to showcase different SDK patterns and workshop implementations.
+Study them to better understand SDK design and workshop creation:
+
+- https://github.com/canonical/reference-sdks
+- https://github.com/canonical/reference-workshops
