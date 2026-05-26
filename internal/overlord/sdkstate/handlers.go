@@ -127,7 +127,7 @@ func (m *SdkManager) doRetrieveSdk(task *state.Task, tomb *tomb.Tomb) error {
 		return err
 	}
 
-	sdkYaml, err := extractSdkYAML(ctx, rec)
+	sdkYaml, err := extractSdkYAML(ctx, task, rec)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func (m *SdkManager) retrieveSdk(ctx context.Context, task *state.Task, rec sdk.
 	return nil
 }
 
-func extractSdkYAML(ctx context.Context, rec sdk.Setup) (string, error) {
+func extractSdkYAML(ctx context.Context, task *state.Task, rec sdk.Setup) (string, error) {
 	path := rec.Filepath()
 	cache := path + ".yaml"
 
@@ -229,6 +229,13 @@ func extractSdkYAML(ctx context.Context, rec sdk.Setup) (string, error) {
 	)
 	content, err = cmd.Output()
 	if err != nil {
+		exitErr, ok := errors.AsType[*exec.ExitError](err)
+		if ok && len(exitErr.Stderr) > 0 {
+			st := task.State()
+			st.Lock()
+			task.Logf("%s", exitErr.Stderr)
+			st.Unlock()
+		}
 		return "", err
 	}
 

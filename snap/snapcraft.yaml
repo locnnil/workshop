@@ -24,7 +24,7 @@ apps:
     command: bin/workshop
   workshopd:
     environment:
-      PATH: ${SNAP}/usr/bin:${PATH}
+      PATH: ${SNAP}/bin:${PATH}
       WORKSHOP: ${SNAP_DATA}
       WORKSHOP_CACHE: $SNAP_COMMON/workshop/cache
       WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket
