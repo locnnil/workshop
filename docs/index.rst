@@ -48,6 +48,11 @@ a plethora of diverse tools and frameworks,
 and a wide range of libraries and languages.
 That's where |ws_markup| thrives.
 
+**Built for AI workflows**.
+|ws_markup| publishes :ref:`LLM-readable docs <ref_ai_discovery>`,
+and ships agentic skills for :ref:`operating workshops <ref_ai_use_workshop_skill>`
+and :ref:`scaffolding SDKs <ref_ai_sdk_designer_skill>`.
+
 ----
 
 
