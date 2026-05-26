@@ -120,6 +120,7 @@ Multipass
 multistage
 multistep
 multiworkshop
+nftables
 nonblocking
 noncumulative
 noncustomizable
@@ -140,6 +141,7 @@ ollama
 Ollama
 onboarding
 OpenVINO
+passthrough
 pathname
 PlugRef
 prebuilt
