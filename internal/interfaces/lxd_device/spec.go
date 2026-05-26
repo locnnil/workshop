@@ -32,27 +32,25 @@ import (
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
 
-// lxdServerInfo retrieves GPU resources and CDI support from LXD.
-var lxdServerInfo = func(ctx context.Context) (*api.Resources, bool, error) {
+// lxdServerInfo retrieves GPU resources from LXD.
+var lxdServerInfo = func(ctx context.Context) (*api.Resources, error) {
 	conn, err := lxdbackend.ConnectLxd(ctx)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer conn.Disconnect()
 
 	resources, err := conn.GetServerResources()
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	cdiSupported := conn.HasExtension("gpu_cdi") && conn.HasExtension("gpu_cdi_amd") && conn.HasExtension("gpu_cdi_hotplug")
-
-	return resources, cdiSupported, nil
+	return resources, nil
 }
 
 // MockLxdServerInfo replaces the LXD server info function used by
 // NewSpecification and returns a restore function.
-func MockLxdServerInfo(f func(ctx context.Context) (*api.Resources, bool, error)) func() {
+func MockLxdServerInfo(f func(ctx context.Context) (*api.Resources, error)) func() {
 	old := lxdServerInfo
 	lxdServerInfo = f
 	return func() { lxdServerInfo = old }
@@ -67,19 +65,18 @@ func NewSpecification(user string, sdk string) (*Specification, error) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, workshop.ContextUser, user)
 
-	resources, cdiSupported, err := lxdServerInfo(ctx)
+	resources, err := lxdServerInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Specification{
-		devices:      make(map[string]map[string]string),
-		config:       make(map[string]string),
-		Profile:      workshop.NewSdkProfile(sdk),
-		User:         usr,
-		Environment:  env,
-		resources:    resources,
-		cdiSupported: cdiSupported,
+		devices:     make(map[string]map[string]string),
+		config:      make(map[string]string),
+		Profile:     workshop.NewSdkProfile(sdk),
+		User:        usr,
+		Environment: env,
+		resources:   resources,
 	}, nil
 }
 
@@ -90,9 +87,8 @@ type Specification struct {
 	config    map[string]string
 	resources *api.Resources
 
-	User         *user.User
-	Environment  map[string]string
-	cdiSupported bool
+	User        *user.User
+	Environment map[string]string
 }
 
 // AddPermanentSlot records side-effects of having a slot.
@@ -208,56 +204,44 @@ func detectGpuVendor(vendorID string) string {
 func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 	s.Profile.Gpu = &gpu
 
-	if s.cdiSupported {
-		gpus := s.resources.GPU
-		if gpus.Total == 0 {
-			logger.Debugf("GPU interface requested, but no GPU detected on the host system")
-			return nil
-		}
+	gpus := s.resources.GPU
+	if gpus.Total == 0 {
+		logger.Debugf("GPU interface requested, but no GPU detected on the host system")
+		return nil
+	}
 
-		for _, c := range gpus.Cards {
-			vendor := detectGpuVendor(c.VendorID)
-			switch vendor {
-			case "nvidia", "amd":
-				device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor)
-				// Add "all" devices per vendor. Indexes would be rather accurate but
-				// the problem with indexes is that the AMD CDI start indexes from 0
-				// regardless what index the card has in the system whilst NVIDIA CDI
-				// indexes match the system indexes. LXD should include UUIDs
-				// in the GPU resources which we can use in the spec instead of IDs.
-				if _, ok := s.devices[device]; !ok {
-					s.devices[device] = map[string]string{
-						"type":    "gpu",
-						"gputype": "physical",
-						"id":      vendor + ".com/gpu=all",
-					}
-				}
-			case "intel":
-				// Intel GPUs are not yet supported by the GPU CDI spec, so we
-				// fall back to exposing them as 'physical' GPUs with a specific
-				// ID.
-				cardId := strconv.FormatUint(c.DRM.ID, 10)
-				device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor, cardId)
+	for _, c := range gpus.Cards {
+		vendor := detectGpuVendor(c.VendorID)
+		switch vendor {
+		case "nvidia", "amd":
+			device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor)
+			// Add "all" devices per vendor. Indexes would be rather accurate but
+			// the problem with indexes is that the AMD CDI start indexes from 0
+			// regardless what index the card has in the system whilst NVIDIA CDI
+			// indexes match the system indexes. LXD should include UUIDs
+			// in the GPU resources which we can use in the spec instead of IDs.
+			if _, ok := s.devices[device]; !ok {
 				s.devices[device] = map[string]string{
 					"type":    "gpu",
 					"gputype": "physical",
-					"uid":     workshop.User.Uid,
-					"gid":     workshop.User.Gid,
-					"id":      cardId,
+					"id":      vendor + ".com/gpu=all",
 				}
-			default:
-				logger.Debugf("Unknown GPU vendor ID '%s' for GPU card with ID %d", c.VendorID, c.DRM.ID)
 			}
-
-		}
-	} else {
-		// TODO: Remove when switched to LXD 6.8
-		name := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name)
-		s.devices[name] = map[string]string{
-			"type":    "gpu",
-			"gputype": "physical",
-			"uid":     workshop.User.Uid,
-			"gid":     workshop.User.Gid,
+		case "intel":
+			// Intel GPUs are not yet supported by the GPU CDI spec, so we
+			// fall back to exposing them as 'physical' GPUs with a specific
+			// ID.
+			cardId := strconv.FormatUint(c.DRM.ID, 10)
+			device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor, cardId)
+			s.devices[device] = map[string]string{
+				"type":    "gpu",
+				"gputype": "physical",
+				"uid":     workshop.User.Uid,
+				"gid":     workshop.User.Gid,
+				"id":      cardId,
+			}
+		default:
+			logger.Debugf("Unknown GPU vendor ID '%s' for GPU card with ID %d", c.VendorID, c.DRM.ID)
 		}
 	}
 

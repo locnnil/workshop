@@ -56,7 +56,6 @@ const (
 )
 
 var (
-	checkNvidiaRuntime  = checkUseLegacyNvidia
 	startCommandTimeout = 1 * time.Minute
 	storagePoolDriver   = "zfs"
 )
@@ -1009,34 +1008,6 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 	return device
 }
 
-func checkUseLegacyNvidia() (bool, error) {
-	conn, err := lxd.ConnectLXDUnix("", nil)
-	if err != nil {
-		return false, ErrorLxdBackend(err)
-	}
-	defer conn.Disconnect()
-
-	if conn.HasExtension("gpu_cdi") && conn.HasExtension("gpu_cdi_amd") && conn.HasExtension("gpu_cdi_hotplug") {
-		return false, nil
-	}
-
-	resources, err := conn.GetServerResources()
-	if err != nil {
-		return false, err
-	}
-
-	// Check if nvidia card(s) are present as this requires additional
-	// configuration for the GPU interfaces runtime passthrough.
-	legacyNvidia := false
-	for _, card := range resources.GPU.Cards {
-		if card.Nvidia != nil {
-			legacyNvidia = true
-			break
-		}
-	}
-	return legacyNvidia, nil
-}
-
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
@@ -1117,18 +1088,6 @@ runcmd:
 		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
 	}
 
-	// TODO: Remove when switched to LXD 6.8
-	legacyNvidia, err := checkNvidiaRuntime()
-	if err != nil {
-		return nil, err
-	}
-
-	// nvidia.* properties must be set at launch as otherwise it requires a
-	// container restart to take effect.
-	if legacyNvidia {
-		cfg["nvidia.driver.capabilities"] = "all"
-		cfg["nvidia.runtime"] = "true"
-	}
 	return cfg, nil
 }
 

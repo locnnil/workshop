@@ -38,11 +38,3 @@ var (
 	CauseDocker          = causeDocker
 	CauseUFW             = causeUFW
 )
-
-func MockNvidiaRuntime(f func() (bool, error)) func() {
-	old := checkNvidiaRuntime
-	checkNvidiaRuntime = f
-	return func() {
-		checkNvidiaRuntime = old
-	}
-}

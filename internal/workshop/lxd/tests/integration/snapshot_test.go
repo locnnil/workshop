@@ -232,17 +232,6 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	// Validate snapshot metadata.
 	sdkSnapshot := s.snapshotFormat(c, snapshot)
 
-	conn, err := s.bd.LxdClient(s.ctx)
-	c.Assert(err, check.IsNil)
-	defer conn.Disconnect()
-	newApi := conn.HasExtension("instance_refresh_config")
-	if !newApi {
-		for _, name := range []string{"cache.apt", "workshop.network", "workshop.socket", "workshop.workshopctl"} {
-			c.Check(sdkSnapshot.Devices[name], check.DeepEquals, map[string]string{"type": "none"})
-			delete(sdkSnapshot.Devices, name)
-		}
-	}
-
 	c.Check(sdkSnapshot, testutil.JsonEquals, format["snapshot"])
 }
 

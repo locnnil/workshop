@@ -51,8 +51,8 @@ func (s *sshAgentSuite) SetUpTest(c *check.C) {
 	s.restoreUserEnv = osutil.FakeUserEnvironment(func(user *user.User) (map[string]string, error) {
 		return map[string]string{"SSH_AUTH_SOCK": "/tmp/dir/ssh"}, nil
 	})
-	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, bool, error) {
-		return &api.Resources{}, false, nil
+	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, error) {
+		return &api.Resources{}, nil
 	})
 }
 

@@ -329,8 +329,6 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		return err
 	}
 
-	newApi := snapshotConn.HasExtension("instance_refresh_config")
-
 	if inst.Config == nil {
 		inst.Config = map[string]string{}
 	}
@@ -341,13 +339,12 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		workshop.ConfigWorkshopBaseFingerprint: snapshot.Image.Fingerprint,
 		workshop.ConfigWorkshopSha3_384:        digest,
 	}
-	mergeConfig(inst.Config, nil, config, newApi)
+	mergeConfig(inst.Config, nil, config)
 
-	promote := storagePoolDriver == "zfs" && snapshotConn.HasExtension("storage_zfs_promote")
 	if inst.Devices == nil {
 		inst.Devices = map[string]map[string]string{}
 	}
-	if err := mergeDevices(inst.Devices, snapshot.Sdks, name, newApi, promote); err != nil {
+	if err := mergeDevices(inst.Devices, snapshot.Sdks, name); err != nil {
 		return err
 	}
 
@@ -582,19 +579,10 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		req.Config[fmt.Sprintf("user.workshop.snapshot-%v", i+1)] = sdkSnapshotName(partial, digest)
 	}
 
-	newApi := conn.HasExtension("instance_refresh_config")
-
 	if source.Config == nil {
 		source.Config = map[string]string{}
 	}
-	var sourceConfig, reqConfig map[string]string
-	if !newApi {
-		// The old API handles config options inconsistently. This
-		// computes the form required for UpdateInstance.
-		sourceConfig = maps.Clone(source.Config)
-		reqConfig = req.Config
-	}
-	mergeConfig(source.Config, inst.Config, req.Config, newApi)
+	mergeConfig(source.Config, inst.Config, req.Config)
 
 	req.Architecture = source.Architecture
 	req.Config = source.Config
@@ -617,28 +605,7 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		return err
 	}
 
-	if newApi {
-		return nil
-	}
-
-	var etag string
-	if inst.Name == "" {
-		inst, etag, err = conn.GetInstance(req.Name)
-		if err != nil {
-			return err
-		}
-	}
-
-	// If the workshop already existed, it still has the old config options
-	// and devices. If it did not exist, the config and devices are mostly
-	// correct, but we still need to remove placeholder SDK devices.
-	mergeConfig(sourceConfig, inst.Config, reqConfig, true)
-	req.Config = sourceConfig
-	op, err := conn.UpdateInstance(req.Name, req.InstancePut, etag)
-	if err != nil {
-		return err
-	}
-	return op.Wait()
+	return nil
 }
 
 // Hash is truncated to 16 hex digits to remain within the 63 characters
@@ -648,21 +615,10 @@ func sdkSnapshotName(snapshot workshop.Snapshot, digest string) string {
 	return sk + "-" + digest[:16]
 }
 
-func mergeConfig(source, target, config map[string]string, newApi bool) {
-	if newApi {
-		maps.DeleteFunc(source, func(k, v string) bool {
-			return optionDomain(k) != sharedProperty
-		})
-	} else {
-		// Omit options managed by LXD, to let it decide what to do.
-		maps.DeleteFunc(source, func(k, v string) bool {
-			return optionDomain(k) != customOption
-		})
-		// Tell LXD to remove all custom options.
-		for k := range source {
-			source[k] = ""
-		}
-	}
+func mergeConfig(source, target, config map[string]string) {
+	maps.DeleteFunc(source, func(k, v string) bool {
+		return optionDomain(k) != sharedProperty
+	})
 
 	for k, v := range target {
 		if optionDomain(k) == uniqueProperty {
@@ -673,31 +629,12 @@ func mergeConfig(source, target, config map[string]string, newApi bool) {
 	maps.Copy(source, config)
 }
 
-func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string, newApi, promote bool) error {
-	if newApi {
-		maps.DeleteFunc(source, func(k string, v map[string]string) bool {
-			return k != "root"
-		})
-	} else {
-		none := map[string]string{"type": "none"}
-		for key, device := range source {
-			s, err := maybeSdkInstallation(key, device)
-			if err != nil {
-				return err
-			}
-			if s != nil {
-				idx := s.InstallOrder - 1
-				if idx < 0 || len(sdks) <= idx || sdks[idx].Name != s.Name {
-					return fmt.Errorf("internal error: %q workshop has unexpected %q SDK", w, s.Name)
-				}
-				delete(source, key)
-			} else if key != "root" {
-				source[key] = none
-			}
-		}
-	}
+func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string) error {
+	maps.DeleteFunc(source, func(k string, v map[string]string) bool {
+		return k != "root"
+	})
 
-	if promote {
+	if storagePoolDriver == "zfs" {
 		root := maps.Clone(source["root"])
 		if source == nil || root == nil {
 			return fmt.Errorf("internal error: %q workshop has no rootfs", w)
@@ -836,19 +773,9 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		}
 	}
 
-	newApi := dst.HasExtension("instance_refresh_config")
-
 	req := *srcInst
-	if !newApi {
-		// Set the config and device overrides. LXD will copy most other
-		// options from the source instance, but it will omit options which are
-		// unique to the source instance, like MAC addresses and UUIDs.
-		req.Config = config
-		req.Devices = nil
-	}
 
-	promote := storagePoolDriver == "zfs" && dst.HasExtension("storage_zfs_promote")
-	if promote {
+	if storagePoolDriver == "zfs" {
 		req.Devices = maps.Clone(req.Devices)
 		root := maps.Clone(req.Devices["root"])
 		if req.Devices == nil || root == nil {
@@ -871,21 +798,7 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		return err
 	}
 
-	if newApi || dstInst.Name == "" {
-		// LXD created a new instance with copied config and devices.
-		return nil
-	}
-
-	// Otherwise, LXD replaced an existing instance's root disk, and it's
-	// our job to copy the config and devices.
-	req.Config = srcInst.Config
-	req.Devices = srcInst.Devices
-
-	op, err := dst.UpdateInstance(dstName, req.Writable(), "")
-	if err != nil {
-		return err
-	}
-	return op.Wait()
+	return nil
 }
 
 func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
