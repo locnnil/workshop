@@ -25,7 +25,6 @@ Releases
    :hidden:
 
    Workshop v0.9.0 <v0.9.0>
-   Workshop v0.1.30 <v0.1.30>
 
 
 A complete |ws_markup| installation comprises two snaps:
