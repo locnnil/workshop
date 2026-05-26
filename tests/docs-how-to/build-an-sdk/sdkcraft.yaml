@@ -1,0 +1,17 @@
+name: build-demo
+version: "0.1.0"
+summary: Demo SDK exercising the four lifecycle hooks
+description: |
+  Minimal SDK used by the docs-how-to spread test
+  to verify the build-an-sdk how-to procedure end-to-end.
+license: MIT
+platforms:
+  ubuntu@24.04:amd64:
+
+parts:
+  payload:
+    plugin: nil
+    override-build: |
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      printf '#!/bin/sh\necho hello-build-demo\n' > "$CRAFT_PART_INSTALL/bin/hello-build-demo"
+      chmod +x "$CRAFT_PART_INSTALL/bin/hello-build-demo"

@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+if [ -f /home/workshop/.build-demo.marker ]; then
+  cp /home/workshop/.build-demo.marker "$SDK_STATE_DIR/marker"
+fi

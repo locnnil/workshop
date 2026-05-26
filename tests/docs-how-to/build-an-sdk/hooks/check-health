@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ ! -f /var/lib/build-demo/setup-base.marker ]; then
+  workshopctl set-health error "setup-base marker missing"
+  exit
+fi
+
+if ! sudo -u workshop --login test -f /home/workshop/.build-demo.marker; then
+  workshopctl set-health error "setup-project marker missing"
+  exit
+fi
+
+if ! output=$(sudo -u workshop --login hello-build-demo 2>&1); then
+  workshopctl set-health error "$output"
+  exit
+fi
+
+workshopctl set-health okay
