@@ -24,6 +24,7 @@ Releases
 .. toctree::
    :hidden:
 
+   Workshop v0.9.0 <v0.9.0>
    Workshop v0.1.30 <v0.1.30>
 
 
@@ -41,15 +42,16 @@ Both are available for :samp:`amd64` and :samp:`arm64`.
 
 Latest version:
 
-- :doc:`Workshop v0.1.30 <v0.1.30>`
+- :doc:`Workshop v0.9.0 <v0.9.0>`
 
 
 Older versions:
 
 .. note::
 
-   These versions predate the SDK Store and are no longer supported.
+   These versions are no longer supported.
 
+- `Workshop v0.1.30 <https://github.com/canonical/workshop/releases/tag/v0.1.30>`_
 - `Workshop v0.1.29 <https://github.com/canonical/workshop/releases/tag/v0.1.29>`_
 - `Workshop v0.1.28 <https://github.com/canonical/workshop/releases/tag/v0.1.28>`_
 - `Workshop v0.1.27 <https://github.com/canonical/workshop/releases/tag/v0.1.27>`_
