@@ -51,6 +51,7 @@ var (
 	ErrVolumeNotFound        = errors.New("volume not found")
 	ErrVolumeAlreadyExists   = errors.New("volume already exists")
 	ErrVolumeInUse           = errors.New("volume is in use")
+	ErrSnapshotNotFound      = errors.New("snapshot not found")
 	ErrSnapshotAlreadyExists = errors.New("snapshot already exists")
 	ErrSdkProfileNotFound    = errors.New("sdk profile not found")
 	ErrIncompatibleBackend   = errors.New("incompatible backend")
@@ -72,6 +73,9 @@ func (e *ErrExec) Error() string {
 }
 
 type Stash interface {
+	// Loads a stashed workshop instance.
+	StashedWorkshop(ctx context.Context, name string) (*Workshop, error)
+
 	// Make a stash of the workshop. The workshop will be stopped and will not
 	// be available to other workshop operations, e.g. list, stop, start and so
 	// on. A new workshop with the same name can be launched for the same
@@ -113,23 +117,36 @@ type BaseImageManager interface {
 // backend-specific details. For example snapshot names in LXD are subject to
 // length limits and a restricted character set.
 type Snapshot struct {
-	Image BaseImage
-	Sdks  []sdk.ContentID
+	Format sdk.Revision
+	Image  BaseImage
+	Sdks   []sdk.ContentID
 }
 
 func (s Snapshot) Equal(other Snapshot) bool {
-	return s.Image == other.Image && slices.Equal(s.Sdks, other.Sdks)
+	return s.Format == other.Format && s.Image == other.Image && slices.Equal(s.Sdks, other.Sdks)
+}
+
+// IsBasedOn returns true if other is a prefix of s.
+func (s Snapshot) IsBasedOn(other Snapshot) bool {
+	if s.Format != other.Format || s.Image != other.Image {
+		return false
+	}
+	if len(s.Sdks) < len(other.Sdks) {
+		return false
+	}
+	s.Sdks = s.Sdks[:len(other.Sdks)]
+	return slices.Equal(s.Sdks, other.Sdks)
 }
 
 // BaseOnly identifies a "snapshot" which consists of a base image only.
-func BaseOnly(name, fingerprint string) Snapshot {
-	return Snapshot{Image: BaseImage{Name: name, Fingerprint: fingerprint}}
+func BaseOnly(format sdk.Revision, name, fingerprint string) Snapshot {
+	return Snapshot{Format: format, Image: BaseImage{Name: name, Fingerprint: fingerprint}}
 }
 
 // SdkSnapshot identifies a snapshot consisting of a base image and a sequence
 // of installed SDKs.
-func SdkSnapshot(image BaseImage, sdks []sdk.Setup) Snapshot {
-	snapshot := Snapshot{Image: image, Sdks: make([]sdk.ContentID, 0, len(sdks))}
+func SdkSnapshot(format sdk.Revision, image BaseImage, sdks []sdk.Setup) Snapshot {
+	snapshot := Snapshot{Format: format, Image: image, Sdks: make([]sdk.ContentID, 0, len(sdks))}
 	for _, s := range sdks {
 		snapshot.Sdks = append(snapshot.Sdks, sdk.SetupContentID(s))
 	}
@@ -139,6 +156,12 @@ func SdkSnapshot(image BaseImage, sdks []sdk.Setup) Snapshot {
 // IsBase returns whether the snapshot is just a base image.
 func (s Snapshot) IsBase() bool {
 	return len(s.Sdks) == 0
+}
+
+type SnapshotInfo struct {
+	Snapshot
+	// Project ID / Workshop pairs that are based on the snapshot.
+	Workshops map[string][]string
 }
 
 type SdkManager interface {
@@ -212,8 +235,14 @@ type Backend interface {
 	// Returns a list of workshops for the project in context.
 	ProjectWorkshops(ctx context.Context) ([]*Workshop, error)
 
-	// Check if the given snapshot already exists.
-	HasSnapshot(ctx context.Context, snapshot Snapshot) (bool, error)
+	// Number representing workshop and snapshot compatibility level.
+	FormatRevision() sdk.Revision
+
+	// Look up the given snapshot. On success, returns the given snapshot and
+	// the workshops that are based on it. On failure, returns an error. In the
+	// unlikely event the error is caused by a snapshot conflict (i.e. a name
+	// collision), also returns the conflicting snapshot.
+	Snapshot(ctx context.Context, snapshot Snapshot) (*SnapshotInfo, error)
 
 	// Launch a clean workshop instance. If the workshop exists, wipe out
 	// its rootfs and rebuild it from the given snapshot (which may be just

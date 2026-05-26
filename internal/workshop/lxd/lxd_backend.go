@@ -38,6 +38,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -55,7 +56,6 @@ const (
 )
 
 var (
-	checkNvidiaRuntime  = checkUseLegacyNvidia
 	startCommandTimeout = 1 * time.Minute
 	storagePoolDriver   = "zfs"
 )
@@ -137,7 +137,7 @@ To restart the workshop daemon: 'sudo snap restart workshop'`, err)
 
 func checkVersion(version string) error {
 	const minimalLXDMajor = 6
-	const minimalLXDMinor = 6
+	const minimalLXDMinor = 8
 
 	comps := strings.Split(version, ".")
 
@@ -318,7 +318,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, snapshot.Image.Fingerprint)
+	config, err := s.workshopConfig(projectId, usr.Uid, usr.Gid, file, snapshot.Format, snapshot.Image.Fingerprint)
 	if err != nil {
 		return err
 	}
@@ -739,6 +739,10 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 	}
 	defer conn.Disconnect()
 
+	return s.workshop(ctx, conn, name, false)
+}
+
+func (s *Backend) workshop(ctx context.Context, conn lxd.InstanceServer, name string, stash bool) (*workshop.Workshop, error) {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {
 		return nil, fmt.Errorf("context key project-id not found")
@@ -760,7 +764,14 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 	}
 	p := projects[user][idx]
 
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
+	var instName string
+	if stash {
+		instName = instanceStashName(name, projectId)
+	} else {
+		instName = InstanceName(name, projectId)
+	}
+
+	inst, _, err := conn.GetInstance(instName)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil, workshop.ErrWorkshopNotLaunched
@@ -790,6 +801,11 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	f, err := workshopFile(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
+	}
+
+	format, err := sdk.ParseRevision(inst.Config[workshop.ConfigWorkshopSnapshotFormat])
+	if err != nil {
+		return nil, err
 	}
 
 	image := workshop.BaseImage{
@@ -825,6 +841,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		Backend:  b,
 		Project:  p,
 		Name:     f.Name,
+		Format:   format,
 		Image:    image,
 		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
 		Sdks:     sdks,
@@ -991,35 +1008,7 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 	return device
 }
 
-func checkUseLegacyNvidia() (bool, error) {
-	conn, err := lxd.ConnectLXDUnix("", nil)
-	if err != nil {
-		return false, ErrorLxdBackend(err)
-	}
-	defer conn.Disconnect()
-
-	if conn.HasExtension("gpu_cdi") && conn.HasExtension("gpu_cdi_amd") && conn.HasExtension("gpu_cdi_hotplug") {
-		return false, nil
-	}
-
-	resources, err := conn.GetServerResources()
-	if err != nil {
-		return false, err
-	}
-
-	// Check if nvidia card(s) are present as this requires additional
-	// configuration for the GPU interfaces runtime passthrough.
-	legacyNvidia := false
-	for _, card := range resources.GPU.Cards {
-		if card.Nvidia != nil {
-			legacyNvidia = true
-			break
-		}
-	}
-	return legacyNvidia, nil
-}
-
-func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, baseFingerprint string) (map[string]string, error) {
+func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
 	cloudInitConfig := `#cloud-config
 users:
   - default
@@ -1086,7 +1075,7 @@ runcmd:
 		"security.nesting":               "true",
 		"user.user-data":                 cloudInitConfig,
 		"user.network-config":            cloudInitNetwork,
-		"user.workshop.format-revision":  SnapshotFormatRevision.String(),
+		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
 		"user.workshop.file":             string(f),
@@ -1099,18 +1088,6 @@ runcmd:
 		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
 	}
 
-	// TODO: Remove when switched to LXD 6.8
-	legacyNvidia, err := checkNvidiaRuntime()
-	if err != nil {
-		return nil, err
-	}
-
-	// nvidia.* properties must be set at launch as otherwise it requires a
-	// container restart to take effect.
-	if legacyNvidia {
-		cfg["nvidia.driver.capabilities"] = "all"
-		cfg["nvidia.runtime"] = "true"
-	}
 	return cfg, nil
 }
 

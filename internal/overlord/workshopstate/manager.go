@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/canonical/workshop/internal/logger"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
@@ -31,6 +32,10 @@ type WorkshopManager struct {
 	state           *state.State
 	firewallChecker func(string) string
 }
+
+var (
+	snapshotCooldownTime = 1 * time.Hour // Time to wait before deleting unused snapshots.
+)
 
 func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	manager := &WorkshopManager{
@@ -57,6 +62,11 @@ func New(st *state.State, runner *state.TaskRunner) *WorkshopManager {
 	runner.AddHandler("create-state-storage", OnDo(manager.doCreateStateStorage), OnUndo(manager.doRemoveStateStorage))
 	runner.AddHandler("remove-state-storage", OnDo(manager.doRemoveStateStorage), nil)
 
+	runner.AddCleanup("create-workshop", manager.doDeleteUnusedSnapshots)
+	runner.AddCleanup("remove-workshop", manager.doDeleteUnusedSnapshots)
+	runner.AddCleanup("stash-workshop", manager.doDeleteUnusedSnapshots)
+	runner.AddCleanup("remove-workshop-stash", manager.doDeleteUnusedSnapshots)
+
 	return manager
 }
 
@@ -72,6 +82,14 @@ func (m *WorkshopManager) StartUp() error {
 
 func (w *WorkshopManager) Ensure() error {
 	return nil
+}
+
+func FakeSnapshotCooldownTime(t time.Duration) (restore func()) {
+	old := snapshotCooldownTime
+	snapshotCooldownTime = t
+	return func() {
+		snapshotCooldownTime = old
+	}
 }
 
 // Project finds an existing project with the given ID.

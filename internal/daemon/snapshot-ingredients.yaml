@@ -21,6 +21,7 @@ Workshop:
   Project: workshop.Project
   File: '*workshop.File'
   Name: string
+  Format: sdk.Revision
   Image: workshop.BaseImage
   Running: bool
   Sdks: map[string]workshop.SdkInstallation
@@ -56,9 +57,11 @@ FakeWorkshopBackend:
   SnapshotCalls:
   SnapshotCallback:
   Snapshots:
+  RemovedSnapshots:
   BaseDir:
   SnapshotDir:
 FakeWorkshop:
   Workshop: '*workshop.Workshop'
   Devices: map[string]map[string]string
   WorkshopFilesystem:
+  CurrentSnapshot: workshop.Snapshot

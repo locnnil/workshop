@@ -124,29 +124,29 @@ func optionDomain(key string) configDomain {
 	}
 }
 
-func (s *Backend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
+func (s *Backend) Snapshot(ctx context.Context, snapshot workshop.Snapshot) (*workshop.SnapshotInfo, error) {
 	if snapshot.IsBase() {
-		return false, errors.New("internal error: snapshots require at least one SDK")
+		return nil, errors.New("internal error: snapshots require at least one SDK")
 	}
 
 	conn, snapshotConn, err := s.snapshotClients(ctx)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer conn.Disconnect()
 
 	digest, err := s.HashSnapshot(snapshot)
 	if err != nil {
-		return false, fmt.Errorf("internal error: hashing snapshot info: %w", err)
+		return nil, fmt.Errorf("internal error: hashing snapshot info: %w", err)
 	}
 
 	name := sdkSnapshotName(snapshot, digest)
 	inst, _, err := snapshotConn.GetInstance(name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		return false, nil
+		return nil, workshop.ErrSnapshotNotFound
 	}
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Check for in-progress snapshots. In this case we could wait for it to
@@ -155,30 +155,68 @@ func (s *Backend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (
 	// should coordinate their snapshots, not just those which happen to call
 	// HasSnapshot and TakeSnapshot at the same time.
 	if inst.Config[workshop.ConfigWorkshopSnapshotType] != "sdk" {
-		return false, nil
+		return nil, workshop.ErrSnapshotNotFound
 	}
 
-	if err := detectHashCollision(inst, snapshot); err != nil {
-		return false, err
+	other, err := detectHashCollision(inst, snapshot)
+	if err != nil {
+		if other == nil {
+			return nil, err
+		}
+		return &workshop.SnapshotInfo{Snapshot: *other}, err
 	}
-	return true, nil
+
+	workshops := map[string][]string{}
+
+	usedBy, err := conn.GetInstances(lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters:      []string{fmt.Sprintf("config.user.workshop.snapshot-%v=%s", len(snapshot.Sdks), name)},
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, inst := range usedBy {
+		projectId := inst.Config[workshop.ConfigProjectId]
+		name := inst.Config[workshop.ConfigWorkshopName]
+		workshops[projectId] = append(workshops[projectId], name)
+	}
+
+	// Check for stashed workshops as well.
+	usedBy, err = snapshotConn.GetInstances(lxd.GetInstancesArgs{
+		InstanceType: api.InstanceTypeContainer,
+		Filters:      []string{fmt.Sprintf("config.user.workshop.snapshot-%v=%s", len(snapshot.Sdks), name)},
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, inst := range usedBy {
+		projectId := inst.Config[workshop.ConfigProjectId]
+		name := inst.Config[workshop.ConfigWorkshopName]
+		if !slices.Contains(workshops[projectId], name) {
+			workshops[projectId] = append(workshops[projectId], name)
+		}
+	}
+
+	return &workshop.SnapshotInfo{Snapshot: snapshot, Workshops: workshops}, nil
 }
 
-func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) error {
-	if inst.Config[workshop.ConfigWorkshopSnapshotFormat] != SnapshotFormatRevision.String() {
-		return fmt.Errorf("hash collision detected: %q snapshot taken by incompatible Workshop version", inst.Name)
-	}
+func detectHashCollision(inst *api.Instance, snapshot workshop.Snapshot) (*workshop.Snapshot, error) {
 	saved, err := identifySnapshot(inst)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := compareSnapshots(inst.Name, *saved, snapshot); err != nil {
-		return fmt.Errorf("hash collision detected: %w", err)
+		return saved, fmt.Errorf("hash collision detected: %w", err)
 	}
-	return nil
+	return saved, nil
 }
 
 func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
+	format, err := sdk.ParseRevision(inst.Config[workshop.ConfigWorkshopSnapshotFormat])
+	if err != nil {
+		return nil, err
+	}
+
 	sdks := make([]sdk.ContentID, len(inst.Devices))
 	length := 0
 	maxInstallOrder := 0
@@ -207,6 +245,7 @@ func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
 	}
 
 	return &workshop.Snapshot{
+		Format: format,
 		Image: workshop.BaseImage{
 			Name:        inst.Config[workshop.ConfigWorkshopBase],
 			Fingerprint: inst.Config[workshop.ConfigWorkshopBaseFingerprint],
@@ -217,6 +256,9 @@ func identifySnapshot(inst *api.Instance) (*workshop.Snapshot, error) {
 
 // compareSnapshots is like reflect.DeepEqual with specific error messages.
 func compareSnapshots(name string, actual, expected workshop.Snapshot) error {
+	if actual.Format != expected.Format {
+		return fmt.Errorf("%q snapshot has format revision %s; required: %s", name, actual.Format, expected.Format)
+	}
 	if actual.Image.Name != expected.Image.Name {
 		return fmt.Errorf("%q snapshot has %q base; required: %q", name, actual.Image.Name, expected.Image.Name)
 	}
@@ -267,7 +309,7 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 	}
 	defer conn.Disconnect()
 
-	inst, _, err := conn.GetInstance(InstanceName(name, projectId))
+	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return workshop.ErrWorkshopNotLaunched
@@ -275,25 +317,34 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		return err
 	}
 
-	newApi := snapshotConn.HasExtension("instance_refresh_config")
+	// Mark the snapshot as "in use" by this workshop. This can be done when
+	// installing the SDK to avoid an extra UpdateInstance, but is easier to do
+	// here since we already know the snapshot name.
+	inst.Config[fmt.Sprintf("user.workshop.snapshot-%v", len(snapshot.Sdks))] = snapshotName
+	op, err := conn.UpdateInstance(inst.Name, inst.Writable(), etag)
+	if err != nil {
+		return err
+	}
+	if err := op.Wait(); err != nil {
+		return err
+	}
 
 	if inst.Config == nil {
 		inst.Config = map[string]string{}
 	}
 	config := map[string]string{
 		"security.protection.start":            "true",
+		workshop.ConfigWorkshopSnapshotFormat:  snapshot.Format.String(),
 		workshop.ConfigWorkshopBase:            snapshot.Image.Name,
 		workshop.ConfigWorkshopBaseFingerprint: snapshot.Image.Fingerprint,
-		workshop.ConfigWorkshopSnapshotFormat:  SnapshotFormatRevision.String(),
 		workshop.ConfigWorkshopSha3_384:        digest,
 	}
-	mergeConfig(inst.Config, nil, config, newApi)
+	mergeConfig(inst.Config, nil, config)
 
-	promote := storagePoolDriver == "zfs" && snapshotConn.HasExtension("storage_zfs_promote")
 	if inst.Devices == nil {
 		inst.Devices = map[string]map[string]string{}
 	}
-	if err := mergeDevices(inst.Devices, snapshot.Sdks, name, newApi, promote); err != nil {
+	if err := mergeDevices(inst.Devices, snapshot.Sdks, name); err != nil {
 		return err
 	}
 
@@ -447,7 +498,7 @@ func (s *Backend) checkPartialSnapshot(snapshotConn lxd.InstanceServer, snapshot
 		return err
 	}
 
-	if err := detectHashCollision(inst, snapshot); err != nil {
+	if _, err := detectHashCollision(inst, snapshot); err != nil {
 		return err
 	}
 	return workshop.ErrSnapshotAlreadyExists
@@ -512,19 +563,26 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		return err
 	}
 
-	newApi := conn.HasExtension("instance_refresh_config")
+	if req.Config == nil {
+		req.Config = make(map[string]string, len(snapshot.Sdks))
+	} else {
+		req.Config = maps.Clone(req.Config)
+	}
+	for i := range snapshot.Sdks {
+		partial := snapshot
+		partial.Sdks = partial.Sdks[:i+1]
+
+		digest, err := s.HashSnapshot(partial)
+		if err != nil {
+			return err
+		}
+		req.Config[fmt.Sprintf("user.workshop.snapshot-%v", i+1)] = sdkSnapshotName(partial, digest)
+	}
 
 	if source.Config == nil {
 		source.Config = map[string]string{}
 	}
-	var sourceConfig, reqConfig map[string]string
-	if !newApi {
-		// The old API handles config options inconsistently. This
-		// computes the form required for UpdateInstance.
-		sourceConfig = maps.Clone(source.Config)
-		reqConfig = req.Config
-	}
-	mergeConfig(source.Config, inst.Config, req.Config, newApi)
+	mergeConfig(source.Config, inst.Config, req.Config)
 
 	req.Architecture = source.Architecture
 	req.Config = source.Config
@@ -547,28 +605,7 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 		return err
 	}
 
-	if newApi {
-		return nil
-	}
-
-	var etag string
-	if inst.Name == "" {
-		inst, etag, err = conn.GetInstance(req.Name)
-		if err != nil {
-			return err
-		}
-	}
-
-	// If the workshop already existed, it still has the old config options
-	// and devices. If it did not exist, the config and devices are mostly
-	// correct, but we still need to remove placeholder SDK devices.
-	mergeConfig(sourceConfig, inst.Config, reqConfig, true)
-	req.Config = sourceConfig
-	op, err := conn.UpdateInstance(req.Name, req.InstancePut, etag)
-	if err != nil {
-		return err
-	}
-	return op.Wait()
+	return nil
 }
 
 // Hash is truncated to 16 hex digits to remain within the 63 characters
@@ -578,21 +615,10 @@ func sdkSnapshotName(snapshot workshop.Snapshot, digest string) string {
 	return sk + "-" + digest[:16]
 }
 
-func mergeConfig(source, target, config map[string]string, newApi bool) {
-	if newApi {
-		maps.DeleteFunc(source, func(k, v string) bool {
-			return optionDomain(k) != sharedProperty
-		})
-	} else {
-		// Omit options managed by LXD, to let it decide what to do.
-		maps.DeleteFunc(source, func(k, v string) bool {
-			return optionDomain(k) != customOption
-		})
-		// Tell LXD to remove all custom options.
-		for k := range source {
-			source[k] = ""
-		}
-	}
+func mergeConfig(source, target, config map[string]string) {
+	maps.DeleteFunc(source, func(k, v string) bool {
+		return optionDomain(k) != sharedProperty
+	})
 
 	for k, v := range target {
 		if optionDomain(k) == uniqueProperty {
@@ -603,31 +629,12 @@ func mergeConfig(source, target, config map[string]string, newApi bool) {
 	maps.Copy(source, config)
 }
 
-func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string, newApi, promote bool) error {
-	if newApi {
-		maps.DeleteFunc(source, func(k string, v map[string]string) bool {
-			return k != "root"
-		})
-	} else {
-		none := map[string]string{"type": "none"}
-		for key, device := range source {
-			s, err := maybeSdkInstallation(key, device)
-			if err != nil {
-				return err
-			}
-			if s != nil {
-				idx := s.InstallOrder - 1
-				if idx < 0 || len(sdks) <= idx || sdks[idx].Name != s.Name {
-					return fmt.Errorf("internal error: %q workshop has unexpected %q SDK", w, s.Name)
-				}
-				delete(source, key)
-			} else if key != "root" {
-				source[key] = none
-			}
-		}
-	}
+func mergeDevices(source map[string]map[string]string, sdks []sdk.ContentID, w string) error {
+	maps.DeleteFunc(source, func(k string, v map[string]string) bool {
+		return k != "root"
+	})
 
-	if promote {
+	if storagePoolDriver == "zfs" {
 		root := maps.Clone(source["root"])
 		if source == nil || root == nil {
 			return fmt.Errorf("internal error: %q workshop has no rootfs", w)
@@ -659,7 +666,20 @@ func (s *Backend) RemoveSnapshot(ctx context.Context, snapshot workshop.Snapshot
 		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
 	}
 
+	// For completeness we should probably check for collisions here. But if
+	// the given snapshot is being removed, it was recently part of a workshop
+	// and we already checked for collisions on launch.
 	return s.deleteSnapshot(snapshotConn, sdkSnapshotName(snapshot, digest))
+}
+
+func (s *Backend) StashedWorkshop(ctx context.Context, name string) (*workshop.Workshop, error) {
+	conn, snapshotConn, err := s.snapshotClients(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Disconnect()
+
+	return s.workshop(ctx, snapshotConn, name, true)
 }
 
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
@@ -753,19 +773,9 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		}
 	}
 
-	newApi := dst.HasExtension("instance_refresh_config")
-
 	req := *srcInst
-	if !newApi {
-		// Set the config and device overrides. LXD will copy most other
-		// options from the source instance, but it will omit options which are
-		// unique to the source instance, like MAC addresses and UUIDs.
-		req.Config = config
-		req.Devices = nil
-	}
 
-	promote := storagePoolDriver == "zfs" && dst.HasExtension("storage_zfs_promote")
-	if promote {
+	if storagePoolDriver == "zfs" {
 		req.Devices = maps.Clone(req.Devices)
 		root := maps.Clone(req.Devices["root"])
 		if req.Devices == nil || root == nil {
@@ -788,21 +798,7 @@ func (s *Backend) copyInstance(src, dst lxd.InstanceServer, srcName, dstName str
 		return err
 	}
 
-	if newApi || dstInst.Name == "" {
-		// LXD created a new instance with copied config and devices.
-		return nil
-	}
-
-	// Otherwise, LXD replaced an existing instance's root disk, and it's
-	// our job to copy the config and devices.
-	req.Config = srcInst.Config
-	req.Devices = srcInst.Devices
-
-	op, err := dst.UpdateInstance(dstName, req.Writable(), "")
-	if err != nil {
-		return err
-	}
-	return op.Wait()
+	return nil
 }
 
 func (s *Backend) RemoveWorkshopStash(ctx context.Context, name string) error {
@@ -859,8 +855,22 @@ func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.
 // - SDK config and devices (e.g. volume mounts)
 // - Direct modifications (e.g. mkdir /var/lib/workshop/run)
 // If something like this changes, bump the revision number so that workshops
-// constructed using the next release of Workshop see the changes.
-var SnapshotFormatRevision = sdk.R(1)
+// constructed using the next release of Workshop are updated on refresh.
+//
+// Some care needs to be taken with workshops using the old format. If a launch
+// or refresh is in progress, it should either continue in a manner consistent
+// with the old format, or fail if that isn't possible for some reason. For
+// example, after changing the format of installed SDKs, the install-sdk task
+// should either use a format consistent with the target workshop, or fail for
+// workshops stuck on the old format.
+//
+// Another issue is the restore command. In most cases this simply rebuilds
+// from the last snapshot, but if that snapshot doesn't exist then it will
+// replay some of the install-sdk and setup-base tasks. These can be handled in
+// the same way as in-progress launches and refreshes.
+func (s *Backend) FormatRevision() sdk.Revision {
+	return sdk.R(1)
+}
 
 func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {
 	digest, err := hex.DecodeString(snapshot.Image.Fingerprint)
@@ -869,7 +879,7 @@ func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {
 	}
 
 	hash := sha3.New384()
-	if _, err := fmt.Fprintf(hash, "%s %s\x00%s", SnapshotFormatRevision, snapshot.Image.Name, digest); err != nil {
+	if _, err := fmt.Fprintf(hash, "%s %s\x00%s", snapshot.Format, snapshot.Image.Name, digest); err != nil {
 		return "", err
 	}
 

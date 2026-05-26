@@ -16,6 +16,7 @@ package workshopstate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -281,23 +282,22 @@ func (w *WorkshopManager) RefreshMany(ctx context.Context, project workshop.Proj
 }
 
 func (w *WorkshopManager) bestSnapshot(ctx context.Context, manifest Manifest) (*workshop.Snapshot, error) {
-	snapshot := workshop.SdkSnapshot(manifest.Image, manifest.Sdks)
+	snapshot := workshop.SdkSnapshot(manifest.Format, manifest.Image, manifest.Sdks)
 	for range manifest.Sdks {
-		found, err := w.backend.HasSnapshot(ctx, snapshot)
-		if err != nil {
+		if _, err := w.backend.Snapshot(ctx, snapshot); errors.Is(err, workshop.ErrSnapshotNotFound) {
+			snapshot.Sdks = snapshot.Sdks[:len(snapshot.Sdks)-1]
+		} else if err != nil {
 			return nil, err
-		}
-		if found {
+		} else {
 			break
 		}
-		snapshot.Sdks = snapshot.Sdks[:len(snapshot.Sdks)-1]
 	}
 	return &snapshot, nil
 }
 
 func hasUpdates(current, latest Manifest) bool {
-	currentSnapshot := workshop.SdkSnapshot(current.Image, current.Sdks)
-	finalSnapshot := workshop.SdkSnapshot(latest.Image, latest.Sdks)
+	currentSnapshot := workshop.SdkSnapshot(current.Format, current.Image, current.Sdks)
+	finalSnapshot := workshop.SdkSnapshot(latest.Format, latest.Image, latest.Sdks)
 	if !currentSnapshot.Equal(finalSnapshot) {
 		return true
 	}
@@ -694,40 +694,16 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	return execSet, nil
 }
 
-func (w *WorkshopManager) RemoveMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
-	project, err := w.Project(ctx, projectId)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx = context.WithValue(ctx, workshop.ContextProjectId, project.ProjectId)
-
-	var workshops = make([]*workshop.Workshop, 0, len(names))
-	for _, name := range names {
-		wp, err := w.backend.Workshop(ctx, name)
-		if err != nil {
-			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
-		}
-		workshops = append(workshops, wp)
-		if err = conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
-			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
-		}
-
-		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
-		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-			return nil, fmt.Errorf("cannot remove %q: %w", name, err)
-		}
-	}
-
+func (w *WorkshopManager) RemoveMany(ctx context.Context, project workshop.Project, manifests []Manifest, running []bool) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
-	for _, wp := range workshops {
-		remove := remove(w.state, wp, project)
+	for i, m := range manifests {
+		remove := remove(w.state, m, running[i], project)
 		taskset = append(taskset, remove)
 	}
 	return taskset, nil
 }
 
-func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *state.TaskSet {
+func remove(st *state.State, manifest Manifest, running bool, project workshop.Project) *state.TaskSet {
 	removeSet := state.NewTaskSet()
 	var prevRemove *state.TaskSet
 	addTaskSet := func(ts *state.TaskSet) {
@@ -741,21 +717,19 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 		removeSet.AddAll(ts)
 	}
 
-	sdks := make([]sdk.Setup, 0, len(w.Sdks))
-	for _, sk := range w.Sdks {
-		sdks = append(sdks, sk.Setup)
-	}
+	sdks := slices.Clone(manifest.Sdks)
+	slices.Reverse(sdks)
 
 	disconnectSet := disconnectSdks(st, sdks)
 	addTaskSet(disconnectSet)
 
-	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", w.Name))
+	discard := st.NewTask("discard-conns", fmt.Sprintf("Discard %q undesired connections", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(discard))
 
-	if w.Running {
+	if running {
 		// It's safe to stop if the workshop isn't running, but we
 		// don't want to start it if the Change is undone.
-		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", w.Name))
+		stop := st.NewTask("stop-workshop", fmt.Sprintf("Stop %q workshop", manifest.File.Name))
 		stop.Set("force", true)
 		addTaskSet(state.NewTaskSet(stop))
 	}
@@ -763,7 +737,7 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	uninstall := uninstallSdks(st, sdks)
 	addTaskSet(uninstall)
 
-	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", w.Name))
+	remove := st.NewTask("remove-workshop", fmt.Sprintf("Remove %q workshop", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(remove))
 
 	// The point of no return starts after the workshop is removed. If any of the tasks
@@ -771,10 +745,10 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 	addTaskSet(state.NewTaskSet(removeStateStorage))
 
-	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", w.Name))
+	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(removeStash))
 
-	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", w.Name))
+	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(removeDirs))
 
 	// Directories should exist from before create-workshop until after remove-workshop.
@@ -786,7 +760,7 @@ func remove(st *state.State, w *workshop.Workshop, project workshop.Project) *st
 	removeStateStorage.JoinLane(cleanupLane)
 
 	for _, task := range removeSet.Tasks() {
-		task.Set("workshop", w.Name)
+		task.Set("workshop", manifest.File.Name)
 		task.Set("project", project)
 	}
 	return removeSet

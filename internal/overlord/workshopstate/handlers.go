@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"syscall"
 	"time"
 
@@ -46,7 +47,7 @@ func (m *WorkshopManager) doDownloadBase(task *state.Task, tomb *tomb.Tomb) erro
 
 	st := task.State()
 	st.Lock()
-	image, err := WorkshopBase(task.Change(), w)
+	image, err := WorkshopBase(task.Change(), w, NewWorkshop)
 	st.Unlock()
 	if err != nil {
 		return err
@@ -93,7 +94,7 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 	}
 
 	st.Lock()
-	snapshot, err := WorkshopSnapshot(task.Change(), w, lastIntact)
+	snapshot, err := WorkshopSdkSnapshot(task.Change(), w, lastIntact)
 	st.Unlock()
 	if err != nil {
 		return err
@@ -394,6 +395,18 @@ func (m *WorkshopManager) doRemoveWorkshop(task *state.Task, tomb *tomb.Tomb) er
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
 
+	age := OldWorkshop
+	if task.Kind() == "create-workshop" {
+		age = NewWorkshop
+	}
+	st := task.State()
+	st.Lock()
+	err = SetSnapshotLastUsed(task.Change(), w, age, task.ID(), time.Now())
+	st.Unlock()
+	if err != nil {
+		return err
+	}
+
 	return m.backend.RemoveWorkshop(ctx, w)
 }
 
@@ -405,6 +418,18 @@ func (m *WorkshopManager) doRemoveWorkshopStash(task *state.Task, tomb *tomb.Tom
 
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
+
+	st := task.State()
+	st.Lock()
+	age := OldWorkshop
+	if task.Change().Kind() == "remove" {
+		age = OldStash
+	}
+	err = SetSnapshotLastUsed(task.Change(), w, age, task.ID(), time.Now())
+	st.Unlock()
+	if err != nil {
+		return err
+	}
 
 	if err := m.backend.RemoveWorkshopStash(ctx, w); err != nil {
 		task.State().Lock()
@@ -438,6 +463,14 @@ func (m *WorkshopManager) undoStashWorkshop(task *state.Task, tomb *tomb.Tomb) e
 
 	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
 	defer cancel()
+
+	st := task.State()
+	st.Lock()
+	err = SetSnapshotLastUsed(task.Change(), w, NewWorkshop, task.ID(), time.Now())
+	st.Unlock()
+	if err != nil {
+		return err
+	}
 
 	if err = m.backend.UnstashWorkshop(ctx, w); err != nil {
 		return err
@@ -490,4 +523,120 @@ func (m *WorkshopManager) doRemoveStateStorage(task *state.Task, tomb *tomb.Tomb
 	}
 
 	return nil
+}
+
+// doDeleteUnusedSnapshots is a cleanup handler that deletes unused snapshots.
+// It is called periodically to ensure that snapshots that are no longer
+// needed are removed from the system. The cleanup is done only if there are no
+// tasks in progress that might use the snapshot. The cleanup is also
+// throttled to avoid deleting snapshots too frequently. The cooldown time is
+// defined by the snapshotCooldownTime constant.
+//
+// There are multiple scenarios when this cleanup is triggered:
+//   - A workshop was removed (remove-workshop or, if launch failed, create-workshop task)
+//   - A stash was removed (after a successful refresh, or if a workshop is
+//     removed while a refresh is paused)
+//   - A workshop was replaced (undo stash-workshop task)
+func (m *WorkshopManager) doDeleteUnusedSnapshots(task *state.Task, tomb *tomb.Tomb) error {
+	user, prj, _, err := UserProjectWorkshop(task)
+	if err != nil {
+		// Log as an internal error, no need to retry again.
+		logger.Noticef("On WorkshopManager.doDeleteUnusedSnapshots: internal error: %v", err)
+		return nil
+	}
+
+	ctx, cancel := BackendContext(tomb, user, prj.ProjectId)
+	defer cancel()
+
+	st := task.State()
+	st.Lock()
+	defer st.Unlock()
+
+	snapshot, lastUsed, err := SnapshotLastUsedByTask(task)
+	if err != nil {
+		if !errors.Is(err, state.ErrNoState) {
+			logger.Noticef("On WorkshopManager.doDeleteUnusedSnapshots: internal error: %v", err)
+		}
+		return nil
+	}
+
+	for range snapshot.Sdks {
+		removed, err := m.deleteUnusedSnapshot(ctx, task, *snapshot, lastUsed)
+		if err != nil {
+			return err
+		}
+		if !removed {
+			return nil
+		}
+		snapshot.Sdks = snapshot.Sdks[:len(snapshot.Sdks)-1]
+	}
+	return nil
+}
+
+func (m *WorkshopManager) deleteUnusedSnapshot(ctx context.Context, task *state.Task, snapshot workshop.Snapshot, lastUsed time.Time) (bool, error) {
+	// Check for changes that might use the same snapshot. If one is in
+	// progress, removing the snapshot will break the launch or rebuild. If
+	// another task stopped using the snapshot after us, we can let it handle
+	// the cleanup.
+	st := task.State()
+	changes := st.Changes()
+	blocking := []string{"launch", "refresh", "remove"}
+	for _, change := range changes {
+		// Other changes like "exec" do not affect snapshots, so we can skip them.
+		if !slices.Contains(blocking, change.Kind()) {
+			continue
+		}
+		if !change.IsReady() {
+			return false, &state.Retry{}
+		}
+
+		taskID, time, err := SnapshotLastUsed(change, snapshot)
+		if errors.Is(err, state.ErrNoState) {
+			continue
+		}
+		if err != nil {
+			logger.Noticef("On WorkshopManager.doDeleteUnusedSnapshots: internal error: %v", err)
+			return false, nil
+		}
+
+		if taskID == task.ID() {
+			continue
+		}
+		// Just compare task IDs lexicographically; it doesn't really matter
+		// which one handles the cleanup as long as there's consensus.
+		if time.After(lastUsed) || (time.Equal(lastUsed) && taskID > task.ID()) {
+			return false, nil
+		}
+
+		// Earlier tasks may be responsible for cleaning up descendant
+		// snapshots. We wait for them to be clean to avoid deleting snapshots
+		// in the wrong order.
+		if t := st.Task(taskID); t == nil {
+			logger.Noticef("On WorkshopManager.doDeleteUnusedSnapshots: internal error: task %s not found", taskID)
+			return false, nil
+		} else if !t.IsClean() {
+			return false, &state.Retry{}
+		}
+	}
+
+	if time.Since(lastUsed) < snapshotCooldownTime {
+		return false, &state.Retry{}
+	}
+
+	info, err := m.backend.Snapshot(ctx, snapshot)
+	if errors.Is(err, workshop.ErrSnapshotNotFound) || (err != nil && info != nil) {
+		// Snapshot not found, or a hash collision.
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if len(info.Workshops) > 0 {
+		return false, nil
+	}
+
+	if err := m.backend.RemoveSnapshot(ctx, snapshot); err != nil {
+		return false, err
+	}
+	return true, nil
 }

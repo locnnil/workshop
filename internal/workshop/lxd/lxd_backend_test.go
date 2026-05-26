@@ -93,48 +93,27 @@ func (f *LxdBeTests) TestDefaultWorkshopConfig(c *check.C) {
 		},
 	}
 
-	reset := lxdbackend.MockNvidiaRuntime(func() (bool, error) {
-		return true, nil
-	})
-
 	// Execute
-	cfg, err := lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file, "fakeimage12345")
-	defer reset()
+	cfg, err := lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file, b.FormatRevision(), "fakeimage12345")
 
 	// Validate
 	c.Assert(err, check.IsNil)
 	c.Assert(cfg["raw.idmap"], check.Equals, "uid 1001 1000\ngid 1001 1000")
 	c.Assert(cfg["security.nesting"], check.Equals, "true")
 	c.Assert(cfg["user.workshop.project-id"], check.Equals, f.project.ProjectId)
-
-	c.Assert(cfg["nvidia.runtime"], check.Equals, "true")
-	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "all")
 	c.Assert(cfg["user.workshop.file"], check.Equals, marshalledWorkshop)
+	c.Assert(cfg["user.workshop.format-revision"], check.Equals, b.FormatRevision().String())
 	c.Assert(cfg["user.workshop.base-fingerprint"], check.Equals, "fakeimage12345")
-
-	// Setup
-	reset = lxdbackend.MockNvidiaRuntime(func() (bool, error) {
-		return false, nil
-	})
-	defer reset()
-
-	// Execute
-	cfg, err = lxdbackend.DefaultConfig(b, f.project.ProjectId, "1001", "1001", file, "")
-
-	// Validate
-	c.Assert(err, check.IsNil)
-	c.Assert(cfg["nvidia.runtime"], check.Equals, "")
-	c.Assert(cfg["nvidia.driver.capabilities"], check.Equals, "")
 }
 
 func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
-	err := lxdbackend.CheckServerVersion("6.6")
+	err := lxdbackend.CheckServerVersion("6.8")
+	c.Assert(err, check.IsNil)
+
+	err = lxdbackend.CheckServerVersion("6.9")
 	c.Assert(err, check.IsNil)
 
 	err = lxdbackend.CheckServerVersion("6.7")
-	c.Assert(err, check.IsNil)
-
-	err = lxdbackend.CheckServerVersion("6.5")
 	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
 
 	err = lxdbackend.CheckServerVersion("5.9")
@@ -149,9 +128,9 @@ func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
 	err = lxdbackend.CheckServerVersion("6.x")
 	c.Assert(err, check.ErrorMatches, ".*cannot parse LXD server version.*")
 
-	err = lxdbackend.CheckServerVersion("6.6.1")
+	err = lxdbackend.CheckServerVersion("6.8.1")
 	c.Assert(err, check.IsNil)
 
-	err = lxdbackend.CheckServerVersion("6.5.9")
+	err = lxdbackend.CheckServerVersion("6.7.9")
 	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
 }

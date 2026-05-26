@@ -318,6 +318,7 @@ func (r *TaskRunner) clean(t *Task) {
 		return
 	}
 
+	t.At(time.Time{}) // clear schedule
 	tomb := &tomb.Tomb{}
 	r.tombs[t.ID()] = tomb
 	tomb.Go(func() error {
@@ -331,8 +332,13 @@ func (r *TaskRunner) clean(t *Task) {
 
 		delete(r.tombs, t.ID())
 
-		if tomb.Err() != nil {
-			logger.Debugf("Cleaning task %s: %s", t.ID(), tomb.Err())
+		if err := tomb.Err(); err != nil {
+			x, ok := err.(*Retry)
+			if !ok {
+				logger.Debugf("Cleaning task %s: %s", t.ID(), err)
+			} else if x.After != 0 {
+				t.At(timeNow().Add(x.After))
+			}
 		} else {
 			t.SetClean()
 		}
@@ -425,7 +431,13 @@ ConsiderTasks:
 		status := t.Status()
 		if status.Ready() {
 			if !t.IsClean() {
-				r.clean(t)
+				// skip tasks scheduled for later and also track the earliest one
+				tWhen := t.AtTime()
+				if tWhen.IsZero() || !ensureTime.Before(tWhen) {
+					r.clean(t)
+				} else if nextTaskTime.IsZero() || nextTaskTime.After(tWhen) {
+					nextTaskTime = tWhen
+				}
 			}
 			continue
 		}

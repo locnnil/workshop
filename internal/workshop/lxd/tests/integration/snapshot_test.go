@@ -162,7 +162,7 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 			{Name: "local-sdk", Source: sdk.ProjectSource},
 		},
 	}
-	snapshot := workshop.Snapshot{Image: image}
+	snapshot := workshop.BaseOnly(s.bd.FormatRevision(), image.Name, image.Fingerprint)
 	rev := s.launchWorkshop(c, wf, snapshot)
 	defer rev.Fail()
 
@@ -232,17 +232,6 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 	// Validate snapshot metadata.
 	sdkSnapshot := s.snapshotFormat(c, snapshot)
 
-	conn, err := s.bd.LxdClient(s.ctx)
-	c.Assert(err, check.IsNil)
-	defer conn.Disconnect()
-	newApi := conn.HasExtension("instance_refresh_config")
-	if !newApi {
-		for _, name := range []string{"cache.apt", "workshop.network", "workshop.socket", "workshop.workshopctl"} {
-			c.Check(sdkSnapshot.Devices[name], check.DeepEquals, map[string]string{"type": "none"})
-			delete(sdkSnapshot.Devices, name)
-		}
-	}
-
 	c.Check(sdkSnapshot, testutil.JsonEquals, format["snapshot"])
 }
 
@@ -275,7 +264,7 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	delete(inst.Config, "user.workshop.file")
 
 	// Avoid having to update the saved configs when bumping the revision.
-	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, lxdbackend.SnapshotFormatRevision.String())
+	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, snapshot.Format.String())
 	delete(inst.Config, "user.workshop.format-revision")
 
 	// Hardware-dependent, not much influence on snapshots.
@@ -337,7 +326,7 @@ func (s *snapshotSuite) snapshotFormat(c *check.C, snapshot workshop.Snapshot) a
 	delete(inst.Config, "user.workshop.base-fingerprint")
 
 	// Avoid having to update the saved configs when bumping the revision.
-	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, lxdbackend.SnapshotFormatRevision.String())
+	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, snapshot.Format.String())
 	delete(inst.Config, "user.workshop.format-revision")
 	c.Check(inst.Config["user.workshop.sha3-384"], check.Equals, digest)
 	delete(inst.Config, "user.workshop.sha3-384")
@@ -373,7 +362,7 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 		Name: "test1",
 		Base: base,
 	}
-	baseOnly := workshop.Snapshot{Image: image}
+	baseOnly := workshop.BaseOnly(s.bd.FormatRevision(), image.Name, image.Fingerprint)
 	r := s.launchWorkshop(c, wf1, baseOnly)
 	revert.Copy(rev, r)
 

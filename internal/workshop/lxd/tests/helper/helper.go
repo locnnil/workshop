@@ -121,7 +121,7 @@ printf '%s\n' "$@"
 	_, _, err = bd.CreateOrLoadProject(ctx, dir)
 	c.Assert(err, check.IsNil)
 
-	snapshot := workshop.Snapshot{Image: image}
+	snapshot := workshop.BaseOnly(bd.FormatRevision(), image.Name, image.Fingerprint)
 	err = bd.LaunchOrRebuildWorkshop(ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)
 

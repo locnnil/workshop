@@ -17,6 +17,7 @@ package sdkstate_test
 import (
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
@@ -51,7 +52,7 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 	}
 
 	change := i.state.NewChange("sample", "...")
-	change.Set("ws_sdks", []sdk.Setup{trySdk, storeSdk})
+	change.Set("ws_new_sdks", []sdk.Setup{trySdk, storeSdk})
 
 	t1 := sdkstate.Retrieve(i.state, trySdk)
 	t2 := sdkstate.Retrieve(i.state, storeSdk)
@@ -59,13 +60,13 @@ func (i *SdkStateTasks) TestRetrieve(c *check.C) {
 
 	i.state.Unlock()
 
-	s, err := sdkstate.SdkSetup(t1, "ws")
+	s, err := sdkstate.SdkSetup(t1, "ws", handlersetup.NewWorkshop)
 	c.Assert(err, check.IsNil)
 	c.Check(s, check.Equals, trySdk)
 	c.Check(t1.Kind(), check.Equals, "retrieve-sdk")
 	c.Check(t1.Summary(), check.Equals, `Retrieve "test-sdk" SDK`)
 
-	s, err = sdkstate.SdkSetup(t2, "ws")
+	s, err = sdkstate.SdkSetup(t2, "ws", handlersetup.NewWorkshop)
 	c.Assert(err, check.IsNil)
 	c.Check(s, check.Equals, storeSdk)
 	c.Check(t2.Kind(), check.Equals, "retrieve-sdk")

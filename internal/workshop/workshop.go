@@ -31,6 +31,7 @@ import (
 
 var (
 	ConfigProjectId               = "user.workshop.project-id"
+	ConfigWorkshopName            = "user.workshop.name"
 	ConfigWorkshopFile            = "user.workshop.file"
 	ConfigWorkshopBase            = "user.workshop.base"
 	ConfigWorkshopBaseFingerprint = "user.workshop.base-fingerprint"
@@ -50,6 +51,7 @@ type Workshop struct {
 	// file in the project directory due to user's edits, etc.
 	File    *File
 	Name    string
+	Format  sdk.Revision
 	Image   BaseImage
 	Running bool
 	// Installed SDKs.

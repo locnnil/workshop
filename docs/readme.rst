@@ -55,7 +55,7 @@ Prerequisites
 ~~~~~~~~~~~~~
 
 Workshop requires
-`LXD 6.6+ <https://canonical.com/lxd>`_
+`LXD 6.8+ <https://canonical.com/lxd>`_
 for low-level operation.
 
 If the ``snap install`` command reports an issue with LXD,

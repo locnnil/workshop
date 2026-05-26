@@ -22,6 +22,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -40,7 +41,7 @@ func (s *apiSuite) setupExec(c *check.C) *Command {
 	s.createWFile(c, "ws", wsYaml)
 
 	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04", Actions: map[string]workshop.Action{"lint": "\n\n\ngolangci-lint run\n"}}
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 
 	err := s.b.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Assert(err, check.IsNil)

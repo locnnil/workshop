@@ -41,9 +41,10 @@ import (
 // Manifest lists the components needed to construct a workshop. It augments
 // the workshop definition with specific versions of the base image and SDKs.
 type Manifest struct {
-	File  *workshop.File
-	Image workshop.BaseImage
-	Sdks  []sdk.Setup
+	File   *workshop.File
+	Format sdk.Revision
+	Image  workshop.BaseImage
+	Sdks   []sdk.Setup
 }
 
 func (m *Manifest) maybeRevision(sk string) sdk.Revision {
@@ -123,6 +124,52 @@ func (w *WorkshopManager) RefreshManifests(ctx context.Context, project workshop
 	default:
 		return nil, nil, errors.New("cannot refresh: internal error: unknown refresh option")
 	}
+}
+
+func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string, names []string) (stashed, current []Manifest, running []bool, err error) {
+	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
+
+	stashed = make([]Manifest, 0, len(names))
+	current = make([]Manifest, 0, len(names))
+	running = make([]bool, 0, len(names))
+	for _, name := range names {
+		wp, err := w.backend.Workshop(ctx, name)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
+
+		if err := conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
+			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
+		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
+		if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
+		}
+
+		installed := make([]sdk.Setup, 0, len(wp.Sdks))
+		for _, sk := range wp.SdksByInstallOrder() {
+			installed = append(installed, sk.Setup)
+		}
+		current = append(current, Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed})
+
+		running = append(running, wp.Running)
+
+		stash, err := w.backend.StashedWorkshop(ctx, name)
+		if errors.Is(err, workshop.ErrWorkshopNotLaunched) {
+			continue
+		}
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		installed = make([]sdk.Setup, 0, len(stash.Sdks))
+		for _, sk := range stash.SdksByInstallOrder() {
+			installed = append(installed, sk.Setup)
+		}
+		stashed = append(stashed, Manifest{File: stash.File, Format: stash.Format, Image: stash.Image, Sdks: installed})
+	}
+
+	return stashed, current, running, nil
 }
 
 type artifactFinder struct {
@@ -211,9 +258,10 @@ func (a *artifactFinder) launchOrRefreshManifests(ctx context.Context, names []s
 			return nil, nil, fmt.Errorf("cannot %s %q: %w", action, name, err)
 		}
 
+		format := a.backend.FormatRevision()
 		installOrder := sdkInstallOrder(files[i])
 		sdks := ordered(installOrder, storeSdks[i], localSdks)
-		latest = append(latest, Manifest{File: files[i], Image: images[i], Sdks: sdks})
+		latest = append(latest, Manifest{File: files[i], Format: format, Image: images[i], Sdks: sdks})
 	}
 
 	return current, latest, nil
@@ -247,7 +295,7 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 	for _, sk := range wp.SdksByInstallOrder() {
 		installed = append(installed, sk.Setup)
 	}
-	return &Manifest{File: wp.File, Image: wp.Image, Sdks: installed}, nil
+	return &Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed}, nil
 }
 
 func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file *workshop.File) ([]sdk.Setup, error) {

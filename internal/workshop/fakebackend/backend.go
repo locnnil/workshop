@@ -46,6 +46,7 @@ type FakeWorkshop struct {
 	*workshop.Workshop
 	Devices            map[string]map[string]string
 	WorkshopFilesystem fsutil.Fs
+	CurrentSnapshot    workshop.Snapshot
 }
 
 type FakeVolume struct {
@@ -125,11 +126,14 @@ type FakeWorkshopBackend struct {
 
 	AttachVolumeCalls []AttachVolumeCall
 
+	formatRevision sdk.Revision
+
 	snapshotLock         sync.Mutex
 	LaunchOrRebuildCalls []LaunchOrRebuildCall
 	SnapshotCalls        []SnapshotCall
 	SnapshotCallback     func(ctx context.Context, name string, snapshot workshop.Snapshot) error
 	Snapshots            []FakeSnapshot
+	RemovedSnapshots     []workshop.Snapshot
 
 	BaseDir     string
 	SnapshotDir string
@@ -257,12 +261,14 @@ func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.
 			Name:     file.Name,
 			Running:  false,
 			Project:  *prj,
+			Format:   f.FormatRevision(),
 			Image:    snapshot.Image,
 			File:     file,
 			Sdks:     map[string]workshop.SdkInstallation{},
 			Profiles: map[string]workshop.SdkProfile{},
 		}
 		ws.Devices = map[string]map[string]string{}
+		ws.CurrentSnapshot = snapshot
 		return nil
 	}
 
@@ -288,7 +294,9 @@ func (f *FakeWorkshopBackend) resetWorkshop(ctx context.Context, file *workshop.
 	}
 
 	ws.File = file
+	ws.Format = f.FormatRevision()
 	ws.Image = snapshot.Image
+	ws.CurrentSnapshot = snapshot
 	return nil
 }
 
@@ -490,6 +498,27 @@ func DoExecDefault(ctx context.Context, name string, args *workshop.Execution) (
 			return nil
 		},
 	}, nil
+}
+
+func (s *FakeWorkshopBackend) StashedWorkshop(ctx context.Context, name string) (*workshop.Workshop, error) {
+	user, projectId, err := s.userProject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	project := s.project(user, projectId)
+	if project == nil {
+		return nil, api.StatusErrorf(404, "project not found")
+	}
+
+	s.workshopLock.Lock()
+	defer s.workshopLock.Unlock()
+
+	wp := s.StashedWorkshops[projectId]["stash-"+name]
+	if wp == nil {
+		return nil, workshop.ErrWorkshopNotLaunched
+	}
+	return wp.Workshop, nil
 }
 
 func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
@@ -824,11 +853,51 @@ func (s *FakeWorkshopBackend) detachVolume(ctx context.Context, name, what, wher
 	return err
 }
 
-func (f *FakeWorkshopBackend) HasSnapshot(ctx context.Context, snapshot workshop.Snapshot) (bool, error) {
-	f.snapshotLock.Lock()
-	defer f.snapshotLock.Unlock()
+func (f *FakeWorkshopBackend) FormatRevision() sdk.Revision {
+	if f.formatRevision.Unset() {
+		return sdk.R(1)
+	}
+	return f.formatRevision
+}
 
-	return f.snapshotIdx(snapshot) >= 0, nil
+func (f *FakeWorkshopBackend) SetFormatRevision(format sdk.Revision) func() {
+	old := f.formatRevision
+	f.formatRevision = format
+	return func() { f.formatRevision = old }
+}
+
+func (f *FakeWorkshopBackend) Snapshot(ctx context.Context, snapshot workshop.Snapshot) (*workshop.SnapshotInfo, error) {
+	f.snapshotLock.Lock()
+	idx := f.snapshotIdx(snapshot)
+	f.snapshotLock.Unlock()
+	if idx < 0 {
+		return nil, workshop.ErrSnapshotNotFound
+	}
+
+	f.workshopLock.Lock()
+	defer f.workshopLock.Unlock()
+
+	workshops := make(map[string][]string)
+	for pid, wps := range f.Workshops {
+		for name, wp := range wps {
+			if wp.CurrentSnapshot.IsBasedOn(snapshot) {
+				workshops[pid] = append(workshops[pid], name)
+			}
+		}
+	}
+	for pid, wps := range f.StashedWorkshops {
+		for name, wp := range wps {
+			name = strings.TrimPrefix(name, "stash-")
+			if slices.Contains(workshops[pid], name) {
+				continue
+			}
+
+			if wp.CurrentSnapshot.IsBasedOn(snapshot) {
+				workshops[pid] = append(workshops[pid], name)
+			}
+		}
+	}
+	return &workshop.SnapshotInfo{Snapshot: snapshot, Workshops: workshops}, nil
 }
 
 func (f *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, snapshot workshop.Snapshot) error {
@@ -841,6 +910,19 @@ func (f *FakeWorkshopBackend) TakeSnapshot(ctx context.Context, name string, sna
 	if err != nil {
 		return err
 	}
+
+	_, projectId, err := f.userProject(ctx)
+	if err != nil {
+		return err
+	}
+
+	f.workshopLock.Lock()
+	wp := f.Workshops[projectId][name]
+	f.workshopLock.Unlock()
+	if wp == nil {
+		return workshop.ErrWorkshopNotLaunched
+	}
+	wp.CurrentSnapshot = snapshot
 
 	f.snapshotLock.Lock()
 	defer f.snapshotLock.Unlock()
@@ -871,6 +953,8 @@ func (f *FakeWorkshopBackend) RemoveSnapshot(ctx context.Context, snapshot works
 	defer f.snapshotLock.Unlock()
 
 	if idx := f.snapshotIdx(snapshot); idx >= 0 {
+		f.RemovedSnapshots = append(f.RemovedSnapshots, snapshot)
+
 		snapId := f.Snapshots[idx].Id
 		f.Snapshots = slices.Delete(f.Snapshots, idx, idx+1)
 		return os.RemoveAll(filepath.Join(f.SnapshotDir, fmt.Sprint(snapId)))

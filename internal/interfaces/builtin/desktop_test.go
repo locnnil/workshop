@@ -50,8 +50,8 @@ func (s *desktopSuite) SetUpSuite(c *check.C) {
 	s.restoreUserLookup = osutil.FakeUserLookup(func(name string) (*user.User, error) {
 		return &testuser, nil
 	})
-	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, bool, error) {
-		return &api.Resources{}, false, nil
+	s.restoreLxdInfo = lxd_device.MockLxdServerInfo(func(ctx context.Context) (*api.Resources, error) {
+		return &api.Resources{}, nil
 	})
 }
 

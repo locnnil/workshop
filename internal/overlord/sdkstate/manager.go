@@ -110,6 +110,8 @@ type SdkManager struct {
 
 var (
 	sdkVolumeCooldownTime = 1 * time.Hour // Time to wait before deleting unused SDK volumes.
+
+	timeNow = time.Now
 )
 
 func New(s *state.State, runner *state.TaskRunner, repo *interfaces.Repository) *SdkManager {
@@ -366,4 +368,10 @@ func FakeSdkVolumeCooldownTime(t time.Duration) (restore func()) {
 	return func() {
 		sdkVolumeCooldownTime = old
 	}
+}
+
+func MockTime(now time.Time) (restore func()) {
+	old := timeNow
+	timeNow = func() time.Time { return now }
+	return func() { timeNow = old }
 }

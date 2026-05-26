@@ -131,7 +131,7 @@ func (s *requestSuite) launchWorkshopWithSDKs(c *check.C, ws string, sdks []work
 	c.Assert(err, check.IsNil)
 
 	wf := workshop.File{Name: ws, Base: "ubuntu@20.04", Sdks: sdks}
-	snapshot := workshop.BaseOnly(wf.Base, "fakeimage123")
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
 	err = s.backend.LaunchOrRebuildWorkshop(s.ctx, &wf, snapshot)
 	c.Assert(err, check.IsNil)
 
@@ -194,8 +194,9 @@ connections:
 	c.Assert(err, check.IsNil)
 
 	current := []workshopstate.Manifest{{
-		File:  &oldf,
-		Image: workshop.BaseImage{Name: newf.Base, Fingerprint: "fakeimage123"},
+		File:   &oldf,
+		Format: sdk.R(1),
+		Image:  workshop.BaseImage{Name: newf.Base, Fingerprint: "fakeimage123"},
 		Sdks: []sdk.Setup{{
 			Name:     "system",
 			Source:   sdk.SystemSource,
@@ -221,9 +222,10 @@ connections:
 		}},
 	}}
 	latest := []workshopstate.Manifest{{
-		File:  &newf,
-		Image: current[0].Image,
-		Sdks:  slices.Clone(current[0].Sdks),
+		File:   &newf,
+		Format: current[0].Format,
+		Image:  current[0].Image,
+		Sdks:   slices.Clone(current[0].Sdks),
 	}}
 
 	// No updates.
@@ -235,6 +237,13 @@ connections:
 	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshRestore)
 	c.Assert(err, check.IsNil)
 	c.Check(ts, check.Not(check.HasLen), 0)
+
+	// Updated format.
+	latest[0].Format = sdk.R(2)
+	ts, err = s.mgr.RefreshMany(s.ctx, s.project, current, latest, conflict.RefreshUpdate)
+	c.Assert(err, check.IsNil)
+	c.Check(ts, check.Not(check.HasLen), 0)
+	latest[0].Format = current[0].Format
 
 	// Updated SDK.
 	latest[0].Sdks[1].Revision = sdk.R(43)
@@ -389,15 +398,16 @@ sdks:
 
 	// Final snapshot already exists.
 	manifest := workshopstate.Manifest{
-		File:  &wf,
-		Image: image,
-		Sdks:  []sdk.Setup{uv, golang, rust, node},
+		File:   &wf,
+		Format: sdk.R(1),
+		Image:  image,
+		Sdks:   []sdk.Setup{uv, golang, rust, node},
 	}
 	s.backend.Snapshots = []fakebackend.FakeSnapshot{
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:1]), Id: 0},
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:2]), Id: 1},
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:3]), Id: 2},
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:4]), Id: 3},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:1]), Id: 0},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:2]), Id: 1},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:3]), Id: 2},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:4]), Id: 3},
 	}
 
 	tasksets, err := s.mgr.LaunchMany(s.ctx, s.project, []workshopstate.Manifest{manifest})
@@ -438,10 +448,10 @@ sdks:
 
 	// Snapshots only exist for outdated workshop.
 	s.backend.Snapshots = []fakebackend.FakeSnapshot{
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:1]), Id: 0},
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:2]), Id: 1},
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:3]), Id: 2},
-		{Snapshot: workshop.SdkSnapshot(image, manifest.Sdks[:4]), Id: 3},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:1]), Id: 0},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:2]), Id: 1},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:3]), Id: 2},
+		{Snapshot: workshop.SdkSnapshot(manifest.Format, image, manifest.Sdks[:4]), Id: 3},
 	}
 	manifest.Sdks[2] = rust_r2
 
@@ -558,20 +568,22 @@ sdks:
 
 	// Updated SDKs.
 	current := workshopstate.Manifest{
-		File:  &wf,
-		Image: image,
-		Sdks:  []sdk.Setup{uv, golang, rust, node},
+		File:   &wf,
+		Format: sdk.R(1),
+		Image:  image,
+		Sdks:   []sdk.Setup{uv, golang, rust, node},
 	}
 	latest := workshopstate.Manifest{
-		File:  &wf,
-		Image: image,
-		Sdks:  []sdk.Setup{uv, golang_r2, rust_r2, node},
+		File:   &wf,
+		Format: sdk.R(1),
+		Image:  image,
+		Sdks:   []sdk.Setup{uv, golang_r2, rust_r2, node},
 	}
 	s.backend.Snapshots = []fakebackend.FakeSnapshot{
-		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:1]), Id: 0},
-		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:2]), Id: 1},
-		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:3]), Id: 2},
-		{Snapshot: workshop.SdkSnapshot(image, current.Sdks[:4]), Id: 3},
+		{Snapshot: workshop.SdkSnapshot(current.Format, image, current.Sdks[:1]), Id: 0},
+		{Snapshot: workshop.SdkSnapshot(current.Format, image, current.Sdks[:2]), Id: 1},
+		{Snapshot: workshop.SdkSnapshot(current.Format, image, current.Sdks[:3]), Id: 2},
+		{Snapshot: workshop.SdkSnapshot(current.Format, image, current.Sdks[:4]), Id: 3},
 	}
 
 	tasksets, err := s.mgr.RefreshMany(s.ctx, s.project, []workshopstate.Manifest{current}, []workshopstate.Manifest{latest}, conflict.RefreshUpdate)
@@ -628,7 +640,7 @@ sdks:
 	current.Sdks = latest.Sdks
 	latest.File = &wf
 	latest.Sdks = []sdk.Setup{uv, golang, rust, node}
-	snapshot := fakebackend.FakeSnapshot{Snapshot: workshop.SdkSnapshot(image, current.Sdks), Id: 4}
+	snapshot := fakebackend.FakeSnapshot{Snapshot: workshop.SdkSnapshot(current.Format, image, current.Sdks), Id: 4}
 	s.backend.Snapshots = append(s.backend.Snapshots, snapshot)
 
 	tasksets, err = s.mgr.RefreshMany(s.ctx, s.project, []workshopstate.Manifest{current}, []workshopstate.Manifest{latest}, conflict.RefreshUpdate)
