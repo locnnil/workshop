@@ -1,0 +1,20 @@
+name: publish-demo
+version: "0.1.0"
+summary: Demo SDK used by the publish-an-sdk spread test
+description: |
+  Minimal SDK used by the docs-how-to spread test
+  to verify the publish-an-sdk how-to procedure
+  through sdkcraft pack and the Store-side --help surface.
+  Register, upload, and release aren't exercised
+  because they require the live SDK Store.
+license: MIT
+platforms:
+  ubuntu@24.04:amd64:
+
+parts:
+  payload:
+    plugin: nil
+    override-build: |
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      printf '#!/bin/sh\necho hello-publish-demo\n' > "$CRAFT_PART_INSTALL/bin/hello-publish-demo"
+      chmod +x "$CRAFT_PART_INSTALL/bin/hello-publish-demo"

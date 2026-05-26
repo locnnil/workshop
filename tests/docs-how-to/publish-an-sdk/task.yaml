@@ -1,0 +1,49 @@
+summary: |
+  Verify the how_publish_sdk procedure up to pack. Stops short of
+  register, upload, and release because those commands talk to the
+  live SDK Store at api.charmhub.io and cannot run in CI. Their CLI
+  surface is still verified via --help, so doc drift between the
+  how-to and the sdkcraft binary will fail the test.
+
+  Note on scaffolding: the doc points new authors at canonical/template-sdk
+  for the project skeleton plus CI/renovate glue. The test uses sdkcraft
+  init instead because it produces the same sdkcraft.yaml and hooks/
+  skeleton without pulling in the CI workflows the test doesn't exercise.
+
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  install_sdkcraft
+
+restore: |
+  . "$TESTSLIB"/utils.sh
+  rm -rf ~ubuntu/publish-demo
+
+execute: |
+  . "$TESTSLIB"/utils.sh
+  TESTROOT=$(pwd)
+
+  # Scaffold the SDK source.
+  mkdir ~ubuntu/publish-demo
+  chown ubuntu:ubuntu ~ubuntu/publish-demo
+  cd ~ubuntu/publish-demo
+  run_sdkcraft init
+  rm -f hooks/*
+  cp "$TESTROOT/sdkcraft.yaml" .
+  cp "$TESTROOT/hooks/"* hooks/
+  chmod 0755 hooks/*
+  chown -R ubuntu:ubuntu .
+
+  # Pack the SDK and verify the artifact name matches the documented
+  # <NAME>_<ARCH>_<BASE>.sdk pattern.
+  run_sdkcraft clean
+  run_sdkcraft pack
+  test -f publish-demo_amd64_ubuntu@24.04.sdk
+
+  # Verify register, upload, and release expose the surface the how-to
+  # describes, without contacting the SDK Store. sdkcraft prints --help
+  # output to stderr, so redirect it for MATCH to see.
+  run_sdkcraft register --help 2>&1 | MATCH "[Rr]egister"
+  run_sdkcraft upload --help 2>&1 | MATCH "[Uu]pload"
+  run_sdkcraft upload --help 2>&1 | MATCH "release"
+  run_sdkcraft release --help 2>&1 | MATCH "[Rr]elease"
+  run_sdkcraft release --help 2>&1 | MATCH "CHANNELS"

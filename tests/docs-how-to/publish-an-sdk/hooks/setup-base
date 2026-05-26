@@ -1,0 +1,5 @@
+#!/bin/bash -ex
+
+cat <<EOF > /etc/profile.d/publish-demo.sh
+export PATH="$SDK/bin:\$PATH"
+EOF
