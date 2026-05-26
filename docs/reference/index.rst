@@ -61,6 +61,22 @@ starts with how SDKs are structured and operated at run-time:
    workshop-status
 
 
+.. _ref_ai:
+
+AI agents
+---------
+
+|ws_markup| exposes documentation in LLM-readable form
+and ships two agentic skills that wrap its CLIs
+for coding agents:
+
+.. toctree::
+   :titlesonly:
+   :class: flat-toctree
+
+   ai-agents
+
+
 
 Reference implementations
 -------------------------

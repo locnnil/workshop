@@ -18,6 +18,9 @@ brought together as SDKs,
 to work in sandboxed environments over a shared project repository,
 thus addressing security and privacy concerns
 while enabling a degree of creativity in your workflows.
+At the same time,
+|ws_markup| treats AI coding agents as another class of tool
+that benefits from the container boundary and a shared sandbox.
 
 Today, developer teams routinely delegate multistep tasks to agents,
 run different models for planning and implementation,
@@ -49,6 +52,12 @@ and synthesizes the optimal approach in different ways:
   Assign distinct roles to different agents:
   :program:`claude-code` as the architect, creating planning documents,
   :program:`copilot` as the coder, implementing the design.
+
+.. note::
+
+   For details of how agents can operate |ws_markup|,
+   rather than the other way around,
+   see :ref:`ref_ai_agents`.
 
 
 Prerequisites
@@ -435,6 +444,7 @@ Explanation:
 
 Reference:
 
-- :ref:`ref_workshop_run`
-- :ref:`ref_workshop_exec`
+- :ref:`ref_ai_agents`
 - :ref:`ref_workshop_actions`
+- :ref:`ref_workshop_exec`
+- :ref:`ref_workshop_run`
