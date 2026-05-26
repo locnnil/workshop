@@ -29,9 +29,9 @@ suites:
       . "$TESTSLIB"/utils.sh
       cleanup_workshop
     debug-each: |
-      lxc list --project workshop.ubuntu
-      sudo -u ubuntu 2>&1 -- workshop list --global
-      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
+      lxc list --project workshop.ubuntu || true
+      sudo -u ubuntu 2>&1 -- workshop list --global || true
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service || true
     kill-timeout: 30m
   tests/integration/:
     summary: LXD integration tests
@@ -55,7 +55,7 @@ suites:
       . "$TESTSLIB"/utils.sh
       cleanup_workshop
     debug-each: |
-      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service || true
     kill-timeout: 30m
   tests/docs-how-to/:
     summary: Documentation how-to tests
@@ -69,7 +69,7 @@ suites:
       . "$TESTSLIB"/utils.sh
       cleanup_workshop
     debug-each: |
-      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service
+      journalctl --since="$(</tmp/spread-job-start)" --unit=snap.workshop.workshopd.service || true
     kill-timeout: 20m
 exclude:
   - .git
