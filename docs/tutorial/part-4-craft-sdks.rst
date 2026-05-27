@@ -559,15 +559,23 @@ Publish the SDK
 
 When an SDK is ready, built, and tried,
 publish it to the SDK Store
-for use with |ws_markup|:
+for use with |ws_markup|.
+
+Authenticate, register the SDK name, and upload the artifact:
 
 .. code-block:: console
 
-   $ sdkcraft.publish ./ollama_amd64_ubuntu@24.04.sdk 24.04/beta
+   $ sdkcraft login
+   $ sdkcraft register ollama
+   $ sdkcraft upload ./ollama_amd64_ubuntu@24.04.sdk --release latest/beta
 
 
-This publishes the newly created SDK
-under the :samp:`24.04/beta` channel in the SDK Store.
+This uploads the newly created SDK
+and releases it under the :samp:`latest/beta` channel in the SDK Store.
+
+For the full publish flow, including how to release
+already-uploaded revisions to additional channels,
+see :ref:`how_publish_sdk`.
 
 
 Use the SDK
@@ -583,7 +591,7 @@ The resulting SDK can be used with |ws_markup| as follows:
    base: ubuntu@24.04
    sdks:
      - name: ollama
-       channel: 24.04/beta
+       channel: latest/beta
 
 
 Note that the workshop :samp:`base`

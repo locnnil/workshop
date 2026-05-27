@@ -1,0 +1,8 @@
+#!/bin/bash -ex
+
+cat <<EOF > /etc/profile.d/build-demo.sh
+export PATH="$SDK/bin:\$PATH"
+EOF
+
+mkdir -p /var/lib/build-demo
+echo "setup-base ran" > /var/lib/build-demo/setup-base.marker

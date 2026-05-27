@@ -45,6 +45,21 @@ AI agents, IDEs, version control, and CI/CD workflows all work inside a workshop
    Develop with workshops <develop-with-workshops/index>
 
 
+Develop SDKs
+------------
+
+.. @artefact SDK
+
+These guides cover the work of authoring an SDK with |sdk_markup|
+and publishing it to the SDK Store:
+
+.. toctree::
+   :titlesonly:
+   :class: flat-toctree
+
+   Develop SDKs <develop-sdks/index>
+
+
 .. _how_fix_workshops:
 
 Fix workshops

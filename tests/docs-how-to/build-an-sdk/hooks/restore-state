@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+if [ -f "$SDK_STATE_DIR/marker" ]; then
+  install -o workshop -g workshop -m 0644 \
+    "$SDK_STATE_DIR/marker" /home/workshop/.build-demo.marker
+fi
