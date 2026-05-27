@@ -86,7 +86,7 @@ Documentation
 
 Refer to the
 `Tutorial
-<https://ubuntu.com/workshop/docs/tutorial/>`_
+<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/>`_
 in our docs for a detailed introduction to Workshop.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
