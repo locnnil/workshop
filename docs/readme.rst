@@ -2,7 +2,7 @@ Workshop
 ========
 
 .. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=latest
-   :target: https://ubuntu.com/workshop/docs/
+   :target: https://documentation.ubuntu.com/canonical-workshop/
    :alt: Documentation status
 
 **A tool for defining and handling ephemeral development environments**.
@@ -93,7 +93,7 @@ To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
 jump straight to the
 `SDK crafting guide
-<https://ubuntu.com/workshop/docs/tutorial/part-4-craft-sdks/>`_
+<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
 
