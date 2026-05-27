@@ -96,6 +96,9 @@ jump straight to the
 <https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
+For reference examples of SDK implementation, see the
+`reference SDKs repository <https://github.com/canonical/reference-sdks>`__.
+
 
 Community and Support
 ---------------------
