@@ -108,7 +108,7 @@ type SketchFile struct {
 	Hooks map[string]string `yaml:"hooks,omitempty"`
 }
 
-var sketchTemplate = `# For details: https://documentation.ubuntu.com/canonical-workshop/latest/explanation/sdks/concepts/#sketch-sdk
+var sketchTemplate = `# For details: https://ubuntu.com/workshop/docs/explanation/sdks/concepts/#sketch-sdk
 name: sketch
 hooks:
   # Use 'setup-base' to customize the base image
@@ -130,7 +130,7 @@ plugs:
 
 slots:
   # Use this configuration to expose a port, then add a corresponding system SDK plug
-  # More details: https://documentation.ubuntu.com/canonical-workshop/latest/how-to/customize-workshops/forward-ports/
+  # More details: https://ubuntu.com/workshop/docs/how-to/customize-workshops/forward-ports/
   # my-web-server:
   #   interface: tunnel
   #   endpoint: 8080
