@@ -231,6 +231,10 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 			// Intel GPUs are not yet supported by the GPU CDI spec, so we
 			// fall back to exposing them as 'physical' GPUs with a specific
 			// ID.
+			if c.DRM == nil {
+				logger.Debugf("Intel GPU detected without DRM info")
+				continue
+			}
 			cardId := strconv.FormatUint(c.DRM.ID, 10)
 			device := lxdbackend.DeviceName(s.Profile.Sdk, gpu.Name, vendor, cardId)
 			s.devices[device] = map[string]string{
@@ -241,6 +245,10 @@ func (s *Specification) SetGpu(gpu workshop.Gpu) error {
 				"id":      cardId,
 			}
 		default:
+			if c.DRM == nil {
+				logger.Debugf("Unknown GPU vendor ID '%s' for GPU card without DRM info", c.VendorID)
+				continue
+			}
 			logger.Debugf("Unknown GPU vendor ID '%s' for GPU card with ID %d", c.VendorID, c.DRM.ID)
 		}
 	}
