@@ -1,3 +1,28 @@
+retry() {
+    max="$1"
+    shift
+    delay=5
+
+    i=1
+    while [ "$i" -le "$max" ]; do
+        echo "Attempt $i/$max: $*"
+        if "$@"; then
+            return 0
+        fi
+
+        if [ "$i" -lt "$max" ]; then
+            echo "Failed. Sleeping $delay sec..."
+            sleep "$delay"
+            delay=$((delay * 2))
+        fi
+
+        i=$((i + 1))
+    done
+
+    echo "Command failed after $max attempts."
+    return 1
+}
+
 # Enforce local unix socket and the default project (if not specified).
 run_lxc() {
     lxc --force-local "$@"
@@ -9,11 +34,10 @@ get_projects() {
 
 remove_instances() {
     instances=$(run_lxc list -c n -f compact --project "$1" | awk 'NR>1 {printf "%s ", $1}')
-    if [ -n "$instances" ]; then
-        echo "Removing instances: $instances"
-        # shellcheck disable=SC2086
-        run_lxc delete --force $instances --project "$1"
-    fi
+    echo "$instances" | xargs -n1 -r | while read -r instance; do
+        echo "Removing instance: $instance"
+        retry 5 run_lxc delete --force "$instance" --project "$1"
+    done
 }
 
 remove_profiles() {
@@ -58,7 +82,7 @@ remove_volumes() {
     fi
     volumes=$(run_lxc storage volume list "$storage_pool" -c nt type=custom -f compact | awk 'NR>1 {printf "%s ", $1}')
     echo "$volumes" | xargs -n1 -r | while read -r volume; do
-        run_lxc storage volume delete "$storage_pool" "$volume"
+        retry 5 run_lxc storage volume delete "$storage_pool" "$volume"
     done
-    run_lxc storage delete "$storage_pool"
+    retry 5 run_lxc storage delete "$storage_pool"
 }
