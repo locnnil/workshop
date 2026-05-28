@@ -1,11 +1,7 @@
 Workshop
 ========
 
-.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=latest
-   :target: https://documentation.ubuntu.com/canonical-workshop/
-   :alt: Documentation status
-
-**A tool for defining and handling ephemeral development environments**.
+**Workshops are secure, fast, and composable development environments that come agent-ready**.
 
 List your dependencies and components in YAML to define an environment. The key
 pieces of a definition are SDKs, independent but connectable units of
@@ -86,14 +82,14 @@ Documentation
 
 Refer to the
 `Tutorial
-<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/>`_
+<https://ubuntu.com/workshop/docs/tutorial/>`_
 in our docs for a detailed introduction to Workshop.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
 jump straight to the
 `SDK crafting guide
-<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/part-4-craft-sdks/>`_
+<https://ubuntu.com/workshop/docs/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
 For reference examples of SDK implementation, see the
