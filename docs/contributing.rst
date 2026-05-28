@@ -40,6 +40,7 @@ Environment setup
 
       go install ./...
       export WORKSHOP=~/workshop
+      export WORKSHOP_CACHE=~/workshop-cache
       export WORKSHOP_DEBUG=1
       workshopd run --create-dirs
 
@@ -48,6 +49,7 @@ Environment setup
    .. code-block:: console
 
       export WORKSHOP=~/workshop
+      export WORKSHOP_CACHE=~/workshop-cache
       workshop list
 
 #. ``Spread`` is the end-to-end testing tool for ``workshop``.
