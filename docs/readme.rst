@@ -30,7 +30,9 @@ then run ``workshop launch``:
    name: dev
    base: ubuntu@24.04
    sdks:
+     - name: opencode
      - name: go
+       channel: 1.26/stable
 
 
 .. code-block:: console
@@ -40,6 +42,19 @@ then run ``workshop launch``:
 
 Workshop downloads and installs the SDKs your definition lists;
 the project is now ready to use them.
+
+To scaffold definitions directly from the command line instead,
+run ``workshop init`` with a comma-separated list of SDKs,
+pinning any of them to a channel:
+
+.. code-block:: console
+
+   workshop init dev --sdks opencode,go/1.26/stable
+
+
+This writes ``.workshop/dev.yaml``
+with the ``opencode`` SDK on its default channel
+and the ``go`` SDK pinned to ``1.26/stable``.
 
 
 Installation

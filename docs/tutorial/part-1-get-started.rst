@@ -221,6 +221,35 @@ Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
 comes from the :samp:`cpu/stable` channel of the the :samp:`cpu` track.
 
+In a working environment, instead of writing the definitions by hand,
+you can scaffold the file with :command:`workshop init`,
+passing the base, the SDKs, and their channels on the command line:
+
+.. code-block:: console
+
+   $ workshop init dev --sdks ollama/cpu/stable --base ubuntu@22.04
+
+     "dev" workshop created at /home/user/ollama-python-project/.workshop/dev.yaml
+
+
+Each :option:`!--sdks` entry takes the :samp:`<NAME>/<CHANNEL>` form,
+so :samp:`ollama/cpu/stable` pins the :samp:`ollama` SDK
+to its :samp:`cpu/stable` channel.
+The command writes the definition to :file:`.workshop/dev.yaml`:
+
+.. code-block:: yaml
+   :caption: .workshop/dev.yaml
+
+   name: dev
+   base: ubuntu@22.04
+   sdks:
+       - name: ollama
+         channel: cpu/stable
+
+
+This tutorial continues with the root :file:`workshop.yaml`
+rather than the :file:`.workshop/dev.yaml` shown here.
+
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
 
