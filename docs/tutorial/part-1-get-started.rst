@@ -221,7 +221,7 @@ Here, the SDK is referenced as :samp:`ollama`,
 and the specific version to retrieve from the SDK Store
 comes from the :samp:`cpu/stable` channel of the the :samp:`cpu` track.
 
-In a working environment, instead of writing the definitions by hand,
+Alternatively, instead of writing the definitions by hand,
 you can scaffold the file with :command:`workshop init`,
 passing the base, the SDKs, and their channels on the command line:
 
@@ -247,8 +247,9 @@ The command writes the definition to :file:`.workshop/dev.yaml`:
          channel: cpu/stable
 
 
-This tutorial continues with the root :file:`workshop.yaml`
-rather than the :file:`.workshop/dev.yaml` shown here.
+For simplicity,
+this tutorial continues with the root :file:`workshop.yaml`
+rather than the :file:`.workshop/dev.yaml` shown above.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
