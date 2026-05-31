@@ -282,7 +282,7 @@ func (h *healthHandler) Done() (err error) {
 		// if reached the maximum possible retries, reset the counter. This is
 		// required for scenarios when a user provided --wait-on-error to
 		// workshop refresh. If provided and check-health failed after multiple
-		// attemps, refresh will wait on this error allowing to repeat the task
+		// attempts, refresh will wait on this error allowing to repeat the task
 		// with --continue. In this case, we must to re-run the health check
 		// from scratch.
 		h.context.Lock()

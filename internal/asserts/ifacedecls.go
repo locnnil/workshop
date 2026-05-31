@@ -129,7 +129,7 @@ func (ac SideArityConstraint) Any() bool {
 	return ac.N == -1
 }
 
-// SlotConnectionConstraints specfies a set of constraints on an
+// SlotConnectionConstraints specifies a set of constraints on an
 // interface slot for a sdk relevant to its connection or
 // auto-connection.
 type SlotConnectionConstraints struct {
@@ -608,7 +608,7 @@ func compilePlugInstallationConstraints(context *subruleContext, cDef constraint
 	return plugInstCstrs, nil
 }
 
-// PlugConnectionConstraints specfies a set of constraints on an
+// PlugConnectionConstraints specifies a set of constraints on an
 // interface plug for a snap relevant to its connection or
 // auto-connection.
 type PlugConnectionConstraints struct {
@@ -693,7 +693,7 @@ func compilePlugConnectionConstraints(context *subruleContext, cDef constraintsD
 	return plugConnCstrs, nil
 }
 
-// PlugRule holds the rule of what is allowed, wrt instalation and
+// PlugRule holds the rule of what is allowed, wrt installation and
 // connection, for a plug of a specific interface for a sdk.
 type PlugRule struct {
 	Interface string

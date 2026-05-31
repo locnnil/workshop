@@ -649,7 +649,7 @@ func (s *RepositorySuite) TestAddSlotParallelInstance(c *C) {
 
 // Tests for Repository.RemoveSlot()
 
-func (s *RepositorySuite) TestRemoveSlotSuccedsWhenSlotExistsAndDisconnected(c *C) {
+func (s *RepositorySuite) TestRemoveSlotSucceedsWhenSlotExistsAndDisconnected(c *C) {
 	err := s.testRepo.AddSlot(s.slot)
 	c.Assert(err, IsNil)
 	// Removing a vacant slot simply works

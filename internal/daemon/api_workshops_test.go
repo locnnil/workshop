@@ -3798,7 +3798,7 @@ func (s *apiSuite) TestRefreshContinue(c *check.C) {
 	s.runActionTest(c, requests, expected)
 
 	// This will be called twice: first, on the refresh attempt, second, on the
-	// refresh --continue, which will be successfull and allow the refresh to
+	// refresh --continue, which will be successful and allow the refresh to
 	// finish.
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 2)
 

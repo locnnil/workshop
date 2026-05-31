@@ -455,7 +455,7 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	xdgRuntimeDir := filepath.Join(dirs.XdgRuntimeDirBase, strconv.Itoa(flags.UserId))
 	env["XDG_RUNTIME_DIR"] = xdgRuntimeDir
 
-	// The session bus address is often determined programatically, however some
+	// The session bus address is often determined programmatically, however some
 	// programs rely on an explicit environment variable. We set that here. Like
 	// the runtime dir above, we only guarantee that the bus exists for the
 	// workshop user.

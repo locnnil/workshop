@@ -32,7 +32,7 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-// OnUndo helps to skip the undo handler if the change is an abort-backgroud refresh
+// OnUndo helps to skip the undo handler if the change is an abort-background refresh
 func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 	return func(task *state.Task, tomb *tomb.Tomb) error {
 		st := task.State()
@@ -54,8 +54,8 @@ func OnUndo(handler state.HandlerFunc) state.HandlerFunc {
 // OnDo helps to decide whether:
 // 1. The task needs to be put on Wait (wait-on-error for refresh).
 //
-// 2. The error needs to be reported but safely ingored (ContextCancelled can
-// happen if a user cancells or something gets interrupted during the execution
+// 2. The error needs to be reported but safely ignored (ContextCancelled can
+// happen if a user cancels or something gets interrupted during the execution
 // due to abortion, e.g. a running hook is called off because their change was
 // aborted.
 //

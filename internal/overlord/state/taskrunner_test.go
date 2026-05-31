@@ -453,7 +453,7 @@ func (ts *taskRunnerSuite) TestAbortAcrossLanesDescendantTask(c *C) {
 	})
 }
 
-func (ts *taskRunnerSuite) TestAbortAcrossLanesStriclyOrderedTasks(c *C) {
+func (ts *taskRunnerSuite) TestAbortAcrossLanesStrictlyOrderedTasks(c *C) {
 
 	// <task>(<lane>)
 	//  t11(1) -> t12(1)

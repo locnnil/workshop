@@ -458,7 +458,7 @@ func (s *systemd) Status(unitNames ...string) ([]*UnitStatus, error) {
 	return sts, nil
 }
 
-// IsEnabled checkes whether the given service is enabled
+// IsEnabled checks whether the given service is enabled
 func (s *systemd) IsEnabled(serviceName string) (bool, error) {
 	if s.mode == GlobalUserMode {
 		panic("cannot call is-enabled with GlobalUserMode")
@@ -476,7 +476,7 @@ func (s *systemd) IsEnabled(serviceName string) (bool, error) {
 	return false, err
 }
 
-// IsActive checkes whether the given service is Active
+// IsActive checks whether the given service is Active
 func (s *systemd) IsActive(serviceName string) (bool, error) {
 	if s.mode == GlobalUserMode {
 		panic("cannot call is-active with GlobalUserMode")

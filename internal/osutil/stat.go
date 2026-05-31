@@ -42,7 +42,7 @@ func IsDir(path string) bool {
 	return fileInfo.IsDir()
 }
 
-// IsDevice returns true if mode coresponds to a device (char/block).
+// IsDevice returns true if mode corresponds to a device (char/block).
 func IsDevice(mode os.FileMode) bool {
 	return (mode & (os.ModeDevice | os.ModeCharDevice)) != 0
 }

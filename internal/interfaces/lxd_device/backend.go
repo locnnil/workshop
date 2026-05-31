@@ -370,7 +370,7 @@ func unmount(conn lxd.InstanceServer, pid, w string, where string) error {
 // 'systemd-fstab-generator' is responsible for creating mount entries from
 // fstab. Because of this, we need to first ensure it runs (generating the
 // on-demand unit files) by calling daemon-reload, and then activate the
-// newly-creaed units by restarting a downstream target (ie. local-fs) see:
+// newly-created units by restarting a downstream target (ie. local-fs) see:
 // https://www.freedesktop.org/software/systemd/man/latest/systemd.special.html
 func reloadMounts(conn lxd.InstanceServer, pid, w string) error {
 	if err := runCommand(conn, pid, w, []string{"systemctl", "daemon-reload"}); err != nil {

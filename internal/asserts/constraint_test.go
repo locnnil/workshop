@@ -393,10 +393,10 @@ func (s *attrMatcherSuite) TestCompileErrors(c *C) {
 	c.Check(err, ErrorMatches, `cannot nest alternative constraints directly at "foo/alt#2/"`)
 
 	_, err = asserts.CompileAttrMatcher("FOO", nil)
-	c.Check(err, ErrorMatches, `first level of non alternative constraints must be a set of key-value contraints`)
+	c.Check(err, ErrorMatches, `first level of non alternative constraints must be a set of key-value constraints`)
 
 	_, err = asserts.CompileAttrMatcher([]any{"FOO"}, nil)
-	c.Check(err, ErrorMatches, `first level of non alternative constraints must be a set of key-value contraints`)
+	c.Check(err, ErrorMatches, `first level of non alternative constraints must be a set of key-value constraints`)
 
 	_, err = asserts.CompileAttrMatcher(map[string]any{
 		"foo": "$FOO()",

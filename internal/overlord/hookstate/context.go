@@ -279,7 +279,7 @@ func (c *Context) Logf(fmt string, args ...any) {
 func (c *Context) Errorf(format string, args ...any) {
 	c.writing()
 	if c.IsEphemeral() {
-		// XXX: loger has no Errorf() :/
+		// XXX: logger has no Errorf() :/
 		logger.Noticef(format, args...)
 	} else {
 		c.task.Errorf(format, args...)

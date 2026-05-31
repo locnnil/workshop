@@ -11,7 +11,7 @@ import (
 )
 
 // BasicAuthHeader creates a header that contains just the "Authorization"
-// entry.  The implementation was originally taked from net/http but this is
+// entry.  The implementation was originally taken from net/http but this is
 // needed externally from the http request object in order to use this with
 // our websockets. See 2 (end of page 4) http://www.ietf.org/rfc/rfc2617.txt
 // "To receive authorization, the client sends the userid and password,

@@ -831,7 +831,7 @@ func (s *daemonSuite) TestRestartShutdown(c *check.C) {
 	st.Unlock()
 
 	sigCh := make(chan os.Signal, 2)
-	// stop (this will timeout but thats not relevant for this test)
+	// stop (this will timeout but that's not relevant for this test)
 	d.Stop(sigCh)
 
 	// ensure that the sigCh got closed as part of the stop
@@ -882,7 +882,7 @@ func (s *daemonSuite) TestRestartExpectedRebootIsMissing(c *check.C) {
 	}
 
 	sigCh := make(chan os.Signal, 2)
-	// stop (this will timeout but thats not relevant for this test)
+	// stop (this will timeout but that's not relevant for this test)
 	d.Stop(sigCh)
 
 	// an immediate shutdown was scheduled again

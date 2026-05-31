@@ -290,10 +290,10 @@ func (s *attrConstraintsSuite) TestCompileErrors(c *check.C) {
 	c.Check(err, check.ErrorMatches, `cannot compile "foo" constraint "\[": error parsing regexp:.*`)
 
 	_, err = asserts.CompileAttributeConstraints("FOO")
-	c.Check(err, check.ErrorMatches, `first level of non alternative constraints must be a set of key-value contraints`)
+	c.Check(err, check.ErrorMatches, `first level of non alternative constraints must be a set of key-value constraints`)
 
 	_, err = asserts.CompileAttributeConstraints([]any{"FOO"})
-	c.Check(err, check.ErrorMatches, `first level of non alternative constraints must be a set of key-value contraints`)
+	c.Check(err, check.ErrorMatches, `first level of non alternative constraints must be a set of key-value constraints`)
 
 	wrongDollarConstraints := []string{
 		"$",
@@ -597,7 +597,7 @@ func (s *plugSlotRulesSuite) TestCompilePlugRuleDefaults(c *check.C) {
 	checkBoolPlugConnConstraints(c, "deny-auto-connection", rule.DenyAutoConnection, true)
 }
 
-func (s *plugSlotRulesSuite) TestCompilePlugRuleInstalationConstraintsIDConstraints(c *check.C) {
+func (s *plugSlotRulesSuite) TestCompilePlugRuleInstallationConstraintsIDConstraints(c *check.C) {
 	rule, err := asserts.CompilePlugRule("iface", map[string]any{
 		"allow-installation": map[string]any{
 			"plug-sdk-type": []any{sdk.System.String(), sdk.Regular.String()},

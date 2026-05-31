@@ -346,7 +346,7 @@ func handleImageUpdate(opmeta map[string]any, imsize int64) *downloadUpdate {
 		}
 		// now, "done" is the percentage value. The state.Task progress
 		// reporting expects to have bytes all the way up to the client
-		// to calculate the download speed. Thus, covert percentages to
+		// to calculate the download speed. Thus, convert percentages to
 		// bytes.
 		donebytes := imsize * done / 100
 		return &downloadUpdate{Label: "download", Done: donebytes, Total: imsize}

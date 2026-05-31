@@ -1082,7 +1082,7 @@ runcmd:
 		"user.workshop.base-fingerprint": baseFingerprint,
 		// LXC appears to have a race condition wherein a proxy device mounted in
 		// a dynamically created directory has the potential to be 'masked' by this
-		// directory. We create an explicit mount for /tmp here (one such dymanic
+		// directory. We create an explicit mount for /tmp here (one such dynamic
 		// directory) to allow us to mount X11 sockets reliably.
 		// See: https://github.com/lxc/lxc/issues/434
 		"raw.lxc": "lxc.mount.entry = tmpfs tmp tmpfs defaults",
