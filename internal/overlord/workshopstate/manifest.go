@@ -126,12 +126,12 @@ func (w *WorkshopManager) RefreshManifests(ctx context.Context, project workshop
 	}
 }
 
-func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string, names []string) (stashed, current []Manifest, running []bool, err error) {
+func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string, names []string) (stashed, current []Manifest, running map[string]bool, err error) {
 	ctx = context.WithValue(ctx, workshop.ContextProjectId, projectId)
 
 	stashed = make([]Manifest, 0, len(names))
 	current = make([]Manifest, 0, len(names))
-	running = make([]bool, 0, len(names))
+	running = make(map[string]bool, len(names))
 	for _, name := range names {
 		wp, err := w.backend.Workshop(ctx, name)
 		if err != nil {
@@ -152,7 +152,7 @@ func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string,
 		}
 		current = append(current, Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed})
 
-		running = append(running, wp.Running)
+		running[wp.File.Name] = wp.Running
 
 		stash, err := w.backend.StashedWorkshop(ctx, name)
 		if errors.Is(err, workshop.ErrWorkshopNotLaunched) {

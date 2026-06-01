@@ -694,10 +694,10 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	return execSet, nil
 }
 
-func (w *WorkshopManager) RemoveMany(ctx context.Context, project workshop.Project, manifests []Manifest, running []bool) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RemoveMany(ctx context.Context, project workshop.Project, manifests []Manifest, running map[string]bool) ([]*state.TaskSet, error) {
 	taskset := []*state.TaskSet{}
-	for i, m := range manifests {
-		remove := remove(w.state, m, running[i], project)
+	for _, m := range manifests {
+		remove := remove(w.state, m, running[m.File.Name], project)
 		taskset = append(taskset, remove)
 	}
 	return taskset, nil
