@@ -483,7 +483,7 @@ func remove(ctx context.Context, mgr *workshopstate.WorkshopManager, reqData *wo
 		return nil, nil, nil, err
 	}
 
-	tasksets, err = mgr.RemoveMany(ctx, project, current, running)
+	tasksets, err = mgr.RemoveMany(ctx, project, stashed, current, running)
 	if err != nil {
 		return nil, nil, nil, err
 	}
