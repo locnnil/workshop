@@ -44,8 +44,6 @@ execute: |
   run_sdkcraft clean
   run_sdkcraft try
 
-  # The Test the SDK section in the doc invokes sdkcraft test, which installs
-  # Workshop from the store, so no local snap copy is needed.
   run_sdkcraft test --list | MATCH "main/launch"
 
   # Consume the try SDK from a fresh workshop project.
