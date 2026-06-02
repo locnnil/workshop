@@ -1911,11 +1911,12 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 // setting the cooldown time to 0 and running the state engine multiple times to
 // trigger the garbage collection.
 func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
+	st := s.d.state
+	st.Lock()
 	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
+	st.Unlock()
 
-	// More Ensure calls than usual to prevent FakeSdkVolumeCooldownTime
-	// from racing with the outstanding cleanup handlers.
-	for range 12 {
+	for range 6 {
 		c.Check(s.d.overlord.StateEngine().Ensure(), check.IsNil)
 		s.d.overlord.StateEngine().Wait()
 	}
