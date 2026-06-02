@@ -282,6 +282,21 @@ func (s *Specification) SetCamera(camera workshop.Camera) error {
 	return nil
 }
 
+func (s *Specification) AddCustomDevice(device workshop.CustomDevice) error {
+	s.Profile.CustomDevices = append(s.Profile.CustomDevices, device)
+
+	name := lxdbackend.DeviceName(s.Profile.Sdk, device.Name)
+	s.devices[name] = map[string]string{
+		"type":              "unix-hotplug",
+		"subsystem":         device.Subsystem,
+		"required":          "false",
+		"ownership.inherit": "true",
+	}
+	s.config[lxdbackend.DeviceTypeConfigKey(name)] = "custom-device"
+
+	return nil
+}
+
 func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey string) {
 	name := lxdbackend.DeviceName(s.Profile.Sdk, entry.Name)
 	s.config[lxdbackend.DeviceTypeConfigKey(name)] = configKey

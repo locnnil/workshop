@@ -63,6 +63,11 @@ type Camera struct {
 	Name string `json:"name"`
 }
 
+type CustomDevice struct {
+	Name      string `json:"name"`
+	Subsystem string `json:"subsystem"`
+}
+
 type Mount struct {
 	Name      string      `json:"name"`
 	Type      MountType   `json:"type"`
@@ -112,12 +117,13 @@ type Gpu struct {
 type SdkProfile struct {
 	Sdk string
 
-	Camera  *Camera
-	Mounts  map[string]Mount
-	Tunnels []Tunnel
-	Agent   *SshAgent
-	Gpu     *Gpu
-	Desktop *Desktop
+	Camera        *Camera
+	CustomDevices []CustomDevice
+	Mounts        map[string]Mount
+	Tunnels       []Tunnel
+	Agent         *SshAgent
+	Gpu           *Gpu
+	Desktop       *Desktop
 }
 
 func NewSdkProfile(sdkName string) SdkProfile {

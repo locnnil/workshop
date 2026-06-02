@@ -1160,7 +1160,7 @@ line 1: cannot unmarshal !!seq into string`,
 	c.Assert(err, check.IsNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 5)
+	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 6)
 
 	c.Assert(s.b.DownloadBaseCalls, check.HasLen, 1)
 
@@ -2102,6 +2102,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		slots: []string{
 			"mount-conflict:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2115,6 +2116,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2128,6 +2130,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2229,6 +2232,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2309,6 +2313,7 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2388,6 +2393,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2484,6 +2490,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2693,6 +2700,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2740,6 +2748,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2806,6 +2815,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2852,6 +2862,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -2932,6 +2943,7 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3013,6 +3025,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3086,6 +3099,7 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3166,6 +3180,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3243,6 +3258,7 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3321,6 +3337,7 @@ func (s *apiSuite) TestRefreshRestore(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3402,6 +3419,7 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3500,6 +3518,7 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3576,6 +3595,7 @@ func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3644,6 +3664,7 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -3724,6 +3745,7 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 		slots: []string{
 			"test-sdk-2:data-slot",
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -4412,6 +4434,7 @@ base: ubuntu@22.04
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
@@ -4464,6 +4487,7 @@ plugs:
 		},
 		slots: []string{
 			"system:camera",
+			"system:custom-device",
 			"system:desktop",
 			"system:gpu",
 			"system:mount",
