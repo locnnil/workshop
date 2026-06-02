@@ -308,6 +308,9 @@ func (a *artifactFinder) findStoreSdks(sto sdk.Store, ctx context.Context, file 
 	if err != nil {
 		return nil, err
 	}
+	if len(req.Packages) == 0 {
+		return nil, nil
+	}
 
 	// We have to request each SDK 4 times because the Store requires SDK
 	// platforms to exactly match the request.

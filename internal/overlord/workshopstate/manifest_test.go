@@ -258,6 +258,10 @@ func (s *manifestSuite) TestLaunchOK(c *check.C) {
 	testSdk.Channel = "latest/edge"
 	c.Check(manifests[0].Sdks, check.DeepEquals, []sdk.Setup{systemSdk.Setup})
 	c.Check(manifests[1].Sdks, check.DeepEquals, []sdk.Setup{systemSdk.Setup, testSdk.Setup})
+
+	c.Assert(s.store.ResolveCalls, check.HasLen, 1)
+	c.Assert(s.store.ResolveCalls[0].Packages, check.HasLen, 4)
+	c.Check(s.store.ResolveCalls[0].Packages[0].Name, check.Equals, "test")
 }
 
 func (s *manifestSuite) TestRefreshOK(c *check.C) {
