@@ -9,7 +9,14 @@ execute: |
   chown -R ubuntu:ubuntu ollama-python-project/
   cd ollama-python-project/
   git init 2>/dev/null || true
-  cp ../workshop-part-3.yaml workshop.yaml
+  workshop_exec init dev --sdks ollama/vulkan/stable,jupyter --base ubuntu@24.04
+  cat >> .workshop/dev.yaml <<EOF
+      - name: system
+        plugs:
+          jupyter:
+            interface: tunnel
+            endpoint: 127.0.0.1:8989
+  EOF
   cp ../run-ollama.py .
   workshop_exec launch
   lxc storage set workshop size=20GB

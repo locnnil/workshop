@@ -141,15 +141,15 @@ Add the :samp:`jupyter` SDK to the workshop
 to run Jupyter notebooks with the Ollama models:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 6
 
    name: dev
    base: ubuntu@24.04
    sdks:
-     - name: ollama
-       channel: vulkan/stable
-     - name: jupyter
+       - name: ollama
+         channel: vulkan/stable
+       - name: jupyter
 
 
 .. code-block:: console
@@ -167,20 +167,20 @@ this exposes the Jupyter server, now available in the workshop,
 to the host system at a port of your choice (here, :samp:`8989`):
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 7-11
 
    name: dev
    base: ubuntu@24.04
    sdks:
-     - name: ollama
-       channel: vulkan/stable
-     - name: jupyter
-     - name: system
-       plugs:
-         jupyter:
-           interface: tunnel
-           endpoint: 127.0.0.1:8989
+       - name: ollama
+         channel: vulkan/stable
+       - name: jupyter
+       - name: system
+         plugs:
+           jupyter:
+             interface: tunnel
+             endpoint: 127.0.0.1:8989
 
 
 The slot we're going to connect this plug to comes from the SDK itself
@@ -260,24 +260,24 @@ before any consuming SDK installs into it.
 Then declare the connection in a top-level :samp:`connections:` block:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 6,13-15
 
    name: dev
    base: ubuntu@24.04
    sdks:
-     - name: ollama
-       channel: vulkan/stable
-     - name: uv
-     - name: jupyter
-     - name: system
-       plugs:
-         jupyter:
-           interface: tunnel
-           endpoint: 127.0.0.1:8989
+       - name: ollama
+         channel: vulkan/stable
+       - name: uv
+       - name: jupyter
+       - name: system
+         plugs:
+           jupyter:
+             interface: tunnel
+             endpoint: 127.0.0.1:8989
    connections:
-     - plug: jupyter:venv
-       slot: uv:venv
+       - plug: jupyter:venv
+         slot: uv:venv
 
 
 Apply the new definition by refreshing the workshop:

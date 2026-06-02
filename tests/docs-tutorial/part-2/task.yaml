@@ -8,7 +8,7 @@ execute: |
 
   chown -R ubuntu:ubuntu ollama-python-project/
   cd ollama-python-project/
-  cp ../workshop-part-2.yaml workshop.yaml
+  workshop_exec init dev --sdks ollama/vulkan/stable --base ubuntu@24.04
   workshop_exec launch
   lxc storage set workshop size=20GB
 
@@ -33,13 +33,13 @@ execute: |
 
   ## Add plugs, slots
 
-  cat >> workshop.yaml <<EOF
-    - name: jupyter
-    - name: system
-      plugs:
-        jupyter:
-          interface: tunnel
-          endpoint: 127.0.0.1:8989
+  cat >> .workshop/dev.yaml <<EOF
+      - name: jupyter
+      - name: system
+        plugs:
+          jupyter:
+            interface: tunnel
+            endpoint: 127.0.0.1:8989
   EOF
   workshop_exec connections --all
   workshop_exec refresh
@@ -49,22 +49,22 @@ execute: |
 
   ## Wire jupyter to a uv-managed Python environment
 
-  cat > workshop.yaml <<EOF
+  cat > .workshop/dev.yaml <<EOF
   name: dev
   base: ubuntu@24.04
   sdks:
-    - name: ollama
-      channel: vulkan
-    - name: uv
-    - name: jupyter
-    - name: system
-      plugs:
-        jupyter:
-          interface: tunnel
-          endpoint: 127.0.0.1:8989
+      - name: ollama
+        channel: vulkan/stable
+      - name: uv
+      - name: jupyter
+      - name: system
+        plugs:
+          jupyter:
+            interface: tunnel
+            endpoint: 127.0.0.1:8989
   connections:
-    - plug: jupyter:venv
-      slot: uv:venv
+      - plug: jupyter:venv
+        slot: uv:venv
   EOF
 
   # Apply the new definition.

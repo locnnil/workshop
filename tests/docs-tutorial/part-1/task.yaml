@@ -1,6 +1,6 @@
 summary: Run tutorial part 1 commands to ensure it's operational
 restore: |
-  rm -rf ~/ollama-python-project ~/init-demo
+  rm -rf ~/ollama-python-project
 execute: |
   . "$TESTSLIB"/utils.sh
 
@@ -18,22 +18,17 @@ execute: |
   MATCH '[[:space:]]+cpu/stable[[:space:]]' < sdk-info.log
   MATCH '[[:space:]]+vulkan/stable[[:space:]]' < sdk-info.log
 
-  # Sideways path: scaffold a definition with `workshop init` (isolated dir).
-  mkdir init-demo/
-  chown -R ubuntu:ubuntu init-demo/
-  workshop_exec init dev --sdks ollama/cpu/stable --base ubuntu@22.04 --project init-demo | MATCH '"dev" workshop created at'
-  MATCH '^name:[[:space:]]+dev$' < init-demo/.workshop/dev.yaml
-  MATCH '^base:[[:space:]]+ubuntu@22.04$' < init-demo/.workshop/dev.yaml
-  MATCH 'name:[[:space:]]+ollama$' < init-demo/.workshop/dev.yaml
-  MATCH 'channel:[[:space:]]+cpu/stable$' < init-demo/.workshop/dev.yaml
-  rm -rf init-demo/
-
   mkdir ollama-python-project/
-
   chown -R ubuntu:ubuntu ollama-python-project/
   cd ollama-python-project/
   git init 2>/dev/null || true
-  cp ../workshop-part-1.yaml workshop.yaml
+
+  # Scaffold the definition with `workshop init`.
+  workshop_exec init dev --sdks ollama/cpu/stable --base ubuntu@22.04 | MATCH '"dev" workshop created at'
+  MATCH '^name:[[:space:]]+dev$' < .workshop/dev.yaml
+  MATCH '^base:[[:space:]]+ubuntu@22.04$' < .workshop/dev.yaml
+  MATCH 'name:[[:space:]]+ollama$' < .workshop/dev.yaml
+  MATCH 'channel:[[:space:]]+cpu/stable$' < .workshop/dev.yaml
 
   workshop_exec list
   lxc storage set workshop size=20GB
@@ -52,7 +47,7 @@ execute: |
 
   ## Refresh a workshop
 
-  sed -e "s/22.04/24.04/g" -e "s/cpu/vulkan/g" -i workshop.yaml
+  sed -e "s/22.04/24.04/g" -e "s/cpu/vulkan/g" -i .workshop/dev.yaml
   workshop_exec refresh
   sdk_exec list | MATCH '^ollama[[:space:]]'
 
@@ -71,9 +66,9 @@ execute: |
 
   ## Reusable actions
 
-  cat >> workshop.yaml <<'EOF'
+  cat >> .workshop/dev.yaml <<'EOF'
   actions:
-    pull: ollama pull "$@"
+      pull: ollama pull "$@"
   EOF
   workshop_exec run dev -- pull tinyllama:latest
 
