@@ -191,7 +191,7 @@ func prepareMount(fs fsutil.Fs, user *user.User, mnt workshop.Mount) error {
 	case workshop.WorkshopWorkshop:
 		return prepareWorkshopWorkshopMount(fs, mnt)
 	default:
-		return fmt.Errorf(`unknown device type: %v`, mnt.Type)
+		return fmt.Errorf("unknown device type: %v", mnt.Type)
 	}
 }
 

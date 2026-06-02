@@ -38,7 +38,7 @@ func BeforePreparePlug(iface Interface, plugInfo *sdk.PlugInfo) error {
 
 	// Plugs which accept attributes should define BeforePreparePlug.
 	for name := range plugInfo.Attrs {
-		return fmt.Errorf(`unknown attribute for %s interface plug: %q`, iface.Name(), name)
+		return fmt.Errorf("unknown attribute for %s interface plug: %q", iface.Name(), name)
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func BeforePrepareSlot(iface Interface, slotInfo *sdk.SlotInfo) error {
 	}
 	// Slots which accept attributes should define BeforePrepareSlot.
 	for name := range slotInfo.Attrs {
-		return fmt.Errorf(`unknown attribute for %s interface slot: %q`, iface.Name(), name)
+		return fmt.Errorf("unknown attribute for %s interface slot: %q", iface.Name(), name)
 	}
 	return nil
 }

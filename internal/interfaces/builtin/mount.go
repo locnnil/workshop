@@ -89,7 +89,7 @@ func (iface *mountInterface) StaticInfo() interfaces.StaticInfo {
 func (iface *mountInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	for name := range plug.Attrs {
 		if !slices.Contains(knownPlugAttributes, name) {
-			return fmt.Errorf(`unknown attribute for mount interface plug: %q`, name)
+			return fmt.Errorf("unknown attribute for mount interface plug: %q", name)
 		}
 	}
 
@@ -189,14 +189,14 @@ func parseInt(attrs map[string]any, key string, fallback int64) (int64, error) {
 func (iface *mountInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	if slot.Sdk.Type == sdk.System {
 		for name := range slot.Attrs {
-			return fmt.Errorf(`unknown attribute for system mount interface slot: %q`, name)
+			return fmt.Errorf("unknown attribute for system mount interface slot: %q", name)
 		}
 		return nil
 	}
 
 	for name := range slot.Attrs {
 		if !slices.Contains(knownSlotAttributes, name) {
-			return fmt.Errorf(`unknown attribute for mount interface slot: %q`, name)
+			return fmt.Errorf("unknown attribute for mount interface slot: %q", name)
 		}
 	}
 
