@@ -500,27 +500,6 @@ func DoExecDefault(ctx context.Context, name string, args *workshop.Execution) (
 	}, nil
 }
 
-func (s *FakeWorkshopBackend) StashedWorkshop(ctx context.Context, name string) (*workshop.Workshop, error) {
-	user, projectId, err := s.userProject(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	project := s.project(user, projectId)
-	if project == nil {
-		return nil, api.StatusErrorf(404, "project not found")
-	}
-
-	s.workshopLock.Lock()
-	defer s.workshopLock.Unlock()
-
-	wp := s.StashedWorkshops[projectId]["stash-"+name]
-	if wp == nil {
-		return nil, workshop.ErrWorkshopNotLaunched
-	}
-	return wp.Workshop, nil
-}
-
 func (s *FakeWorkshopBackend) RemoveWorkshopStash(ctx context.Context, name string) error {
 	_, projectId, err := s.userProject(ctx)
 	if err != nil {

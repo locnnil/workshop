@@ -672,16 +672,6 @@ func (s *Backend) RemoveSnapshot(ctx context.Context, snapshot workshop.Snapshot
 	return s.deleteSnapshot(snapshotConn, sdkSnapshotName(snapshot, digest))
 }
 
-func (s *Backend) StashedWorkshop(ctx context.Context, name string) (*workshop.Workshop, error) {
-	conn, snapshotConn, err := s.snapshotClients(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Disconnect()
-
-	return s.workshop(ctx, snapshotConn, name, true)
-}
-
 func (s *Backend) StashWorkshop(ctx context.Context, name string) error {
 	projectId, ok := ctx.Value(workshop.ContextProjectId).(string)
 	if !ok {

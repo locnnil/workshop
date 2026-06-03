@@ -30,7 +30,9 @@ import (
 	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/healthstate"
+	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
@@ -138,9 +140,14 @@ func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string,
 			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
 
-		if err := conflict.BackgroundDiscardWaitingRefresh(w.state, name, projectId); err != nil {
+		manifest, err := w.maybeDiscardWaitingRefresh(projectId, wp.File)
+		if err != nil {
 			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
 		}
+		if manifest != nil {
+			stashed = append(stashed, *manifest)
+		}
+
 		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.ErrorStatus, healthstate.StoppedStatus}
 		if err := healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
 			return nil, nil, nil, fmt.Errorf("cannot remove %q: %w", name, err)
@@ -153,23 +160,43 @@ func (w *WorkshopManager) RemoveManifests(ctx context.Context, projectId string,
 		current = append(current, Manifest{File: wp.File, Format: wp.Format, Image: wp.Image, Sdks: installed})
 
 		running[wp.File.Name] = wp.Running
-
-		stash, err := w.backend.StashedWorkshop(ctx, name)
-		if errors.Is(err, workshop.ErrWorkshopNotLaunched) {
-			continue
-		}
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		installed = make([]sdk.Setup, 0, len(stash.Sdks))
-		for _, sk := range stash.SdksByInstallOrder() {
-			installed = append(installed, sk.Setup)
-		}
-		stashed = append(stashed, Manifest{File: stash.File, Format: stash.Format, Image: stash.Image, Sdks: installed})
 	}
 
 	return stashed, current, running, nil
+}
+
+func (w *WorkshopManager) maybeDiscardWaitingRefresh(projectId string, file *workshop.File) (*Manifest, error) {
+	err := conflict.CheckChangeConflict(w.state, projectId, file.Name, []string{"exec"})
+	if err == nil {
+		return nil, nil
+	}
+	conflictErr, ok := errors.AsType[*conflict.ChangeConflictError](err)
+	if !ok {
+		return nil, err
+	}
+	chg := w.state.Change(conflictErr.ChangeID)
+	if chg.Status() != state.WaitStatus || (chg.Kind() != "launch" && chg.Kind() != "refresh") {
+		// Let CheckWorkshopHealth handle the error.
+		return nil, nil
+	}
+
+	format, err := handlersetup.WorkshopFormat(chg, file.Name, handlersetup.OldWorkshop)
+	if err != nil {
+		return nil, err
+	}
+	image, err := handlersetup.WorkshopBase(chg, file.Name, handlersetup.OldWorkshop)
+	if err != nil {
+		return nil, err
+	}
+	sdks, err := handlersetup.WorkshopSdks(chg, file.Name, handlersetup.OldWorkshop)
+	if err != nil {
+		return nil, err
+	}
+
+	conflict.BackgroundDiscard(chg, file.Name)
+	// The file here is not quite right, but we only use the name field. If
+	// that changes in future, we should reconstruct it from chg.
+	return &Manifest{File: file, Format: format, Image: image, Sdks: sdks}, nil
 }
 
 type artifactFinder struct {
