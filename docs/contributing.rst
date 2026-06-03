@@ -40,6 +40,7 @@ Environment setup
 
       go install ./...
       export WORKSHOP=~/workshop
+      export WORKSHOP_CACHE=~/workshop-cache
       export WORKSHOP_DEBUG=1
       workshopd run --create-dirs
 
