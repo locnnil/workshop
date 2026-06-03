@@ -184,3 +184,39 @@ func (s *lxdSpecSuite) TestSetGpuCDIUnknownVendor(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(spec.devices, check.HasLen, 0)
 }
+
+func (s *lxdSpecSuite) TestSetGpuCDIIntelWithoutDRM(c *check.C) {
+	s.restoreLxdInfo = MockLxdServerInfo(func(ctx context.Context) (*api.Resources, error) {
+		return &api.Resources{GPU: api.ResourcesGPU{
+			Total: 1,
+			Cards: []api.ResourcesGPUCard{
+				{VendorID: "8086"},
+			},
+		}}, nil
+	})
+
+	spec, err := NewSpecification("testuser", "test-sdk")
+	c.Assert(err, check.IsNil)
+
+	err = spec.SetGpu(workshop.Gpu{Name: "gpu"})
+	c.Assert(err, check.IsNil)
+	c.Assert(spec.devices, check.HasLen, 0)
+}
+
+func (s *lxdSpecSuite) TestSetGpuCDIUnknownVendorWithoutDRM(c *check.C) {
+	s.restoreLxdInfo = MockLxdServerInfo(func(ctx context.Context) (*api.Resources, error) {
+		return &api.Resources{GPU: api.ResourcesGPU{
+			Total: 1,
+			Cards: []api.ResourcesGPUCard{
+				{VendorID: "ffff"},
+			},
+		}}, nil
+	})
+
+	spec, err := NewSpecification("testuser", "test-sdk")
+	c.Assert(err, check.IsNil)
+
+	err = spec.SetGpu(workshop.Gpu{Name: "gpu"})
+	c.Assert(err, check.IsNil)
+	c.Assert(spec.devices, check.HasLen, 0)
+}

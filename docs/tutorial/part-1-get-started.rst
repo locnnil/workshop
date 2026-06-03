@@ -204,10 +204,23 @@ your Python code, custom assets, and so on.
 .. @artefact workshop definition
 
 In the project directory,
-create a workshop definition named :file:`workshop.yaml`:
+scaffold a workshop definition with :command:`workshop init`,
+passing the base, the SDKs, and their channels on the command line:
+
+.. code-block:: console
+
+   $ workshop init dev --sdks ollama/cpu/stable --base ubuntu@22.04
+
+     "dev" workshop created at /home/user/ollama-python-project/.workshop/dev.yaml
+
+
+Each :option:`!--sdks` entry can take the :samp:`<NAME>/<CHANNEL>` form,
+so :samp:`ollama/cpu/stable` pins the :samp:`ollama` SDK
+to its :samp:`cpu/stable` channel.
+The command writes the definition to :file:`.workshop/dev.yaml`:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 4-5
 
    name: dev
@@ -217,9 +230,8 @@ create a workshop definition named :file:`workshop.yaml`:
        channel: cpu/stable
 
 
-Here, the SDK is referenced as :samp:`ollama`,
-and the specific version to retrieve from the SDK Store
-comes from the :samp:`cpu/stable` channel of the the :samp:`cpu` track.
+Here, the specific version to retrieve from the SDK Store
+comes from the :samp:`cpu/stable` channel of the :samp:`cpu` track.
 
 To confirm that |ws_markup| sees the definition,
 list the workshops in the project directory:
@@ -403,8 +415,8 @@ In the next step, you'll refresh an existing workshop.
       $ echo ".workshop.lock" >> .gitignore
 
 
-   In contrast, the definition and the :file:`.workshop/` directory
-   are *meant* to be stored in a repository;
+   In contrast, the :file:`.workshop/` directory, which holds your definition,
+   is *meant* to be stored in a repository;
    if your :file:`.gitignore` file uses rules
    such as "ignore everything except these files and directories,"
    add them to the list of explicitly tracked items.
@@ -431,7 +443,7 @@ For example, change the base and the SDK channel in your definition
 and refresh the workshop:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 2,5
 
    name: dev
@@ -569,10 +581,10 @@ For complex commands that you run often,
 define actions in your workshop definition
 to invoke them with :command:`workshop run`.
 
-Add an :samp:`actions` section to :file:`workshop.yaml`:
+Add an :samp:`actions` section to :file:`.workshop/dev.yaml`:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 6-7
 
    name: dev

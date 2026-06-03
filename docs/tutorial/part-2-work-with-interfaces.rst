@@ -141,7 +141,7 @@ Add the :samp:`jupyter` SDK to the workshop
 to run Jupyter notebooks with the Ollama models:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 6
 
    name: dev
@@ -167,7 +167,7 @@ this exposes the Jupyter server, now available in the workshop,
 to the host system at a port of your choice (here, :samp:`8989`):
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 7-11
 
    name: dev
@@ -260,7 +260,7 @@ before any consuming SDK installs into it.
 Then declare the connection in a top-level :samp:`connections:` block:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 6,13-15
 
    name: dev

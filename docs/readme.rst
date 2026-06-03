@@ -1,11 +1,7 @@
 Workshop
 ========
 
-.. image:: https://app.readthedocs.com/projects/canonical-workshop/badge/?version=latest
-   :target: https://documentation.ubuntu.com/canonical-workshop/
-   :alt: Documentation status
-
-**A tool for defining and handling ephemeral development environments**.
+**Workshops are secure, fast, and composable development environments that come agent-ready**.
 
 List your dependencies and components in YAML to define an environment. The key
 pieces of a definition are SDKs, independent but connectable units of
@@ -24,18 +20,30 @@ Using Workshop
 
 In the directory of the project
 that you want to use with Workshop,
-create a workshop definition file named ``workshop.yaml``
-to list your project's prerequisites,
-then run ``workshop launch``:
+run ``workshop init`` with a comma-separated list of SDKs,
+pinning any of them to a channel:
+
+.. code-block:: console
+
+   workshop init dev --sdks opencode,go/1.26/stable
+
+
+This writes ``.workshop/dev.yaml``
+with the ``opencode`` SDK on its default channel
+and the ``go`` SDK pinned to ``1.26/stable``:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
 
    name: dev
    base: ubuntu@24.04
    sdks:
+     - name: opencode
      - name: go
+       channel: 1.26/stable
 
+
+Launch the workshop:
 
 .. code-block:: console
 
@@ -86,14 +94,14 @@ Documentation
 
 Refer to the
 `Tutorial
-<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/>`_
+<https://ubuntu.com/workshop/docs/tutorial/>`_
 in our docs for a detailed introduction to Workshop.
 
 To know more about `SDKcraft <https://github.com/canonical/sdkcraft/>`_,
 the SDK authoring tool for Workshop,
 jump straight to the
 `SDK crafting guide
-<https://documentation.ubuntu.com/canonical-workshop/latest/tutorial/part-4-craft-sdks/>`_
+<https://ubuntu.com/workshop/docs/tutorial/part-4-craft-sdks/>`_
 in our docs.
 
 For reference examples of SDK implementation, see the
