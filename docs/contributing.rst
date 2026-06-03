@@ -49,7 +49,6 @@ Environment setup
    .. code-block:: console
 
       export WORKSHOP=~/workshop
-      export WORKSHOP_CACHE=~/workshop-cache
       workshop list
 
 #. ``Spread`` is the end-to-end testing tool for ``workshop``.
