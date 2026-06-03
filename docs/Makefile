@@ -148,13 +148,14 @@ linkcheck: lychee-install
 	@echo "Running lychee link checker..."
 	@mkdir -p $(DOCS_BUILDDIR)
 	@lychee --config $(LYCHEE_CONFIG) -vv --format json $(DOCS_SOURCEDIR) > $(DOCS_BUILDDIR)/lychee-output.json 2> $(DOCS_BUILDDIR)/lychee-debug.log; \
-		RC=$$?; \
 		if [ ! -s $(DOCS_BUILDDIR)/lychee-output.json ]; then \
 			echo "ERROR: lychee produced no JSON output. See $(DOCS_BUILDDIR)/lychee-debug.log"; \
 			cat $(DOCS_BUILDDIR)/lychee-debug.log; \
 			exit 1; \
 		fi; \
-		lychee --config $(LYCHEE_CONFIG) --no-progress $(DOCS_SOURCEDIR) | tee $(DOCS_BUILDDIR)/lychee-output.txt; \
+		lychee --config $(LYCHEE_CONFIG) --no-progress $(DOCS_SOURCEDIR) > $(DOCS_BUILDDIR)/lychee-output.txt 2>&1; \
+		RC=$$?; \
+		cat $(DOCS_BUILDDIR)/lychee-output.txt; \
 		exit $$RC
 
 pa11y: pa11y-install html
