@@ -38,9 +38,9 @@ and the ``go`` SDK pinned to ``1.26/stable``:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: opencode
-       - name: go
-         channel: 1.26/stable
+     - name: opencode
+     - name: go
+       channel: 1.26/stable
 
 
 Launch the workshop:

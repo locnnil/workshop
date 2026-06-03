@@ -11,11 +11,11 @@ execute: |
   git init 2>/dev/null || true
   workshop_exec init dev --sdks ollama/vulkan/stable,jupyter --base ubuntu@24.04
   cat >> .workshop/dev.yaml <<EOF
-      - name: system
-        plugs:
-          jupyter:
-            interface: tunnel
-            endpoint: 127.0.0.1:8989
+    - name: system
+      plugs:
+        jupyter:
+          interface: tunnel
+          endpoint: 127.0.0.1:8989
   EOF
   cp ../run-ollama.py .
   workshop_exec launch

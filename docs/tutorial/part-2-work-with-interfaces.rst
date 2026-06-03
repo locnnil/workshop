@@ -147,9 +147,9 @@ to run Jupyter notebooks with the Ollama models:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: vulkan/stable
-       - name: jupyter
+     - name: ollama
+       channel: vulkan/stable
+     - name: jupyter
 
 
 .. code-block:: console
@@ -173,14 +173,14 @@ to the host system at a port of your choice (here, :samp:`8989`):
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: vulkan/stable
-       - name: jupyter
-       - name: system
-         plugs:
-           jupyter:
-             interface: tunnel
-             endpoint: 127.0.0.1:8989
+     - name: ollama
+       channel: vulkan/stable
+     - name: jupyter
+     - name: system
+       plugs:
+         jupyter:
+           interface: tunnel
+           endpoint: 127.0.0.1:8989
 
 
 The slot we're going to connect this plug to comes from the SDK itself
@@ -266,18 +266,18 @@ Then declare the connection in a top-level :samp:`connections:` block:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: vulkan/stable
-       - name: uv
-       - name: jupyter
-       - name: system
-         plugs:
-           jupyter:
-             interface: tunnel
-             endpoint: 127.0.0.1:8989
+     - name: ollama
+       channel: vulkan/stable
+     - name: uv
+     - name: jupyter
+     - name: system
+       plugs:
+         jupyter:
+           interface: tunnel
+           endpoint: 127.0.0.1:8989
    connections:
-       - plug: jupyter:venv
-         slot: uv:venv
+     - plug: jupyter:venv
+       slot: uv:venv
 
 
 Apply the new definition by refreshing the workshop:

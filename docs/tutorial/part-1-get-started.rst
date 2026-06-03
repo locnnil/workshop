@@ -226,8 +226,8 @@ The command writes the definition to :file:`.workshop/dev.yaml`:
    name: dev
    base: ubuntu@22.04
    sdks:
-       - name: ollama
-         channel: cpu/stable
+     - name: ollama
+       channel: cpu/stable
 
 
 Here, the specific version to retrieve from the SDK Store
@@ -449,8 +449,8 @@ and refresh the workshop:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: vulkan/stable
+     - name: ollama
+       channel: vulkan/stable
 
 .. @artefact workshop refresh
 
@@ -590,10 +590,10 @@ Add an :samp:`actions` section to :file:`.workshop/dev.yaml`:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: vulkan/stable
+     - name: ollama
+       channel: vulkan/stable
    actions:
-       pull: ollama pull "$@"
+     pull: ollama pull "$@"
 
 
 The :samp:`"$@"` expansion forwards every argument

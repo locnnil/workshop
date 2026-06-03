@@ -49,14 +49,14 @@ when we discussed :ref:`tut_work_with_interfaces`:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: vulkan/stable
-       - name: jupyter
-       - name: system
-         plugs:
-           jupyter:
-             interface: tunnel
-             endpoint: 127.0.0.1:8989
+     - name: ollama
+       channel: vulkan/stable
+     - name: jupyter
+     - name: system
+       plugs:
+         jupyter:
+           interface: tunnel
+           endpoint: 127.0.0.1:8989
 
 
 In our example workshop,
@@ -360,7 +360,7 @@ and looks for it in the :file:`.workshop/` directory:
 .. code-block:: yaml
 
    sdks:
-       - name: project-console
+     - name: project-console
 
 
 Next, run :command:`workshop refresh` to apply the change.

@@ -504,7 +504,7 @@ To use them in a workshop, add a prefix: :samp:`try-<NAME>`:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: try-ollama
+     - name: try-ollama
 
 
 A :samp:`channel` is not needed here;
@@ -590,8 +590,8 @@ The resulting SDK can be used with |ws_markup| as follows:
    name: dev
    base: ubuntu@24.04
    sdks:
-       - name: ollama
-         channel: latest/beta
+     - name: ollama
+       channel: latest/beta
 
 
 Note that the workshop :samp:`base`

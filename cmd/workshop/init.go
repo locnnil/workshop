@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -170,12 +171,17 @@ func writeWorkshopFile(projectDir string, wfile *workshop.File) (string, error) 
 
 	path := workshop.Filepath(projectDir, wfile.Name)
 
-	out, err := yaml.Marshal(wfile)
-	if err != nil {
+	var out bytes.Buffer
+	encoder := yaml.NewEncoder(&out)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(wfile); err != nil {
+		return "", err
+	}
+	if err := encoder.Close(); err != nil {
 		return "", err
 	}
 
-	if err := os.WriteFile(path, out, 0644); err != nil {
+	if err := os.WriteFile(path, out.Bytes(), 0644); err != nil {
 		return "", fmt.Errorf("cannot write %q: %w", path, err)
 	}
 
