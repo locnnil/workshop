@@ -499,7 +499,7 @@ the :command:`sdkcraft try` command also copies the SDKs to a special *try area
 To use them in a workshop, add a prefix: :samp:`try-<NAME>`:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
 
    name: dev
    base: ubuntu@24.04
@@ -584,7 +584,7 @@ Use the SDK
 The resulting SDK can be used with |ws_markup| as follows:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
    :emphasize-lines: 4,5
 
    name: dev

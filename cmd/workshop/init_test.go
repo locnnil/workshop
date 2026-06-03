@@ -66,7 +66,13 @@ func (s *workshopInit) TestInitWithSdkChannel(c *check.C) {
 	path := workshop.Filepath(projectDir, "dev")
 	content, err := os.ReadFile(path)
 	c.Assert(err, check.IsNil)
-	c.Assert(strings.Contains(string(content), "channel: 1.26/stable"), check.Equals, true)
+	c.Assert(string(content), check.Equals, `name: dev
+base: ubuntu@24.04
+sdks:
+  - name: go
+    channel: 1.26/stable
+  - name: python
+`)
 }
 
 func (s *workshopInit) TestInitWithCustomBase(c *check.C) {

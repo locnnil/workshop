@@ -44,7 +44,7 @@ additionally augmented with the :samp:`jupyter` SDK
 when we discussed :ref:`tut_work_with_interfaces`:
 
 .. code-block:: yaml
-   :caption: workshop.yaml
+   :caption: .workshop/dev.yaml
 
    name: dev
    base: ubuntu@24.04
@@ -352,7 +352,7 @@ to change this, use the :option:`!--name` option:
 
 
 After ejecting, add the new in-project SDK to your workshop definition
-(usually in :file:`workshop.yaml`) under the :samp:`sdks:` list,
+(in :file:`.workshop/dev.yaml`) under the :samp:`sdks:` list,
 using the :samp:`project-` prefix
 so |ws_markup| knows it's an in-project SDK
 and looks for it in the :file:`.workshop/` directory:

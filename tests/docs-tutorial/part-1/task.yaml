@@ -19,11 +19,16 @@ execute: |
   MATCH '[[:space:]]+vulkan/stable[[:space:]]' < sdk-info.log
 
   mkdir ollama-python-project/
-
   chown -R ubuntu:ubuntu ollama-python-project/
   cd ollama-python-project/
   git init 2>/dev/null || true
-  cp ../workshop-part-1.yaml workshop.yaml
+
+  # Scaffold the definition with `workshop init`.
+  workshop_exec init dev --sdks ollama/cpu/stable --base ubuntu@22.04 | MATCH '"dev" workshop created at'
+  MATCH '^name:[[:space:]]+dev$' < .workshop/dev.yaml
+  MATCH '^base:[[:space:]]+ubuntu@22.04$' < .workshop/dev.yaml
+  MATCH 'name:[[:space:]]+ollama$' < .workshop/dev.yaml
+  MATCH 'channel:[[:space:]]+cpu/stable$' < .workshop/dev.yaml
 
   workshop_exec list
   lxc storage set workshop size=20GB
@@ -42,7 +47,7 @@ execute: |
 
   ## Refresh a workshop
 
-  sed -e "s/22.04/24.04/g" -e "s/cpu/vulkan/g" -i workshop.yaml
+  sed -e "s/22.04/24.04/g" -e "s/cpu/vulkan/g" -i .workshop/dev.yaml
   workshop_exec refresh
   sdk_exec list | MATCH '^ollama[[:space:]]'
 
@@ -61,7 +66,7 @@ execute: |
 
   ## Reusable actions
 
-  cat >> workshop.yaml <<'EOF'
+  cat >> .workshop/dev.yaml <<'EOF'
   actions:
     pull: ollama pull "$@"
   EOF
