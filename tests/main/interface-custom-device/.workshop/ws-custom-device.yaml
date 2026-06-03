@@ -1,0 +1,4 @@
+name: ws-custom-device
+base: ubuntu@22.04
+sdks:
+  - name: project-custom-dev

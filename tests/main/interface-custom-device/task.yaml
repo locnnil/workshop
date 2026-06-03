@@ -1,0 +1,53 @@
+summary: Check custom-device interface scenarios
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch ws-custom-device
+restore: |
+  . "$TESTSLIB"/utils.sh
+  systemctl stop workshop-test-input.service 2>/dev/null || true
+  workshop_exec remove ws-custom-device
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Check the custom-device interface plug cannot be auto-connected"
+  workshop_exec connections ws-custom-device | MATCH "^custom-device.+ws-custom-device/custom-dev:my-custom-device.+\-.+\-$"
+
+  echo "Check the custom-device interface plug can be connected and disconnected manually"
+  workshop_exec connect ws-custom-device/custom-dev:my-custom-device :custom-device
+  workshop_exec connections ws-custom-device | MATCH "^custom-device.+ws-custom-device/custom-dev:my-custom-device.+:custom-device.+manual$"
+  workshop_exec disconnect ws-custom-device/custom-dev:my-custom-device
+  workshop_exec connections ws-custom-device | MATCH "^custom-device.+ws-custom-device/custom-dev:my-custom-device.+\-.+\-$"
+
+  attach_device() {
+    systemd-run --collect --property=KillSignal=SIGINT --same-dir --service-type=notify --unit=workshop-test-input python3 fakeinput.py
+  }
+  detach_device() {
+    systemctl stop workshop-test-input.service
+  }
+  detect_device() {
+    device_name=$(grep -l '^workshop-test-input$' /sys/class/input/*/device/name)
+    device_basename=$(basename -- "$(dirname -- "$(dirname -- "$device_name")")")
+    device_node="/dev/input/$device_basename"
+  }
+
+  echo "Ensure input devices are passed through when connected"
+  attach_device
+  detect_device
+  workshop_exec exec ws-custom-device test ! -e "$device_node"
+  workshop_exec connect ws-custom-device/custom-dev:my-custom-device :custom-device
+  workshop_exec exec ws-custom-device test -e "$device_node"
+
+  echo "Ensure input devices can be hotplugged"
+  detach_device
+  workshop_exec exec ws-custom-device test ! -e "$device_node"
+
+  attach_device
+  detect_device
+  workshop_exec exec ws-custom-device test -e "$device_node"
+
+  workshop_exec disconnect ws-custom-device/custom-dev:my-custom-device
+  workshop_exec exec ws-custom-device test ! -e "$device_node"
+
+  echo "Check a user cannot install a custom-device slot (violates slot declaration)"
+  workshop_exec launch ws-custom-device-fail > launch.log || true
+  MATCH ".*installation not allowed by \"user-custom-device\" slot rule of interface \"custom-device\"" < launch.log

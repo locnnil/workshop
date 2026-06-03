@@ -32,13 +32,13 @@ var (
 	//go:embed meta/*
 	SystemSdkFs embed.FS
 
-	SystemSdkRevision = sdk.R(1)
+	SystemSdkRevision = sdk.R(2)
 
 	RetrieveSystemSdk = retrieveSystemSdk
 )
 
 // Update the system SDK revision number when this hash changes.
-const SystemSdkDigest = "5891a3a98ed62339c5c24ded56de52a18873bd73ba8e1e03725376e7fc89c7560944b5fb7260c288b17e115e538d7da6"
+const SystemSdkDigest = "9fe8becc4142397ed62404170155290b559afc08fef418211e8032c17b29a35dbad4946b7fee7fe8bd67ac8ee40ae5c4"
 
 func SystemSdkMeta() (*sdk.Meta, error) {
 	setup := sdk.Setup{

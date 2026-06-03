@@ -497,6 +497,8 @@ var apiSuiteSdks = map[string]sdk.Meta{
 	},
 }
 
+var systemVolume = "system-" + system.SystemSdkRevision.String()
+
 func (s *apiSuite) launchWorkshop(c *check.C, name, yaml string) {
 	s.createWFile(c, name, yaml)
 
@@ -1251,7 +1253,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	c.Assert(repo.Slots(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume})
 	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "test-sdk", "test-sdk-2"})
 }
 
@@ -1658,7 +1660,7 @@ func (s *apiSuite) TestLaunchWorkshopWithPlugOK(c *check.C) {
 	c.Assert(conns, check.HasLen, 1)
 	c.Assert(conns[0].ID(), check.Equals, fmt.Sprintf(`%s/workshopplug/test-sdk:training-plug %s/workshopplug/system:mount`, s.project.ProjectId, s.project.ProjectId))
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume, "test-sdk-1", "test-sdk-2-1"})
 }
 
 func (s *apiSuite) TestLaunchWorkshopPlugAddedAndBound(c *check.C) {
@@ -2065,7 +2067,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1", "mount-conflict-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume, "test-sdk-1", "test-sdk-2-1", "mount-conflict-1"})
 
 	s.createWFile(c, "manysdks", manysdks_allremoved)
 	requests = []*bytes.Buffer{
@@ -2168,7 +2170,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 		{manysdks_allremoved, []string{"system"}},
 	})
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "mount-conflict-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume, "test-sdk-1", "mount-conflict-1"})
 }
 
 func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
@@ -2337,7 +2339,7 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 		{manysdks_extended, []string{"system"}},
 	})
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1", "test-sdk-3-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume, "test-sdk-1", "test-sdk-2-1", "test-sdk-3-1"})
 }
 
 func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
@@ -2414,7 +2416,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 		{manysdks_minusone, []string{"system", "test-sdk"}},
 	})
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", "system-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", systemVolume})
 	s.ensureSnapshotsAfterCooldown(c, []string{"system", "test-sdk"}, []string{"test-sdk-2"})
 }
 
@@ -2513,7 +2515,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{
-		"system-1",
+		systemVolume,
 		"test-sdk-2",
 		"test-sdk-2-1",
 	})
@@ -3278,7 +3280,7 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 		{manysdks, nil},
 	})
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume, "test-sdk-1", "test-sdk-2-1"})
 }
 
 func (s *apiSuite) TestRefreshRestore(c *check.C) {
@@ -3358,7 +3360,7 @@ func (s *apiSuite) TestRefreshRestore(c *check.C) {
 		{manysdks, []string{"system", "test-sdk", "test-sdk-2"}},
 	})
 
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1", "test-sdk-1", "test-sdk-2-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume, "test-sdk-1", "test-sdk-2-1"})
 }
 
 func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
@@ -4857,7 +4859,7 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 		},
 	}
 	s.runActionTest(c, requests, expected)
-	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
+	s.ensureSdkVolumesAfterCooldown(c, []string{systemVolume})
 	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "test-sdk", "test-sdk-2"})
 }
 
