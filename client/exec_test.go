@@ -102,6 +102,21 @@ func (s *execSuite) TestExitZero(c *C) {
 	c.Assert(err, IsNil)
 }
 
+// TestEmptyCommandPrefix verifies an explicitly empty command prefix is
+// treated as omitted and does not appear in the exec payload.
+func (s *execSuite) TestEmptyCommandPrefix(c *C) {
+	opts := &client.ExecOptions{
+		Command:       []string{"true"},
+		CommandPrefix: []string{},
+	}
+	process, reqBody := s.exec(c, opts, 0)
+	c.Assert(reqBody, DeepEquals, map[string]any{
+		"command": []any{"true"},
+	})
+	err := s.wait(c, process)
+	c.Assert(err, IsNil)
+}
+
 func (s *execSuite) TestExitNonZero(c *C) {
 	opts := &client.ExecOptions{
 		Command: []string{"false"},
@@ -135,26 +150,28 @@ func (s *execSuite) TestOtherOptions(c *C) {
 	userID := 1000
 	groupID := 2000
 	opts := &client.ExecOptions{
-		Command:     []string{"echo", "foo"},
-		Environment: map[string]string{"K1": "V1", "K2": "V2"},
-		WorkingDir:  "WD",
-		UserId:      &userID,
-		GroupId:     &groupID,
-		Terminal:    true,
-		Width:       12,
-		Height:      34,
-		Stderr:      io.Discard,
+		Command:       []string{"echo", "foo"},
+		CommandPrefix: []string{"sudo", "--"},
+		Environment:   map[string]string{"K1": "V1", "K2": "V2"},
+		WorkingDir:    "WD",
+		UserId:        &userID,
+		GroupId:       &groupID,
+		Terminal:      true,
+		Width:         12,
+		Height:        34,
+		Stderr:        io.Discard,
 	}
 	process, reqBody := s.exec(c, opts, 0)
 	c.Assert(reqBody, DeepEquals, map[string]any{
-		"command":     []any{"echo", "foo"},
-		"environment": map[string]any{"K1": "V1", "K2": "V2"},
-		"working-dir": "WD",
-		"user-id":     1000.0,
-		"group-id":    2000.0,
-		"terminal":    true,
-		"width":       12.0,
-		"height":      34.0,
+		"command":        []any{"echo", "foo"},
+		"command-prefix": []any{"sudo", "--"},
+		"environment":    map[string]any{"K1": "V1", "K2": "V2"},
+		"working-dir":    "WD",
+		"user-id":        1000.0,
+		"group-id":       2000.0,
+		"terminal":       true,
+		"width":          12.0,
+		"height":         34.0,
 	})
 	err := s.wait(c, process)
 	c.Assert(err, IsNil)

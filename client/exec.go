@@ -35,6 +35,9 @@ type ExecOptions struct {
 	Workshop string
 	// Required: command and arguments (first element is the executable).
 	Command []string
+	// Optional command prefix prepended by Workshop before execution. If empty,
+	// the command is executed without a prefix.
+	CommandPrefix []string
 	// True to treat command as a workshop action with arguments.
 	Action bool
 
@@ -80,14 +83,20 @@ type ExecOptions struct {
 }
 
 type execPayload struct {
-	Command     []string          `json:"command"`
-	Action      bool              `json:"action,omitempty"`
-	Environment map[string]string `json:"environment,omitempty"`
-	WorkingDir  string            `json:"working-dir,omitempty"`
-	UserId      *int              `json:"user-id,omitempty"`
-	GroupId     *int              `json:"group-id,omitempty"`
-	Terminal    bool              `json:"terminal,omitempty"`
-	Timeout     string            `json:"timeout,omitempty"`
+	// Command is the user-requested command. It is used for user-facing
+	// summaries and diagnostics.
+	Command []string `json:"command"`
+
+	// CommandPrefix is a Workshop-managed wrapper prepended to [Command] at the
+	// execution boundary. Older clients may omit this field.
+	CommandPrefix []string          `json:"command-prefix,omitempty"`
+	Action        bool              `json:"action,omitempty"`
+	Environment   map[string]string `json:"environment,omitempty"`
+	WorkingDir    string            `json:"working-dir,omitempty"`
+	UserId        *int              `json:"user-id,omitempty"`
+	GroupId       *int              `json:"group-id,omitempty"`
+	Terminal      bool              `json:"terminal,omitempty"`
+	Timeout       string            `json:"timeout,omitempty"`
 
 	Interactive bool `json:"interactive,omitempty"`
 	SplitStderr bool `json:"split-stderr,omitempty"`
@@ -132,18 +141,19 @@ func (client *Client) Exec(opts *ExecOptions, workshop, projectId string) (*Exec
 	}
 
 	payload := execPayload{
-		Command:     opts.Command,
-		Action:      opts.Action,
-		Environment: opts.Environment,
-		WorkingDir:  opts.WorkingDir,
-		UserId:      opts.UserId,
-		GroupId:     opts.GroupId,
-		Timeout:     timeoutStr,
-		Terminal:    opts.Terminal,
-		Interactive: opts.Interactive,
-		SplitStderr: false,
-		Width:       opts.Width,
-		Height:      opts.Height,
+		Command:       opts.Command,
+		CommandPrefix: opts.CommandPrefix,
+		Action:        opts.Action,
+		Environment:   opts.Environment,
+		WorkingDir:    opts.WorkingDir,
+		UserId:        opts.UserId,
+		GroupId:       opts.GroupId,
+		Timeout:       timeoutStr,
+		Terminal:      opts.Terminal,
+		Interactive:   opts.Interactive,
+		SplitStderr:   false,
+		Width:         opts.Width,
+		Height:        opts.Height,
 	}
 	var body bytes.Buffer
 	err := json.NewEncoder(&body).Encode(&payload)
