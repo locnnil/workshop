@@ -105,6 +105,20 @@ type RetrySuite struct{}
 
 var _ = check.Suite(&RetrySuite{})
 
+type timeoutError struct{}
+
+func (timeoutError) Error() string {
+	return "net/http: TLS handshake timeout"
+}
+
+func (timeoutError) Timeout() bool {
+	return true
+}
+
+func (timeoutError) Temporary() bool {
+	return true
+}
+
 func (s *RetrySuite) TestRetryNotRequired(c *check.C) {
 	ctrl := gomock.NewController(c)
 	defer ctrl.Finish()
@@ -165,6 +179,67 @@ func (s *RetrySuite) TestRetryRequired(c *check.C) {
 	resp, err := middleware.RoundTrip(req) //nolint:bodyclose
 	c.Assert(err, check.IsNil)
 	c.Assert(resp.StatusCode, check.Equals, http.StatusOK)
+}
+
+func (s *RetrySuite) TestRetryRequiredForSafeMethodNetworkTimeout(c *check.C) {
+	ctrl := gomock.NewController(c)
+	defer ctrl.Finish()
+
+	req, err := http.NewRequest("GET", "http://meshuggah.rocks", nil)
+	c.Assert(err, check.IsNil)
+
+	transport := NewMockRoundTripper(ctrl)
+	transport.EXPECT().RoundTrip(req).Return(nil, timeoutError{}).Times(2)
+	transport.EXPECT().RoundTrip(req).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil)
+
+	ch := make(chan time.Time)
+
+	clock := NewMockClock(ctrl)
+	clock.EXPECT().Now().Return(time.Now()).AnyTimes()
+	clock.EXPECT().After(gomock.Any()).Return(ch).AnyTimes()
+
+	retries := 3
+	go func() {
+		for range retries {
+			ch <- time.Now()
+		}
+	}()
+
+	middleware := makeRetryMiddleware(transport, RetryPolicy{
+		Attempts: retries,
+		Delay:    time.Second,
+		MaxDelay: time.Minute,
+	}, clock)
+
+	resp, err := middleware.RoundTrip(req) //nolint:bodyclose
+	c.Assert(err, check.IsNil)
+	c.Assert(resp.StatusCode, check.Equals, http.StatusOK)
+}
+
+func (s *RetrySuite) TestRetryNotRequiredForUnsafeMethodNetworkTimeout(c *check.C) {
+	ctrl := gomock.NewController(c)
+	defer ctrl.Finish()
+
+	req, err := http.NewRequest("POST", "http://meshuggah.rocks", nil)
+	c.Assert(err, check.IsNil)
+
+	transport := NewMockRoundTripper(ctrl)
+	transport.EXPECT().RoundTrip(req).Return(nil, timeoutError{})
+
+	clock := NewMockClock(ctrl)
+	clock.EXPECT().Now().Return(time.Now())
+
+	retries := 3
+	middleware := makeRetryMiddleware(transport, RetryPolicy{
+		Attempts: retries,
+		Delay:    time.Second,
+		MaxDelay: time.Minute,
+	}, clock)
+
+	_, err = middleware.RoundTrip(req) //nolint:bodyclose
+	c.Assert(err, check.ErrorMatches, `net/http: TLS handshake timeout`)
 }
 
 func (s *RetrySuite) TestRetryRequiredUsingBackoff(c *check.C) {
@@ -362,6 +437,39 @@ func (s *RetrySuite) TestRetryRequiredAndExceeded(c *check.C) {
 
 	_, err = middleware.RoundTrip(req) //nolint:bodyclose
 	c.Assert(err, check.ErrorMatches, `attempt count exceeded: retryable error`)
+}
+
+func (s *RetrySuite) TestRetryRequiredForNetworkTimeoutAndExceeded(c *check.C) {
+	ctrl := gomock.NewController(c)
+	defer ctrl.Finish()
+
+	req, err := http.NewRequest("GET", "http://meshuggah.rocks", nil)
+	c.Assert(err, check.IsNil)
+
+	transport := NewMockRoundTripper(ctrl)
+	transport.EXPECT().RoundTrip(req).Return(nil, timeoutError{}).Times(3)
+
+	ch := make(chan time.Time)
+
+	clock := NewMockClock(ctrl)
+	clock.EXPECT().Now().Return(time.Now()).AnyTimes()
+	clock.EXPECT().After(gomock.Any()).Return(ch).AnyTimes()
+
+	retries := 3
+	go func() {
+		for range retries {
+			ch <- time.Now()
+		}
+	}()
+
+	middleware := makeRetryMiddleware(transport, RetryPolicy{
+		Attempts: retries,
+		Delay:    time.Second,
+		MaxDelay: time.Minute,
+	}, clock)
+
+	_, err = middleware.RoundTrip(req) //nolint:bodyclose
+	c.Assert(err, check.ErrorMatches, `attempt count exceeded: net/http: TLS handshake timeout`)
 }
 
 func (s *RetrySuite) TestRetryRequiredContextKilled(c *check.C) {
