@@ -1,5 +1,5 @@
 summary: Check major workshop exec scenarios
-prepare: |  
+prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch
 restore: |
@@ -18,6 +18,20 @@ execute: |
   workshop_exec exec ws-exec echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
   workshop_exec exec -- echo -- -e '\x66oo' | MATCH '^-- -e \\x66oo$'
   ! workshop_exec exec echo -- -e '\x66oo' || false
+
+  echo "Check exec summaries show the user command"
+  workshop_exec exec -I ws-exec -- /bin/echo command-prefix-summary-check | MATCH '^command-prefix-summary-check$'
+  change_id="$(workshop_exec changes --no-headers | awk 'END{print $1}')"
+  workshop_exec changes --no-headers |
+    awk 'END{print}' |
+    MATCH 'Execute command "/bin/echo"$'
+  workshop_exec tasks --no-headers "$change_id" |
+    MATCH 'Exec command "/bin/echo"$'
+  workshop_exec changes --no-headers |
+    awk 'END{print}' |
+    NOMATCH 'Execute command "sudo"$'
+  workshop_exec tasks --no-headers "$change_id" |
+    NOMATCH 'Exec command "sudo"$'
 
   echo "Check an environment variable can be set"
   workshop_exec exec --env 'Foo=bar' ws-exec bash -c '[ "$Foo" = bar ]'
