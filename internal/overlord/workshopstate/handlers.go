@@ -370,7 +370,7 @@ func (m *WorkshopManager) doStop(task *state.Task, tomb *tomb.Tomb) error {
 	defer cancel()
 	go func() {
 		// LXD has an internal timeout (30 seconds) for the operation,
-		// if exceeded, the dealine error will be returned
+		// if exceeded, the deadline error will be returned
 		stopped <- StopWorkshop(m.backend, stopctx, w, force)
 	}()
 

@@ -19,7 +19,7 @@ const (
 	// field in the Config struct.
 	DefaultServerURL = "https://api.pkg.store"
 
-	// RefreshTimeout is the timout callers should use for Refresh calls.
+	// RefreshTimeout is the timeout callers should use for Refresh calls.
 	RefreshTimeout = 10 * time.Second
 )
 

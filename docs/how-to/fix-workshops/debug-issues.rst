@@ -191,7 +191,7 @@ comment out SDKs one by one in the workshop definition
 and refresh the workshop after each change.
 
 When the issue reappears,
-the cause is likely the SDK you just reenabled,
+the cause is likely the SDK you just re-enabled,
 or its interaction with other SDKs.
 Investigate it using the :command:`workshop tasks` command
 to view detailed error information.

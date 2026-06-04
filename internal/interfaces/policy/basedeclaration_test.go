@@ -202,7 +202,7 @@ revision: 0
 
 func (s *baseDeclSuite) TestDoesNotPanic(c *check.C) {
 	// In case there are any issues in the actual interfaces we'd get a panic
-	// on startup. This test prevents this from happing unnoticed.
+	// on startup. This test prevents this from happening unnoticed.
 	_, err := policy.ComposeBaseDeclaration(builtin.Interfaces())
 	c.Assert(err, check.IsNil)
 }

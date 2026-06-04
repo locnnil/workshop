@@ -25,7 +25,7 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
-// Handler is the interface a client must satify to handle hooks.
+// Handler is the interface a client must satisfy to handle hooks.
 type Handler interface {
 	// Before is called right before the hook is to be run.
 	Before() error

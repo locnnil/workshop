@@ -104,7 +104,7 @@ func (w *Project) ReadWorkshops() (map[string]string, error) {
 
 	// *.yaml is the only supported extension for workshop files as the only
 	// recommended "official" extension: https://yaml.org/faq.html. Also, having a
-	// single way of naming workshop files avoids unneccesary inconsistencies.
+	// single way of naming workshop files avoids unnecessary inconsistencies.
 	files, err := filepath.Glob(filepath.Join(w.Path, Directory, "*.yaml"))
 	if err != nil {
 		return nil, err

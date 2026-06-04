@@ -54,7 +54,7 @@ func MirrorToWebsocket(conn MessageWriter, r io.ReadCloser, exited chan struct{}
 }
 
 // Extensively commented directly in the code. Please leave the comments!
-// Looking at this in a couple of months noone will know why and how this works
+// Looking at this in a couple of months no one will know why and how this works
 // anymore.
 func ExecReaderToChannel(r io.Reader, bufferSize int, exited <-chan struct{}, fd int) <-chan []byte {
 	if bufferSize <= (128 * 1024) {
@@ -77,7 +77,7 @@ func ExecReaderToChannel(r io.Reader, bufferSize int, exited <-chan struct{}, fd
 	// following function call. Here's why: Assume the above case, now the
 	// attached child (the shell in this example) exits. This will not
 	// generate any poll() event: We won't get POLLHUP because the
-	// background process is holding stdin/stdout open and noone is writing
+	// background process is holding stdin/stdout open and no one is writing
 	// to it. So we effectively block on GetPollRevents() in the function
 	// below. Hence, we use another go routine here who's only job is to
 	// handle that case: When we detect that the child has exited we check

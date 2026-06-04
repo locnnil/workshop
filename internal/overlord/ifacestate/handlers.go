@@ -949,7 +949,7 @@ func (m *InterfaceManager) doRemoveProfiles(task *state.Task, tomb *tomb.Tomb) e
 
 	for _, backend := range m.repo.Backends() {
 		// If there are not plugs or slots declared by the SDK the profile does
-		// not neccessarily exist for the SDK.
+		// not necessarily exist for the SDK.
 		ref := sdk.Ref{ProjectId: p.ProjectId, Workshop: w, Sdk: s}
 		if err := backend.Remove(ctx, ref); err != nil && !errors.Is(err, workshop.ErrSdkProfileNotFound) {
 			return err

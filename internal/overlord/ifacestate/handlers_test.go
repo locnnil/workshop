@@ -39,13 +39,13 @@ import (
 
 type interfaceHandlersSuite struct {
 	interfaceManagerSuite
-	mgr                      *ifacestate.InterfaceManager
-	user                     *user.User
-	restoreSimple            func()
-	restoreDeny              func()
-	restoreSecurtityBackends func()
-	restoreUserLookup        func()
-	restoreUserEnv           func()
+	mgr                     *ifacestate.InterfaceManager
+	user                    *user.User
+	restoreSimple           func()
+	restoreDeny             func()
+	restoreSecurityBackends func()
+	restoreUserLookup       func()
+	restoreUserEnv          func()
 }
 
 var _ = check.Suite(&interfaceHandlersSuite{})
@@ -215,7 +215,7 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 		return errors.New("error-trigger task")
 	}
 	s.runner.AddHandler("error-trigger", erroringHandler, nil)
-	s.restoreSecurtityBackends = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
+	s.restoreSecurityBackends = ifacestate.MockSecurityBackends([]interfaces.SecurityBackend{s.secBackend})
 
 	s.o.AddManager(s.mgr)
 	s.o.AddManager(s.runner)
@@ -226,7 +226,7 @@ func (s *interfaceHandlersSuite) SetUpTest(c *check.C) {
 func (s *interfaceHandlersSuite) TearDownTest(c *check.C) {
 	s.restoreSimple()
 	s.restoreDeny()
-	s.restoreSecurtityBackends()
+	s.restoreSecurityBackends()
 	s.restoreUserEnv()
 	s.restoreUserLookup()
 }

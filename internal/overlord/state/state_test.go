@@ -984,7 +984,7 @@ func (ss *stateSuite) TestPruneMaxChangesHonored(c *C) {
 	// 10 changes, none ready
 	for i := 0; i < 10; i++ {
 		chg := st.NewChange(fmt.Sprintf("chg%d", i), "not-ready")
-		t := st.NewTask("foo", "not-readly")
+		t := st.NewTask("foo", "not-ready")
 		chg.AddTask(t)
 	}
 	c.Assert(st.Changes(), HasLen, 10)

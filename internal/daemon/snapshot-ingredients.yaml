@@ -1,7 +1,7 @@
 # When updating this file, please carefully consider whether the snapshot
 # format revision number needs to be bumped. This file is used by the
 # apiSuite.TestSnapshotIngredients test. It records the types Workshop uses
-# interally to define or describe workshops. Field types may be omitted if
+# internally to define or describe workshops. Field types may be omitted if
 # they're irrelevant to the snapshot format. Changes to this file may indicate
 # a need to expand the other snapshot format tests.
 File:
