@@ -134,34 +134,38 @@ func (m *workshopExec) TestWorkshopExecSendsUserCommand(c *check.C) {
 			c.Check(r.Method, check.Equals, "POST")
 			body := DecodedRequestBody(c, r)
 			userId := fmt.Sprint(workshop.Uid)
+			groupId := fmt.Sprint(workshop.Gid)
 			c.Check(body["command"], check.DeepEquals, []any{"echo", "foo"})
-			commandPrefix, ok := body["command-prefix"].([]any)
-			c.Assert(ok, check.Equals, true)
-			c.Check(
-				commandPrefix[:5],
-				check.DeepEquals,
-				[]any{"sudo", "-u", "#" + userId, "-g", "#" + fmt.Sprint(workshop.Gid)},
-			)
-			c.Check(
-				commandPrefix[len(commandPrefix)-5:],
-				check.DeepEquals,
-				[]any{"--", "bash", "-l", "-c", `exec -- "$0" "$@"`},
-			)
-			c.Check(body["user-id"], check.Equals, json.Number(userId))
-			c.Check(body["group-id"], check.Equals, json.Number(fmt.Sprint(workshop.Gid)))
+			c.Check(body["user-id"], check.DeepEquals, json.Number(userId))
+			c.Check(body["group-id"], check.DeepEquals, json.Number(groupId))
 
-			environment, ok := body["environment"].(map[string]any)
-			c.Assert(ok, check.Equals, true)
-			c.Check(
-				environment["XDG_RUNTIME_DIR"],
-				check.Equals,
-				"/run/user/"+userId,
+			expectedEnvironment := map[string]any{
+				"DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/" + userId + "/bus",
+				"XDG_RUNTIME_DIR":          "/run/user/" + userId,
+			}
+			if term, ok := os.LookupEnv("TERM"); ok {
+				expectedEnvironment["TERM"] = term
+			}
+			c.Check(body["environment"], check.DeepEquals, expectedEnvironment)
+
+			expectedPrefix := []any{"sudo", "-u", "#" + userId, "-g", "#" + groupId}
+			expectedPrefix = append(
+				expectedPrefix,
+				"--preserve-env=DBUS_SESSION_BUS_ADDRESS",
 			)
-			c.Check(
-				environment["DBUS_SESSION_BUS_ADDRESS"],
-				check.Equals,
-				"unix:path=/run/user/"+userId+"/bus",
+			if _, ok := os.LookupEnv("TERM"); ok {
+				expectedPrefix = append(expectedPrefix, "--preserve-env=TERM")
+			}
+			expectedPrefix = append(
+				expectedPrefix,
+				"--preserve-env=XDG_RUNTIME_DIR",
+				"--",
+				"bash",
+				"-l",
+				"-c",
+				`exec -- "$0" "$@"`,
 			)
+			c.Check(body["command-prefix"], check.DeepEquals, expectedPrefix)
 
 			w.WriteHeader(404)
 			fmt.Fprintln(w, mockWorkshopExecError)
