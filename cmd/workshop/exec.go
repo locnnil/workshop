@@ -478,6 +478,7 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		env[key] = value
 	}
 
+	var commandPrefix []string
 	if args.action {
 		logger.Debugf("Running action %q", av)
 	} else {
@@ -485,25 +486,28 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 		// This is required as an lxd exec call is a simple namespace exec, and LXD
 		// ignores the instance configuration by design:
 		// https://documentation.ubuntu.com/lxd/en/latest/instance-exec/#user-groups-and-working-directory
-		keys := slices.Sorted(maps.Keys(env))
-		command := []string{"sudo",
+		commandPrefix = []string{
+			"sudo",
 			"-u",
 			"#" + strconv.Itoa(flags.UserId),
 			"-g",
 			"#" + strconv.Itoa(flags.GroupId),
 		}
+
+		keys := slices.Sorted(maps.Keys(env))
 		for _, k := range keys {
-			command = append(command, "--preserve-env="+k)
+			commandPrefix = append(commandPrefix, "--preserve-env="+k)
 		}
-		command = append(command,
+
+		commandPrefix = append(
+			commandPrefix,
 			"--",
 			"bash",
 			"-l",
 			"-c",
 			`exec -- "$0" "$@"`,
 		)
-		av = append(command, av...)
-		logger.Debugf("Running %q", av)
+		logger.Debugf("Running command %q", av)
 	}
 
 	// Record terminal state (and restore it before we exit).
@@ -532,19 +536,20 @@ func exec(root *CmdRoot, flags *ExecFlags, args *ExecArgs) error {
 	// ls produces access errors, those will not be filtered out to null as LXD
 	// combines stderr and stdout in the interactive mode.
 	opts := &client.ExecOptions{
-		Command:     av,
-		Environment: env,
-		Action:      args.action,
-		WorkingDir:  flags.WorkingDir,
-		UserId:      &flags.UserId,
-		GroupId:     &flags.GroupId,
-		Interactive: interactive,
-		Timeout:     flags.Timeout,
-		Width:       width,
-		Height:      height,
-		Stdin:       Stdin,
-		Stdout:      Stdout,
-		Stderr:      Stderr,
+		Command:       av,
+		CommandPrefix: commandPrefix,
+		Environment:   env,
+		Action:        args.action,
+		WorkingDir:    flags.WorkingDir,
+		UserId:        &flags.UserId,
+		GroupId:       &flags.GroupId,
+		Interactive:   interactive,
+		Timeout:       flags.Timeout,
+		Width:         width,
+		Height:        height,
+		Stdin:         Stdin,
+		Stdout:        Stdout,
+		Stderr:        Stderr,
 	}
 
 	// Start the command.

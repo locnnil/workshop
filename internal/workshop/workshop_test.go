@@ -53,6 +53,36 @@ func writeFile(c *check.C, path string, content string) {
 	c.Assert(os.WriteFile(path, []byte(content), 0644), check.IsNil)
 }
 
+// TestExecArgsEffectiveCommand prepends Workshop-managed command prefixes
+// without mutating the stored user command.
+func (f *workshopSuite) TestExecArgsEffectiveCommand(c *check.C) {
+	args := workshop.ExecArgs{
+		Command:       []string{"echo", "foo"},
+		CommandPrefix: []string{"sudo", "--"},
+	}
+
+	command := args.EffectiveCommand()
+
+	c.Check(command, check.DeepEquals, []string{"sudo", "--", "echo", "foo"})
+	command[0] = "changed"
+	c.Check(args.CommandPrefix, check.DeepEquals, []string{"sudo", "--"})
+	c.Check(args.Command, check.DeepEquals, []string{"echo", "foo"})
+}
+
+// TestExecArgsEffectiveCommandNoPrefix returns the user command unchanged when
+// no Workshop-managed command prefix is supplied.
+func (f *workshopSuite) TestExecArgsEffectiveCommandNoPrefix(c *check.C) {
+	args := workshop.ExecArgs{
+		Command: []string{"echo", "foo"},
+	}
+
+	command := args.EffectiveCommand()
+
+	c.Check(command, check.DeepEquals, []string{"echo", "foo"})
+	command[0] = "changed"
+	c.Check(args.Command, check.DeepEquals, []string{"echo", "foo"})
+}
+
 func (f *workshopSuite) TestValidateSdkSyntax(c *check.C) {
 	defer sdk.MockSanitizePlugsSlots(func(sdkInfo *sdk.Info) {})()
 

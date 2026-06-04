@@ -15,12 +15,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/internal/workshop"
 )
 
 type workshopExec struct {
@@ -108,6 +111,77 @@ foo:
 	c.Check(err, check.ErrorMatches, "workshop not found")
 
 	c.Check(n, check.Equals, 7)
+}
+
+// TestWorkshopExecSendsUserCommand verifies the CLI sends the requested
+// command to the API and relies on the daemon for user/group execution.
+func (m *workshopExec) TestWorkshopExecSendsUserCommand(c *check.C) {
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/projects":
+			c.Check(r.Method, check.Equals, "POST")
+			res := fmt.Sprintf(
+				`{"type": "sync", "result": {"id":"%s","path":"%s"}}`,
+				m.prjId,
+				m.prjDir,
+			)
+			fmt.Fprintln(w, res)
+		case fmt.Sprintf("/v1/projects/%s/workshops", m.prjId):
+			c.Check(r.Method, check.Equals, "GET")
+			w.WriteHeader(200)
+			fmt.Fprintln(w, mockSingleWorkshopSpecifyStatus("Ready"))
+		case fmt.Sprintf("/v1/projects/%s/workshops/ws/exec", m.prjId):
+			c.Check(r.Method, check.Equals, "POST")
+			body := DecodedRequestBody(c, r)
+			userId := fmt.Sprint(workshop.Uid)
+			groupId := fmt.Sprint(workshop.Gid)
+			c.Check(body["command"], check.DeepEquals, []any{"echo", "foo"})
+			c.Check(body["user-id"], check.DeepEquals, json.Number(userId))
+			c.Check(body["group-id"], check.DeepEquals, json.Number(groupId))
+
+			expectedEnvironment := map[string]any{
+				"DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/" + userId + "/bus",
+				"XDG_RUNTIME_DIR":          "/run/user/" + userId,
+			}
+			if term, ok := os.LookupEnv("TERM"); ok {
+				expectedEnvironment["TERM"] = term
+			}
+			c.Check(body["environment"], check.DeepEquals, expectedEnvironment)
+
+			expectedPrefix := []any{"sudo", "-u", "#" + userId, "-g", "#" + groupId}
+			expectedPrefix = append(
+				expectedPrefix,
+				"--preserve-env=DBUS_SESSION_BUS_ADDRESS",
+			)
+			if _, ok := os.LookupEnv("TERM"); ok {
+				expectedPrefix = append(expectedPrefix, "--preserve-env=TERM")
+			}
+			expectedPrefix = append(
+				expectedPrefix,
+				"--preserve-env=XDG_RUNTIME_DIR",
+				"--",
+				"bash",
+				"-l",
+				"-c",
+				`exec -- "$0" "$@"`,
+			)
+			c.Check(body["command-prefix"], check.DeepEquals, expectedPrefix)
+
+			w.WriteHeader(404)
+			fmt.Fprintln(w, mockWorkshopExecError)
+		default:
+			c.Errorf("unexpected API call: %s", r.URL.Path)
+		}
+	})
+
+	cmd := &CmdExec{root: &CmdRoot{cwd: m.prjDir}}
+	exec := cmd.Command()
+	exec.SilenceUsage = true
+	exec.SilenceErrors = true
+	exec.SetArgs([]string{"-I", "ws", "--", "echo", "foo"})
+
+	err := exec.Execute()
+	c.Check(err, check.ErrorMatches, `(?s).*Install action "foo".*`)
 }
 
 func (m *workshopExec) TestSingleWorkshopRunErrors(c *check.C) {

@@ -649,7 +649,7 @@ func (s *Backend) execCommand(conn lxd.InstanceServer, ctx context.Context, name
 	}
 
 	req := api.InstanceExecPost{
-		Command:     args.Command,
+		Command:     args.EffectiveCommand(),
 		WaitForWS:   true,
 		Interactive: args.Interactive,
 		Environment: args.Environment,

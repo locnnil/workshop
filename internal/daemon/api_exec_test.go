@@ -163,6 +163,41 @@ func (s *apiSuite) TestExecSuccess(c *check.C) {
 	c.Assert(soon, check.Equals, 1)
 }
 
+// TestExecSuccessWithCommandPrefix verifies command prefixes are accepted but
+// are not used in user-facing change or task summaries.
+func (s *apiSuite) TestExecSuccessWithCommandPrefix(c *check.C) {
+	// Setup
+	projectsCmd := s.setupExec(c)
+
+	body := bytes.NewBufferString(`{"command":["ls"],"command-prefix":["sudo","--"],"working-dir":"/"}`)
+
+	req, err := s.createProjectsRequest("POST", "/v1/projects/"+s.project.ProjectId+"/workshops/ws/exec", body)
+	c.Assert(err, check.IsNil)
+
+	soon := 0
+	restoreEnsure := testutil.FakeFunc(func(st *state.State, d time.Duration) {
+		soon++
+	}, &ensureStateSoon)
+	defer restoreEnsure()
+
+	// Execute
+	rsp := v1PostWorkshopExec(projectsCmd, req, nil).(*resp)
+
+	// Verify
+	c.Assert(rsp.Status, check.Equals, http.StatusAccepted)
+	c.Assert(soon, check.Equals, 1)
+
+	st := s.d.Overlord().State()
+	st.Lock()
+	defer st.Unlock()
+	change := st.Change("1")
+	c.Assert(change, check.NotNil)
+	c.Check(change.Summary(), check.Equals, `Execute command "ls"`)
+	tasks := change.Tasks()
+	c.Assert(tasks, check.HasLen, 1)
+	c.Check(tasks[0].Summary(), check.Equals, `Exec command "ls"`)
+}
+
 func (s *apiSuite) TestExecActionSuccess(c *check.C) {
 	// Setup
 	projectsCmd := s.setupExec(c)

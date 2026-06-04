@@ -27,18 +27,24 @@ import (
 )
 
 type execPayload struct {
-	Command     []string          `json:"command"`
-	Action      bool              `json:"action"`
-	Environment map[string]string `json:"environment"`
-	WorkingDir  string            `json:"working-dir"`
-	Timeout     string            `json:"timeout"`
-	UserId      *int              `json:"user-id"`
-	GroupId     *int              `json:"group-id"`
-	Terminal    bool              `json:"terminal"`
-	Interactive bool              `json:"interactive"`
-	SplitStderr bool              `json:"split-stderr"`
-	Width       int               `json:"width"`
-	Height      int               `json:"height"`
+	// Command is the user-requested command. It is used for user-facing
+	// summaries and diagnostics.
+	Command []string `json:"command"`
+
+	// CommandPrefix is a Workshop-managed wrapper prepended to [Command] at the
+	// execution boundary. Older clients may omit this field.
+	CommandPrefix []string          `json:"command-prefix"`
+	Action        bool              `json:"action"`
+	Environment   map[string]string `json:"environment"`
+	WorkingDir    string            `json:"working-dir"`
+	Timeout       string            `json:"timeout"`
+	UserId        *int              `json:"user-id"`
+	GroupId       *int              `json:"group-id"`
+	Terminal      bool              `json:"terminal"`
+	Interactive   bool              `json:"interactive"`
+	SplitStderr   bool              `json:"split-stderr"`
+	Width         int               `json:"width"`
+	Height        int               `json:"height"`
 }
 
 func normaliseUserGroupIds(usrId, grpId *int) (int, int, error) {
@@ -138,17 +144,18 @@ func v1PostWorkshopExec(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	var execArgs = &workshop.ExecArgs{
-		Command:     reqData.Command,
-		Environment: environment,
-		WorkDir:     reqData.WorkingDir,
-		UserId:      userId,
-		GroupId:     groupId,
-		Timeout:     timeout,
-		Terminal:    reqData.Terminal,
-		Interactive: reqData.Interactive,
-		SplitStderr: reqData.SplitStderr,
-		Width:       reqData.Width,
-		Height:      reqData.Height,
+		Command:       reqData.Command,
+		CommandPrefix: reqData.CommandPrefix,
+		Environment:   environment,
+		WorkDir:       reqData.WorkingDir,
+		UserId:        userId,
+		GroupId:       groupId,
+		Timeout:       timeout,
+		Terminal:      reqData.Terminal,
+		Interactive:   reqData.Interactive,
+		SplitStderr:   reqData.SplitStderr,
+		Width:         reqData.Width,
+		Height:        reqData.Height,
 	}
 
 	st := c.d.overlord.State()

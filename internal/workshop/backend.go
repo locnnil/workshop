@@ -180,17 +180,35 @@ type SdkManager interface {
 }
 
 type ExecArgs struct {
-	Command     []string
-	UserId      int
-	GroupId     int
-	WorkDir     string
-	Timeout     time.Duration
-	Environment map[string]string
-	Interactive bool
-	Terminal    bool
-	SplitStderr bool
-	Width       int
-	Height      int
+	// Command is the user-requested command. It is used for user-facing
+	// summaries and diagnostics.
+	Command []string
+
+	// CommandPrefix is a Workshop-managed wrapper prepended to [Command] at the
+	// execution boundary. It is not part of the user-requested command.
+	CommandPrefix []string
+	UserId        int
+	GroupId       int
+	WorkDir       string
+	Timeout       time.Duration
+	Environment   map[string]string
+	Interactive   bool
+	Terminal      bool
+	SplitStderr   bool
+	Width         int
+	Height        int
+}
+
+// EffectiveCommand returns the command that should be sent to the execution
+// backend, including any Workshop-managed command prefix.
+func (args ExecArgs) EffectiveCommand() []string {
+	command := make(
+		[]string,
+		0,
+		len(args.CommandPrefix)+len(args.Command),
+	)
+	command = append(command, args.CommandPrefix...)
+	return append(command, args.Command...)
 }
 
 type ExecControls struct {
