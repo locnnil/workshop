@@ -61,3 +61,5 @@ require (
 	gopkg.in/errgo.v1 v1.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+tool github.com/canonical/workshop/tools/try
