@@ -58,8 +58,8 @@ See [`docs/contributing.rst`](../docs/contributing.rst) for detailed standards. 
 - Run `make run` in `docs/` to build and serve locally.
 
 ### Running Locally
-- Install binaries: `go install ./...`
-- Run daemon: `workshopd run --create-dirs` (requires `WORKSHOP` env var set).
+- Quick path: `go tool try` — builds, starts `workshopd` against a temporary session, and drops into a pre-configured subshell. Exit to tear down; `--keep` retains the session.
+- Manual: `go install ./cmd/...` then `workshopd run --create-dirs` (requires `WORKSHOP` env var set).
 
 ## Available Resources
 
