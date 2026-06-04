@@ -230,9 +230,9 @@ func (m retryMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
 			if err != nil {
 				if retryable {
 					// Convert retryable transport errors into retryableErr so retry.Call
-					// treats them the same way as retryable HTTP status response. Keep the
+					// treats them the same way as retryable HTTP status responses. Keep the
 					// original error wrapped so the final error still explains what failed
-					// it all attempts are exhausted.
+					// if all attempts are exhausted.
 					return retryableErr{err: err}
 				}
 				return err
