@@ -35,6 +35,107 @@ func (m *workshopStop) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
+func (m *workshopStop) TestStopChangeConflictInProgress(c *check.C) {
+	cmd := &CmdStop{root: &CmdRoot{}}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(
+				`{"type": "sync", "result": {"id":"%s","path":"%s"}}`,
+				m.prjId,
+				m.prjDir,
+			)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(
+				r.URL.Path,
+				check.Equals,
+				fmt.Sprintf("/v1/projects/%s/workshops", m.prjId),
+			)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, `{
+				"type": "error",
+				"status-code": 400,
+				"result": {
+					"kind": "change-conflict",
+					"message": "cannot stop \\\"dev\\\": change is in progress",
+					"value": {
+						"change-id": "30",
+						"change-kind": "launch",
+						"change-status": "Do",
+						"project-id": "42424242",
+						"workshop": "dev"
+					}
+				}
+			}`)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(cmd.Command(), []string{"dev"})
+	c.Assert(err, check.ErrorMatches,
+		"cannot stop \\\"dev\\\": change launch is in progress\n"+
+			"To view details: \\\"workshop tasks 30\\\"")
+}
+
+func (m *workshopStop) TestStopChangeConflictWaiting(c *check.C) {
+	cmd := &CmdStop{root: &CmdRoot{}}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(
+				`{"type": "sync", "result": {"id":"%s","path":"%s"}}`,
+				m.prjId,
+				m.prjDir,
+			)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(
+				r.URL.Path,
+				check.Equals,
+				fmt.Sprintf("/v1/projects/%s/workshops", m.prjId),
+			)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, `{
+				"type": "error",
+				"status-code": 400,
+				"result": {
+					"kind": "change-conflict",
+					"message": "cannot stop \\\"dev\\\": waiting on error",
+					"value": {
+						"change-id": "29",
+						"change-kind": "refresh",
+						"change-status": "Wait",
+						"project-id": "42424242",
+						"workshop": "dev"
+					}
+				}
+			}`)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(cmd.Command(), []string{"dev"})
+	c.Assert(err, check.ErrorMatches,
+		"cannot stop \\\"dev\\\": refresh change is waiting on error\n"+
+			"To view details: \\\"workshop tasks 29\\\"\n\n"+
+			"To abort and undo the refresh: \\\"workshop refresh --abort dev\\\"\n"+
+			"Otherwise, resolve the error, then run \\\"workshop refresh --continue dev\\\"\n"+
+			"After that, run \\\"workshop stop dev\\\" again\\.")
+}
+
 func (m *workshopStop) TestStopSuccess(c *check.C) {
 	cmd := &CmdStop{root: &CmdRoot{}}
 	n := 0

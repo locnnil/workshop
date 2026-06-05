@@ -15,10 +15,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdStop struct {
@@ -88,7 +91,30 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	changeId, err := cli.Stop(project.Id, av)
-	if err != nil {
+
+	var conflictErr client.ChangeConflictError
+	switch {
+	case err == nil:
+	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh":
+		return fmt.Errorf(`
+cannot stop %[1]q: refresh change is waiting on error
+To view details: "workshop tasks %[2]s"
+
+To abort and undo the refresh: "workshop refresh --abort %[1]s"
+Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"
+After that, run "workshop stop %[1]s" again.`[1:],
+			conflictErr.Workshop,
+			conflictErr.ChangeID,
+		)
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(`
+cannot stop %[1]q: change %[2]s is in progress
+To view details: "workshop tasks %[3]s"`[1:],
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+			conflictErr.ChangeID,
+		)
+	default:
 		return err
 	}
 
