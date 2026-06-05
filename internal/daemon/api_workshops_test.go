@@ -4794,6 +4794,69 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 	c.Assert(wp.Running, check.Equals, true)
 }
 
+// TestStopWorkshopChangeConflict checks that a stop action blocked by a
+// waiting change returns a structured change-conflict API error.
+func (s *apiSuite) TestStopWorkshopChangeConflict(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.createWFile(c, "basic", basic)
+	defer s.store.SetDownloadCallback(storeDownload(c))()
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{{
+		Type:    ResponseTypeAsync,
+		Status:  http.StatusAccepted,
+		Kind:    "launch",
+		Summary: `Launch "basic" workshop`,
+	}}
+	s.runActionTest(c, requests, expected)
+
+	st := s.d.state
+	st.Lock()
+	refresh := st.NewChange("refresh", `Refresh "basic" workshop`)
+	refresh.Set("project-id", s.project.ProjectId)
+	refresh.SetStatus(state.WaitStatus)
+	task := st.NewTask("run-hook", "Run refresh hook")
+	task.Set("workshop", "basic")
+	task.Set("project", s.project)
+	refresh.AddTask(task)
+	refreshID := refresh.ID()
+	st.Unlock()
+
+	s.vars = map[string]string{"id": s.project.ProjectId}
+	req, err := s.createProjectsRequest(
+		"POST",
+		"/v1/projects/"+s.project.ProjectId+"/workshops",
+		bytes.NewBufferString(`{"names":["basic"],"action":"stop"}`),
+	)
+	c.Assert(err, check.IsNil)
+
+	rsp := v1PostProjectWorkshop(
+		apiCmd("/v1/projects/{id}/workshops"),
+		req,
+		nil,
+	).(*resp)
+
+	c.Assert(rsp.Type, check.Equals, ResponseTypeError)
+	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
+	result := rsp.Result.(*errorResult)
+	c.Check(result, check.DeepEquals, &errorResult{
+		Message: `workshop "basic" has "refresh" change in progress`,
+		Kind:    errorKindChangeConflict,
+		Value: changeConflictValue{
+			ChangeID:     refreshID,
+			ChangeKind:   "refresh",
+			ChangeStatus: "Wait",
+			ProjectID:    s.project.ProjectId,
+			Workshop:     "basic",
+		},
+	})
+}
+
 func (s *apiSuite) TestStopWorkshop(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()

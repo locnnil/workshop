@@ -118,6 +118,7 @@ func (r *resp) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 type errorKind string
 
 const (
+	errorKindChangeConflict     = errorKind("change-conflict")
 	errorKindLoginRequired      = errorKind("login-required")
 	errorKindDaemonRestart      = errorKind("daemon-restart")
 	errorKindSystemRestart      = errorKind("system-restart")
