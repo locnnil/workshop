@@ -241,7 +241,7 @@ The only camera interface slot is :samp:`system:camera`.
 
 
 Custom device interface
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. @artefact custom-device interface
 

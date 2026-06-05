@@ -39,7 +39,7 @@ allows the workshops using this SDK to connect to matching devices,
 which can unlock additional SDK functionality.
 
 
-.. _exp_determine_subsystem:
+.. _exp_custom_device_subsystem:
 
 Device subsystems
 -----------------

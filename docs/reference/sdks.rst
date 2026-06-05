@@ -189,7 +189,9 @@ Custom device interface
 
 .. @artefact custom-device interface
 
-A custom-device plug in the definition must specify the plug name, the interface, and a ``subsystem`` attribute:
+A custom-device plug in the definition
+must specify the plug name, the interface,
+and a :samp:`subsystem` attribute:
 
 .. code-block:: yaml
    :caption: sdk.yaml
