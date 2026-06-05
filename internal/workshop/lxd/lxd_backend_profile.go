@@ -157,11 +157,17 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			}
 		case "unix-hotplug":
 			devtype := config[DeviceTypeConfigKey(devname)]
-			if devtype == "camera" {
-				continue
+			switch devtype {
+			case "camera":
+				// Ignore the real camera devices, config is under type=none.
+			case "custom-device":
+				pr.CustomDevices = append(pr.CustomDevices, workshop.CustomDevice{
+					Name:      name,
+					Subsystem: dev["subsystem"],
+				})
+			default:
+				logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 			}
-
-			logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 		case "none":
 			cfg, exist := config[DeviceConfigKey(devname)]
 			if !exist {

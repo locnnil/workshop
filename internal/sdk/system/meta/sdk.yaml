@@ -10,5 +10,7 @@ slots:
     interface: ssh-agent
   camera:
     interface: camera
+  custom-device:
+    interface: custom-device
   desktop:
     interface: desktop

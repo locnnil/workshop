@@ -178,8 +178,8 @@ but this detail isn't exposed in the definition files.
 
 Several interfaces expose resources that are host-based and singular by nature;
 the system SDK has default eponymous slots for these interfaces:
-:samp:`system:camera`, :samp:`system:desktop`, :samp:`system:gpu`,
-:samp:`system:mount`, and :samp:`system:ssh-agent`.
+:samp:`system:camera`, :samp:`system:custom-device`, :samp:`system:desktop`,
+:samp:`system:gpu`, :samp:`system:mount`, and :samp:`system:ssh-agent`.
 No other SDKs can declare slots for these interfaces, except for :samp:`mount`.
 The :samp:`system:mount` slot is still unique
 because it's the only one that provides access to the *host* filesystem,
@@ -238,6 +238,34 @@ and can't belong to the :ref:`system SDK <ref_system_sdk>`.
 They have no attributes.
 
 The only camera interface slot is :samp:`system:camera`.
+
+
+Custom device interface
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. @artefact custom-device interface
+
+Custom device interface plugs can't belong to the :ref:`system SDK <ref_system_sdk>`.
+They are described by the following attributes:
+
+.. @artefact custom-device interface attributes
+
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 2 1 6
+
+   * - Key
+     - Value
+     - Description
+
+   * - :samp:`subsystem` (required)
+     - string
+     - The Linux kernel subsystem of the host devices to expose,
+       for example :samp:`input`, :samp:`tty`, or :samp:`usb`.
+
+
+The only custom device interface slot is :samp:`system:custom-device`.
 
 
 Desktop interface

@@ -33,6 +33,7 @@ such as displays, GPUs, and cameras:
    :maxdepth: 1
 
    camera-interface
+   custom-device-interface
    desktop-interface
    gpu-interface
 

@@ -494,7 +494,7 @@ func (r *Repository) Connect(ref *ConnRef, plugStaticAttrs, plugDynamicAttrs, sl
 	}
 	// Ensure that plug and slot are compatible
 	if slot.Interface != plug.Interface {
-		return nil, fmt.Errorf(`cannot connect: %s plug %q incompatible with %s slot %q`,
+		return nil, fmt.Errorf("cannot connect: %s plug %q incompatible with %s slot %q",
 			plug.Interface, ref.PlugRef.ShortRef(), slot.Interface, ref.SlotRef.ShortRef())
 	}
 
@@ -1088,7 +1088,7 @@ func (r *Repository) ResolveConnect(plugProjectId, plugWorkshop, plugSdkName, pl
 		switch len(candidates) {
 		case 0:
 			sdkRef := sdk.Ref{ProjectId: slotProjectId, Workshop: slotWorkshop, Sdk: slotSdkName}
-			return nil, fmt.Errorf(`%q SDK has no %s interface slots`, sdkRef.ShortRef(), plug.Interface)
+			return nil, fmt.Errorf("%q SDK has no %s interface slots", sdkRef.ShortRef(), plug.Interface)
 		case 1:
 			slotName = candidates[0]
 		default:

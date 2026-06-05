@@ -1,0 +1,7 @@
+name: ws-custom-device-fail
+base: ubuntu@22.04
+sdks:
+  - name: system
+    slots:
+      user-custom-device:
+        interface: custom-device

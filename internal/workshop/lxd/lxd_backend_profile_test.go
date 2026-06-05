@@ -100,6 +100,11 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					What:  "/var",
 					Where: "/etc",
 					Type:  workshop.WorkshopWorkshop}}},
+		{
+			Sdk:           "sdk",
+			Mounts:        map[string]workshop.Mount{},
+			CustomDevices: []workshop.CustomDevice{{Name: "mydevice", Subsystem: "accel"}},
+		},
 	}
 
 	for i, t := range []struct {
@@ -197,6 +202,16 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
           "where": "/etc", 
           "type": 1}`,
 				"user.workshop.sdk_plug.type": "mount"},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"sdk_mydevice": {
+					"type":              "unix-hotplug",
+					"subsystem":         "accel",
+					"required":          "false",
+					"ownership.inherit": "true"}},
+			map[string]string{
+				"user.workshop.sdk_mydevice.type": "custom-device"},
 		},
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)
@@ -204,6 +219,7 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 		c.Assert(res.Agent, check.DeepEquals, expected[i].Agent)
 		c.Assert(res.Desktop, check.DeepEquals, expected[i].Desktop)
 		c.Assert(res.Camera, check.DeepEquals, expected[i].Camera)
+		c.Assert(res.CustomDevices, testutil.DeepUnsortedMatches, expected[i].CustomDevices)
 		c.Assert(res.Gpu, check.DeepEquals, expected[i].Gpu)
 		c.Assert(res.Mounts, testutil.DeepUnsortedMatches, expected[i].Mounts)
 		c.Assert(res.Tunnels, testutil.DeepUnsortedMatches, expected[i].Tunnels)

@@ -95,6 +95,7 @@ In this documentation
    * - **Interfaces**
      - :ref:`Concepts <exp_interface_concepts>` •
        :ref:`Camera <exp_camera_interface>` •
+       :ref:`Custom device <exp_custom_device_interface>` •
        :ref:`Desktop <exp_desktop_interface>` •
        :ref:`GPU <exp_gpu_interface>` •
        :ref:`Mounts <exp_mount_interface>` •

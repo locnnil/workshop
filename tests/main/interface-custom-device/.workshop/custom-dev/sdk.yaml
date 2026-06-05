@@ -1,0 +1,6 @@
+name: custom-dev
+
+plugs:
+  my-custom-device:
+    interface: custom-device
+    subsystem: input

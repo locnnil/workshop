@@ -88,7 +88,7 @@ func (iface *tunnelInterface) StaticInfo() interfaces.StaticInfo {
 func (iface *tunnelInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 	for name := range plug.Attrs {
 		if !slices.Contains(knownTunnelAttributes, name) {
-			return fmt.Errorf(`unknown attribute for tunnel interface plug: %q`, name)
+			return fmt.Errorf("unknown attribute for tunnel interface plug: %q", name)
 		}
 	}
 
@@ -107,7 +107,7 @@ func (iface *tunnelInterface) BeforePreparePlug(plug *sdk.PlugInfo) error {
 func (iface *tunnelInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	for name := range slot.Attrs {
 		if !slices.Contains(knownTunnelAttributes, name) {
-			return fmt.Errorf(`unknown attribute for tunnel interface slot: %q`, name)
+			return fmt.Errorf("unknown attribute for tunnel interface slot: %q", name)
 		}
 	}
 
@@ -121,7 +121,6 @@ func (iface *tunnelInterface) BeforePrepareSlot(slot *sdk.SlotInfo) error {
 	slot.Attrs["endpoint"] = address
 
 	return nil
-
 }
 
 func normalizeEndpoint(attrs interfaces.Attrer) (string, error) {

@@ -54,6 +54,8 @@ EOF
         jq
         "linux-modules-extra-$(uname -r)"
         moreutils
+        python3-sdnotify
+        python3-uinput
         zfsutils-linux
         zsh
     )
