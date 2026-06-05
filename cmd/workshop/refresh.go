@@ -180,7 +180,12 @@ To proceed, resolve the issue and run "workshop refresh --continue %s"
 To cancel and undo: "workshop refresh --abort %s"
 To view more information: "workshop tasks %s"`, w, w, w, chg.ID)
 	default:
-		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
+		return fmt.Errorf(`
+cannot refresh %s: aborted
+To view details: "workshop tasks %s"`[1:],
+			strutil.Quoted(av),
+			chg.ID,
+		)
 	}
 
 	return nil
