@@ -4,6 +4,7 @@ prepare: |
 
   # Remove LXD so Docker is the first to enable ip_forward and sets FORWARD
   # policy to DROP.
+  zpool wait workshop || true
   snap remove lxd --purge
   sysctl -w net.ipv4.ip_forward=0
 
@@ -32,6 +33,7 @@ restore: |
   # Flush leftover Docker nft rules, then restore LXD and workshop
   # to clean state. LXD recreates its own rules on setup.
   nft flush ruleset
+  zpool wait workshop || true
   snap remove lxd --purge
   setup_lxd
   rm -f /home/ubuntu/.cache/workshop/warnings.json
