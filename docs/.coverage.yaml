@@ -155,6 +155,17 @@
   specs:
     - SK042
 
+"custom-device interface":
+  category: interface
+  type: concept
+  specs:
+    - SK052
+
+"custom-device interface attributes":
+  category: interface
+  type: concept
+  specs: []
+
 "check-health":
   category: SDK
   type: action

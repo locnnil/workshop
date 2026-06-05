@@ -38,6 +38,7 @@ so you cannot create a custom interface type.
 Currently, |ws_markup| and |sdk_markup| support the following:
 
 - :ref:`Camera interface <exp_camera_interface>` (manually connected)
+- :ref:`Custom device interface <exp_custom_device_interface>` (manually connected)
 - :ref:`Desktop interface <exp_desktop_interface>` (manually connected)
 - :ref:`GPU interface <exp_gpu_interface>` (auto-connected)
 - :ref:`Mount interface <exp_mount_interface>` (auto-connected)
@@ -128,6 +129,7 @@ but the overall aim is to conduct reasonably in each case:
 the :ref:`mount <exp_mount_interface>`
 and the :ref:`GPU <exp_gpu_interface>` interfaces are auto-connected,
 whereas the :ref:`camera <exp_camera_interface>`,
+:ref:`custom device <exp_custom_device_interface>`,
 :ref:`desktop <exp_desktop_interface>`, and :ref:`SSH <exp_ssh_interface>`
 interfaces require manual connection.
 

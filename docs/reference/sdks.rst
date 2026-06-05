@@ -146,6 +146,7 @@ SDK plugs and slots
 Currently, |ws_markup| and |sdk_markup| support the following interface plugs:
 
 - :ref:`Camera <ref_camera_interface>`
+- :ref:`Custom device <ref_custom_device_interface>`
 - :ref:`Desktop <ref_desktop_interface>`
 - :ref:`GPU <ref_gpu_interface>`
 - :ref:`Mount <ref_mount_interface>`
@@ -179,6 +180,32 @@ as video capture devices.
 .. note::
 
    See the :ref:`explanation <exp_camera_interface>` for more details.
+
+
+.. _ref_custom_device_interface:
+
+Custom device interface
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. @artefact custom-device interface
+
+A custom-device plug in the definition must specify the plug name, the interface, and a ``subsystem`` attribute:
+
+.. code-block:: yaml
+   :caption: sdk.yaml
+
+    # ...
+    plugs:
+      <NAME>:
+        interface: custom-device
+        subsystem: <SUBSYSTEM>
+
+
+This makes host devices from the given subsystem directly available inside the workshop.
+
+.. note::
+
+   See the :ref:`explanation <exp_custom_device_interface>` for more details.
 
 
 .. _ref_desktop_interface:
