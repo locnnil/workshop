@@ -994,8 +994,14 @@ func (s *workshopHandlers) TestSnapshotRemovedAfterRemoveMidRefresh(c *check.C) 
 	c.Check(s2.Workshops[s.project.ProjectId], check.DeepEquals, []string{"ws"})
 
 	// Next, remove the partially-refreshed workshop.
-	err = conflict.BackgroundDiscardWaitingRefresh(s.state, "ws", s.project.ProjectId)
-	c.Assert(err, check.IsNil)
+	err = conflict.CheckChangeConflict(s.state, s.project.ProjectId, "ws", []string{"exec"})
+	c.Assert(err, check.DeepEquals, &conflict.ChangeConflictError{
+		ProjectId:  s.project.ProjectId,
+		Workshop:   "ws",
+		ChangeKind: refresh.Kind(),
+		ChangeID:   refresh.ID(),
+	})
+	conflict.BackgroundDiscard(refresh, "ws")
 
 	remove := s.state.NewChange("remove", "...")
 	remove.Set("user", "testuser")

@@ -694,16 +694,21 @@ func (w *WorkshopManager) Exec(ctx context.Context, name, projectId string, args
 	return execSet, nil
 }
 
-func (w *WorkshopManager) RemoveMany(ctx context.Context, project workshop.Project, manifests []Manifest, running []bool) ([]*state.TaskSet, error) {
+func (w *WorkshopManager) RemoveMany(ctx context.Context, project workshop.Project, stashed, current []Manifest, running map[string]bool) ([]*state.TaskSet, error) {
+	hasStash := make(map[string]bool, len(stashed))
+	for _, s := range stashed {
+		hasStash[s.File.Name] = true
+	}
+
 	taskset := []*state.TaskSet{}
-	for i, m := range manifests {
-		remove := remove(w.state, m, running[i], project)
+	for _, m := range current {
+		remove := remove(w.state, m, hasStash[m.File.Name], running[m.File.Name], project)
 		taskset = append(taskset, remove)
 	}
 	return taskset, nil
 }
 
-func remove(st *state.State, manifest Manifest, running bool, project workshop.Project) *state.TaskSet {
+func remove(st *state.State, manifest Manifest, hasStash, running bool, project workshop.Project) *state.TaskSet {
 	removeSet := state.NewTaskSet()
 	var prevRemove *state.TaskSet
 	addTaskSet := func(ts *state.TaskSet) {
@@ -745,8 +750,11 @@ func remove(st *state.State, manifest Manifest, running bool, project workshop.P
 	removeStateStorage := st.NewTask("remove-state-storage", "Remove SDK state storage")
 	addTaskSet(state.NewTaskSet(removeStateStorage))
 
-	removeStash := st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", manifest.File.Name))
-	addTaskSet(state.NewTaskSet(removeStash))
+	var removeStash *state.Task
+	if hasStash {
+		removeStash = st.NewTask("remove-workshop-stash", fmt.Sprintf("Remove %q workshop from stash", manifest.File.Name))
+		addTaskSet(state.NewTaskSet(removeStash))
+	}
 
 	removeDirs := st.NewTask("remove-workshop-storage", fmt.Sprintf("Remove %q storage directories", manifest.File.Name))
 	addTaskSet(state.NewTaskSet(removeDirs))
@@ -756,7 +764,9 @@ func remove(st *state.State, manifest Manifest, running bool, project workshop.P
 	// If an error occurs when removing the directories, it will not affect the other tasks.
 	cleanupLane := st.NewLane()
 	removeDirs.JoinLane(cleanupLane)
-	removeStash.JoinLane(cleanupLane)
+	if removeStash != nil {
+		removeStash.JoinLane(cleanupLane)
+	}
 	removeStateStorage.JoinLane(cleanupLane)
 
 	for _, task := range removeSet.Tasks() {

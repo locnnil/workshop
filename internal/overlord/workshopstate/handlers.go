@@ -638,5 +638,6 @@ func (m *WorkshopManager) deleteUnusedSnapshot(ctx context.Context, task *state.
 	if err := m.backend.RemoveSnapshot(ctx, snapshot); err != nil {
 		return false, err
 	}
+	logger.Debugf("On WorkshopManager.doDeleteUnusedSnapshots: snapshot %v for task %s was deleted", len(snapshot.Sdks), task.ID())
 	return true, nil
 }

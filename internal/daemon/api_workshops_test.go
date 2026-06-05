@@ -42,6 +42,7 @@ import (
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/sdkstate"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sdk/system"
@@ -1251,6 +1252,7 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	c.Assert(repo.Plugs(s.project.ProjectId, "manysdks", "test-sdk-2"), check.HasLen, 0)
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
+	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "test-sdk", "test-sdk-2"})
 }
 
 //go:embed snapshot-format.yaml
@@ -1911,11 +1913,12 @@ func (s *apiSuite) ensureWorkshops(c *check.C, want []expectedWorkshop) {
 // setting the cooldown time to 0 and running the state engine multiple times to
 // trigger the garbage collection.
 func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
+	st := s.d.state
+	st.Lock()
 	defer sdkstate.FakeSdkVolumeCooldownTime(0)()
+	st.Unlock()
 
-	// More Ensure calls than usual to prevent FakeSdkVolumeCooldownTime
-	// from racing with the outstanding cleanup handlers.
-	for range 12 {
+	for range 6 {
 		c.Check(s.d.overlord.StateEngine().Ensure(), check.IsNil)
 		s.d.overlord.StateEngine().Wait()
 	}
@@ -1936,6 +1939,39 @@ func (s *apiSuite) ensureSdkVolumesAfterCooldown(c *check.C, want []string) {
 		c.Check(sk.Sha3_384, check.Not(check.Equals), "")
 		c.Check(sk.SdkYAML, check.Not(check.Equals), "")
 	}
+}
+
+// ensureSnapshotsAfterCooldown ensures that unused snapshots are removed if
+// unused by setting the snapshot cooldown time to 0 and running the state
+// engine multiple times to trigger the garbage collection.
+func (s *apiSuite) ensureSnapshotsAfterCooldown(c *check.C, want, remove []string) {
+	st := s.d.state
+	st.Lock()
+	defer workshopstate.FakeSnapshotCooldownTime(0)()
+	st.Unlock()
+
+	for range 6 {
+		c.Check(s.d.overlord.StateEngine().Ensure(), check.IsNil)
+		s.d.overlord.StateEngine().Wait()
+	}
+
+	var remaining, removed []string
+	for _, snapshot := range s.b.Snapshots {
+		remaining = append(remaining, snapshotSdk(snapshot.Snapshot))
+	}
+	for _, snapshot := range s.b.RemovedSnapshots {
+		removed = append(removed, snapshotSdk(snapshot))
+	}
+
+	c.Assert(remaining, testutil.DeepUnsortedMatches, want)
+	c.Assert(removed, testutil.DeepUnsortedMatches, remove)
+}
+
+func snapshotSdk(snapshot workshop.Snapshot) string {
+	if len(snapshot.Sdks) == 0 {
+		return ""
+	}
+	return snapshot.Sdks[len(snapshot.Sdks)-1].Name
 }
 
 type launchOrRebuild struct {
@@ -2373,6 +2409,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 	})
 
 	s.ensureSdkVolumesAfterCooldown(c, []string{"test-sdk-1", "system-1"})
+	s.ensureSnapshotsAfterCooldown(c, []string{"system", "test-sdk"}, []string{"test-sdk-2"})
 }
 
 func updateSdkStoreRev(name string, rev int, meta, digest string) func() {
@@ -4501,6 +4538,123 @@ func (s *apiSuite) TestRefreshConflictChange(c *check.C) {
 	c.Assert(s.secBackend.RemoveCalls, check.HasLen, 1)
 }
 
+func (s *apiSuite) TestSnapshotRemovedAfterFailedRefresh(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.createWFile(c, "basic", basic)
+	defer s.store.SetDownloadCallback(storeDownload(c))()
+
+	// Fail when snapshotting test-sdk-2.
+	s.b.SnapshotCallback = func(ctx context.Context, name string, snapshot workshop.Snapshot) error {
+		if len(snapshot.Sdks) > 2 {
+			return errors.New("cannot take snapshot")
+		}
+		return nil
+	}
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.mockProjectSdk(c, "test-sdk-2", testsdk2)
+	s.createWFile(c, "basic", basic_refreshed)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["basic"],"action":"refresh"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "basic" workshop`,
+			ChangeErr: `(?s).*cannot take snapshot.*`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.ensureSnapshotsAfterCooldown(c, []string{"system"}, []string{"test-sdk"})
+}
+
+func (s *apiSuite) TestSnapshotsRemovedAfterRemoveMidRefresh(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.store.SetDownloadCallback(storeDownload(c))()
+
+	// Fail when snapshotting test-sdk-2 post-refresh.
+	s.b.SnapshotCallback = func(ctx context.Context, name string, snapshot workshop.Snapshot) error {
+		if snapshot.Image.Name == "ubuntu@24.04" && len(snapshot.Sdks) > 2 {
+			return errors.New("cannot take snapshot")
+		}
+		return nil
+	}
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch"}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.createWFile(c, "manysdks", manysdks_newbase)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"refresh","options":{"mode":"wait-on-error"}}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "refresh",
+			Summary:   `Refresh "manysdks" workshop`,
+			ChangeErr: `(?s).*cannot take snapshot.*`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	c.Assert(s.b.Snapshots, check.HasLen, 5)
+	st := s.d.state
+	st.Lock()
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", []string{"exec"})
+	st.Unlock()
+	c.Assert(err, check.NotNil)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"remove"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "remove",
+			Summary: `Remove "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "system", "test-sdk", "test-sdk", "test-sdk-2"})
+}
+
 func (s *apiSuite) TestSDKInstallationOrder(c *check.C) {
 	s.daemon(c)
 	s.d.Overlord().Loop()
@@ -4680,6 +4834,7 @@ func (s *apiSuite) TestRemoveWorkshopSuccess(c *check.C) {
 	}
 	s.runActionTest(c, requests, expected)
 	s.ensureSdkVolumesAfterCooldown(c, []string{"system-1"})
+	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "test-sdk", "test-sdk-2"})
 }
 
 func (s *apiSuite) TestRemoveWorkshopNotFound(c *check.C) {

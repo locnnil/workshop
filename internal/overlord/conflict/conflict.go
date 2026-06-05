@@ -194,24 +194,11 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKind
 	}
 }
 
-func BackgroundDiscardWaitingRefresh(st *state.State, workshop, projectId string) error {
-	chg, err := findRunningChange(st, projectId, workshop, []string{"exec"})
-	if err != nil {
-		return err
-	}
-
-	if chg == nil || chg.Status() != state.WaitStatus {
-		return nil
-	}
-
-	if chg.Kind() != "refresh" && chg.Kind() != "launch" {
-		return fmt.Errorf("cannot discard %s: %s is in progress", workshop, chg.Kind())
-	}
-
+func BackgroundDiscard(chg *state.Change, workshop string) {
 	for _, tsk := range chg.Tasks() {
 		if tsk.Status() == state.WaitStatus {
 			tsk.SetStatus(state.DoStatus)
-			tsk.Logf("Discarding %q for workshop %q...", chg.Kind(), workshop)
+			tsk.Logf("Discarding %q for %q workshop...", chg.Kind(), workshop)
 		}
 	}
 
@@ -221,7 +208,6 @@ func BackgroundDiscardWaitingRefresh(st *state.State, workshop, projectId string
 	chg.Set("discard-background", true)
 
 	chg.Abort()
-	return nil
 }
 
 // Attempt to resume the change associated with the Resume/Launch operation
