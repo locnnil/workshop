@@ -608,6 +608,22 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		if err != nil {
 			return nil, fmt.Errorf("cannot stop %q: %w", name, err)
 		}
+
+		health := healthstate.WorkshopHealth(w.state, wp)
+		// Waiting health means a non-exec change is paused on error. Re-check
+		// the conflict so callers get the blocking change kind, status, and ID.
+		if health.Status == healthstate.WaitingStatus {
+			err := conflict.CheckChangeConflict(
+				w.state,
+				projectId,
+				name,
+				[]string{"exec"},
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus}
 		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
 			return nil, fmt.Errorf("cannot stop %q: %w", name, err)

@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/sha3"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -736,6 +737,34 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 
 	ts[0].Tasks()[0].Get("force", &force)
 	c.Assert(force, check.Equals, false)
+}
+
+// TestStopManyWaitingReturnsChangeConflict checks that stop returns a typed
+// [conflict.ChangeConflictError], rather than a generic health error, when a
+// workshop is waiting on an errored change.
+func (s *requestSuite) TestStopManyWaitingReturnsChangeConflict(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.launchWorkshopWithSDKs(c, "ws", nil)
+	change := s.state.NewChange("refresh", "refresh ws")
+	change.Set("project-id", s.project.ProjectId)
+	change.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("run-hook", "Run refresh hook")
+	task.Set("workshop", "ws")
+	task.Set("project", s.project)
+	change.AddTask(task)
+
+	_, err := s.mgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
+	var conflictErr *conflict.ChangeConflictError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
+		ProjectId:    s.project.ProjectId,
+		Workshop:     "ws",
+		ChangeKind:   "refresh",
+		ChangeStatus: "Wait",
+		ChangeID:     change.ID(),
+	})
 }
 
 func (s *requestSuite) TestRemountSuccess(c *check.C) {
