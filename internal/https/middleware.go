@@ -154,7 +154,8 @@ func (lr roundTripRecorder) RoundTrip(req *http.Request) (*http.Response, error)
 }
 
 // RetryMiddleware allows retrying of certain retryable http errors.
-// This only handles very specific status codes, ones that are deemed retryable:
+// This only handles transient network timeout errors for safe requests
+// and specific status codes that are deemed retryable:
 //
 //   - 502 Bad Gateway
 //   - 503 Service Unavailable
@@ -191,10 +192,19 @@ func makeRetryMiddleware(transport http.RoundTripper, policy RetryPolicy, clock 
 	}
 }
 
-type retryableErr struct{}
+type retryableErr struct {
+	err error
+}
 
-func (retryableErr) Error() string {
+func (e retryableErr) Error() string {
+	if e.err != nil {
+		return e.err.Error()
+	}
 	return "retryable error"
+}
+
+func (e retryableErr) Unwrap() error {
+	return e.err
 }
 
 // RoundTrip defines a strategy for handling retries based on the status code.
@@ -215,8 +225,16 @@ func (m retryMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
 
 			var retryable bool
 			var err error
+			res = nil
 			res, retryable, err = m.roundTrip(req) //nolint:bodyclose // Body closed by caller.
 			if err != nil {
+				if retryable {
+					// Convert retryable transport errors into retryableErr so retry.Call
+					// treats them the same way as retryable HTTP status responses. Keep the
+					// original error wrapped so the final error still explains what failed
+					// if all attempts are exhausted.
+					return retryableErr{err: err}
+				}
 				return err
 			}
 			if retryable {
@@ -232,6 +250,13 @@ func (m retryMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
 		Attempts: m.policy.Attempts,
 		Delay:    m.policy.Delay,
 		BackoffFunc: func(delay time.Duration, attempts int) time.Duration {
+			if res == nil {
+				// Transport errors do not have an HTTP response, so there is
+				// no Retry-After header to inspect. Fall back to the policy backoff.
+				var duration time.Duration
+				duration, backOffErr = m.clampBackoff(delay)
+				return duration
+			}
 			var duration time.Duration
 			duration, backOffErr = m.defaultBackoff(res, delay)
 			return duration
@@ -244,7 +269,7 @@ func (m retryMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
 func (m retryMiddleware) roundTrip(req *http.Request) (*http.Response, bool, error) {
 	res, err := m.wrappedRoundTripper.RoundTrip(req)
 	if err != nil {
-		return nil, false, err
+		return nil, isRetryableNetworkError(req, err), err
 	}
 
 	switch res.StatusCode {
@@ -258,6 +283,39 @@ func (m retryMiddleware) roundTrip(req *http.Request) (*http.Response, bool, err
 	default:
 		// Don't handle any of the following status codes.
 		return res, false, nil
+	}
+}
+
+func isRetryableNetworkError(req *http.Request, err error) bool {
+	// Network failures can happen before an HTTP response exists. For example,
+	// a TLS handshake timeout from net/http is returned as an error from
+	// RoundTrip rather than as an HTTP 5xx response. Treat timeout errors as
+	// retryable so transient connection setup failures can use the same retry
+	// policy as retryable status codes.
+	if !isSafeMethod(req.Method) {
+		return false
+	}
+
+	// Do not retry explicit caller cancellation or request deadline expiry.
+	// These indicate that the request context itself is done, so retrying would
+	// ignore the caller's intent rather than recover from a transient network failure.
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
+func isSafeMethod(method string) bool {
+	// RoundTrip errors happen before we receive a response, so for methods that
+	// may have side effects we cannot know whether the server processed the
+	// request. Limit transport-level retries to HTTP safe methods to avoid
+	// repeating requests that may have side effects.
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
+		return true
+	default:
+		return false
 	}
 }
 

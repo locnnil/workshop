@@ -34,8 +34,9 @@ const (
 
 	// defaultRetryAttempts defines the number of attempts that a default
 	// HTTPClient will retry before giving up.
-	// Retries are only performed on certain status codes, nothing in the 200 to
-	// 400 range and a select few from the 500 range (deemed retryable):
+	// Retries are performed on transient network timeout errors and certain
+	// status codes, nothing in the 200 to 400 range and a select few from the
+	// 500 range (deemed retryable):
 	//
 	// - http.StatusBadGateway
 	// - http.StatusGatewayTimeout
