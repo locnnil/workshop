@@ -210,10 +210,11 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 
 	err := cmd.Run(nil, nil)
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "cannot complete refresh for \"ws\", execution is paused\n\n"+
-		"To proceed, resolve the issue and run \"workshop refresh --continue ws\"\n"+
-		"To cancel and undo: \"workshop refresh --abort ws\"\n"+
-		"To view more information: \"workshop tasks 42\"")
+	c.Assert(err, check.ErrorMatches,
+		"cannot refresh \\\"ws\\\"; paused\n"+
+			"To view details: \\\"workshop tasks 42\\\"\n\n"+
+			"To abort and undo: \\\"workshop refresh --abort ws\\\"\n"+
+			"Otherwise, resolve the error, then run \\\"workshop refresh --continue ws\\\"")
 	c.Check(n, check.Equals, 4)
 }
 
