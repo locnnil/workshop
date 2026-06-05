@@ -250,6 +250,13 @@ func (m retryMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
 		Attempts: m.policy.Attempts,
 		Delay:    m.policy.Delay,
 		BackoffFunc: func(delay time.Duration, attempts int) time.Duration {
+			if res == nil {
+				// Transport errors do not have an HTTP response, so there is
+				// no Retry-After header to inspect. Fall back to the policy backoff.
+				var duration time.Duration
+				duration, backOffErr = m.clampBackoff(delay)
+				return duration
+			}
 			var duration time.Duration
 			duration, backOffErr = m.defaultBackoff(res, delay)
 			return duration
@@ -320,12 +327,6 @@ func isSafeMethod(method string) bool {
 //   - Retry-After: <http-date>
 //   - Retry-After: <delay-seconds>
 func (m retryMiddleware) defaultBackoff(resp *http.Response, backoff time.Duration) (time.Duration, error) {
-	if resp == nil {
-		// Transport errors do not have an HTTP response, so there is no
-		// Retry-After header to inspect. Fall back to the policy backoff.
-		return m.clampBackoff(backoff)
-	}
-
 	if header := resp.Header.Get("Retry-After"); header != "" {
 		// Attempt to parse the header from the request.
 		//
