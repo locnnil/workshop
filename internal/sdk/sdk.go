@@ -285,14 +285,8 @@ var SanitizePlugsSlots = func(snapInfo *Info) {
 
 func ReadSdkInfo(yamlData []byte, projectId, workshop string) (*Info, error) {
 	var sdkYaml sdkYaml
-	dec := yaml.NewDecoder(bytes.NewReader(yamlData))
-	dec.KnownFields(true)
-	if err := dec.Decode(&sdkYaml); err != nil {
-		te, ok := err.(*yaml.TypeError)
-		if ok {
-			errs := strings.Join(te.Errors, "\n")
-			return nil, fmt.Errorf("SDK definition YAML:\n%s", errs)
-		}
+	err := yaml.Unmarshal(yamlData, &sdkYaml)
+	if err != nil {
 		return nil, err
 	}
 
