@@ -164,10 +164,30 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 
 	chg, err := c.RunRefresh(cli, project, av)
 
+	var conflictErr client.ChangeConflictError
 	switch {
 	case err == nil:
 		fmt.Fprintf(Stdout, "%s refreshed\n", strutil.Quoted(av))
 	case errors.Is(err, errNoWait):
+	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh" &&
+		conflictErr.ChangeStatus == "Wait":
+		return fmt.Errorf(`
+cannot refresh %[1]q; paused
+To view details: "workshop tasks %[2]s"
+
+To abort and undo: "workshop refresh --abort %[1]s"
+Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"`[1:],
+			conflictErr.Workshop,
+			conflictErr.ChangeID,
+		)
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(`
+cannot refresh %[1]q: change %[2]s is in progress
+To view details: "workshop tasks %[3]s"`[1:],
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+			conflictErr.ChangeID,
+		)
 	case client.IsNoUpdatesAvailable(err):
 		fmt.Fprintf(Stdout, "no updates available for %s\n", strutil.Quoted(av))
 	case errors.Is(err, errUndone):

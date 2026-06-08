@@ -115,6 +115,119 @@ func (m *workshopRefresh) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
+// TestConflictInProgress checks that refresh explains a blocking in-progress
+// change and points the user to the task details.
+func (m *workshopRefresh) TestConflictInProgress(c *check.C) {
+	cmd := &CmdRefresh{root: &CmdRoot{}}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(
+				`{"type": "sync", "result": {"id":"%s","path":"%s"}}`,
+				m.prjId,
+				m.prjDir,
+			)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(
+				r.URL.Path,
+				check.Equals,
+				fmt.Sprintf("/v1/projects/%s/workshops", m.prjId),
+			)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, `{
+				"type": "error",
+				"status-code": 400,
+				"result": {
+					"kind": "change-conflict",
+					"message": "cannot refresh \\\"dev\\\": change is in progress",
+					"value": {
+						"change-id": "30",
+						"change-kind": "launch",
+						"change-status": "Do",
+						"project-id": "42424242",
+						"workshop": "dev"
+					}
+				}
+			}`)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(cmd.Command(), []string{"dev"})
+	c.Assert(
+		err,
+		check.ErrorMatches,
+		`
+cannot refresh "dev": change launch is in progress
+To view details: "workshop tasks 30"`[1:],
+	)
+}
+
+// TestConflictWaitingOnRefresh checks that refresh explains a paused refresh
+// conflict and shows the recovery commands.
+func (m *workshopRefresh) TestConflictWaitingOnRefresh(c *check.C) {
+	cmd := &CmdRefresh{root: &CmdRoot{}}
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(
+				`{"type": "sync", "result": {"id":"%s","path":"%s"}}`,
+				m.prjId,
+				m.prjDir,
+			)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(
+				r.URL.Path,
+				check.Equals,
+				fmt.Sprintf("/v1/projects/%s/workshops", m.prjId),
+			)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintln(w, `{
+				"type": "error",
+				"status-code": 400,
+				"result": {
+					"kind": "change-conflict",
+					"message": "cannot refresh \\\"dev\\\": waiting on error",
+					"value": {
+						"change-id": "29",
+						"change-kind": "refresh",
+						"change-status": "Wait",
+						"project-id": "42424242",
+						"workshop": "dev"
+					}
+				}
+			}`)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(cmd.Command(), []string{"dev"})
+	c.Assert(
+		err,
+		check.ErrorMatches,
+		`
+cannot refresh "dev"; paused
+To view details: "workshop tasks 29"
+
+To abort and undo: "workshop refresh --abort dev"
+Otherwise, resolve the error, then run "workshop refresh --continue dev"`[1:],
+	)
+}
+
 func (m *workshopRefresh) TestRefreshTransactionalSuccess(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	n := 0
