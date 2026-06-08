@@ -273,9 +273,9 @@ func (w *SdkManager) fillChannels(ctx context.Context, name string, full *SdkFul
 		}
 		channel = channel.Full()
 
-		// TODO: replace with fethcing the website URL from
+		// TODO: replace with fetching the website URL from
 		// the InfoMetadata when the store supports it.
-		if sdkYaml.Website != "" {
+		if full.Website == "" && sdkYaml.Website != "" {
 			full.Website = sdkYaml.Website
 		}
 
