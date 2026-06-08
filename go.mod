@@ -3,15 +3,15 @@ module github.com/canonical/workshop
 go 1.26.2
 
 require (
-	github.com/adrg/xdg v0.4.0
+	github.com/adrg/xdg v0.5.3
 	github.com/canonical/gencodo v0.2.1
 	github.com/canonical/lxd v0.0.0-20260521084752-704f941eaeb2
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/gorilla/websocket v1.5.1
-	github.com/jessevdk/go-flags v1.5.0
+	github.com/gorilla/websocket v1.5.3
+	github.com/jessevdk/go-flags v1.6.1
 	github.com/juju/clock v1.1.1
 	github.com/juju/retry v1.0.1
 	github.com/pkg/sftp v1.13.10
@@ -20,9 +20,9 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	go.uber.org/mock v0.6.0
-	golang.org/x/crypto v0.51.0
-	golang.org/x/net v0.54.0
-	golang.org/x/sys v0.44.0
+	golang.org/x/crypto v0.52.0
+	golang.org/x/net v0.55.0
+	golang.org/x/sys v0.45.0
 	golang.org/x/term v0.43.0
 	golang.org/x/text v0.37.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
