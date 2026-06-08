@@ -169,9 +169,8 @@ func (m *workshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches,
-		"cannot refresh \\\"ws\\\", \\\"ws-1\\\": aborted\n"+
-			"To view details: \\\"workshop tasks 42\\\"")
+	c.Assert(err, check.ErrorMatches, `cannot refresh "ws", "ws-1": aborted
+To view details: "workshop tasks 42"`)
 	c.Check(n, check.Equals, 3)
 }
 
@@ -210,11 +209,16 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorFailed(c *check.C) {
 
 	err := cmd.Run(nil, nil)
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches,
-		"cannot refresh \\\"ws\\\"; paused\n"+
-			"To view details: \\\"workshop tasks 42\\\"\n\n"+
-			"To abort and undo: \\\"workshop refresh --abort ws\\\"\n"+
-			"Otherwise, resolve the error, then run \\\"workshop refresh --continue ws\\\"")
+	c.Assert(
+		err,
+		check.ErrorMatches,
+		`
+cannot refresh "ws"; paused
+To view details: "workshop tasks 42"
+
+To abort and undo: "workshop refresh --abort ws"
+Otherwise, resolve the error, then run "workshop refresh --continue ws"`[1:],
+	)
 	c.Check(n, check.Equals, 4)
 }
 
