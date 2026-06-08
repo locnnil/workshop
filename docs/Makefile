@@ -76,12 +76,15 @@ pa11y-install:
 		}
 
 lychee-install:
+# A confined lychee snap cannot read documentation sources outside its mount namespace
+# (e.g. the workshop's /project bind mount), even in devmode, so install the unconfined
+# upstream binary when lychee is absent. Any pre-existing lychee (snap or binary) on PATH
+# is left as-is and used, so a host's lychee snap is never removed or shadowed.
 	@command -v lychee >/dev/null 2>&1 || { \
 			OS=$$(uname -s); \
 			if [ "$$OS" = "Linux" ]; then \
-				echo "Installing lychee via snap..."; \
-				sudo snap install lychee || { \
-					echo "snap failed, trying wget binary fallback..."; \
+				echo "Installing unconfined lychee v$(LYCHEE_VERSION) binary..."; \
+				{ \
 					ARCH=$$(uname -m); \
 					TARBALL="lychee-$$ARCH-unknown-linux-gnu.tar.gz"; \
 					wget -q "https://github.com/lycheeverse/lychee/releases/download/lychee-v$(LYCHEE_VERSION)/$$TARBALL" -O /tmp/$$TARBALL || { \
@@ -89,10 +92,10 @@ lychee-install:
 						echo "Please install manually from https://github.com/lycheeverse/lychee/releases"; \
 						exit 1; \
 					}; \
-					tar -xzf /tmp/$$TARBALL -C /tmp; \
-					sudo mv /tmp/lychee /usr/local/bin/lychee; \
-					rm -f /tmp/$$TARBALL; \
-					echo "lychee installed via wget binary fallback."; \
+					rm -rf /tmp/lychee-dl && mkdir -p /tmp/lychee-dl && tar -xzf /tmp/$$TARBALL -C /tmp/lychee-dl; \
+					sudo install -m 0755 "$$(find /tmp/lychee-dl -type f -name lychee | head -1)" /usr/local/bin/lychee; \
+					rm -rf /tmp/lychee-dl /tmp/$$TARBALL; \
+					echo "lychee v$(LYCHEE_VERSION) installed to /usr/local/bin."; \
 				}; \
 			elif [ "$$OS" = "Darwin" ]; then \
 				echo "Installing lychee via brew..."; \
