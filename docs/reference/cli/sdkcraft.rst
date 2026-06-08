@@ -58,6 +58,9 @@ and also has a number of global flags:
 .. include:: sdkcraft-release.rst
 
 
+.. include:: sdkcraft-revisions.rst
+
+
 .. include:: sdkcraft-upload.rst
 
 
