@@ -92,8 +92,19 @@ lychee-install:
 						echo "Please install manually from https://github.com/lycheeverse/lychee/releases"; \
 						exit 1; \
 					}; \
-					rm -rf /tmp/lychee-dl && mkdir -p /tmp/lychee-dl && tar -xzf /tmp/$$TARBALL -C /tmp/lychee-dl; \
-					sudo install -m 0755 "$$(find /tmp/lychee-dl -type f -name lychee | head -1)" /usr/local/bin/lychee; \
+					rm -rf /tmp/lychee-dl && mkdir -p /tmp/lychee-dl && tar -xzf /tmp/$$TARBALL -C /tmp/lychee-dl || { \
+						echo "ERROR: Failed to extract lychee archive."; \
+						exit 1; \
+					}; \
+					LYCHEE_BIN=$$(find /tmp/lychee-dl -type f -name lychee | head -1); \
+					test -n "$$LYCHEE_BIN" || { \
+						echo "ERROR: lychee binary not found in extracted archive."; \
+						exit 1; \
+					}; \
+					sudo install -m 0755 "$$LYCHEE_BIN" /usr/local/bin/lychee || { \
+						echo "ERROR: Failed to install lychee binary to /usr/local/bin."; \
+						exit 1; \
+					}; \
 					rm -rf /tmp/lychee-dl /tmp/$$TARBALL; \
 					echo "lychee v$(LYCHEE_VERSION) installed to /usr/local/bin."; \
 				}; \
