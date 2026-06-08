@@ -174,13 +174,22 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(Stdout, "%s refresh aborted\n", strutil.Quoted(av))
 	case errors.Is(err, errWaitOnError):
 		w := workshopName(av[0])
-		return fmt.Errorf(`cannot complete refresh for %q, execution is paused
+		return fmt.Errorf(`
+cannot refresh %[1]q; paused
+To view details: "workshop tasks %[2]s"
 
-To proceed, resolve the issue and run "workshop refresh --continue %s"
-To cancel and undo: "workshop refresh --abort %s"
-To view more information: "workshop tasks %s"`, w, w, w, chg.ID)
+To abort and undo: "workshop refresh --abort %[1]s"
+Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"`[1:],
+			w,
+			chg.ID,
+		)
 	default:
-		return fmt.Errorf("%v\n%s refresh aborted", err, strutil.Quoted(av))
+		return fmt.Errorf(`
+cannot refresh %s: aborted
+To view details: "workshop tasks %s"`[1:],
+			strutil.Quoted(av),
+			chg.ID,
+		)
 	}
 
 	return nil
