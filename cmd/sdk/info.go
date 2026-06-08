@@ -17,6 +17,7 @@ package main
 import (
 	"cmp"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 	"text/tabwriter"
@@ -115,6 +116,13 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	}
 	if info.License != "" {
 		fmt.Fprintf(w, "license:\t%s\n", info.License)
+	}
+	if info.Website != "" {
+		website := info.Website
+		if u, err := url.Parse(info.Website); err == nil {
+			website = esc.MakeLink(info.Website, u, info.Website)
+		}
+		fmt.Fprintf(w, "website:\t%s\n", website)
 	}
 
 	if info.Description != "" {

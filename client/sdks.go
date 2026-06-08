@@ -65,6 +65,7 @@ type SdkFullInfo struct {
 	Summary     string         `json:"summary,omitempty"`
 	Description string         `json:"description,omitempty"`
 	License     string         `json:"license,omitempty"`
+	Website     string         `json:"website,omitempty"`
 	Publisher   *StoreAccount  `json:"publisher,omitempty"`
 	Channels    []*SdkRevision `json:"channels,omitempty"`
 	Installed   []SdkInstalled `json:"installed,omitempty"`

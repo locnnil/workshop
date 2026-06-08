@@ -408,7 +408,7 @@ func (s *apiSuite) TestSdkInfoGetOk(c *check.C) {
 					Download:  transport.Download{Size: 1234},
 					Revision:  85,
 					Version:   "2.1-084c8c8",
-					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-20T00:00:00+00:00"}`),
+					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-20T00:00:00+00:00","website": "https://openvino.ai"}`),
 				},
 			}, {
 				Channel: transport.Channel{
@@ -477,6 +477,7 @@ sdkcraft-started-at: 2024-11-20T00:00:00+00:00
 version: 2.0
 summary: Intel OpenVINO toolkit (legacy)
 description: Legacy release
+website: https://openvino.ai
 sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 `,
 	}
@@ -501,6 +502,7 @@ sdkcraft-started-at: 2024-11-25T00:00:00+00:00
 	c.Check(full.Summary, check.Not(check.Equals), "")
 	c.Check(full.Description, check.Equals, "Accelerated toolkit")
 	c.Check(full.License, check.Equals, "Apache-2.0")
+	c.Check(full.Website, check.Equals, "https://openvino.ai")
 	c.Check(full.Publisher, check.DeepEquals, &sdkstate.StoreAccount{
 		ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
 		Username:    "hunter2",
@@ -608,7 +610,7 @@ func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
 					Download:  transport.Download{Size: 1234},
 					Revision:  85,
 					Version:   "2.1-084c8c8",
-					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-20T00:00:00+00:00"}`),
+					SdkYAML:   json.RawMessage(`{"sdkcraft-started-at": "2024-11-20T00:00:00+00:00","website": "https://openvino.ai"}`),
 				},
 			}},
 		}, nil
@@ -633,6 +635,7 @@ func (s *apiSuite) TestSdkInfoStoreOnly(c *check.C) {
 	c.Check(full.Summary, check.Equals, "")
 	c.Check(full.Description, check.Equals, "Accelerated toolkit")
 	c.Check(full.License, check.Equals, "Apache-2.0")
+	c.Check(full.Website, check.Equals, "https://openvino.ai")
 	c.Check(full.Publisher, check.DeepEquals, &sdkstate.StoreAccount{
 		ID:          "ZeW8fMKBPHZBsaSm6LBPbpDZDpVcIHy1",
 		Username:    "hunter2",
