@@ -17,8 +17,9 @@ package client_test
 import (
 	"errors"
 
-	"github.com/canonical/workshop/client"
 	"gopkg.in/check.v1"
+
+	"github.com/canonical/workshop/client"
 )
 
 // errorSuite checks structured API error conversion behaviour.
