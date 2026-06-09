@@ -16,6 +16,13 @@ execute: |
   echo "Check the workshop is in Waiting state"
   workshop_exec list | MATCH "^ws-refresh-abort[[:space:]]+Waiting[[:space:]]+wait-on-error$"
 
+  echo "Check refresh explains the blocking refresh conflict"
+  ! workshop_exec refresh > error.log 2>&1 || false
+  MATCH '^error: cannot refresh "ws-refresh-abort"; paused$' < error.log
+  MATCH '^To view details: "workshop tasks [0-9]+"$' < error.log
+  MATCH '^To abort and undo: "workshop refresh --abort ws-refresh-abort"$' < error.log
+  MATCH '^Otherwise, resolve the error, then run "workshop refresh --continue ws-refresh-abort"$' < error.log
+
   echo "Check the \"workshop refresh --abort\" command reverts to the previous state"
   workshop_exec refresh --abort | MATCH "\"ws-refresh-abort\" refresh aborted"
   workshop_exec list | MATCH "^ws-refresh-abort[[:space:]]+Ready[[:space:]]+-$"
