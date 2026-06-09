@@ -2,8 +2,9 @@
 
 .. meta::
    :description: Reference for Workshop's AI-agent integration points,
-                 listing the LLM-readable documentation URLs and the
-                 use-workshop and sdk-designer agentic skills.
+                 listing the LLM-readable documentation URLs, the Context7
+                 integration, and the use-workshop and sdk-designer
+                 agentic skills.
 
 Workshop and AI agents
 ======================
@@ -13,6 +14,7 @@ Workshop and AI agents
 
 |ws_markup| integrates with AI coding agents,
 exposing documentation as Markdown that agents can fetch and parse directly,
+or retrieve through Context7,
 and agentic skills that wrap |ws_markup| and |sdk_markup| operations
 so agents don't have to rediscover the CLIs every session.
 
@@ -35,6 +37,17 @@ append :file:`.md` to its URL.
 For example,
 this page is available at
 :samp:`https://ubuntu.com/workshop/docs/reference/ai-agents.md`.
+
+
+.. _ref_ai_context7:
+
+Context7
+--------
+
+`Context7 <https://context7.com/canonical/workshop>`_
+indexes the |ws_markup| documentation
+and serves it to AI agents through its Model Context Protocol (MCP) server,
+so agents can pull current docs without scraping the site.
 
 
 .. _ref_ai_use_workshop_skill:
