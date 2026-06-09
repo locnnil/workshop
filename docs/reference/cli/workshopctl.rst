@@ -49,8 +49,9 @@ The arguments are as follows:
      - Can be :samp:`okay`, :samp:`waiting` or :samp:`error`.
 
    * - :samp:`<MESSAGE>`
-     - Required with :option:`!--code`
-     - Arbitrary string explaining the context of the error code;
+     - Required when :samp:`<STATUS>` is :samp:`waiting` or :samp:`error`;
+       not allowed with :samp:`okay`
+     - Arbitrary string explaining the status;
        7–70 characters.
 
 
