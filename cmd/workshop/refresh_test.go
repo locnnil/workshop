@@ -105,6 +105,10 @@ var mockChangeWithError = `{"type": "sync", "result":{
     "tasks": [{"kind": "bar", "summary": "some summary", "status": "Undone", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z"},{"kind": "foo", "summary": "some summary", "status": "Error", "progress": {"done": 1, "total": 1}, "spawn-time": "2015-02-21T01:02:03Z", "ready-time": "2015-02-21T01:02:04Z" , "log":["2015-02-21T01:02:03Z ERROR No answer found"], "data":{"workshop":["ws","ws-1"]}}]
 }}`
 
+var mockSyncError = `{"type":"error","status-code":400,"status":"Bad Request","result":{
+    "message":"\"dev\" workshop file must be named \"dev.yaml\" (now: \"workshop.yaml\")"
+}}`
+
 func (m *workshopRefresh) SetUpTest(c *check.C) {
 	m.prjDir = c.MkDir()
 	m.prjId = "42424242"
@@ -290,4 +294,31 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C
 	c.Assert(err, check.IsNil)
 	c.Assert(m.stdout.String(), check.Matches, `"ws" refreshed\n`)
 	c.Check(n, check.Equals, 3)
+}
+
+func (m *workshopRefresh) TestRefreshHandlesSyncError(c *check.C) {
+	cmd := &CmdRefresh{root: &CmdRoot{}}
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(400)
+			fmt.Fprintln(w, mockSyncError)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(nil, []string{"workshop"})
+	c.Assert(err, check.ErrorMatches, `cannot refresh "workshop": "dev" workshop file must be named "dev.yaml" \(now: "workshop.yaml"\)`)
+	c.Check(n, check.Equals, 2)
 }

@@ -183,13 +183,15 @@ Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"`[1:],
 			w,
 			chg.ID,
 		)
-	default:
+	case chg != nil:
 		return fmt.Errorf(`
 cannot refresh %s: aborted
 To view details: "workshop tasks %s"`[1:],
 			strutil.Quoted(av),
 			chg.ID,
 		)
+	default:
+		return fmt.Errorf("cannot refresh %s: %w", strutil.Quoted(av), err)
 	}
 
 	return nil
