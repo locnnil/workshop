@@ -100,7 +100,7 @@ From here, you can do whatever you like with your repo,
 because |ws_markup| handles
 :ref:`moving projects around <how_move_projects>` quite well.
 
-Don't forget to add the :file:`.lock` file to your :file:`.gitignore` file:
+Don't forget to add the :file:`.workshop.lock` file to your :file:`.gitignore` file:
 
 .. code-block:: console
 

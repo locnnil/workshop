@@ -26,7 +26,7 @@ and run :command:`workshop launch`.
 Launching a workshop from a project
 establishes the relationship between the two
 that's required to actually start a workshop.
-This is achieved with a hidden :file:`.lock` file,
+This is achieved with a hidden :file:`.workshop.lock` file,
 which must remain in the project directory
 and must not be copied or stored externally, e.g., in a repository.
 

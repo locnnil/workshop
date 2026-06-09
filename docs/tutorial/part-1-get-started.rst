@@ -355,7 +355,7 @@ and the revision shown matches the one in :command:`workshop info`.
 .. @artefact workshop .lock
 
 After launch, |ws_markup| tracks the project directory
-using a hidden :file:`.lock` file
+using a hidden :file:`.workshop.lock` file
 that must remain in the project directory
 and **not be copied or stored externally**, e.g., in a repository.
 
@@ -407,7 +407,7 @@ In the next step, you'll refresh an existing workshop.
 
 .. note::
 
-   Consider adding the :file:`.lock` file
+   Consider adding the :file:`.workshop.lock` file
    to your :file:`.gitignore` or similar ignore files:
 
    .. code-block:: console
