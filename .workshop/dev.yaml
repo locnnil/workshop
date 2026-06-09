@@ -11,13 +11,13 @@ sdks:
         endpoint: 8000
 actions:
   docs-html: |
-    make -C docs/ html
+    make -C docs/ DOCS_VENVDIR="$HOME/.docs-venv" html
   docs-run: |
-    make -C docs/ run
+    make -C docs/ DOCS_VENVDIR="$HOME/.docs-venv" run
   docs-clean: |
     make -C docs/ clean-doc
   docs-check: |
-    make -C docs/ spelling linkcheck woke lint-md
+    make -C docs/ DOCS_VENVDIR="$HOME/.docs-venv" spelling linkcheck woke lint-md
   lint: |
     golangci-lint run
     golangci-lint run --new-from-rev='HEAD~' --config=.golangci.incremental.yaml
