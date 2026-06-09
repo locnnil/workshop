@@ -1106,27 +1106,33 @@ runcmd:
   - networkctl reload
 `[1:]
 
-	dot := struct {
-		Format int
-	}{
-		Format: format.N,
-	}
-
-	var cloudConfig strings.Builder
-	if err := template.Must(template.New("cloud-config").Parse(cloudConfigTemplate)).Execute(&cloudConfig, dot); err != nil {
-		panic(err)
-	}
-
 	// Based on lxd-imagebuilder Ubuntu template. By default
 	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
 	// which can change when refreshing to a new base image.
-	networkConfig := `network:
+	networkConfigTemplate := `network:
   version: 2
   ethernets:
     eth0:
       dhcp4: true
       dhcp-identifier: mac
+{{- if gt .Format 2}}
+      nameservers:
+        search: [{{printf "%s.%s" .ProjectID .Domain | printf "%q"}}, {{printf "%q" .Domain}}]
+{{else}}
+{{end -}}
 `
+
+	dot := struct {
+		Format    int
+		Domain    string
+		ProjectID string
+	}{
+		Format:    format.N,
+		Domain:    networkDomain,
+		ProjectID: projectId,
+	}
+	cloudConfig := mustExecute("cloud-config", cloudConfigTemplate, dot)
+	networkConfig := mustExecute("network-config", networkConfigTemplate, dot)
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
@@ -1139,7 +1145,7 @@ runcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"user.user-data":                 cloudConfig.String(),
+		"user.user-data":                 cloudConfig,
 		"user.network-config":            networkConfig,
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
@@ -1155,6 +1161,20 @@ runcmd:
 	}
 
 	return cfg, nil
+}
+
+func mustExecute(name, text string, dot any) string {
+	t, err := template.New(name).Parse(text)
+	if err != nil {
+		panic(err)
+	}
+
+	var builder strings.Builder
+	if err := t.Execute(&builder, dot); err != nil {
+		panic(err)
+	}
+
+	return builder.String()
 }
 
 func FakeStartCommand(script string) func() {
