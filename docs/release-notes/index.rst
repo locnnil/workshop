@@ -52,7 +52,6 @@ Latest version
    These versions are no longer supported.
 
 - :doc:`Workshop v0.9.0 <v0.9.0>`
-- :doc:`Workshop v0.9.0 <v0.9.0>`
 - `Workshop v0.1.30 <https://github.com/canonical/workshop/releases/tag/v0.1.30>`_
 - `Workshop v0.1.29 <https://github.com/canonical/workshop/releases/tag/v0.1.29>`_
 
