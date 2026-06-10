@@ -80,7 +80,7 @@ func (m *workshopStop) TestStopChangeConflictInProgress(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{"dev"})
 	c.Assert(err, check.ErrorMatches,
-		"cannot stop \\\"dev\\\": change launch is in progress\n"+
+		"cannot stop \\\"dev\\\": tasks are in progress\n"+
 			"To view details: \\\"workshop tasks 30\\\"")
 }
 
@@ -129,7 +129,7 @@ func (m *workshopStop) TestStopChangeConflictWaiting(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{"dev"})
 	c.Assert(err, check.ErrorMatches,
-		"cannot stop \\\"dev\\\": refresh change is waiting on error\n"+
+		"cannot stop \\\"dev\\\": a refresh task is waiting on error\n"+
 			"To view details: \\\"workshop tasks 29\\\"\n\n"+
 			"To abort and undo the refresh: \\\"workshop refresh --abort dev\\\"\n"+
 			"Otherwise, resolve the error, then run \\\"workshop refresh --continue dev\\\"\n"+
