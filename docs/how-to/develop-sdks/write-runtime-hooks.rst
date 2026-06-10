@@ -1,7 +1,7 @@
 .. _how_write_runtime_hooks:
 
 .. meta::
-   :description: Write the five SDK lifecycle hooks (setup-base, setup-project,
+   :description: Write the five SDK runtime hooks (setup-base, setup-project,
                  check-health, save-state, restore-state) so that an SDK
                  participates in the workshop launch and refresh lifecycle.
 
@@ -16,7 +16,7 @@ How to write runtime hooks
 .. @artefact restore-state
 
 This guide shows how to write each of the five
-:ref:`SDK lifecycle hooks <exp_sdk_hooks>`,
+runtime hooks an SDK can ship,
 with a synthesized SDK that exercises the contract differences:
 which user the hook runs as,
 which working directory it starts in,
@@ -34,13 +34,14 @@ Prerequisites
 You need a working |sdk_markup| installation
 and a workshop you can launch and refresh
 on a host with |ws_markup| installed.
-This guide assumes a synthesized SDK named :file:`dotfiles-sdk`,
-scaffolded with :command:`sdkcraft init`,
-as covered in :ref:`how_declare_plugs_slots`.
+The examples use a synthesized SDK named :file:`dotfiles-sdk`.
+If you don't have an SDK yet,
+:ref:`tut_craft_sdks` walks through scaffolding one with
+:command:`sdkcraft init`.
 
 
-Where hooks live
-----------------
+Lay out the hooks directory
+---------------------------
 
 |sdk_markup| picks up any executable file in the SDK's :file:`hooks/` directory
 whose name matches one of the five hook names.
@@ -68,9 +69,11 @@ Write setup-base
 ----------------
 
 :samp:`setup-base` runs as :samp:`root`,
-once per launch or refresh,
 before the project directory is mounted
 and before plugs and slots are connected.
+It runs when the SDK is installed
+and again when its revision changes;
+a refresh that leaves the SDK intact skips it.
 The working directory is the SDK's own :file:`hooks/` directory.
 Use it for system-wide preparation
 that other SDKs in the workshop may want to rely on:
@@ -120,10 +123,12 @@ Write check-health
 :samp:`check-health` runs as :samp:`root`
 from the SDK's :file:`hooks/` directory.
 It is meant to be quick:
-|ws_markup| waits at most five seconds
-for :command:`workshopctl set-health` to be called.
-If the hook neither exits nor calls :samp:`set-health` within that window,
-the SDK's health is set to :samp:`error`.
+each attempt has five seconds
+to report its result through :command:`workshopctl set-health`
+and exit.
+A hook that runs past that window,
+or exits without reporting a status,
+moves the SDK's health to :samp:`error`.
 
 Call :command:`workshopctl set-health okay`
 when everything is in order;
@@ -192,14 +197,23 @@ that was originally launched without :samp:`save-state`.
 Verify the hooks
 ----------------
 
-Try the SDK in place:
+Build and install the SDK into a workshop with :command:`sdkcraft try`:
 
 .. code-block:: console
 
    $ sdkcraft try
 
 
-Add the SDK to a workshop and launch it:
+List the SDK in a workshop definition with the :samp:`try-` prefix
+and launch the workshop:
+
+.. code-block:: yaml
+   :caption: .workshop/dev.yaml
+
+   name: dev
+   base: ubuntu@22.04
+   sdks:
+     - name: try-dotfiles-sdk
 
 .. code-block:: console
 
@@ -222,9 +236,10 @@ Confirm:
 
    $ workshop info dev
 
-     name: dev
-     ...
-     status: ready
+     name:     dev
+     base:     ubuntu@22.04
+     project:  /home/user/workshop/dev
+     status:   ready
 
 
 :samp:`save-state` and :samp:`restore-state` only run
@@ -236,9 +251,9 @@ A bare :command:`workshop refresh dev` against an unchanged workshop
 is a no-op and skips every hook.
 
 To exercise the state hooks,
-bump the SDK to a new revision (for example, with :command:`sdkcraft pack`
-followed by reinstalling it in the workshop)
-or edit the workshop definition so the refresh has something to apply.
+edit the workshop definition so the refresh has something to apply,
+for example by adding a mount,
+and run :command:`workshop refresh` for the workshop.
 After the refresh,
 :file:`.dotfiles-restored-uid` exists in the workshop user's home,
 confirming that :samp:`save-state` wrote into :envvar:`$SDK_STATE_DIR`
@@ -252,6 +267,7 @@ Explanation:
 
 - :ref:`exp_sdk_best_practices`
 - :ref:`exp_sdk_hooks`
+- :ref:`exp_workshopctl_cli`
 
 
 Reference:

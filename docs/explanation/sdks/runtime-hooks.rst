@@ -34,7 +34,7 @@ so they do not need to be listed in the
 The five hooks
 --------------
 
-|ws_markup| recognises five hooks,
+|ws_markup| recognizes five hooks,
 each one answering a different question about the SDK's relationship
 to the workshop.
 
@@ -126,7 +126,9 @@ not no environment at all):
    * - :samp:`setup-project`
      - :file:`/project/`
      - The :samp:`workshop` user
-     - None
+     - :envvar:`$HOME`,
+       :envvar:`$XDG_RUNTIME_DIR`,
+       :envvar:`$DBUS_SESSION_BUS_ADDRESS`
 
    * - :samp:`check-health`
      - The SDK's :file:`hooks/` directory
@@ -176,6 +178,7 @@ Talking back with workshopctl
 
 .. @artefact workshopctl
 .. @artefact workshop status
+.. @artefact SDK health
 
 From inside a hook,
 the SDK can call :program:`workshopctl`
@@ -240,6 +243,7 @@ Explanation:
 - :ref:`exp_sdk_best_practices`
 - :ref:`exp_sdk_concepts`
 - :ref:`exp_sdks`
+- :ref:`exp_workshopctl_cli`
 
 
 Reference:
