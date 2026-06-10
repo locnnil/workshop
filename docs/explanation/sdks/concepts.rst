@@ -55,12 +55,12 @@ A build-time definition looks like this:
    :caption: sdkcraft.yaml
 
 
-Lifecycle hooks
----------------
+Runtime hooks
+-------------
 
 .. @artefact SDK hook
 
-|ws_markup| and |sdk_markup| enable optional lifecycle hooks
+|ws_markup| and |sdk_markup| enable optional runtime hooks
 that let an SDK extend the workshop's internal behavior.
 Hooks live in the :file:`hooks/` subdirectory next to the SDK definition
 and run as bash scripts at well-defined points

@@ -50,11 +50,9 @@ Develop SDKs
 
 .. @artefact SDK
 
-The work of building SDKs with |sdk_markup|
-and publishing them to the SDK Store
-involves handling plug and slot declarations, mount ownership,
-and the lifecycle hooks an SDK ships
-to participate in the workshop runtime:
+These guides cover the work of authoring an SDK with |sdk_markup|,
+from project layout and interface declarations
+to runtime hooks and publishing to the SDK Store:
 
 .. toctree::
    :titlesonly:
