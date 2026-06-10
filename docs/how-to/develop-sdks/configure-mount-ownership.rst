@@ -3,20 +3,25 @@
 .. meta::
    :description: Configure ownership and permissions on mount interface plugs
                  by setting uid, gid, mode, and read-only attributes,
-                 overriding the path-aware defaults that |ws_markup| applies.
+                 overriding the path-based defaults that Workshop applies.
 
 How to configure mount ownership
 ================================
 
+.. @tests in tests/docs-how-to/configure-mount-ownership/task.yaml
+
 .. @artefact mount interface
 .. @artefact interface plug
 
-This guide shows how an SDK author tunes ownership and permissions
+This guide shows how to tune ownership and permissions
 on a :samp:`mount` interface plug,
 overriding the defaults that |ws_markup| derives from the target path.
 
 By default, |ws_markup| applies the following rules
-when a mount plug omits ownership and permission attributes:
+when a mount plug omits ownership and permission attributes.
+The attributes take effect when |ws_markup| creates the target path
+and any missing parent directories;
+a path that already exists keeps its ownership and permissions.
 
 - :samp:`uid` and :samp:`gid` default to :samp:`1000`
   when :samp:`workshop-target` is at or below
@@ -25,26 +30,35 @@ when a mount plug omits ownership and permission attributes:
   or :file:`/run/user/1000`.
   Otherwise, both default to :samp:`0` (root).
 
-- :samp:`mode` defaults to :samp:`0o775`
-  when the owner is the :samp:`workshop` user,
-  or :samp:`0o755` when the owner is root.
+- :samp:`mode` defaults to :samp:`0o755` when the :samp:`uid`,
+  set explicitly or resolved by the previous rule, is :samp:`0` (root),
+  and to :samp:`0o775` otherwise.
   The maximum allowed value is :samp:`0o777`.
 
 - :samp:`read-only` defaults to :samp:`false`.
 
 
-Override the defaults when a mount lives outside the path-aware home tree,
+Override the defaults when a mount lives outside the user-owned paths,
 when a mount stores secrets that should not be world-readable,
 or when the SDK should not be able to write to the mount.
 
 
-Set explicit ownership outside the home tree
---------------------------------------------
+Prerequisites
+-------------
 
-For a mount whose target lives outside :file:`/home/workshop/`,
-:file:`/project/`, or :file:`/run/user/1000/`,
+You need an :file:`sdkcraft.yaml` that declares at least one mount plug;
+:ref:`ref_sdk_plugs_slots` covers the declarations.
+The attributes below extend the plug entries
+under the top-level :samp:`plugs:` key.
+
+
+Set explicit ownership outside the user-owned paths
+----------------------------------------------------
+
+For a mount whose target lives outside :file:`/home/workshop`,
+:file:`/project`, or :file:`/run/user/1000`,
 the ownership defaults to root.
-If the :samp:`workshop` user has to read or write the mount,
+If the :samp:`workshop` user needs to read or write the mount,
 set :samp:`uid` and :samp:`gid` to :samp:`1000`:
 
 .. code-block:: yaml
@@ -57,6 +71,13 @@ set :samp:`uid` and :samp:`gid` to :samp:`1000`:
        workshop-target: /var/lib/example
        uid: 1000
        gid: 1000
+
+
+An explicit :samp:`uid` doesn't change the default for :samp:`gid`,
+which still follows the target path,
+so set both attributes.
+The default :samp:`mode`, in contrast, follows the resolved owner
+and becomes :samp:`0o775` here.
 
 
 Tighten permissions for a private mount
@@ -77,7 +98,7 @@ so that only the owning user can access it:
        mode: 0o700
 
 
-The owner inherits the path-aware default
+The owner keeps the path-based default
 (here, the workshop user, since the target is under :file:`/home/workshop`).
 
 
@@ -105,7 +126,7 @@ that the SDK consumes but never writes to.
 Verify inside a workshop
 ------------------------
 
-After packing the SDK, listing it in a workshop, and launching the workshop,
+After adding the SDK to a workshop definition and launching the workshop,
 inspect the mounts to confirm the applied ownership and permissions.
 The numeric uid and gid show how |ws_markup| resolved the attributes:
 
@@ -144,3 +165,8 @@ Reference:
 
 - :ref:`ref_mount_interface`
 - :ref:`ref_sdk_plugs_slots`
+
+
+Tutorial:
+
+- :ref:`tut_craft_sdks`
