@@ -40,6 +40,12 @@ exclude = [
     # gnu.org blocks bot User-Agents with 403; valid references
     "^https://www\\.gnu\\.org/",
 
+    # Intermittent "Connection reset by peer" (os error 104) on these hosts —
+    # transient CI-side network failures, not broken links
+    "^https://documentation\\.ubuntu\\.com/",
+    "^https://snapcraft\\.io/",
+    "^https://canonical\\.com/",
+
     # Transient overrides before public release
     "^https://ubuntu\\.com/workshop/",
     "^https://github\\.com/canonical/sdkcraft",

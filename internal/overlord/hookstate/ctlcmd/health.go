@@ -30,19 +30,21 @@ import (
 var (
 	shortHealthHelp = "Report the health status of an SDK"
 	longHealthHelp  = `
- The set-health command is called from within a workshop to inform the system of the
- SDK's overall health.
+ The set-health command is called from within a workshop
+ to inform the system of the SDK's overall health.
+
+ It can only be called from the optional 'check-health' hook,
+ which runs when SDK health is checked (e.g. during launch or refresh)
+ and retried while the SDK reports as 'waiting'.
+ If the SDK reports an 'error', the hook fails with the provided message.
+
+ - status: One of 'okay', 'waiting', 'error'.
+
+ - code: An optional note matching regex '[a-z](?:-?[a-z0-9])+', e.g. 'missing-cuda';
+   3-30 characters. Must be empty if the status is 'okay'.
  
- It can be called from any hook. An SDK can
- optionally provide a 'check-health' hook to manage these calls, which is
- then called periodically and with increased frequency while the SDK is
- "waiting". Any health regression will issue a warning to the user.
- 
- - status: One of okay, waiting, error.
- 
- - error-code: An optional note matching regex '[a-z](?:-?[a-z0-9])+', e.g. missing-cuda; up to 20 symbols.
- 
- - message: A user-friendly message expanding the status, 7-70 lines long. Required if the status is 'waiting' or 'error'.
+ - message: A user-friendly message expanding the status, 7-70 characters long.
+   Must be empty if the status is 'okay'; required if the status is 'waiting' or 'error'.
  `
 )
 
