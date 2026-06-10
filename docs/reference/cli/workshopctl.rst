@@ -50,7 +50,7 @@ The arguments are as follows:
 
    * - :samp:`<MESSAGE>`
      - Required when :samp:`<STATUS>` is :samp:`waiting` or :samp:`error`;
-       not allowed with :samp:`okay`
+       not allowed with :samp:`okay`.
      - Arbitrary string explaining the status;
        7–70 characters.
 

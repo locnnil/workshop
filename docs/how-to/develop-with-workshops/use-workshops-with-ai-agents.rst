@@ -189,12 +189,12 @@ Even with :samp:`--yolo` or :samp:`--dangerously-skip-permissions`,
 any changes done by an agent remain contained inside the workshop.
 
 Save the definition and add it to :file:`.gitignore`,
-along with the :samp:`.lock` pattern:
+along with the :file:`.workshop.lock` file:
 
 .. code-block:: console
 
    $ cat >> .gitignore << EOF
-   *.lock
+   .workshop.lock
    .workshop.yaml
    EOF
 
