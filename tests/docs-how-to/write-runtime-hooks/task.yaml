@@ -22,6 +22,7 @@ execute: |
   echo "check-health called workshopctl set-health okay; workshop info reflects that."
   workshop_exec info dev | MATCH '^status:[[:space:]]+ready'
 
-  # save-state and restore-state only fire when refresh actually swaps the SDK
-  # to a new revision. In-project SDKs do not have a new revision to swap to,
-  # so the hooks are shipped as documented examples but not exercised here.
+  echo "A refresh with definition changes runs save-state before the rebuild and restore-state after it."
+  cp dev.updated.yaml .workshop/dev.yaml
+  workshop_exec refresh dev
+  workshop_exec exec dev -- cat /home/workshop/.dotfiles-restored-uid | MATCH '^1000$'
