@@ -151,6 +151,44 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
 }
 
+func (s *hookSuite) TestExecHookPathError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "one", 0, hookstate.SetupBase)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	// Launch a workshop with a malformed SDK layout: hooks is a regular file
+	// instead of a directory. Stat() on sdk/hooks/setup-base then returns
+	// ENOTDIR and should be reported as a task error rather than panicking.
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
+	c.Check(err, check.IsNil)
+
+	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	defer ws.Close()
+	err = ws.MkdirAll(filepath.Dir(sdk.SdkHooksDir("one")), 0755)
+	c.Check(err, check.IsNil)
+	err = ws.WriteFile(sdk.SdkHooksDir("one"), []byte("not a directory"), 0644)
+	c.Check(err, check.IsNil)
+
+	s.state.Unlock()
+	err = s.se.Ensure()
+	c.Assert(err, check.IsNil)
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Check(t1.Log()[0], check.Matches, `.*cannot inspect "setup-base" hook for "one" SDK:.*`)
+	c.Check(s.backend.ExecCalls, check.HasLen, 0)
+}
+
 func (s *hookSuite) TestExecSetupProject(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()

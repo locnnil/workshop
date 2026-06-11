@@ -227,7 +227,14 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w strin
 
 	info, err := wsFs.Stat(hookPath)
 	wsFs.Close()
-	if errors.Is(err, os.ErrNotExist) || !info.Mode().IsRegular() {
+	if errors.Is(err, os.ErrNotExist) {
+		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk, hook.Type())
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("cannot inspect %q hook for %q SDK: %w", hook.Type(), hook.Sdk, err)
+	}
+	if !info.Mode().IsRegular() {
 		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk, hook.Type())
 		return nil
 	}
