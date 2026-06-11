@@ -169,7 +169,7 @@ func (s *hookSuite) TestExecHookPathError(c *check.C) {
 	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
 	c.Check(err, check.IsNil)
 
-	ws, err := s.backend.WorkshopFs(s.ctx, "ws")
+	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
 	c.Check(err, check.IsNil)
 	defer ws.Close()
 	err = ws.MkdirAll(filepath.Dir(sdk.SdkHooksDir("one")), 0755)

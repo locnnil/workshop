@@ -232,7 +232,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w strin
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("cannot inspect %q hook for %q SDK: %w", hook.Type(), hook.Sdk, err)
+		return fmt.Errorf("cannot read hook: %w", err)
 	}
 	if !info.Mode().IsRegular() {
 		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk, hook.Type())
