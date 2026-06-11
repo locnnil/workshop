@@ -325,7 +325,7 @@ func validateProjectSdk(document *yaml.Node, expected *SketchFile) error {
 	if !reflect.DeepEqual(expected.Plugs, actual.Plugs) {
 		return errors.New("internal error: sketch SDK plugs not preserved")
 	}
-	if !reflect.DeepEqual(actual.Slots, actual.Slots) {
+	if !reflect.DeepEqual(expected.Slots, actual.Slots) {
 		return errors.New("internal error: sketch SDK slots not preserved")
 	}
 	if len(actual.Hooks) > 0 {
