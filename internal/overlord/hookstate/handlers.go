@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"syscall"
 
 	"github.com/canonical/x-go/strutil"
 	"gopkg.in/tomb.v2"
@@ -227,7 +228,7 @@ func (h *HookManager) executeHook(ctx context.Context, task *state.Task, w strin
 
 	info, err := wsFs.Stat(hookPath)
 	wsFs.Close()
-	if errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
 		logger.Debugf("%q SDK does not provide %q hook", hook.Sdk, hook.Type())
 		return nil
 	}

@@ -36,6 +36,7 @@ const (
 var sftpStatusError = regexp.MustCompile(`^sftp: (.*) \([^()]*\)$`)
 var dirNotEmptyError = regexp.MustCompile(`^([a-z]*) .*: directory not empty$`)
 var fileExistsError = regexp.MustCompile(`^([a-z]*) .*: file exists$`)
+var notDirError = regexp.MustCompile(`^([a-z]*) .*: not a directory$`)
 
 func NewSftpFs(client *sftp.Client, umask os.FileMode) Fs {
 	return Fs{&sftpFs{client, umask}}
@@ -242,6 +243,10 @@ func maybePathError(op, path string, err error) error {
 
 	if match = dirNotEmptyError.FindStringSubmatch(message); match != nil {
 		return &os.PathError{Op: match[1], Path: path, Err: syscall.ENOTEMPTY}
+	}
+
+	if match = notDirError.FindStringSubmatch(message); match != nil {
+		return &os.PathError{Op: match[1], Path: path, Err: syscall.ENOTDIR}
 	}
 
 	return errors.New(message)
