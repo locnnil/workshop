@@ -36,3 +36,12 @@ execute: |
   echo "Check a user cannot install a GPU slot (violates slot declaration)"
   workshop_exec launch ws-gpu-fail > launch.log || true
   MATCH ".*installation not allowed by \"user-gpu\" slot rule of interface \"gpu\"" < launch.log
+
+  echo "Check the user belongs to the render group for all supported bases"
+  workshop_exec exec ws-gpu id -Gz > groups.log
+  mapfile -d '' -t groups < groups.log
+  printf '%s\n' "${groups[@]}" > groups.log
+  MATCH '^109$' < groups.log
+  MATCH '^110$' < groups.log
+  MATCH '^990$' < groups.log
+  MATCH '^992$' < groups.log

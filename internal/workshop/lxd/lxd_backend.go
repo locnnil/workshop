@@ -1004,8 +1004,8 @@ users:
   - name: workshop
     primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
     shell: /bin/bash
+    {GROUPS}
 apt:
   conf: |
     # Installed by workshop
@@ -1039,6 +1039,50 @@ runcmd:
   # Required to load above DHCP config.
   - networkctl reload
 `
+
+	groups := `create_groups: false
+    groups:
+    - 'adm'
+    - 'cdrom'
+    - 'sudo'
+    - 'dip'
+    - 'plugdev'
+    - 'audio'
+    - 'netdev'
+    - 'lxd'
+    - 'video'
+    - 'render'
+    # Compatibility GIDs for various host systems:
+    - '108' # netdev on 26.04
+    - '111' # netdev on 24.04
+    - '118' # netdev on 20.04
+    - '119' # netdev on 22.04
+    - '109' # render on 20.04
+    - '110' # render on 22.04
+    - '990' # render on 26.04
+    - '992' # render on 24.04
+bootcmd:
+- |
+  set -e
+  maybe_groupadd() {
+      # Ignore GID not unique (exit code 4) or group name not unique (exit code 9)
+      groupadd -g "$1" -r "$2" || case $? in 4|9) ;; *) return $? ;; esac
+  }
+  maybe_groupadd 1000 workshop
+  maybe_groupadd 108 netdev-compat-108
+  maybe_groupadd 111 netdev-compat-111
+  maybe_groupadd 118 netdev-compat-118
+  maybe_groupadd 119 netdev-compat-119
+  maybe_groupadd 109 render-compat-109
+  maybe_groupadd 110 render-compat-110
+  maybe_groupadd 990 render-compat-990
+  maybe_groupadd 992 render-compat-992
+`
+	if format.N < 2 {
+		groups = `groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
+`
+	}
+	cloudInitConfig = strings.Replace(cloudInitConfig, "{GROUPS}\n", groups, 1)
 
 	// Based on lxd-imagebuilder Ubuntu template. By default
 	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
