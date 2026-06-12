@@ -21,6 +21,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"syscall"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
@@ -54,6 +56,15 @@ type hookSuite struct {
 }
 
 var _ = check.Suite(&hookSuite{})
+
+type statErrorFs struct {
+	fsutil.Fs
+	err error
+}
+
+func (f statErrorFs) Stat(string) (os.FileInfo, error) {
+	return nil, f.err
+}
 
 func TestHookSuite(t *testing.T) { check.TestingT(t) }
 
@@ -149,6 +160,81 @@ func (s *hookSuite) TestExecHookDoesNotExist(c *check.C) {
 
 	c.Assert(s.backend.ExecCalls, check.HasLen, 0)
 	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+}
+
+func (s *hookSuite) TestExecHookSkipsStrayHooksFile(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "one", 0, hookstate.SetupBase)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
+	c.Check(err, check.IsNil)
+
+	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+	defer fs.Close()
+	err = fs.MkdirAll(filepath.Dir(sdk.SdkHooksDir("one")), 0755)
+	c.Check(err, check.IsNil)
+	err = fs.WriteFile(sdk.SdkHooksDir("one"), []byte("not a directory"), 0644)
+	c.Check(err, check.IsNil)
+
+	s.state.Unlock()
+	err = s.se.Ensure()
+	c.Assert(err, check.IsNil)
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.DoneStatus)
+	c.Check(t1.Log(), check.HasLen, 0)
+	c.Check(s.backend.ExecCalls, check.HasLen, 0)
+}
+
+func (s *hookSuite) TestExecHookStatError(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+	t1 := hookstate.Hook(s.state, "one", 0, hookstate.SetupBase)
+
+	chg := s.state.NewChange("sample", "...")
+	setWorkshopProject("ws", s.project, t1)
+	chg.Set("user", "testuser")
+	chg.AddTask(t1)
+
+	wf := &workshop.File{Name: "ws", Base: "ubuntu@20.04"}
+	snapshot := workshop.BaseOnly(sdk.R(1), wf.Base, "fakeimage123")
+	err := s.backend.LaunchOrRebuildWorkshop(s.ctx, wf, snapshot)
+	c.Check(err, check.IsNil)
+
+	fs, err := s.backend.WorkshopFs(s.ctx, "ws")
+	c.Check(err, check.IsNil)
+
+	statErr := &os.PathError{
+		Op:   "stat",
+		Path: sdk.SdkHookPath("one", hookstate.SetupBase.String()),
+		Err:  syscall.EIO,
+	}
+
+	restore := s.backend.SetWorkshopFsCallback(func(context.Context, string) (fsutil.Fs, error) {
+		return fsutil.Fs{FsBackend: statErrorFs{Fs: fs, err: statErr}}, nil
+	})
+	defer restore()
+
+	s.state.Unlock()
+	err = s.se.Ensure()
+	c.Assert(err, check.IsNil)
+	s.se.Wait()
+	s.state.Lock()
+
+	c.Check(t1.Status(), check.Equals, state.ErrorStatus)
+	c.Check(t1.Log(), check.HasLen, 1)
+	c.Check(t1.Log()[0], check.Matches, `(?s).*cannot read hook: stat .*/setup-base: input/output error.*`)
+	c.Check(s.backend.ExecCalls, check.HasLen, 0)
 }
 
 func (s *hookSuite) TestExecSetupProject(c *check.C) {

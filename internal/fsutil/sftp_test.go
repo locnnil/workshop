@@ -131,6 +131,14 @@ func (s *sftpSuite) TestStat(c *check.C) {
 	c.Check(info, check.IsNil)
 }
 
+func (s *sftpSuite) TestStatNotDir(c *check.C) {
+	c.Assert(s.fs.WriteFile("testfile", nil, 0644), check.IsNil)
+
+	info, err := s.fs.Stat("testfile/child")
+	c.Assert(err, testutil.ErrorIs, syscall.ENOTDIR)
+	c.Check(info, check.IsNil)
+}
+
 func (s *sftpSuite) TestLstat(c *check.C) {
 	info, err := s.fs.Lstat("notexist")
 	c.Assert(err, check.ErrorMatches, `lstat notexist: file does not exist`)
