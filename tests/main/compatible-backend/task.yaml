@@ -5,7 +5,7 @@ execute: |
 
   workshop_exec list | MATCH "^comp-check[[:space:]]+Off[[:space:]]+-$"
 
-  zpool wait workshop || true
+  "$TESTSLIB"/wait-snapshots-unmounted.sh
   snap remove lxd --purge
   retry 5 snap install lxd --channel=5.21/stable
   lxd waitready
@@ -13,7 +13,7 @@ execute: |
   ! workshop_exec list > error.log 2>&1 || false
   MATCH "^error: system is not healthy: incompatible backend: LXD server version .+ is not supported; required >= 6.8.\*$" < error.log
 
-  zpool wait workshop || true
+  "$TESTSLIB"/wait-snapshots-unmounted.sh
   snap remove lxd --purge
   setup_lxd
   snap restart workshop
