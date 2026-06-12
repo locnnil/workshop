@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -998,49 +999,16 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
-	cloudInitConfig := `#cloud-config
+	cloudConfigTemplate := `
+#cloud-config
 users:
   - default
   - name: workshop
     primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-    {GROUPS}
-apt:
-  conf: |
-    # Installed by workshop
-
-    # Don't automatically install recommended packages
-    APT::Install-Recommends "0";
-
-    # Don't automatically install suggested packages
-    APT::Install-Suggests "0";
-
-    # Bypass confirmation prompts
-    APT::Get::Assume-Yes "1";
-grub_dpkg:
-  enabled: false
-ssh_genkeytypes: [ed25519]
-write_files:
-- content: |
-    [DHCPv4]
-    SendRelease=false
-
-    [DHCPv6]
-    SendRelease=false
-  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
-runcmd:
-  # Project directory is required for 'workshop exec'.
-  - install --directory --mode=755 /project
-  # Create XDG base directories so SDKs don't need an extra mode=700 step.
-  - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
-  # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
-  - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
-  # Required to load above DHCP config.
-  - networkctl reload
-`
-
-	groups := `create_groups: false
+{{- if gt .Format 1}}
+    create_groups: false
     groups:
     - 'adm'
     - 'cdrom'
@@ -1077,17 +1045,58 @@ bootcmd:
   maybe_groupadd 110 render-compat-110
   maybe_groupadd 990 render-compat-990
   maybe_groupadd 992 render-compat-992
-`
-	if format.N < 2 {
-		groups = `groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
-`
+{{else}}
+    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
+{{end -}}
+apt:
+  conf: |
+    # Installed by workshop
+
+    # Don't automatically install recommended packages
+    APT::Install-Recommends "0";
+
+    # Don't automatically install suggested packages
+    APT::Install-Suggests "0";
+
+    # Bypass confirmation prompts
+    APT::Get::Assume-Yes "1";
+grub_dpkg:
+  enabled: false
+ssh_genkeytypes: [ed25519]
+write_files:
+- content: |
+    [DHCPv4]
+    SendRelease=false
+
+    [DHCPv6]
+    SendRelease=false
+  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
+runcmd:
+  # Project directory is required for 'workshop exec'.
+  - install --directory --mode=755 /project
+  # Create XDG base directories so SDKs don't need an extra mode=700 step.
+  - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
+  # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
+  - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
+  # Required to load above DHCP config.
+  - networkctl reload
+`[1:]
+
+	dot := struct {
+		Format int
+	}{
+		Format: format.N,
 	}
-	cloudInitConfig = strings.Replace(cloudInitConfig, "{GROUPS}\n", groups, 1)
+
+	var cloudConfig strings.Builder
+	if err := template.Must(template.New("cloud-config").Parse(cloudConfigTemplate)).Execute(&cloudConfig, dot); err != nil {
+		panic(err)
+	}
 
 	// Based on lxd-imagebuilder Ubuntu template. By default
 	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
 	// which can change when refreshing to a new base image.
-	cloudInitNetwork := `network:
+	networkConfig := `network:
   version: 2
   ethernets:
     eth0:
@@ -1106,8 +1115,8 @@ bootcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"user.user-data":                 cloudInitConfig,
-		"user.network-config":            cloudInitNetwork,
+		"user.user-data":                 cloudConfig.String(),
+		"user.network-config":            networkConfig,
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
