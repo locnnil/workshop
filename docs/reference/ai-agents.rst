@@ -91,11 +91,3 @@ then writes the corresponding files into the template.
 
 #. Review the generated files
    and adjust where the skill's defaults don't match your case.
-
-
-See also
---------
-
-How-to guides:
-
-- :ref:`how_use_workshops_with_ai_agents`

@@ -452,7 +452,6 @@ they receive the trailing arguments of :command:`workshop run`
 as standard positional parameters.
 Use :samp:`"$@"` to forward every argument
 and :samp:`"$1"`, :samp:`"$2"`, and so on to pick individual ones.
-See :ref:`how_add_actions` for an example.
 
 Actions are not part of the layered snapshot system at all.
 They stay in the definition,

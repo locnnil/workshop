@@ -85,8 +85,7 @@ Direct interface connections between two workshops
 are rejected by :command:`workshop connect`;
 if your workshops need to talk to each other,
 they may do so by bridging through the host
-with two independent :ref:`tunnel <exp_tunnel_interface>` connections,
-as described in :ref:`how_use_multiple_workshops`.
+with two independent :ref:`tunnel <exp_tunnel_interface>` connections.
 
 Pick this pattern when several components of one project
 need different runtimes but the same source tree.
@@ -117,7 +116,6 @@ The :command:`workshop list` command,
 invoked with :option:`!--global`,
 shows the workshops across the projects currently tracked by |ws_markup|,
 including their project paths.
-:ref:`how_git_workshops` walks through the mechanics.
 
 Pick this pattern when the parts have to stay separated:
 different branches,
@@ -261,8 +259,6 @@ Explanation:
 How-to guides:
 
 - :ref:`how_forward_ports`
-- :ref:`how_git_workshops`
-- :ref:`how_use_multiple_workshops`
 - :ref:`how_use_workshops_with_ai_agents`
 
 Reference:

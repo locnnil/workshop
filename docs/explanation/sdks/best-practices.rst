@@ -529,8 +529,6 @@ when no compatible slot is available,
 the consuming SDK falls back to the host directory
 that |ws_markup| automatically provides for the plug,
 so a Python-based SDK still works on its own.
-For the details of how this works,
-see :ref:`how_manage_python_environments`.
 
 This pattern extends beyond Python or its virtual environments
 to encompass various shared resources,
