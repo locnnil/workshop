@@ -756,14 +756,15 @@ func (s *requestSuite) TestStopManyWaitingReturnsChangeConflict(c *check.C) {
 	change.AddTask(task)
 
 	_, err := s.mgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
-	var conflictErr *conflict.ChangeConflictError
+	var conflictErr workshopstate.RequestChangeConflictError
 	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
-	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
-		ProjectId:    s.project.ProjectId,
-		Workshop:     "ws",
+	c.Check(conflictErr, check.DeepEquals, workshopstate.RequestChangeConflictError{
+		ChangeID:     change.ID(),
 		ChangeKind:   "refresh",
 		ChangeStatus: "Wait",
-		ChangeID:     change.ID(),
+		ProjectID:    s.project.ProjectId,
+		Request:      "stop",
+		Workshop:     "ws",
 	})
 }
 

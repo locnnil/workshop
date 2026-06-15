@@ -35,7 +35,32 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
+// RequestChangeConflictError reports that a request cannot proceed because a
+// conflicting change is already in progress for the target workshop.
+type RequestChangeConflictError struct {
+	// ChangeID is the identifier of the change that blocks the request.
+	ChangeID string
+
+	// ChangeKind is the kind of the conflicting change, such as "refresh".
+	ChangeKind string
+
+	// ChangeStatus is the status of the conflicting change, such as "Wait".
+	ChangeStatus string
+
+	// ProjectID identifies the project the targeted workshop belongs to.
+	ProjectID string
+
+	// Request names the operation that could not proceed, such as "stop" or
+	// "start".
+	Request string
+
+	// Workshop is the name of the workshop the request targeted.
+	Workshop string
+}
+
 const (
+	checkHealthTimeout = 5 * time.Second
+
 	// mark the last task in a taskset after which refresh becomes irreversible (i.e. the following tasks
 	// will not be possible to undo, e.g. removing an old workshop copy)
 	EdgeRefreshLastTaskBeforeCleanup = state.TaskSetEdge("last-before-irreversible")
@@ -45,7 +70,65 @@ const (
 	EdgeRefreshFirstCleanupTask = state.TaskSetEdge("refresh-cleanup")
 )
 
-var checkHealthTimeout = 5 * time.Second
+var (
+	// ErrorWorkshopHealthError reports that the workshop is unhealthy because
+	// a change has stopped in error.
+	ErrorWorkshopHealthError = errors.New("unhealthy in error")
+
+	// ErrorWorkshopHealthPending reports that another change is already in
+	// progress for the workshop.
+	ErrorWorkshopHealthPending = errors.New("other change in progress")
+
+	// ErrorWorkshopHealthReady reports that the workshop is already running.
+	ErrorWorkshopHealthReady = errors.New("already running")
+
+	// ErrorWorkshopHealthStopped reports that the workshop is not running.
+	ErrorWorkshopHealthStopped = errors.New("not running")
+
+	// ErrorWorkshopHealthUnknown reports that the workshop health could not be
+	// determined.
+	ErrorWorkshopHealthUnknown = errors.New("health unknown")
+
+	// ErrorWorkshopHealthWaiting reports that a change is paused waiting on an
+	// error in the workshop.
+	ErrorWorkshopHealthWaiting = errors.New("waiting on error")
+)
+
+// Error implements the error interface, describing the blocked request and the
+// change responsible for the conflict.
+func (e RequestChangeConflictError) Error() string {
+	return fmt.Sprintf(
+		"cannot %s workshop %q: conflicting %q change in progress",
+		e.Request,
+		e.Workshop,
+		e.ChangeKind,
+	)
+}
+
+// workshopHealthError builds an error explaining why action cannot be performed
+// on the named workshop given its current health. The returned error wraps the
+// matching ErrorWorkshopHealth sentinel so callers can match it with
+// [errors.Is].
+func workshopHealthError(
+	action, name string, healthStatus healthstate.Status,
+) error {
+	var reason error
+	switch healthStatus {
+	case healthstate.ReadyStatus:
+		reason = ErrorWorkshopHealthReady
+	case healthstate.PendingStatus:
+		reason = ErrorWorkshopHealthPending
+	case healthstate.WaitingStatus:
+		reason = ErrorWorkshopHealthWaiting
+	case healthstate.ErrorStatus:
+		reason = ErrorWorkshopHealthError
+	case healthstate.StoppedStatus:
+		reason = ErrorWorkshopHealthStopped
+	default:
+		reason = ErrorWorkshopHealthUnknown
+	}
+	return fmt.Errorf("cannot %s workshop %q: %w", action, name, reason)
+}
 
 func (w *WorkshopManager) LaunchMany(ctx context.Context, project workshop.Project, manifests []Manifest) ([]*state.TaskSet, error) {
 	tasksets := make([]*state.TaskSet, 0, len(manifests))
@@ -610,23 +693,21 @@ func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectI
 		}
 
 		health := healthstate.WorkshopHealth(w.state, wp)
-		// Waiting health means a non-exec change is paused on error. Re-check
-		// the conflict so callers get the blocking change kind, status, and ID.
-		if health.Status == healthstate.WaitingStatus {
-			err := conflict.CheckChangeConflict(
-				w.state,
-				projectId,
-				name,
-				[]string{"exec"},
-			)
-			if err != nil {
-				return nil, err
+		switch {
+		case health.HasStatusIn(healthstate.ReadyStatus, healthstate.StoppedStatus):
+			// Workshop has an acceptable health to be stopped.
+			continue
+		case health.HasStatusIn(healthstate.WaitingStatus) && health.Cause.HasChangeRef():
+			return nil, RequestChangeConflictError{
+				ChangeID:     health.Cause.ChangeRef.ID,
+				ChangeKind:   health.Cause.ChangeRef.Kind,
+				ChangeStatus: health.Cause.ChangeRef.Status,
+				ProjectID:    projectId,
+				Request:      "stop",
+				Workshop:     wp.Name,
 			}
-		}
-
-		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus}
-		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
-			return nil, fmt.Errorf("cannot stop %q: %w", name, err)
+		default:
+			return nil, workshopHealthError("stop", wp.Name, health.Status)
 		}
 	}
 
