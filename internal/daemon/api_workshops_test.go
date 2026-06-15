@@ -4845,7 +4845,7 @@ func (s *apiSuite) TestStopWorkshopChangeConflict(c *check.C) {
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
 	result := rsp.Result.(*errorResult)
 	c.Check(result, check.DeepEquals, &errorResult{
-		Message: `workshop "basic" has "refresh" change in progress`,
+		Message: `cannot stop workshop "basic": conflicting "refresh" change in progress`,
 		Kind:    errorKindChangeConflict,
 		Value: changeConflictValue{
 			ChangeID:     refreshID,

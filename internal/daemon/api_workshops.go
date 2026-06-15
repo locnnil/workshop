@@ -133,7 +133,9 @@ type Action struct {
 var ensureStateSoon = stateEnsureBefore
 
 // changeConflictErrorResponse converts a change conflict into an API error.
-func changeConflictErrorResponse(conflictErr *conflict.ChangeConflictError) Response {
+func changeConflictErrorResponse(
+	conflictErr workshopstate.RequestChangeConflictError,
+) Response {
 	return &resp{
 		Type:   ResponseTypeError,
 		Status: http.StatusBadRequest,
@@ -144,7 +146,7 @@ func changeConflictErrorResponse(conflictErr *conflict.ChangeConflictError) Resp
 				ChangeID:     conflictErr.ChangeID,
 				ChangeKind:   conflictErr.ChangeKind,
 				ChangeStatus: conflictErr.ChangeStatus,
-				ProjectID:    conflictErr.ProjectId,
+				ProjectID:    conflictErr.ProjectID,
 				Workshop:     conflictErr.Workshop,
 			},
 		},
@@ -604,7 +606,7 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		change.SetStatus(state.ErrorStatus)
 	}
 
-	var conflictErr *conflict.ChangeConflictError
+	var conflictErr workshopstate.RequestChangeConflictError
 	switch {
 	case err == nil:
 	case errors.As(err, &conflictErr):
