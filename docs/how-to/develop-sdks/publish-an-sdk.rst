@@ -341,8 +341,3 @@ Reference:
 - :ref:`ref_sdkcraft_try`
 - :ref:`ref_sdkcraft_upload`
 - :ref:`ref_workshop_definition`
-
-
-Tutorial:
-
-- :ref:`tut_craft_sdks`

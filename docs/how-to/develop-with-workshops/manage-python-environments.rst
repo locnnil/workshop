@@ -200,8 +200,3 @@ Explanation:
 How-to guides:
 
 - :ref:`how_jupyterlab_run_in_browser`
-
-
-Tutorial:
-
-- :ref:`tut_interfaces`

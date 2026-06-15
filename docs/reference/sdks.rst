@@ -379,7 +379,7 @@ When a tunnel interface plug is connected to a slot,
 clients can connect to the address of the plug.
 The connection will be forwarded to the address of the slot.
 Regular SDKs define the workshop side of the connection,
-leaving the host system to the :ref:`system SDK <exp_system_sdk>`.
+leaving the host system to the :samp:`system` SDK.
 
 The supported protocols are TCP, UDP and Unix domain sockets.
 Unix domain sockets are compatible with TCP, but UDP plugs can only connect to UDP slots.

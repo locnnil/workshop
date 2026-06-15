@@ -20,9 +20,8 @@ Three common scenarios cover most day-to-day port-forwarding needs.
 Expose workshop services
 ------------------------
 
-This scenario was covered earlier in the
-:ref:`tutorial section on interfaces <tut_interfaces>`.
-In short, you add a tunnel slot to the SDK that runs the service
+To expose a service running inside a workshop,
+add a tunnel slot to the SDK that runs the service
 and a matching plug to the :samp:`system` SDK:
 
 .. code-block:: yaml
