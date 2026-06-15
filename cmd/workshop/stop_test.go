@@ -80,7 +80,7 @@ func (m *workshopStop) TestStopChangeConflictInProgress(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{"dev"})
 	c.Assert(err, check.ErrorMatches,
-		"cannot stop \\\"dev\\\": tasks are in progress\n"+
+		"cannot stop \\\"dev\\\": change is in progress\n"+
 			"To view details: \\\"workshop tasks 30\\\"")
 }
 

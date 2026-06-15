@@ -102,7 +102,7 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 		)
 	case errors.As(err, &conflictErr):
 		return fmt.Errorf(`
-cannot stop %[1]q: tasks are in progress
+cannot stop %[1]q: change is in progress
 To view details: "workshop tasks %[2]s"`[1:],
 			conflictErr.Workshop,
 			conflictErr.ChangeID,
