@@ -51,6 +51,11 @@ const (
 	networkName = "workshopbr0"
 	networkType = "bridge"
 
+	// networkDomain is the DNS domain served by the workshop bridge. Workshop
+	// instances are reachable as "<instance>.<networkDomain>", and configure-dns
+	// registers this domain with the host resolver.
+	networkDomain = "wp"
+
 	// NetworkBridgeName is the name of the LXD bridge network used by
 	// workshops, exported for use by other packages (e.g. firewall checks).
 	NetworkBridgeName = networkName
@@ -266,18 +271,14 @@ func New() (*Backend, error) {
 		return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q (expected %q)", storagePool, pools[idx].Driver, storagePoolDriver)
 	}
 
-	networks, err := conn.GetNetworks()
-	if err != nil {
-		return nil, err
-	}
-
-	if idx := slices.IndexFunc(networks, func(n api.Network) bool { return n.Name == networkName }); idx < 0 {
+	network, etag, err := conn.GetNetwork(networkName)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		req := api.NetworksPost{
 			Name: networkName,
 			Type: networkType,
 			NetworkPut: api.NetworkPut{
 				Config: map[string]string{
-					"dns.domain": "workshop",
+					"dns.domain": networkDomain,
 				},
 				Description: "Bridge network for workshops",
 			},
@@ -290,8 +291,19 @@ func New() (*Backend, error) {
 		if err := op.Wait(); err != nil {
 			return nil, err
 		}
-	} else if networks[idx].Type != networkType {
-		return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, networks[idx].Type)
+	} else if err != nil {
+		return nil, err
+	} else if network.Type != networkType {
+		return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, network.Type)
+	} else if network.Config["dns.domain"] != networkDomain {
+		network.Config["dns.domain"] = networkDomain
+		op, err := conn.UpdateNetwork(network.Name, network.Writable(), etag)
+		if err != nil {
+			return nil, err
+		}
+		if err := op.Wait(); err != nil {
+			return nil, err
+		}
 	}
 
 	return &server, nil
@@ -525,6 +537,10 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		return err
 	}
 
+	if err := s.addWorkshopCNAMEs(conn, ctx, name); err != nil {
+		logger.Noticef("On StartWorkshop: failed to add %q workshop CNAME records: %v", name, err)
+	}
+
 	rev.Success()
 	return nil
 }
@@ -549,12 +565,20 @@ func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, nam
 	if force {
 		timeout = 10
 	}
-	if err := s.updateInstanceState(conn, ctx, name, "stop", timeout); err != nil && force {
-		logger.Noticef("On stopWorkshop: failed to stop %q workshop: %v", name, err)
-		return s.updateInstanceState(conn, ctx, name, "stop", 0)
-	} else {
+	err := s.updateInstanceState(conn, ctx, name, "stop", timeout)
+	if err != nil && force {
+		logger.Noticef("On StopWorkshop: failed to stop %q workshop: %v", name, err)
+		err = s.updateInstanceState(conn, ctx, name, "stop", 0)
+	}
+	if err != nil {
 		return err
 	}
+
+	if err := s.removeWorkshopCNAMEs(conn, ctx, name); err != nil {
+		logger.Noticef("On StopWorkshop: failed to remove %q workshop CNAME records: %v", name, err)
+	}
+
+	return nil
 }
 
 func (s *Backend) setAutoStart(conn lxd.InstanceServer, ctx context.Context, name string, autostart bool) error {

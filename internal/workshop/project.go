@@ -355,3 +355,13 @@ func allocateProjectId() (string, error) {
 	}
 	return hex.EncodeToString(bytes), nil
 }
+
+func ValidateProjectId(projectId string) error {
+	if len(projectId) != 8 {
+		return fmt.Errorf("invalid project ID %q", projectId)
+	}
+	if _, err := hex.DecodeString(projectId); err != nil {
+		return fmt.Errorf("invalid project ID %q: %w", projectId, err)
+	}
+	return nil
+}
