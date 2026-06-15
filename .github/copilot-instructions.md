@@ -59,7 +59,7 @@ See [`docs/contributing.rst`](../docs/contributing.rst) for detailed standards. 
 
 ### Running Locally
 - Quick path: `go tool try` — builds, starts `workshopd` against a temporary session, and drops into a pre-configured subshell. Exit to tear down; `--keep` retains the session.
-- Manual: `go install ./cmd/...` then `workshopd run --create-dirs` (requires `WORKSHOP` env var set).
+- Manual: `go install ./cmd/...` then `workshopd run --create-dirs` (requires `WORKSHOP` and `WORKSHOP_CACHE` env vars set).
 
 ## Available Resources
 
