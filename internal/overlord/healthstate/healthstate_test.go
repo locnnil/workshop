@@ -217,6 +217,11 @@ func (s *healthSuite) TestWorkshopHealthOperationInProgress(c *check.C) {
 	c.Check(health.SdkHealth, check.HasLen, 0)
 	c.Check(health.Message, check.HasLen, 0)
 	c.Check(health.Code, check.HasLen, 0)
+	c.Check(health.Cause.ChangeRef, check.DeepEquals, &healthstate.ChangeRef{
+		ID:     chg.ID(),
+		Kind:   "launch",
+		Status: chg.Status().String(),
+	})
 }
 
 func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
@@ -241,6 +246,11 @@ func (s *healthSuite) TestWorkshopHealthOperationWaitingWithNotes(c *check.C) {
 	c.Check(health.SdkHealth, check.HasLen, 0)
 	c.Check(health.Message, check.HasLen, 0)
 	c.Check(health.Code, check.Equals, "wait-on-error")
+	c.Check(health.Cause.ChangeRef, check.DeepEquals, &healthstate.ChangeRef{
+		ID:     chg.ID(),
+		Kind:   "refresh",
+		Status: state.WaitStatus.String(),
+	})
 }
 
 func (s *healthSuite) TestWorkshopHealthSdkHealth(c *check.C) {

@@ -103,6 +103,19 @@ func (s HealthCheckResult) String() string {
 	return knownSetHealthStatuses[s]
 }
 
+// ChangeRef identifies a [state.Change] and its progress at a point in time.
+type ChangeRef struct {
+	// ID is the unique identifier of the change.
+	ID string
+
+	// Kind is the kind of the change, such as "refresh" or "launch".
+	Kind string
+
+	// Status is the status of the change when the reference was made, such
+	// as "Wait" or "Doing".
+	Status string
+}
+
 type HealthCheck struct {
 	Sdk         string            `json:"sdk"`
 	Timestamp   time.Time         `json:"timestamp,omitzero"`
@@ -112,11 +125,24 @@ type HealthCheck struct {
 }
 
 type HealthState struct {
+	// Cause carries the supporting detail behind Status, identifying what
+	// is responsible for the current value.
+	Cause HealthStateCause
+
 	Timestamp time.Time              `json:"timestamp,omitzero"`
 	Status    Status                 `json:"status"`
 	Message   string                 `json:"message,omitempty"`
 	Code      string                 `json:"code,omitempty"`
 	SdkHealth map[string]HealthCheck `json:"sdk-health,omitempty"`
+}
+
+// HealthStateCause describes what is responsible for the status reported in a
+// [HealthState], providing the supporting detail behind the status value.
+type HealthStateCause struct {
+	// ChangeRef identifies the change driving the current status, such as a
+	// refresh waiting on error. It is nil when no change is involved, e.g.
+	// when the workshop is simply running or stopped.
+	ChangeRef *ChangeRef
 }
 
 // Infers the state of a workshop based on the container's state and any of the
@@ -135,35 +161,44 @@ func WorkshopHealth(st *state.State, ws *workshop.Workshop) HealthState {
 		return healthState
 	}
 
-	if err := conflict.CheckChangeConflict(st, ws.Project.ProjectId, ws.Name, []string{"exec"}); err != nil {
-		conflict, ok := err.(*conflict.ChangeConflictError)
-		if !ok || conflict.ChangeID == "" {
-			healthState.Status = ErrorStatus
-			return healthState
-		}
-
-		change := st.Change(conflict.ChangeID)
-		if change.Status() == state.WaitStatus {
+	err := conflict.CheckChangeConflict(
+		st, ws.Project.ProjectId, ws.Name, []string{"exec"})
+	var changeConflictError *conflict.ChangeConflictError
+	switch {
+	case errors.As(err, &changeConflictError):
+		if changeConflictError.ChangeStatus == state.WaitStatus.String() {
 			healthState.Code = "wait-on-error"
 			healthState.Status = WaitingStatus
 		} else {
 			healthState.Status = PendingStatus
 		}
 
-		healthState.SdkHealth = sdksHealthCheckSummary(change)
-	} else {
-		if ws.Running {
-			healthState.Status = ReadyStatus
-		} else {
-			healthState.Status = StoppedStatus
+		// Set the change information that is contributing to the current health
+		// status.
+		healthState.Cause.ChangeRef = &ChangeRef{
+			ID:     changeConflictError.ChangeID,
+			Kind:   changeConflictError.ChangeKind,
+			Status: changeConflictError.ChangeStatus,
 		}
+
+		healthState.SdkHealth = sdksHealthCheckSummary(
+			st, changeConflictError.ChangeID)
+	case err != nil:
+		healthState.Status = ErrorStatus
+	case ws.Running:
+		healthState.Status = ReadyStatus
+	default:
+		healthState.Status = StoppedStatus
 	}
+
 	return healthState
 }
 
 // Examine the tasks of the change to fetch possible check-health hook results
 // for the workshop's SDKs.
-func sdksHealthCheckSummary(chg *state.Change) map[string]HealthCheck {
+func sdksHealthCheckSummary(st *state.State, changeID string) map[string]HealthCheck {
+	chg := st.Change(changeID)
+
 	var sdkChecks = map[string]HealthCheck{}
 	for _, task := range chg.Tasks() {
 		if task.Kind() == "run-hook" {
