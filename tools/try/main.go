@@ -401,8 +401,16 @@ func startWorkshopd(tmp string) error {
 	pidData := []byte(strconv.Itoa(cmd.Process.Pid))
 	err = os.WriteFile(pidPath, pidData, 0o644)
 	if err != nil {
-		// Tear down the child since we have nowhere to record it.
-		cmd.Process.Signal(syscall.SIGTERM)
+		// Tear down the child since we have nowhere to record it;
+		// best-effort, surface a warning if the signal itself fails.
+		sigErr := cmd.Process.Signal(syscall.SIGTERM)
+		if sigErr != nil {
+			fmt.Fprintf(
+				os.Stderr,
+				"warning: signalling abandoned workshopd: %v\n",
+				sigErr,
+			)
+		}
 		return fmt.Errorf(
 			"writing PID file %q: %w", pidPath, err,
 		)
