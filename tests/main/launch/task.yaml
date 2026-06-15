@@ -22,6 +22,9 @@ execute: |
     workshop_exec exec "$1" stat --format='%A %U %G' /var/cache/apt/archives | MATCH '^drwxr-xr-x workshop workshop$'
     # ensure apt is configured to exclude suggested and recommended packages
     workshop_exec run "$1" check-apt
+    # ensure systemd-resolved is configured for the workshopbr0 network
+    resolvectl domain workshopbr0 | MATCH '^Link [0-9]+ \(workshopbr0\): ~wp$'
+    resolvectl query "$1-$(< .workshop.lock).wp" | MATCH 'link: workshopbr0'
     # ensure systemd-networkd is configured not to release DHCP on stop
     # just skip if `networkctl cat` is missing, since old bases have been manually tested
     sd_ver="$(workshop_exec exec "$1" networkctl --version | awk 'FNR == 1 {print $2}')"

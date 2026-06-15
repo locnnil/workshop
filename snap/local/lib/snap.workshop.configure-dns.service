@@ -1,0 +1,11 @@
+[Unit]
+Description=Configure DNS for the Workshop bridge device
+After=sys-subsystem-net-devices-workshopbr0.device
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/systemctl is-enabled systemd-resolved.service
+ExecStart=/usr/bin/snap run workshop.configure-dns workshopbr0 wp
+
+[Install]
+WantedBy=sys-subsystem-net-devices-workshopbr0.device
