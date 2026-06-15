@@ -145,6 +145,17 @@ type HealthStateCause struct {
 	ChangeRef *ChangeRef
 }
 
+// HasChangeRef reports whether a change is referenced by the cause.
+func (c HealthStateCause) HasChangeRef() bool {
+	return c.ChangeRef != nil
+}
+
+// HasStatusIn reports whether the health status matches any of the provided
+// statuses.
+func (h HealthState) HasStatusIn(statuses ...Status) bool {
+	return slices.Contains(statuses, h.Status)
+}
+
 // Infers the state of a workshop based on the container's state and any of the
 // operations in progress for the workshop. The state must be locked.
 func WorkshopHealth(st *state.State, ws *workshop.Workshop) HealthState {

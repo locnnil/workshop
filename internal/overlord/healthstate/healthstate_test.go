@@ -150,6 +150,44 @@ func (*healthSuite) TestStatusUnhappy(c *check.C) {
 	c.Check(status.String(), check.Equals, "invalid (-1)")
 }
 
+// HasChangeRef reports true when a change is referenced by the cause.
+func (*healthSuite) TestHasChangeRefPresent(c *check.C) {
+	cause := healthstate.HealthStateCause{ChangeRef: &healthstate.ChangeRef{}}
+
+	c.Check(cause.HasChangeRef(), check.Equals, true)
+}
+
+// HasChangeRef reports false when no change is referenced by the cause.
+func (*healthSuite) TestHasChangeRefAbsent(c *check.C) {
+	cause := healthstate.HealthStateCause{}
+
+	c.Check(cause.HasChangeRef(), check.Equals, false)
+}
+
+// HasStatusIn reports true when the health status is among those provided.
+func (*healthSuite) TestHasStatusInMatch(c *check.C) {
+	health := healthstate.HealthState{Status: healthstate.WaitingStatus}
+
+	c.Check(health.HasStatusIn(healthstate.WaitingStatus), check.Equals, true)
+	c.Check(health.HasStatusIn(
+		healthstate.ReadyStatus, healthstate.WaitingStatus,
+	), check.Equals, true)
+}
+
+// HasStatusIn reports false when the health status is not among those provided.
+func (*healthSuite) TestHasStatusInNoMatch(c *check.C) {
+	health := healthstate.HealthState{Status: healthstate.WaitingStatus}
+
+	c.Check(health.HasStatusIn(healthstate.ReadyStatus), check.Equals, false)
+}
+
+// HasStatusIn reports false when no statuses are provided.
+func (*healthSuite) TestHasStatusInEmpty(c *check.C) {
+	health := healthstate.HealthState{Status: healthstate.WaitingStatus}
+
+	c.Check(health.HasStatusIn(), check.Equals, false)
+}
+
 func (s *healthSuite) TestWorkshopHealthReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
