@@ -96,15 +96,9 @@ func (c *CmdStop) Run(cmd *cobra.Command, av []string) error {
 	switch {
 	case err == nil:
 	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh":
-		return fmt.Errorf(`
-cannot stop %[1]q: a refresh task is waiting on error
-To view details: "workshop tasks %[2]s"
-
-To abort and undo the refresh: "workshop refresh --abort %[1]s"
-Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"
-After that, run "workshop stop %[1]s" again.`[1:],
+		return fmt.Errorf(
+			"cannot stop %[1]q: refresh change is waiting on error",
 			conflictErr.Workshop,
-			conflictErr.ChangeID,
 		)
 	case errors.As(err, &conflictErr):
 		return fmt.Errorf(`
