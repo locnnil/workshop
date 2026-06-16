@@ -33,22 +33,20 @@ func (errorSuite) TestChangeConflictErrorAsFullValue(c *check.C) {
 	err := &client.Error{
 		Kind: client.ErrorKindChangeConflict,
 		Value: map[string]any{
-			"change-id":     "29",
-			"change-kind":   "refresh",
-			"change-status": "Wait",
-			"project-id":    "project-1",
-			"workshop":      "dev",
+			"change-id":   "29",
+			"change-kind": "refresh",
+			"project-id":  "project-1",
+			"workshop":    "dev",
 		},
 	}
 
 	var conflictErr client.ChangeConflictError
 	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
 	c.Check(conflictErr, check.DeepEquals, client.ChangeConflictError{
-		ChangeID:     "29",
-		ChangeKind:   "refresh",
-		ChangeStatus: "Wait",
-		ProjectID:    "project-1",
-		Workshop:     "dev",
+		ChangeID:   "29",
+		ChangeKind: "refresh",
+		ProjectID:  "project-1",
+		Workshop:   "dev",
 	})
 }
 

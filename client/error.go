@@ -24,9 +24,6 @@ type ChangeConflictError struct {
 	// ChangeKind is the kind of the blocking change, such as "refresh".
 	ChangeKind string
 
-	// ChangeStatus is the status of the blocking change, such as "Wait".
-	ChangeStatus string
-
 	// ProjectID is the ID of the project containing the blocked workshop.
 	ProjectID string
 
@@ -62,16 +59,14 @@ func toChangeConflictError(err Error, conflict *ChangeConflictError) bool {
 
 	changeID, _ := value["change-id"].(string)
 	changeKind, _ := value["change-kind"].(string)
-	changeStatus, _ := value["change-status"].(string)
 	projectID, _ := value["project-id"].(string)
 	workshop, _ := value["workshop"].(string)
 
 	*conflict = ChangeConflictError{
-		ChangeID:     changeID,
-		ChangeKind:   changeKind,
-		ChangeStatus: changeStatus,
-		ProjectID:    projectID,
-		Workshop:     workshop,
+		ChangeID:   changeID,
+		ChangeKind: changeKind,
+		ProjectID:  projectID,
+		Workshop:   workshop,
 	}
 	return true
 }
