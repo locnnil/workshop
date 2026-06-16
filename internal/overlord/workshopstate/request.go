@@ -36,6 +36,8 @@ import (
 )
 
 const (
+	checkHealthTimeout = 5 * time.Second
+
 	// mark the last task in a taskset after which refresh becomes irreversible (i.e. the following tasks
 	// will not be possible to undo, e.g. removing an old workshop copy)
 	EdgeRefreshLastTaskBeforeCleanup = state.TaskSetEdge("last-before-irreversible")
@@ -44,8 +46,6 @@ const (
 	// removing state storage and the old workshop copy)
 	EdgeRefreshFirstCleanupTask = state.TaskSetEdge("refresh-cleanup")
 )
-
-var checkHealthTimeout = 5 * time.Second
 
 func (w *WorkshopManager) LaunchMany(ctx context.Context, project workshop.Project, manifests []Manifest) ([]*state.TaskSet, error) {
 	tasksets := make([]*state.TaskSet, 0, len(manifests))
@@ -603,13 +603,18 @@ func startMany(st *state.State, names []string, project workshop.Project) []*sta
 }
 
 func (w *WorkshopManager) StopMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
+	var allowedHealthStatus = []healthstate.Status{
+		healthstate.ReadyStatus,
+		healthstate.StoppedStatus,
+	}
+
 	for _, name := range names {
 		wp, err := w.Workshop(ctx, name, projectId)
 		if err != nil {
 			return nil, fmt.Errorf("cannot stop %q: %w", name, err)
 		}
-		allowed := []healthstate.Status{healthstate.ReadyStatus, healthstate.StoppedStatus}
-		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+
+		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowedHealthStatus); err != nil {
 			return nil, fmt.Errorf("cannot stop %q: %w", name, err)
 		}
 	}

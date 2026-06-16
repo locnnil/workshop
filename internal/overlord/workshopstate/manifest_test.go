@@ -435,10 +435,10 @@ func (s *manifestSuite) TestRefreshRequiresStatusReady(c *check.C) {
 	s.launchWorkshopWithSDKs(c, "test-3", "ubuntu@20.04", nil)
 
 	_, _, err = s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1", "test-2", "test-3"}, conflict.RefreshUpdate)
-	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not running`)
+	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": not running`)
 
 	_, _, err = s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1", "test-2", "test-3"}, conflict.RefreshRestore)
-	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": workshop not running`)
+	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": not running`)
 }
 
 func (s *manifestSuite) TestLaunchRequiresFile(c *check.C) {

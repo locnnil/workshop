@@ -77,6 +77,7 @@ func (s *conflictSuite) TestCheckChangeConflictFound(c *check.C) {
 	c.Assert(ok, check.Equals, true)
 	c.Assert(conflictErr.ChangeID, check.Equals, change.ID())
 	c.Assert(conflictErr.ChangeKind, check.Equals, "launch")
+	c.Assert(conflictErr.ChangeStatus, check.Equals, "Do")
 	c.Assert(conflictErr.Workshop, check.Equals, "ws")
 	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
 }
@@ -93,6 +94,7 @@ func (s *conflictSuite) TestCheckChangeDisconnectConflictFound(c *check.C) {
 	c.Assert(ok, check.Equals, true)
 	c.Assert(conflictErr.ChangeID, check.Equals, change.ID())
 	c.Assert(conflictErr.ChangeKind, check.Equals, "disconnect")
+	c.Assert(conflictErr.ChangeStatus, check.Equals, "Do")
 	c.Assert(conflictErr.Workshop, check.Equals, "ws")
 	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
 
@@ -102,6 +104,7 @@ func (s *conflictSuite) TestCheckChangeDisconnectConflictFound(c *check.C) {
 	c.Assert(ok, check.Equals, true)
 	c.Assert(conflictErr.ChangeID, check.Equals, change.ID())
 	c.Assert(conflictErr.ChangeKind, check.Equals, "disconnect")
+	c.Assert(conflictErr.ChangeStatus, check.Equals, "Do")
 	c.Assert(conflictErr.Workshop, check.Equals, "another-ws")
 	c.Assert(conflictErr.ProjectId, check.Equals, s.project.ProjectId)
 }

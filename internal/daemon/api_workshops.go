@@ -48,6 +48,13 @@ type actionOpts struct {
 	Verbose       bool   `json:"verbose"`
 }
 
+type changeConflictValue struct {
+	ChangeID   string `json:"change-id"`
+	ChangeKind string `json:"change-kind"`
+	ProjectID  string `json:"project-id"`
+	Workshop   string `json:"workshop"`
+}
+
 type workshopReq struct {
 	Names   []string   `json:"names"`
 	Action  string     `json:"action"`
@@ -123,6 +130,27 @@ type Action struct {
 }
 
 var ensureStateSoon = stateEnsureBefore
+
+// changeInProgressErrorResponse converts a [healthstate.ChangeInProgressError]
+// into a change-conflict API error response.
+func changeInProgressErrorResponse(
+	conflictErr healthstate.ChangeInProgressError,
+) Response {
+	return &resp{
+		Type:   ResponseTypeError,
+		Status: http.StatusBadRequest,
+		Result: &errorResult{
+			Kind:    errorKindChangeConflict,
+			Message: conflictErr.Error(),
+			Value: changeConflictValue{
+				ChangeID:   conflictErr.ChangeID,
+				ChangeKind: conflictErr.ChangeKind,
+				ProjectID:  conflictErr.ProjectID,
+				Workshop:   conflictErr.Workshop,
+			},
+		},
+	}
+}
 
 func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo {
 	var ws WorkshopFileInfo
@@ -573,10 +601,16 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		}
 	}
 
-	if err != nil {
-		if change != nil {
-			change.SetStatus(state.ErrorStatus)
-		}
+	if err != nil && change != nil {
+		change.SetStatus(state.ErrorStatus)
+	}
+
+	var conflictErr healthstate.ChangeInProgressError
+	switch {
+	case err == nil:
+	case errors.As(err, &conflictErr):
+		return changeInProgressErrorResponse(conflictErr)
+	case err != nil:
 		return statusBadRequest("%w", err)
 	}
 

@@ -118,6 +118,7 @@ func (r *resp) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 type errorKind string
 
 const (
+	errorKindChangeConflict     = errorKind("change-conflict")
 	errorKindLoginRequired      = errorKind("login-required")
 	errorKindDaemonRestart      = errorKind("daemon-restart")
 	errorKindSystemRestart      = errorKind("system-restart")
@@ -134,6 +135,11 @@ type errorResult struct {
 	Message string     `json:"message"` // note no omitempty
 	Kind    errorKind  `json:"kind,omitempty"`
 	Value   errorValue `json:"value,omitempty"`
+}
+
+// String returns the error kind as a string, implementing [fmt.Stringer].
+func (k errorKind) String() string {
+	return string(k)
 }
 
 func SyncResponse(result any, status int) Response {

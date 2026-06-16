@@ -30,6 +30,22 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
+// ChangeInProgressError reports that an operation on a workshop cannot
+// proceed because a conflicting change is already in progress for it.
+type ChangeInProgressError struct {
+	// ChangeID is the identifier of the change that blocks the operation.
+	ChangeID string
+
+	// ChangeKind is the kind of the conflicting change, such as "refresh".
+	ChangeKind string
+
+	// ProjectID identifies the project the targeted workshop belongs to.
+	ProjectID string
+
+	// Workshop is the name of the workshop the operation targeted.
+	Workshop string
+}
+
 type Status int
 
 const (
@@ -39,6 +55,30 @@ const (
 	WaitingStatus
 	ErrorStatus
 	StoppedStatus
+)
+
+var (
+	// ErrorWorkshopHealthError reports that the workshop is unhealthy because
+	// a change has stopped in error.
+	ErrorWorkshopHealthError = errors.New("unhealthy in error")
+
+	// ErrorWorkshopHealthPending reports that another change is already in
+	// progress for the workshop.
+	ErrorWorkshopHealthPending = errors.New("other change in progress")
+
+	// ErrorWorkshopHealthReady reports that the workshop is already running.
+	ErrorWorkshopHealthReady = errors.New("already running")
+
+	// ErrorWorkshopHealthStopped reports that the workshop is not running.
+	ErrorWorkshopHealthStopped = errors.New("not running")
+
+	// ErrorWorkshopHealthUnknown reports that the workshop health could not be
+	// determined.
+	ErrorWorkshopHealthUnknown = errors.New("health unknown")
+
+	// ErrorWorkshopHealthWaiting reports that a change is paused waiting on an
+	// error in the workshop.
+	ErrorWorkshopHealthWaiting = errors.New("waiting on error")
 )
 
 var knownStatuses = []string{"Unknown", "Ready", "Pending", "Waiting", "Error", "Stopped"}
@@ -103,6 +143,19 @@ func (s HealthCheckResult) String() string {
 	return knownSetHealthStatuses[s]
 }
 
+// ChangeRef identifies a [state.Change] and its progress at a point in time.
+type ChangeRef struct {
+	// ID is the unique identifier of the change.
+	ID string
+
+	// Kind is the kind of the change, such as "refresh" or "launch".
+	Kind string
+
+	// Status is the status of the change when the reference was made, such
+	// as "Wait" or "Doing".
+	Status string
+}
+
 type HealthCheck struct {
 	Sdk         string            `json:"sdk"`
 	Timestamp   time.Time         `json:"timestamp,omitzero"`
@@ -112,11 +165,35 @@ type HealthCheck struct {
 }
 
 type HealthState struct {
+	// Cause carries the supporting detail behind Status, identifying what
+	// is responsible for the current value.
+	Cause HealthStateCause
+
 	Timestamp time.Time              `json:"timestamp,omitzero"`
 	Status    Status                 `json:"status"`
 	Message   string                 `json:"message,omitempty"`
 	Code      string                 `json:"code,omitempty"`
 	SdkHealth map[string]HealthCheck `json:"sdk-health,omitempty"`
+}
+
+// HealthStateCause describes what is responsible for the status reported in a
+// [HealthState], providing the supporting detail behind the status value.
+type HealthStateCause struct {
+	// ChangeRef identifies the change driving the current status, such as a
+	// refresh waiting on error. It is nil when no change is involved, e.g.
+	// when the workshop is simply running or stopped.
+	ChangeRef *ChangeRef
+}
+
+// HasChangeRef reports whether a change is referenced by the cause.
+func (c HealthStateCause) HasChangeRef() bool {
+	return c.ChangeRef != nil
+}
+
+// HasStatusIn reports whether the health status matches any of the provided
+// statuses.
+func (h HealthState) HasStatusIn(statuses ...Status) bool {
+	return slices.Contains(statuses, h.Status)
 }
 
 // Infers the state of a workshop based on the container's state and any of the
@@ -135,35 +212,44 @@ func WorkshopHealth(st *state.State, ws *workshop.Workshop) HealthState {
 		return healthState
 	}
 
-	if err := conflict.CheckChangeConflict(st, ws.Project.ProjectId, ws.Name, []string{"exec"}); err != nil {
-		conflict, ok := err.(*conflict.ChangeConflictError)
-		if !ok || conflict.ChangeID == "" {
-			healthState.Status = ErrorStatus
-			return healthState
-		}
-
-		change := st.Change(conflict.ChangeID)
-		if change.Status() == state.WaitStatus {
+	err := conflict.CheckChangeConflict(
+		st, ws.Project.ProjectId, ws.Name, []string{"exec"})
+	var changeConflictError *conflict.ChangeConflictError
+	switch {
+	case errors.As(err, &changeConflictError):
+		if changeConflictError.ChangeStatus == state.WaitStatus.String() {
 			healthState.Code = "wait-on-error"
 			healthState.Status = WaitingStatus
 		} else {
 			healthState.Status = PendingStatus
 		}
 
-		healthState.SdkHealth = sdksHealthCheckSummary(change)
-	} else {
-		if ws.Running {
-			healthState.Status = ReadyStatus
-		} else {
-			healthState.Status = StoppedStatus
+		// Set the change information that is contributing to the current health
+		// status.
+		healthState.Cause.ChangeRef = &ChangeRef{
+			ID:     changeConflictError.ChangeID,
+			Kind:   changeConflictError.ChangeKind,
+			Status: changeConflictError.ChangeStatus,
 		}
+
+		healthState.SdkHealth = sdksHealthCheckSummary(
+			st, changeConflictError.ChangeID)
+	case err != nil:
+		healthState.Status = ErrorStatus
+	case ws.Running:
+		healthState.Status = ReadyStatus
+	default:
+		healthState.Status = StoppedStatus
 	}
+
 	return healthState
 }
 
 // Examine the tasks of the change to fetch possible check-health hook results
 // for the workshop's SDKs.
-func sdksHealthCheckSummary(chg *state.Change) map[string]HealthCheck {
+func sdksHealthCheckSummary(st *state.State, changeID string) map[string]HealthCheck {
+	chg := st.Change(changeID)
+
 	var sdkChecks = map[string]HealthCheck{}
 	for _, task := range chg.Tasks() {
 		if task.Kind() == "run-hook" {
@@ -176,27 +262,51 @@ func sdksHealthCheckSummary(chg *state.Change) map[string]HealthCheck {
 	return sdkChecks
 }
 
-// Checks the provided workshop has one of the allowed health statuses.
-func CheckWorkshopHealth(st *state.State, ws *workshop.Workshop, allowedStatuses []Status) error {
-	health := WorkshopHealth(st, ws)
+// Error implements the error interface, describing the change responsible for
+// the conflict.
+func (e ChangeInProgressError) Error() string {
+	return fmt.Sprintf(
+		"workshop %q has %q change in progress", e.Workshop, e.ChangeKind)
+}
 
-	if !slices.Contains(allowedStatuses, health.Status) {
-		switch health.Status {
-		case ReadyStatus:
-			return errors.New("workshop already running")
-		case PendingStatus:
-			return errors.New("other changes in progress")
-		case WaitingStatus:
-			return errors.New("waiting on error")
-		case ErrorStatus:
-			return errors.New("workshop unhealthy")
-		case StoppedStatus:
-			return errors.New("workshop not running")
-		default:
-			return errors.New("workshop health unknown")
+// CheckWorkshopHealth returns an error when the workshop's health is not one of
+// the allowed statuses. A workshop blocked by a pending change, or a change
+// waiting on error, yields a [ChangeInProgressError]; any other disallowed
+// status yields the matching ErrorWorkshopHealth sentinel.
+func CheckWorkshopHealth(
+	st *state.State,
+	ws *workshop.Workshop,
+	allowedStatuses []Status,
+) error {
+	health := WorkshopHealth(st, ws)
+	if health.HasStatusIn(allowedStatuses...) {
+		return nil
+	}
+
+	if health.HasStatusIn(WaitingStatus, PendingStatus) &&
+		health.Cause.HasChangeRef() {
+		return ChangeInProgressError{
+			ChangeID:   health.Cause.ChangeRef.ID,
+			ChangeKind: health.Cause.ChangeRef.Kind,
+			ProjectID:  ws.Project.ProjectId,
+			Workshop:   ws.Name,
 		}
 	}
-	return nil
+
+	switch health.Status {
+	case ReadyStatus:
+		return ErrorWorkshopHealthReady
+	case PendingStatus:
+		return ErrorWorkshopHealthPending
+	case WaitingStatus:
+		return ErrorWorkshopHealthWaiting
+	case ErrorStatus:
+		return ErrorWorkshopHealthError
+	case StoppedStatus:
+		return ErrorWorkshopHealthStopped
+	default:
+		return ErrorWorkshopHealthUnknown
+	}
 }
 
 func Init(hookManager *hookstate.HookManager) {

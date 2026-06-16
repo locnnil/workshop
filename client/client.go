@@ -442,6 +442,8 @@ func (e *Error) Error() string {
 }
 
 const (
+	// ErrorKindChangeConflict identifies an operation blocked by another change.
+	ErrorKindChangeConflict     = "change-conflict"
 	ErrorKindLoginRequired      = "login-required"
 	ErrorKindSystemRestart      = "system-restart"
 	ErrorKindDaemonRestart      = "daemon-restart"

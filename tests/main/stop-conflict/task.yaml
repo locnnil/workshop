@@ -1,0 +1,28 @@
+summary: Check stopping a workshop waiting on a refresh error fails clearly
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Update the workshop file to include a failing SDK"
+  sed -i 's/test-sdk-basic-2/test-sdk-setup-fail/g' workshop.yaml
+  workshop_exec refresh --wait-on-error || true
+  sed -i 's/test-sdk-setup-fail/test-sdk-basic-2/g' workshop.yaml
+
+  echo "Check the workshop is in Waiting state"
+  workshop_exec list | MATCH "^ws-stop-conflict[[:space:]]+Waiting[[:space:]]+wait-on-error$"
+
+  echo "Check stopping a workshop waiting on a refresh error fails clearly"
+  stop_output="$(workshop_exec stop || true)"
+  echo "$stop_output" | MATCH 'cannot stop "ws-stop-conflict": refresh change is waiting on error'
+
+  echo "Check the workshop is still in Waiting state"
+  workshop_exec list | MATCH "^ws-stop-conflict[[:space:]]+Waiting[[:space:]]+wait-on-error$"
+
+  echo "Abort the refresh to restore the workshop to a clean state"
+  workshop_exec refresh --abort | MATCH "\"ws-stop-conflict\" refresh aborted"
+  workshop_exec list | MATCH "^ws-stop-conflict[[:space:]]+Ready[[:space:]]+-$"

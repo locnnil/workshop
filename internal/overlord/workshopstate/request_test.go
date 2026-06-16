@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/sha3"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -33,6 +34,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -738,6 +740,33 @@ func (s *requestSuite) TestStopMany(c *check.C) {
 	c.Assert(force, check.Equals, false)
 }
 
+// TestStopManyWaitingReturnsChangeConflict checks that stop returns a typed
+// [conflict.ChangeConflictError], rather than a generic health error, when a
+// workshop is waiting on an errored change.
+func (s *requestSuite) TestStopManyWaitingReturnsChangeConflict(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.launchWorkshopWithSDKs(c, "ws", nil)
+	change := s.state.NewChange("refresh", "refresh ws")
+	change.Set("project-id", s.project.ProjectId)
+	change.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("run-hook", "Run refresh hook")
+	task.Set("workshop", "ws")
+	task.Set("project", s.project)
+	change.AddTask(task)
+
+	_, err := s.mgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
+	var conflictErr healthstate.ChangeInProgressError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, healthstate.ChangeInProgressError{
+		ChangeID:   change.ID(),
+		ChangeKind: "refresh",
+		ProjectID:  s.project.ProjectId,
+		Workshop:   "ws",
+	})
+}
+
 func (s *requestSuite) TestRemountSuccess(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -790,5 +819,5 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	change.Set("project-id", s.project.ProjectId)
 
 	_, err := s.mgr.Remount(s.ctx, s.state, plug, c.MkDir())
-	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": other changes in progress`)
+	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": workshop "ws-1" has "refresh" change in progress`)
 }

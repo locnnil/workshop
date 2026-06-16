@@ -81,9 +81,10 @@ func ParseRefreshSetting(s string) (RefreshOption, error) {
 
 // ChangeConflictError represents an error because of snap conflicts between changes.
 type ChangeConflictError struct {
-	ProjectId  string
-	Workshop   string
-	ChangeKind string
+	ProjectId    string
+	Workshop     string
+	ChangeKind   string
+	ChangeStatus string
 	// a Message is optional, otherwise one is composed from the other information
 	Message string
 	// ChangeID can optionally be set to the ID of the change with which the operation conflicts
@@ -187,10 +188,11 @@ func CheckChangeConflict(st *state.State, projectId, workshop string, ignoreKind
 		return nil
 	}
 	return &ChangeConflictError{
-		ProjectId:  projectId,
-		Workshop:   workshop,
-		ChangeKind: chg.Kind(),
-		ChangeID:   chg.ID(),
+		ProjectId:    projectId,
+		Workshop:     workshop,
+		ChangeKind:   chg.Kind(),
+		ChangeStatus: chg.Status().String(),
+		ChangeID:     chg.ID(),
 	}
 }
 
