@@ -366,9 +366,17 @@ func (s *healthSuite) TestCheckStatusPending(c *check.C) {
 	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.PendingStatus})
 	c.Assert(err, check.IsNil)
 
-	// All other status' should return an error
+	// All other status' should return a structured change-in-progress error
+	// identifying the blocking change.
 	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "other change in progress")
+	var conflictErr healthstate.ChangeInProgressError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, healthstate.ChangeInProgressError{
+		ChangeID:   chg.ID(),
+		ChangeKind: "refresh",
+		ProjectID:  s.project.ProjectId,
+		Workshop:   "ws",
+	})
 }
 
 func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {

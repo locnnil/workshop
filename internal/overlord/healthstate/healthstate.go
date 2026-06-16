@@ -270,9 +270,9 @@ func (e ChangeInProgressError) Error() string {
 }
 
 // CheckWorkshopHealth returns an error when the workshop's health is not one of
-// the allowed statuses. A workshop blocked by a change waiting on error yields
-// a [ChangeInProgressError]; any other disallowed status yields the matching
-// ErrorWorkshopHealth sentinel.
+// the allowed statuses. A workshop blocked by a pending change, or a change
+// waiting on error, yields a [ChangeInProgressError]; any other disallowed
+// status yields the matching ErrorWorkshopHealth sentinel.
 func CheckWorkshopHealth(
 	st *state.State,
 	ws *workshop.Workshop,
@@ -283,7 +283,8 @@ func CheckWorkshopHealth(
 		return nil
 	}
 
-	if health.Status == WaitingStatus && health.Cause.HasChangeRef() {
+	if health.HasStatusIn(WaitingStatus, PendingStatus) &&
+		health.Cause.HasChangeRef() {
 		return ChangeInProgressError{
 			ChangeID:   health.Cause.ChangeRef.ID,
 			ChangeKind: health.Cause.ChangeRef.Kind,

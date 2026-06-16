@@ -819,5 +819,5 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	change.Set("project-id", s.project.ProjectId)
 
 	_, err := s.mgr.Remount(s.ctx, s.state, plug, c.MkDir())
-	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": other change in progress`)
+	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": workshop "ws-1" has "refresh" change in progress`)
 }
