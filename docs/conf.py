@@ -213,5 +213,10 @@ copybutton_prompt_text = "$ "
 copybutton_here_doc_delimiter = "EOF"
 copybutton_line_continuation_character = "\\"
 
+# Let rendered Mermaid diagrams size to their natural aspect ratio instead of
+# the extension's fixed 500px height, which letterboxes wide diagrams with
+# vertical whitespace. Fullscreen view overrides this with !important.
+mermaid_height = "auto"
+
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes_action
 smartquotes_action = "qe"
