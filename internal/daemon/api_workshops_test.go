@@ -4547,13 +4547,15 @@ func (s *apiSuite) TestRefreshConflictChange(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh "basic": waiting on error`,
+			Kind:    errorKindChangeConflict.String(),
+			Message: `workshop "basic" has "refresh" change in progress`,
 			Summary: `Refresh "basic" workshop`,
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot refresh "basic": waiting on error`,
+			Kind:    errorKindChangeConflict.String(),
+			Message: `workshop "basic" has "refresh" change in progress`,
 			Summary: `Refresh "basic" workshop`,
 		},
 	}
@@ -4783,7 +4785,7 @@ func (s *apiSuite) TestStartWorkshop(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: `cannot start "basic": workshop already running`,
+			Message: `cannot start "basic": already running`,
 		},
 	}
 
@@ -4845,14 +4847,13 @@ func (s *apiSuite) TestStopWorkshopChangeConflict(c *check.C) {
 	c.Assert(rsp.Status, check.Equals, http.StatusBadRequest)
 	result := rsp.Result.(*errorResult)
 	c.Check(result, check.DeepEquals, &errorResult{
-		Message: `cannot stop workshop "basic": conflicting "refresh" change in progress`,
+		Message: `workshop "basic" has "refresh" change in progress`,
 		Kind:    errorKindChangeConflict,
 		Value: changeConflictValue{
-			ChangeID:     refreshID,
-			ChangeKind:   "refresh",
-			ChangeStatus: "Wait",
-			ProjectID:    s.project.ProjectId,
-			Workshop:     "basic",
+			ChangeID:   refreshID,
+			ChangeKind: "refresh",
+			ProjectID:  s.project.ProjectId,
+			Workshop:   "basic",
 		},
 	})
 }
