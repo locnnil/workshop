@@ -84,9 +84,7 @@ func (m *workshopStart) TestStartChangeConflictInProgress(c *check.C) {
 	c.Assert(
 		err,
 		check.ErrorMatches,
-		`
-cannot start "dev": change launch is in progress
-To view details: "workshop tasks 30"`[1:],
+		`cannot start "dev": change launch is in progress`,
 	)
 }
 
@@ -136,12 +134,7 @@ func (m *workshopStart) TestStartRefreshConflictWaiting(c *check.C) {
 	})
 
 	err := cmd.Run(cmd.Command(), []string{"dev"})
-	c.Assert(err, check.ErrorMatches, `cannot start "dev": refresh change is waiting on error
-To view details: "workshop tasks 29"
-
-To abort and undo the refresh: "workshop refresh --abort dev"
-Otherwise, resolve the error, then run "workshop refresh --continue dev"
-After that, run "workshop start dev" again\.`)
+	c.Assert(err, check.ErrorMatches, `cannot start "dev": refresh change is waiting on error`)
 }
 
 func (m *workshopStart) TestStartSuccess(c *check.C) {

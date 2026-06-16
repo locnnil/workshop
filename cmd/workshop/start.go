@@ -96,23 +96,15 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	switch {
 	case err == nil:
 	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh":
-		return fmt.Errorf(`
-cannot start %[1]q: refresh change is waiting on error
-To view details: "workshop tasks %[2]s"
-
-To abort and undo the refresh: "workshop refresh --abort %[1]s"
-Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"
-After that, run "workshop start %[1]s" again.`[1:],
+		return fmt.Errorf(
+			"cannot start %[1]q: refresh change is waiting on error",
 			conflictErr.Workshop,
-			conflictErr.ChangeID,
 		)
 	case errors.As(err, &conflictErr):
-		return fmt.Errorf(`
-cannot start %[1]q: change %[2]s is in progress
-To view details: "workshop tasks %[3]s"`[1:],
+		return fmt.Errorf(
+			"cannot start %[1]q: change %[2]s is in progress",
 			conflictErr.Workshop,
 			conflictErr.ChangeKind,
-			conflictErr.ChangeID,
 		)
 	default:
 		return err
