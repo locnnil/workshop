@@ -30,6 +30,22 @@ import (
 	"github.com/canonical/workshop/internal/workshop"
 )
 
+// ChangeInProgressError reports that an operation on a workshop cannot
+// proceed because a conflicting change is already in progress for it.
+type ChangeInProgressError struct {
+	// ChangeID is the identifier of the change that blocks the operation.
+	ChangeID string
+
+	// ChangeKind is the kind of the conflicting change, such as "refresh".
+	ChangeKind string
+
+	// ProjectID identifies the project the targeted workshop belongs to.
+	ProjectID string
+
+	// Workshop is the name of the workshop the operation targeted.
+	Workshop string
+}
+
 type Status int
 
 const (
@@ -39,6 +55,30 @@ const (
 	WaitingStatus
 	ErrorStatus
 	StoppedStatus
+)
+
+var (
+	// ErrorWorkshopHealthError reports that the workshop is unhealthy because
+	// a change has stopped in error.
+	ErrorWorkshopHealthError = errors.New("unhealthy in error")
+
+	// ErrorWorkshopHealthPending reports that another change is already in
+	// progress for the workshop.
+	ErrorWorkshopHealthPending = errors.New("other change in progress")
+
+	// ErrorWorkshopHealthReady reports that the workshop is already running.
+	ErrorWorkshopHealthReady = errors.New("already running")
+
+	// ErrorWorkshopHealthStopped reports that the workshop is not running.
+	ErrorWorkshopHealthStopped = errors.New("not running")
+
+	// ErrorWorkshopHealthUnknown reports that the workshop health could not be
+	// determined.
+	ErrorWorkshopHealthUnknown = errors.New("health unknown")
+
+	// ErrorWorkshopHealthWaiting reports that a change is paused waiting on an
+	// error in the workshop.
+	ErrorWorkshopHealthWaiting = errors.New("waiting on error")
 )
 
 var knownStatuses = []string{"Unknown", "Ready", "Pending", "Waiting", "Error", "Stopped"}
@@ -222,27 +262,50 @@ func sdksHealthCheckSummary(st *state.State, changeID string) map[string]HealthC
 	return sdkChecks
 }
 
-// Checks the provided workshop has one of the allowed health statuses.
-func CheckWorkshopHealth(st *state.State, ws *workshop.Workshop, allowedStatuses []Status) error {
-	health := WorkshopHealth(st, ws)
+// Error implements the error interface, describing the change responsible for
+// the conflict.
+func (e ChangeInProgressError) Error() string {
+	return fmt.Sprintf(
+		"workshop %q has %q change in progress", e.Workshop, e.ChangeKind)
+}
 
-	if !slices.Contains(allowedStatuses, health.Status) {
-		switch health.Status {
-		case ReadyStatus:
-			return errors.New("workshop already running")
-		case PendingStatus:
-			return errors.New("other changes in progress")
-		case WaitingStatus:
-			return errors.New("waiting on error")
-		case ErrorStatus:
-			return errors.New("workshop unhealthy")
-		case StoppedStatus:
-			return errors.New("workshop not running")
-		default:
-			return errors.New("workshop health unknown")
+// CheckWorkshopHealth returns an error when the workshop's health is not one of
+// the allowed statuses. A workshop blocked by a change waiting on error yields
+// a [ChangeInProgressError]; any other disallowed status yields the matching
+// ErrorWorkshopHealth sentinel.
+func CheckWorkshopHealth(
+	st *state.State,
+	ws *workshop.Workshop,
+	allowedStatuses []Status,
+) error {
+	health := WorkshopHealth(st, ws)
+	if health.HasStatusIn(allowedStatuses...) {
+		return nil
+	}
+
+	if health.Status == WaitingStatus && health.Cause.HasChangeRef() {
+		return ChangeInProgressError{
+			ChangeID:   health.Cause.ChangeRef.ID,
+			ChangeKind: health.Cause.ChangeRef.Kind,
+			ProjectID:  ws.Project.ProjectId,
+			Workshop:   ws.Name,
 		}
 	}
-	return nil
+
+	switch health.Status {
+	case ReadyStatus:
+		return ErrorWorkshopHealthReady
+	case PendingStatus:
+		return ErrorWorkshopHealthPending
+	case WaitingStatus:
+		return ErrorWorkshopHealthWaiting
+	case ErrorStatus:
+		return ErrorWorkshopHealthError
+	case StoppedStatus:
+		return ErrorWorkshopHealthStopped
+	default:
+		return ErrorWorkshopHealthUnknown
+	}
 }
 
 func Init(hookManager *hookstate.HookManager) {

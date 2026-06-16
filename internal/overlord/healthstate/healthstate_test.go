@@ -19,6 +19,7 @@ package healthstate_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -188,6 +189,18 @@ func (*healthSuite) TestHasStatusInEmpty(c *check.C) {
 	c.Check(health.HasStatusIn(), check.Equals, false)
 }
 
+// ChangeInProgressError describes the workshop and the kind of change that is
+// blocking the operation.
+func (*healthSuite) TestChangeInProgressErrorMessage(c *check.C) {
+	err := healthstate.ChangeInProgressError{
+		Workshop:   "ws",
+		ChangeKind: "refresh",
+	}
+
+	c.Check(err.Error(), check.Equals,
+		`workshop "ws" has "refresh" change in progress`)
+}
+
 func (s *healthSuite) TestWorkshopHealthReady(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -329,7 +342,7 @@ func (s *healthSuite) TestCheckStatusReady(c *check.C) {
 
 	// All other status' should return an error
 	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "workshop already running")
+	c.Assert(err, check.ErrorMatches, "already running")
 }
 
 func (s *healthSuite) TestCheckStatusPending(c *check.C) {
@@ -355,7 +368,7 @@ func (s *healthSuite) TestCheckStatusPending(c *check.C) {
 
 	// All other status' should return an error
 	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "other changes in progress")
+	c.Assert(err, check.ErrorMatches, "other change in progress")
 }
 
 func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
@@ -379,9 +392,17 @@ func (s *healthSuite) TestCheckStatusWaiting(c *check.C) {
 	err := healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.WaitingStatus})
 	c.Assert(err, check.IsNil)
 
-	// All other status' should return an error
+	// All other status' should return a structured change-in-progress error
+	// identifying the blocking change.
 	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ErrorStatus, healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "waiting on error")
+	var conflictErr healthstate.ChangeInProgressError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, healthstate.ChangeInProgressError{
+		ChangeID:   chg.ID(),
+		ChangeKind: "refresh",
+		ProjectID:  s.project.ProjectId,
+		Workshop:   "ws",
+	})
 }
 
 func (s *healthSuite) TestCheckStatusError(c *check.C) {
@@ -396,7 +417,7 @@ func (s *healthSuite) TestCheckStatusError(c *check.C) {
 
 	// All other status' should return an error
 	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.StoppedStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "workshop unhealthy")
+	c.Assert(err, check.ErrorMatches, "unhealthy in error")
 }
 
 func (s *healthSuite) TestCheckStatusStopped(c *check.C) {
@@ -411,7 +432,7 @@ func (s *healthSuite) TestCheckStatusStopped(c *check.C) {
 
 	// All other status' should return an error
 	err = healthstate.CheckWorkshopHealth(s.state, workshop, []healthstate.Status{healthstate.ReadyStatus, healthstate.PendingStatus, healthstate.WaitingStatus, healthstate.ErrorStatus, healthstate.UnknownStatus})
-	c.Assert(err, check.ErrorMatches, "workshop not running")
+	c.Assert(err, check.ErrorMatches, "not running")
 }
 
 func (s *healthSuite) TestExecCheckHealthNotProvided(c *check.C) {
