@@ -34,6 +34,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
 	"github.com/canonical/workshop/internal/overlord/handlersetup"
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/hookstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
@@ -756,15 +757,13 @@ func (s *requestSuite) TestStopManyWaitingReturnsChangeConflict(c *check.C) {
 	change.AddTask(task)
 
 	_, err := s.mgr.StopMany(s.ctx, []string{"ws"}, s.project.ProjectId)
-	var conflictErr workshopstate.RequestChangeConflictError
+	var conflictErr healthstate.ChangeInProgressError
 	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
-	c.Check(conflictErr, check.DeepEquals, workshopstate.RequestChangeConflictError{
-		ChangeID:     change.ID(),
-		ChangeKind:   "refresh",
-		ChangeStatus: "Wait",
-		ProjectID:    s.project.ProjectId,
-		Request:      "stop",
-		Workshop:     "ws",
+	c.Check(conflictErr, check.DeepEquals, healthstate.ChangeInProgressError{
+		ChangeID:   change.ID(),
+		ChangeKind: "refresh",
+		ProjectID:  s.project.ProjectId,
+		Workshop:   "ws",
 	})
 }
 
@@ -820,5 +819,5 @@ func (s *requestSuite) TestRemountWorkshopNotReady(c *check.C) {
 	change.Set("project-id", s.project.ProjectId)
 
 	_, err := s.mgr.Remount(s.ctx, s.state, plug, c.MkDir())
-	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": other changes in progress`)
+	c.Assert(err, check.ErrorMatches, `cannot remount "ws-1/sdk-1:plug": other change in progress`)
 }
