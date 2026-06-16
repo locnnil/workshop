@@ -568,14 +568,17 @@ func runHooks(st *state.State, installed []sdk.Setup, timeout time.Duration, hoo
 }
 
 func (w *WorkshopManager) StartMany(ctx context.Context, names []string, projectId string) ([]*state.TaskSet, error) {
-	// check if all the workshops are stopped
+	var allowedHealthStatus = []healthstate.Status{
+		healthstate.StoppedStatus,
+	}
+
 	for _, name := range names {
 		wp, err := w.Workshop(ctx, name, projectId)
 		if err != nil {
 			return nil, fmt.Errorf("cannot start %q: %w", name, err)
 		}
-		allowed := []healthstate.Status{healthstate.StoppedStatus}
-		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowed); err != nil {
+
+		if err = healthstate.CheckWorkshopHealth(w.state, wp, allowedHealthStatus); err != nil {
 			return nil, fmt.Errorf("cannot start %q: %w", name, err)
 		}
 	}

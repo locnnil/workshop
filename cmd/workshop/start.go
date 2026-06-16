@@ -15,10 +15,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/canonical/x-go/strutil"
 	"github.com/spf13/cobra"
+
+	"github.com/canonical/workshop/client"
 )
 
 type CmdStart struct {
@@ -88,7 +91,22 @@ func (c *CmdStart) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	changeId, err := cli.Start(project.Id, av)
-	if err != nil {
+
+	var conflictErr client.ChangeConflictError
+	switch {
+	case err == nil:
+	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh":
+		return fmt.Errorf(
+			"cannot start %[1]q: refresh change is waiting on error",
+			conflictErr.Workshop,
+		)
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(
+			"cannot start %[1]q: change %[2]s is in progress",
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+		)
+	default:
 		return err
 	}
 

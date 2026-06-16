@@ -723,6 +723,34 @@ func (s *requestSuite) TestStartMany(c *check.C) {
 	c.Assert(ts[1].Tasks()[0].Kind(), check.Equals, "start-workshop")
 }
 
+// TestStartManyWaitingReturnsChangeConflict checks that start returns a typed
+// [healthstate.ChangeInProgressError], rather than a generic health error, when
+// a workshop is waiting on an errored change.
+func (s *requestSuite) TestStartManyWaitingReturnsChangeConflict(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.launchWorkshopWithSDKs(c, "ws", nil)
+	c.Assert(s.backend.StopWorkshop(s.ctx, "ws", true), check.IsNil)
+	change := s.state.NewChange("refresh", "refresh ws")
+	change.Set("project-id", s.project.ProjectId)
+	change.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("run-hook", "Run refresh hook")
+	task.Set("workshop", "ws")
+	task.Set("project", s.project)
+	change.AddTask(task)
+
+	_, err := s.mgr.StartMany(s.ctx, []string{"ws"}, s.project.ProjectId)
+	var conflictErr healthstate.ChangeInProgressError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, healthstate.ChangeInProgressError{
+		ChangeID:   change.ID(),
+		ChangeKind: "refresh",
+		ProjectID:  s.project.ProjectId,
+		Workshop:   "ws",
+	})
+}
+
 func (s *requestSuite) TestStopMany(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
