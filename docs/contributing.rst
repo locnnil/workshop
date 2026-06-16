@@ -34,11 +34,27 @@ Environment setup
 -----------------
 #. ``Workshop`` has a client-server architecture.
    Its ``workshopd`` daemon exposes a RESTful API (see ``internal/daemon/api.go``) to the clients.
-   To run the daemon locally:
+
+   The recommended way to run the current sources is the ``try``
+   dev tool wired into ``go.mod``:
 
    .. code-block:: console
 
-      go install ./...
+      go tool try
+
+   This builds ``./cmd/...`` into a temporary session directory under
+   ``try_sessions/``, starts ``workshopd`` against it, and drops you
+   into a subshell with ``WORKSHOP``, ``WORKSHOP_CACHE``,
+   ``WORKSHOP_SOCKET`` and ``PATH`` pre-configured. Exit the shell to
+   tear the session down; pass ``--keep`` to retain the session
+   directory for inspection. Re-run ``go tool try`` from inside the
+   shell to rebuild and restart ``workshopd`` in place.
+
+   If you'd rather drive ``workshopd`` directly:
+
+   .. code-block:: console
+
+      go install ./cmd/...
       export WORKSHOP=~/workshop
       export WORKSHOP_CACHE=~/workshop-cache
       export WORKSHOP_DEBUG=1
