@@ -100,4 +100,4 @@ execute: |
 
   echo "Check stopped workshop"
   workshop_exec stop
-  workshop_exec exec ws-exec pwd | MATCH '.*cannot exec command in "ws-exec": workshop not running$'
+  workshop_exec exec ws-exec pwd | MATCH '.*cannot exec command in "ws-exec": not running$'
