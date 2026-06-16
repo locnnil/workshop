@@ -4859,11 +4859,10 @@ func (s *apiSuite) TestStartWorkshopChangeConflict(c *check.C) {
 		Message: `workshop "basic" has "refresh" change in progress`,
 		Kind:    errorKindChangeConflict,
 		Value: changeConflictValue{
-			ChangeID:     refreshID,
-			ChangeKind:   "refresh",
-			ChangeStatus: "Wait",
-			ProjectID:    s.project.ProjectId,
-			Workshop:     "basic",
+			ChangeID:   refreshID,
+			ChangeKind: "refresh",
+			ProjectID:  s.project.ProjectId,
+			Workshop:   "basic",
 		},
 	})
 }
