@@ -137,6 +137,11 @@ type errorResult struct {
 	Value   errorValue `json:"value,omitempty"`
 }
 
+// String returns the error kind as a string, implementing [fmt.Stringer].
+func (k errorKind) String() string {
+	return string(k)
+}
+
 func SyncResponse(result any, status int) Response {
 	if err, ok := result.(error); ok {
 		return statusInternalError("internal error: %w", err)
