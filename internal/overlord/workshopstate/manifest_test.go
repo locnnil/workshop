@@ -32,6 +32,7 @@ import (
 	"github.com/canonical/workshop/internal/arch"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord/conflict"
+	"github.com/canonical/workshop/internal/overlord/healthstate"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/overlord/workshopstate"
 	"github.com/canonical/workshop/internal/sdk"
@@ -409,38 +410,6 @@ func (s *manifestSuite) TestLaunchAvoidsConflicts(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `cannot launch "test-2": other changes in progress: workshop "test-2" has "launch" change in progress`)
 }
 
-// TestRefreshManifestsWaitingReturnsChangeConflict checks that refresh returns
-// the blocking change details when a workshop is waiting on an errored change.
-func (s *manifestSuite) TestRefreshManifestsWaitingReturnsChangeConflict(c *check.C) {
-	s.state.Lock()
-	defer s.state.Unlock()
-
-	s.launchWorkshopWithSDKs(c, "test-1", "ubuntu@20.04", nil)
-	change := s.state.NewChange("refresh", "refresh test-1")
-	change.Set("project-id", s.project.ProjectId)
-	change.SetStatus(state.WaitStatus)
-	task := s.state.NewTask("run-hook", "Run refresh hook")
-	task.Set("workshop", "test-1")
-	task.Set("project", s.project)
-	change.AddTask(task)
-
-	_, _, err := s.manager.RefreshManifests(
-		s.ctx,
-		s.project,
-		[]string{"test-1"},
-		conflict.RefreshUpdate,
-	)
-	var conflictErr *conflict.ChangeConflictError
-	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
-	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
-		ProjectId:    s.project.ProjectId,
-		Workshop:     "test-1",
-		ChangeKind:   "refresh",
-		ChangeStatus: "Wait",
-		ChangeID:     change.ID(),
-	})
-}
-
 func (s *manifestSuite) TestRefreshRequiresWorkshopExistence(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
@@ -471,6 +440,40 @@ func (s *manifestSuite) TestRefreshRequiresStatusReady(c *check.C) {
 
 	_, _, err = s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1", "test-2", "test-3"}, conflict.RefreshRestore)
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": not running`)
+}
+
+// TestRefreshManifestsWaitingReturnsChangeConflict checks that refresh returns a
+// typed [healthstate.ChangeInProgressError], rather than a generic health
+// error, when a workshop is waiting on an errored change.
+func (s *manifestSuite) TestRefreshManifestsWaitingReturnsChangeConflict(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.launchWorkshopWithSDKs(c, "test-1", "ubuntu@20.04", nil)
+	change := s.state.NewChange("refresh", "refresh test-1")
+	change.Set("project-id", s.project.ProjectId)
+	change.SetStatus(state.WaitStatus)
+	task := s.state.NewTask("run-hook", "Run refresh hook")
+	task.Set("workshop", "test-1")
+	task.Set("project", s.project)
+	change.AddTask(task)
+
+	expected := healthstate.ChangeInProgressError{
+		ChangeID:   change.ID(),
+		ChangeKind: "refresh",
+		ProjectID:  s.project.ProjectId,
+		Workshop:   "test-1",
+	}
+
+	_, _, err := s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1"}, conflict.RefreshUpdate)
+	var updateErr healthstate.ChangeInProgressError
+	c.Assert(errors.As(err, &updateErr), check.Equals, true)
+	c.Check(updateErr, check.DeepEquals, expected)
+
+	_, _, err = s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1"}, conflict.RefreshRestore)
+	var restoreErr healthstate.ChangeInProgressError
+	c.Assert(errors.As(err, &restoreErr), check.Equals, true)
+	c.Check(restoreErr, check.DeepEquals, expected)
 }
 
 func (s *manifestSuite) TestLaunchRequiresFile(c *check.C) {

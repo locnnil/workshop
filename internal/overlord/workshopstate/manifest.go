@@ -314,21 +314,9 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 		return nil, err
 	}
 
-	health := healthstate.WorkshopHealth(w.state, wp)
-	if health.Status == healthstate.PendingStatus ||
-		health.Status == healthstate.WaitingStatus {
-		err := conflict.CheckChangeConflict(
-			w.state,
-			projectId,
-			name,
-			[]string{"exec"},
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err := healthstate.CheckWorkshopHealth(w.state, wp, []healthstate.Status{healthstate.ReadyStatus}); err != nil {
+	err = healthstate.CheckWorkshopHealth(
+		w.state, wp, []healthstate.Status{healthstate.ReadyStatus})
+	if err != nil {
 		return nil, err
 	}
 
