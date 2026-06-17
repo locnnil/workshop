@@ -1257,6 +1257,59 @@ func (s *apiSuite) TestLaunchWorkshopFailed(c *check.C) {
 	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "test-sdk", "test-sdk-2"})
 }
 
+func (s *apiSuite) TestSnapshotsRemovedAfterRemoveMidLaunch(c *check.C) {
+	s.daemon(c)
+	s.d.Overlord().Loop()
+	defer s.d.Overlord().Stop()
+
+	s.createWFile(c, "manysdks", manysdks)
+	defer s.store.SetDownloadCallback(storeDownload(c))()
+
+	// Fail when snapshotting test-sdk-2.
+	s.b.SnapshotCallback = func(ctx context.Context, name string, snapshot workshop.Snapshot) error {
+		if len(snapshot.Sdks) > 2 {
+			return errors.New("cannot take snapshot")
+		}
+		return nil
+	}
+
+	requests := []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"launch","options":{"mode":"wait-on-error"}}`),
+	}
+	expected := []*expectedResp{
+		{
+			Type:      ResponseTypeAsync,
+			Status:    http.StatusAccepted,
+			Kind:      "launch",
+			Summary:   `Launch "manysdks" workshop`,
+			ChangeErr: `(?s).*cannot take snapshot.*`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	c.Assert(s.b.Snapshots, check.HasLen, 2)
+	st := s.d.state
+	st.Lock()
+	err := conflict.CheckChangeConflict(st, s.project.ProjectId, "manysdks", []string{"exec"})
+	st.Unlock()
+	c.Assert(err, check.NotNil)
+
+	requests = []*bytes.Buffer{
+		bytes.NewBufferString(`{"names":["manysdks"],"action":"remove"}`),
+	}
+	expected = []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "remove",
+			Summary: `Remove "manysdks" workshop`,
+		},
+	}
+	s.runActionTest(c, requests, expected)
+
+	s.ensureSnapshotsAfterCooldown(c, nil, []string{"system", "test-sdk"})
+}
+
 //go:embed snapshot-format.yaml
 var snapshotFormat []byte
 
