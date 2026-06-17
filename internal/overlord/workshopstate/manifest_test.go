@@ -925,7 +925,15 @@ ssh-agent:
 	s.createWFile(c, "test-1", "ubuntu@20.04", sdks)
 
 	_, err := s.manager.LaunchManifests(s.ctx, s.project, []string{"test-1"})
-	c.Assert(err, check.ErrorMatches, `cannot launch "test-1": invalid "test" SDK: unknown SDK YAML fields: ssh-agent \(line \d+, column \d+\)`)
+	var unknown *sdk.UnknownYamlFieldsError
+	ok := errors.As(err, &unknown)
+	c.Assert(ok, check.Equals, true)
+	c.Check(unknown.Fields, check.DeepEquals, map[string]sdk.UnknownYamlField{
+		"ssh-agent": {
+			Line:   3,
+			Column: 3,
+		},
+	})
 }
 
 func (s *manifestSuite) TestRefreshDetectsSketchSdk(c *check.C) {
