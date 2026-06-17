@@ -16,6 +16,22 @@ execute: |
   workshop_exec info | yq '.sdks["sketch"].tracking' | MATCH '^~/.local/share/workshop/id/.*/ws-sketch/sdk/sketch'
   workshop_exec info | yq '.sdks["sketch"].installed' | MATCH '\(x1\)$'
 
+  echo "Reject unknown sketch SDK YAML fields"
+  ! sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk > error.log 2>&1 <<EOF || false
+  1/^name: sketch$/a
+  base: ubuntu@24.04
+  .
+  wq
+  EOF
+  MATCH 'cannot sketch: sketch SDK YAML contains unknown fields:' < error.log
+  MATCH '"base" at line [0-9]+, column [0-9]+' < error.log
+
+  echo "Restore valid sketch SDK YAML"
+  sudo TERM=ansi EDITOR=ex -u ubuntu -- workshop sketch-sdk <<EOF
+  /^base: ubuntu@24.04$/d
+  wq
+  EOF
+
   echo "Stash current sketch SDK"
   workshop_exec sketch-sdk --stash
   workshop_exec info | yq '.sdks["sketch"].installed' | NOMATCH '\(x1\)$'
