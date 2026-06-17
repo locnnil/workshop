@@ -4579,12 +4579,14 @@ func (s *apiSuite) TestRefreshWorkshopChangeConflict(c *check.C) {
 	requests := []*bytes.Buffer{
 		bytes.NewBufferString(`{"names":["basic"],"action":"launch"}`),
 	}
-	expected := []*expectedResp{{
-		Type:    ResponseTypeAsync,
-		Status:  http.StatusAccepted,
-		Kind:    "launch",
-		Summary: `Launch "basic" workshop`,
-	}}
+	expected := []*expectedResp{
+		{
+			Type:    ResponseTypeAsync,
+			Status:  http.StatusAccepted,
+			Kind:    "launch",
+			Summary: `Launch "basic" workshop`,
+		},
+	}
 	s.runActionTest(c, requests, expected)
 
 	st := s.d.state
@@ -4620,11 +4622,10 @@ func (s *apiSuite) TestRefreshWorkshopChangeConflict(c *check.C) {
 		Message: `workshop "basic" has "refresh" change in progress`,
 		Kind:    errorKindChangeConflict,
 		Value: changeConflictValue{
-			ChangeID:     refreshID,
-			ChangeKind:   "refresh",
-			ChangeStatus: "Wait",
-			ProjectID:    s.project.ProjectId,
-			Workshop:     "basic",
+			ChangeID:   refreshID,
+			ChangeKind: "refresh",
+			ProjectID:  s.project.ProjectId,
+			Workshop:   "basic",
 		},
 	})
 }

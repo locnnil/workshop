@@ -1,0 +1,4 @@
+name: ws-refresh-conflict
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic-2
