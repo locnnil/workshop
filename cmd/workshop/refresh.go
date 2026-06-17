@@ -167,32 +167,31 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	var conflictErr client.ChangeConflictError
 	switch {
 	case err == nil:
+		// The refresh ran to completion.
 		fmt.Fprintf(Stdout, "%s refreshed\n", strutil.Quoted(av))
 	case errors.Is(err, errNoWait):
-	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh" &&
-		conflictErr.ChangeStatus == "Wait":
-		return fmt.Errorf(`
-cannot refresh %[1]q; paused
-To view details: "workshop tasks %[2]s"
-
-To abort and undo: "workshop refresh --abort %[1]s"
-Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"`[1:],
+		// --no-wait returned the change ID without waiting; nothing to report.
+	case errors.As(err, &conflictErr) && conflictErr.ChangeKind == "refresh":
+		// Rejected before starting: another refresh is already paused on error.
+		return fmt.Errorf(
+			"cannot refresh %[1]q; another refresh change is waiting on error",
 			conflictErr.Workshop,
-			conflictErr.ChangeID,
 		)
 	case errors.As(err, &conflictErr):
-		return fmt.Errorf(`
-cannot refresh %[1]q: change %[2]s is in progress
-To view details: "workshop tasks %[3]s"`[1:],
+		// Rejected before starting: a non-refresh change is blocking the workshop.
+		return fmt.Errorf(
+			"cannot refresh %[1]q: %[2]s change is in progress",
 			conflictErr.Workshop,
 			conflictErr.ChangeKind,
-			conflictErr.ChangeID,
 		)
 	case client.IsNoUpdatesAvailable(err):
+		// The workshops already match their definitions.
 		fmt.Fprintf(Stdout, "no updates available for %s\n", strutil.Quoted(av))
 	case errors.Is(err, errUndone):
+		// An explicit --abort reverted the paused refresh cleanly.
 		fmt.Fprintf(Stdout, "%s refresh aborted\n", strutil.Quoted(av))
 	case errors.Is(err, errWaitOnError):
+		// This refresh hit an error and paused under --wait-on-error.
 		w := workshopName(av[0])
 		return fmt.Errorf(`
 cannot refresh %[1]q; paused
@@ -204,13 +203,15 @@ Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"`[1:],
 			chg.ID,
 		)
 	case chg != nil:
+		// This refresh hit an error in transactional mode and was aborted.
 		return fmt.Errorf(`
-cannot refresh %s: aborted
+cannot refresh %s; aborted
 To view details: "workshop tasks %s"`[1:],
 			strutil.Quoted(av),
 			chg.ID,
 		)
 	default:
+		// The request failed before any change ran; surface the cause.
 		return fmt.Errorf("cannot refresh %s: %w", strutil.Quoted(av), err)
 	}
 

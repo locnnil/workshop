@@ -115,8 +115,8 @@ func (m *workshopRefresh) SetUpTest(c *check.C) {
 	m.BaseWorkshopSuite.SetUpTest(c)
 }
 
-// TestConflictInProgress checks that refresh explains a blocking in-progress
-// change and points the user to the task details.
+// TestConflictInProgress checks that refresh reports a blocking non-refresh
+// change on a single line naming its kind.
 func (m *workshopRefresh) TestConflictInProgress(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	n := 0
@@ -145,11 +145,10 @@ func (m *workshopRefresh) TestConflictInProgress(c *check.C) {
 				"status-code": 400,
 				"result": {
 					"kind": "change-conflict",
-					"message": "cannot refresh \\\"dev\\\": change is in progress",
+					"message": "workshop \"dev\" has \"launch\" change in progress",
 					"value": {
 						"change-id": "30",
 						"change-kind": "launch",
-						"change-status": "Do",
 						"project-id": "42424242",
 						"workshop": "dev"
 					}
@@ -164,9 +163,7 @@ func (m *workshopRefresh) TestConflictInProgress(c *check.C) {
 	c.Assert(
 		err,
 		check.ErrorMatches,
-		`
-cannot refresh "dev": change launch is in progress
-To view details: "workshop tasks 30"`[1:],
+		`cannot refresh "dev": launch change is in progress`,
 	)
 }
 
@@ -200,11 +197,10 @@ func (m *workshopRefresh) TestConflictWaitingOnRefresh(c *check.C) {
 				"status-code": 400,
 				"result": {
 					"kind": "change-conflict",
-					"message": "cannot refresh \\\"dev\\\": waiting on error",
+					"message": "workshop \"dev\" has \"refresh\" change in progress",
 					"value": {
 						"change-id": "29",
 						"change-kind": "refresh",
-						"change-status": "Wait",
 						"project-id": "42424242",
 						"workshop": "dev"
 					}
@@ -219,12 +215,7 @@ func (m *workshopRefresh) TestConflictWaitingOnRefresh(c *check.C) {
 	c.Assert(
 		err,
 		check.ErrorMatches,
-		`
-cannot refresh "dev"; paused
-To view details: "workshop tasks 29"
-
-To abort and undo: "workshop refresh --abort dev"
-Otherwise, resolve the error, then run "workshop refresh --continue dev"`[1:],
+		`cannot refresh "dev"; another refresh change is waiting on error`,
 	)
 }
 
@@ -286,7 +277,7 @@ func (m *workshopRefresh) TestRefreshTransactionalFailedAndAborted(c *check.C) {
 
 	err := cmd.Run(cmd.Command(), []string{"ws", "ws-1"})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `cannot refresh "ws", "ws-1": aborted
+	c.Assert(err, check.ErrorMatches, `cannot refresh "ws", "ws-1"; aborted
 To view details: "workshop tasks 42"`)
 	c.Check(n, check.Equals, 3)
 }
