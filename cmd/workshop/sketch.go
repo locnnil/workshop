@@ -15,11 +15,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"strings"
 
@@ -99,13 +99,6 @@ $ workshop sketch-sdk nimble --stash`,
 	cmd.MarkFlagsMutuallyExclusive("stash", "restore", "eject", "remove")
 
 	return cmd
-}
-
-type SketchFile struct {
-	Name  string            `yaml:"name"`
-	Plugs map[string]any    `yaml:"plugs,omitempty"`
-	Slots map[string]any    `yaml:"slots,omitempty"`
-	Hooks map[string]string `yaml:"hooks,omitempty"`
 }
 
 var sketchTemplate = `# For details: https://ubuntu.com/workshop/docs/explanation/sdks/concepts/#sketch-sdk
@@ -234,24 +227,21 @@ func ejectSketch(project, sketchdir string, name string) (*revert.Reverter, erro
 	} else if err != nil {
 		return nil, err
 	}
+	file, err := sdk.ParseSketchYaml(bytes.NewReader(content))
+	if err != nil {
+		return nil, parseSketchYamlUserError(err)
+	}
+
 	var document yaml.Node
 	if err := yaml.Unmarshal(content, &document); err != nil {
 		return nil, err
 	}
+	projectFile := file
+	projectFile.Name = name
 
-	var file SketchFile
-	if err := document.Decode(&file); err != nil {
+	if err := sketchToProjectSdk(&document, projectFile.Name); err != nil {
 		return nil, err
 	}
-	file.Name = name
-
-	if err := sketchToProjectSdk(&document, name); err != nil {
-		return nil, err
-	}
-	if err := validateProjectSdk(&document, &file); err != nil {
-		return nil, err
-	}
-
 	// This won't be cleaned up on failure. In most cases, the user
 	// is likely to retry the eject after fixing the underlying issue.
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
@@ -297,39 +287,15 @@ func sketchToProjectSdk(document *yaml.Node, name string) error {
 		Name  NodeRef `yaml:"name"`
 		Hooks NodeRef `yaml:"hooks"`
 	}
-	if err := document.Decode(&nodes); err != nil {
+	err := document.Decode(&nodes)
+	if err != nil {
 		return err
 	}
 
-	if nodes.Name.Node == nil {
-		return errors.New(`"sketch" SDK name not found`)
-	}
 	nodes.Name.Node.Value = name
 
 	if nodes.Hooks.Node != nil {
 		RemoveNodes(document, nodes.Hooks.Node)
-	}
-
-	return nil
-}
-
-func validateProjectSdk(document *yaml.Node, expected *SketchFile) error {
-	var actual SketchFile
-	if err := document.Decode(&actual); err != nil {
-		return err
-	}
-
-	if actual.Name != expected.Name {
-		return fmt.Errorf("internal error: sketch SDK renamed %q (expected %q)", actual.Name, expected.Name)
-	}
-	if !reflect.DeepEqual(expected.Plugs, actual.Plugs) {
-		return errors.New("internal error: sketch SDK plugs not preserved")
-	}
-	if !reflect.DeepEqual(expected.Slots, actual.Slots) {
-		return errors.New("internal error: sketch SDK slots not preserved")
-	}
-	if len(actual.Hooks) > 0 {
-		return errors.New("internal error: hooks not ejected from sketch SDK")
 	}
 
 	return nil
@@ -567,14 +533,67 @@ func editSketchSdk(sketchdir string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeSketchHooks(temp, content); err != nil {
-		// If writeSketchHooks failed, we don't want to refresh
-		// but we do want to remember the user's edits for next time.
+	file, err := sdk.ParseSketchYaml(bytes.NewReader(content))
+	if err != nil {
+		// If parsing failed, we don't want to refresh but we do want to
+		// remember the user's edits for next time.
+		_ = osutil.Exchange(temp, sketchdir)
+		return parseSketchYamlUserError(err)
+	}
+
+	if err := writeHooks(temp, file); err != nil {
+		// If writeHooks failed, we don't want to refresh but we do want to
+		// remember the user's edits for next time.
 		_ = osutil.Exchange(temp, sketchdir)
 		return err
 	}
 
 	return osutil.Exchange(temp, sketchdir)
+}
+
+// parseSketchYamlUserError converts structured [sdk.ParseSketchYaml] errors
+// into messages that tell sketch SDK users what to fix in their YAML. Use it
+// when reporting parse failures from sketch command flows, where raw validator
+// errors can be too generic or expose SDK-internal terms.
+func parseSketchYamlUserError(err error) error {
+	var (
+		invalidHook  sdk.InvalidSDKHookNameError
+		unknownField *sdk.UnknownYamlFieldsError
+	)
+
+	switch {
+	case errors.Is(err, sdk.ErrorInvalidSDKName):
+		return fmt.Errorf(
+			"sketch SDK YAML must keep name set to %q",
+			sdk.Sketch,
+		)
+	case errors.As(err, &invalidHook):
+		return fmt.Errorf(
+			"sketch SDK YAML contains unsupported hook %q; supported hooks: %s",
+			string(invalidHook),
+			strings.Join(sdk.AllowedHooks, ", "),
+		)
+	case errors.As(err, &unknownField):
+		parts := make([]string, 0, len(unknownField.Fields))
+		for name, field := range unknownField.Fields {
+			parts = append(
+				parts,
+				fmt.Sprintf(
+					"%q at line %d, column %d",
+					name,
+					field.Line,
+					field.Column,
+				),
+			)
+		}
+
+		return fmt.Errorf(
+			"sketch SDK YAML contains unknown fields: %s",
+			strings.Join(parts, ", "),
+		)
+	default:
+		return fmt.Errorf("could not parse sketch SDK YAML: %v", err)
+	}
 }
 
 func writeSketchSdk(path string, content []byte) error {
@@ -584,20 +603,7 @@ func writeSketchSdk(path string, content []byte) error {
 	return os.WriteFile(path, content, 0644)
 }
 
-func writeSketchHooks(sketchdir string, content []byte) error {
-	var file SketchFile
-	if err := yaml.Unmarshal(content, &file); err != nil {
-		return err
-	}
-
-	if !sdk.IsSketch(file.Name) {
-		return fmt.Errorf("SDK must be named %q (now: %q)", sdk.Sketch, file.Name)
-	}
-
-	return writeHooks(sketchdir, file)
-}
-
-func writeHooks(sdkdir string, file SketchFile) error {
+func writeHooks(sdkdir string, file sdk.SketchSDKYaml) error {
 	hooksdir := filepath.Join(sdkdir, "hooks")
 	if len(file.Hooks) > 0 {
 		if err := os.MkdirAll(hooksdir, 0755); err != nil {
@@ -605,15 +611,14 @@ func writeHooks(sdkdir string, file SketchFile) error {
 		}
 	}
 
-	for _, hook := range []string{"setup-base", "setup-project", "save-state", "restore-state", "check-health"} {
+	for hook, script := range file.Hooks {
 		hookpath := filepath.Join(hooksdir, hook)
-		if script := file.Hooks[hook]; len(script) > 0 {
-			if !strings.HasSuffix(script, "\n") {
-				script += "\n"
-			}
-			if err := os.WriteFile(hookpath, []byte(script), 0644); err != nil {
-				return err
-			}
+		if !strings.HasSuffix(script, "\n") {
+			script += "\n"
+		}
+		err := os.WriteFile(hookpath, []byte(script), 0644)
+		if err != nil {
+			return err
 		}
 	}
 
