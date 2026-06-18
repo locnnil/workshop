@@ -121,6 +121,8 @@ llms_txt_description = textwrap.dedent(
     """
 )
 
+llms_txt_suffix_mode = "url-suffix"
+
 # The base URL for references built by sphinx-markdown-builder.
 if os.environ.get("READTHEDOCS"):
     markdown_http_base = html_baseurl
@@ -220,3 +222,5 @@ mermaid_height = "auto"
 
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes_action
 smartquotes_action = "qe"
+
+# sphinx-llm
