@@ -38,26 +38,33 @@ import (
 // - <Workshop>.<ProjectAlias>.wp
 // Both records point to <Workshop>-<ProjectId>.wp.
 //
-// ProjectAlias is ideally the punycode ASCII encoding of the basename of the
+// ProjectName is the user-facing project name, ideally the basename of the
 // project directory. In these cases we fall back to the project ID:
 // - The basename is invalid according to golang.org/x/net/idna.
 // - The basename is already used by another project.
 // To support common project names, we replace dots, spaces and underscores
 // with hyphens before validation.
 //
-// The reason for using punycode is that dnsmasq (via libidn2) is stricter
-// than Go about valid domain names. It still allows some unicode characters,
-// but not as many. If validation fails, LXD will roll back the changes to
-// raw.dnsmasq so we don't even get the ProjectId fallback.
+// ProjectAlias is the punycode ASCII encoding of ProjectName. The reason for
+// this is that dnsmasq (via libidn2) is stricter than Go about valid domain
+// names. It still allows some unicode characters, but not as many. If
+// validation fails, LXD will roll back the changes to raw.dnsmasq so we don't
+// even get the ProjectId fallback. If ProjectName != ProjectAlias, we store
+// the ProjectName as a comment so that `workshop info` can display it.
 //
-// Once all workshops in a given project are stopped manually, ProjectAlias is
+// Once all workshops in a given project are stopped manually, ProjectName is
 // made available, but only for newly started workshops. If a workshop is
 // stopped using lxc or by other means, the project name remains in use until
 // it is stopped normally, or the project is pruned.
+//
+// Note is an optional human-readable reason why the basename wasn't used,
+// stored as a comment in the dnsmasq config.
 type cname struct {
 	Workshop     string
 	ProjectId    string
+	ProjectName  string
 	ProjectAlias string
+	Note         string
 }
 
 var (
@@ -121,13 +128,13 @@ func (s *Backend) addWorkshopCNAMEs(conn lxd.InstanceServer, ctx context.Context
 }
 
 func generateCNAME(cnames []cname, projects []workshop.Project, projectId string, name string) (cname, error) {
-	result := cname{Workshop: name, ProjectId: projectId, ProjectAlias: projectId}
+	result := cname{Workshop: name, ProjectId: projectId, ProjectName: projectId, ProjectAlias: projectId}
 
 	idx := slices.IndexFunc(cnames, func(c cname) bool {
 		return c.ProjectId != projectId && strings.EqualFold(c.ProjectAlias, projectId)
 	})
 	if idx >= 0 {
-		return cname{}, fmt.Errorf("hostname %s.%s already taken", projectId, networkDomain)
+		return cname{}, fmt.Errorf("hostname %s.%s already taken by %s", projectId, networkDomain, cnames[idx].friendly())
 	}
 
 	idx = slices.IndexFunc(projects, func(p workshop.Project) bool {
@@ -144,6 +151,7 @@ func generateCNAME(cnames []cname, projects []workshop.Project, projectId string
 
 	projectAlias, err := idna.Lookup.ToASCII(projectName)
 	if err != nil {
+		result.Note = "invalid-project-name"
 		return result, nil //nolint:nilerr
 	}
 
@@ -154,9 +162,11 @@ func generateCNAME(cnames []cname, projects []workshop.Project, projectId string
 		return strings.EqualFold(c.ProjectId, projectAlias) || strings.EqualFold(c.ProjectAlias, projectAlias)
 	})
 	if conflict {
+		result.Note = "project-name-in-use"
 		return result, nil
 	}
 
+	result.ProjectName = projectName
 	result.ProjectAlias = projectAlias
 	return result, nil
 }
@@ -318,12 +328,27 @@ func (c cname) String() string {
 	ttl := "0"
 
 	values := []string{alias, target, ttl}
-	if c.ProjectAlias != c.ProjectId {
+	var comment string
+	if c.ProjectAlias == c.ProjectId {
+		comment = c.Note
+	} else {
 		friendlyAlias := c.Workshop + "." + c.ProjectAlias + "." + networkDomain
 		values = []string{alias, friendlyAlias, target, ttl}
+		if c.ProjectName != c.ProjectAlias {
+			comment = c.ProjectName
+		}
 	}
 
-	return strings.Join(values, ",")
+	result := strings.Join(values, ",")
+	if comment != "" {
+		result += "  # "
+		result += comment
+	}
+	return result
+}
+
+func (c cname) friendly() string {
+	return c.Workshop + "." + c.ProjectName + "." + networkDomain
 }
 
 func (c cname) MarshalText() ([]byte, error) {
@@ -331,7 +356,9 @@ func (c cname) MarshalText() ([]byte, error) {
 }
 
 func (c *cname) UnmarshalText(text []byte) error {
-	values := strings.Split(string(text), ",")
+	value, comment, _ := strings.Cut(string(text), "  # ")
+
+	values := strings.Split(value, ",")
 	if len(values) < 3 {
 		return errors.New("not enough arguments")
 	}
@@ -356,7 +383,9 @@ func (c *cname) UnmarshalText(text []byte) error {
 	}
 
 	if len(values) == 3 {
+		c.ProjectName = c.ProjectId
 		c.ProjectAlias = c.ProjectId
+		c.Note = comment
 	} else {
 		prefix, ok := strings.CutSuffix(values[1], "."+networkDomain)
 		if !ok {
@@ -366,6 +395,12 @@ func (c *cname) UnmarshalText(text []byte) error {
 		if !ok {
 			return errors.New("invalid alias")
 		}
+		if comment == "" {
+			c.ProjectName = c.ProjectAlias
+		} else {
+			c.ProjectName = comment
+		}
+		c.Note = ""
 	}
 
 	if c.String() != string(text) {

@@ -855,7 +855,21 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		return nil, err
 	}
 
-	workshop, err := s.loadWorkshop(conn, inst, p)
+	var cnames []cname
+	network, _, err := conn.GetNetwork(networkName)
+	if err != nil {
+		if !api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil, err
+		}
+	} else {
+		cnames, _ = unmarshalDnsmasq(network.Config["raw.dnsmasq"])
+	}
+	if cnames == nil {
+		// Tell loadWorkshop to add the hostname-not-found note.
+		cnames = []cname{}
+	}
+
+	workshop, err := s.loadWorkshop(conn, inst, p, cnames)
 	if err != nil {
 		return nil, err
 	}
@@ -873,7 +887,7 @@ func workshopFile(lxdConfig map[string]string) (*workshop.File, error) {
 	return &f, nil
 }
 
-func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p workshop.Project) (*workshop.Workshop, error) {
+func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p workshop.Project, cnames []cname) (*workshop.Workshop, error) {
 	f, err := workshopFile(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
@@ -913,17 +927,42 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		profs[s.Name] = sp
 	}
 
+	running := inst.StatusCode == api.Running || inst.StatusCode == api.Ready
+	hostname := b.hostname(f.Name, p, format, running, cnames)
+
 	return &workshop.Workshop{
 		Backend:  b,
 		Project:  p,
 		Name:     f.Name,
 		Format:   format,
 		Image:    image,
-		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		Running:  running,
 		Sdks:     sdks,
 		Profiles: profs,
 		File:     f,
+		Hostname: hostname,
 	}, nil
+}
+
+func (s *Backend) hostname(name string, p workshop.Project, format sdk.Revision, running bool, cnames []cname) workshop.Hostname {
+	var hostname workshop.Hostname
+	if cnames == nil {
+		// Skip adding notes if we weren't given the CNAME entries (i.e. when
+		// loading multiple workshops).
+		return hostname
+	}
+
+	idx := slices.IndexFunc(cnames, func(c cname) bool {
+		return c.Workshop == name && c.ProjectId == p.ProjectId
+	})
+	if idx >= 0 {
+		hostname.Domain = cnames[idx].friendly()
+		hostname.Note = cnames[idx].Note
+	} else if running && format.N > 3 {
+		hostname.Note = "hostname-not-found"
+	}
+
+	return hostname
 }
 
 func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, error) {
@@ -966,7 +1005,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 
 	var workshops []*workshop.Workshop
 	for _, i := range instances {
-		ws, err := s.loadWorkshop(conn, &i, p)
+		ws, err := s.loadWorkshop(conn, &i, p, nil)
 		if err != nil {
 			logger.Debugf("Workshop Backend on ProjectsWorkshops: %v", err)
 			continue

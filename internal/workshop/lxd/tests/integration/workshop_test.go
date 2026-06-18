@@ -243,16 +243,14 @@ func includeWhenCopying(key string) bool {
 
 func ipAddresses(inst *api.InstanceFull) []string {
 	var addresses []string
-	for _, network := range inst.State.Network {
-		for _, address := range network.Addresses {
-			if !slices.Contains([]string{"inet", "inet6"}, address.Family) {
-				continue
-			}
-			if slices.Contains([]string{"link", "local"}, address.Scope) {
-				continue
-			}
-			addresses = append(addresses, address.Address)
+	for _, address := range inst.State.Network["eth0"].Addresses {
+		if !slices.Contains([]string{"inet", "inet6"}, address.Family) {
+			continue
 		}
+		if slices.Contains([]string{"link", "local"}, address.Scope) {
+			continue
+		}
+		addresses = append(addresses, address.Address)
 	}
 	return addresses
 }
@@ -1336,7 +1334,7 @@ cname=other.24242424.wp,other.testprj.wp,other-24242424.wp,0
 	c.Assert(err, check.IsNil)
 	want = `
 cname=other.24242424.wp,other.testprj.wp,other-24242424.wp,0
-cname=test.42424242.wp,test-42424242.wp,0
+cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
 # fake custom config line
 # fake custom config line 2
 `[1:]
@@ -1351,7 +1349,7 @@ cname=test.42424242.wp,test-42424242.wp,0
 	network, _, err = conn.GetNetwork(network.Name)
 	c.Assert(err, check.IsNil)
 	want = `
-cname=test.42424242.wp,test-42424242.wp,0
+cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
 # fake custom config line
 # fake custom config line 2
 `[1:]

@@ -43,6 +43,7 @@ var mockWorkshopWithSdks = `{"type":"sync","status-code":200,"status":"OK","resu
     "base":"ubuntu@22.04",
     "project-id":"42424242",
     "status":"Error",
+    "hostname":"ws.sdkcraft.wp",
     "sdks":[{
       "name":"go",
       "version":"1.8.0",
@@ -93,11 +94,12 @@ func (m *workshopInfo) TestWorkshopInfo(c *check.C) {
 
 	err = cmd.Run(cmd.Command(), nil)
 	c.Assert(err, check.IsNil)
-	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:     ws
-base:     ubuntu@22.04
-project:  %s
-status:   error
-notes:    missing-project
+	c.Assert(m.stdout.String(), check.Matches, fmt.Sprintf(`name:      ws
+base:      ubuntu@22.04
+project:   %s
+hostname:  ws\.sdkcraft\.wp
+status:    error
+notes:     missing-project
 sdks:
   go:
     tracking:   latest/edge

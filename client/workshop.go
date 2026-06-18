@@ -76,6 +76,7 @@ type WorkshopInfo struct {
 	Base      string   `json:"base"`
 	Status    string   `json:"status"`
 	Sdks      []*Sdk   `json:"sdks,omitempty"`
+	Hostname  string   `json:"hostname,omitempty"`
 	Notes     []string `json:"notes,omitempty"`
 }
 

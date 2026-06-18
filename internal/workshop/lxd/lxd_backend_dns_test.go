@@ -29,6 +29,7 @@ func (s *dnsSuite) TestGenerateCNAMEOK(c *check.C) {
 	cnames := []lxdbackend.CNAME{{
 		Workshop:     "dev",
 		ProjectId:    "24242424",
+		ProjectName:  "24242424",
 		ProjectAlias: "24242424",
 	}}
 	projects := []workshop.Project{{
@@ -40,6 +41,7 @@ func (s *dnsSuite) TestGenerateCNAMEOK(c *check.C) {
 	c.Check(entry, check.Equals, lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "sdkcraft",
 		ProjectAlias: "sdkcraft",
 	})
 
@@ -49,6 +51,7 @@ func (s *dnsSuite) TestGenerateCNAMEOK(c *check.C) {
 	c.Check(entry, check.Equals, lxdbackend.CNAME{
 		Workshop:     "ci",
 		ProjectId:    "42424242",
+		ProjectName:  "sdkcraft",
 		ProjectAlias: "sdkcraft",
 	})
 }
@@ -57,6 +60,7 @@ func (s *dnsSuite) TestGenerateCNAMEBlocksMatchingID(c *check.C) {
 	cnames := []lxdbackend.CNAME{{
 		Workshop:     "dev",
 		ProjectId:    "24242424",
+		ProjectName:  "DEADbeef",
 		ProjectAlias: "deadbeef",
 	}}
 	projects := []workshop.Project{{
@@ -64,7 +68,7 @@ func (s *dnsSuite) TestGenerateCNAMEBlocksMatchingID(c *check.C) {
 		Path:      "/home/workshop/sdkcraft",
 	}}
 	entry, err := lxdbackend.GenerateCNAME(cnames, projects, "deadbeef", "dev")
-	c.Assert(err, check.ErrorMatches, "hostname deadbeef.wp already taken")
+	c.Assert(err, check.ErrorMatches, "hostname deadbeef.wp already taken by dev.DEADbeef.wp")
 	c.Check(entry, check.Equals, lxdbackend.CNAME{})
 }
 
@@ -78,11 +82,14 @@ func (s *dnsSuite) TestGenerateCNAMEValidation(c *check.C) {
 	invalid := lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "42424242",
 		ProjectAlias: "42424242",
+		Note:         "invalid-project-name",
 	}
 	replaced := lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "sdk-craft",
 		ProjectAlias: "sdk-craft",
 	}
 
@@ -130,6 +137,7 @@ func (s *dnsSuite) TestGenerateCNAMEValidation(c *check.C) {
 	c.Check(entry, check.Equals, lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "café",
 		ProjectAlias: "xn--caf-dma",
 	})
 }
@@ -138,6 +146,7 @@ func (s *dnsSuite) TestGenerateCNAMETakenByID(c *check.C) {
 	cnames := []lxdbackend.CNAME{{
 		Workshop:     "dev",
 		ProjectId:    "deadbeef",
+		ProjectName:  "sdkcraft",
 		ProjectAlias: "sdkcraft",
 	}}
 	projects := []workshop.Project{{
@@ -149,7 +158,9 @@ func (s *dnsSuite) TestGenerateCNAMETakenByID(c *check.C) {
 	c.Check(entry, check.Equals, lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "42424242",
 		ProjectAlias: "42424242",
+		Note:         "project-name-in-use",
 	})
 }
 
@@ -157,6 +168,7 @@ func (s *dnsSuite) TestGenerateCNAMETakenByName(c *check.C) {
 	cnames := []lxdbackend.CNAME{{
 		Workshop:     "dev",
 		ProjectId:    "24242424",
+		ProjectName:  "SDKcraft",
 		ProjectAlias: "sdkcraft",
 	}}
 	projects := []workshop.Project{{
@@ -168,7 +180,9 @@ func (s *dnsSuite) TestGenerateCNAMETakenByName(c *check.C) {
 	c.Check(entry, check.Equals, lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "42424242",
 		ProjectAlias: "42424242",
+		Note:         "project-name-in-use",
 	})
 }
 
@@ -176,12 +190,21 @@ func (s *dnsSuite) TestMarshalCNAME(c *check.C) {
 	cname := lxdbackend.CNAME{
 		Workshop:     "dev",
 		ProjectId:    "42424242",
+		ProjectName:  "sdkcraft",
 		ProjectAlias: "sdkcraft",
 	}
 	c.Check(cname.String(), check.Equals, "dev.42424242.wp,dev.sdkcraft.wp,dev-42424242.wp,0")
 
+	cname.ProjectName = "café"
+	cname.ProjectAlias = "xn--caf-dma"
+	text, err := cname.MarshalText()
+	c.Assert(err, check.IsNil)
+	c.Check(string(text), check.Equals, "dev.42424242.wp,dev.xn--caf-dma.wp,dev-42424242.wp,0  # café")
+
+	cname.ProjectName = cname.ProjectId
 	cname.ProjectAlias = cname.ProjectId
-	c.Check(cname.String(), check.Equals, "dev.42424242.wp,dev-42424242.wp,0")
+	cname.Note = "explanation"
+	c.Check(cname.String(), check.Equals, "dev.42424242.wp,dev-42424242.wp,0  # explanation")
 }
 
 func (s *dnsSuite) TestUnmarshalCNAME(c *check.C) {
@@ -189,11 +212,15 @@ func (s *dnsSuite) TestUnmarshalCNAME(c *check.C) {
 
 	err := cname.UnmarshalText([]byte("dev.42424242.wp,dev.sdkcraft.wp,dev-42424242.wp,0"))
 	c.Assert(err, check.IsNil)
-	c.Check(cname, check.Equals, lxdbackend.CNAME{Workshop: "dev", ProjectId: "42424242", ProjectAlias: "sdkcraft"})
+	c.Check(cname, check.Equals, lxdbackend.CNAME{Workshop: "dev", ProjectId: "42424242", ProjectName: "sdkcraft", ProjectAlias: "sdkcraft"})
 
-	err = cname.UnmarshalText([]byte("dev.42424242.wp,dev-42424242.wp,0"))
+	err = cname.UnmarshalText([]byte("dev.42424242.wp,dev.xn--caf-dma.wp,dev-42424242.wp,0  # café"))
 	c.Assert(err, check.IsNil)
-	c.Check(cname, check.Equals, lxdbackend.CNAME{Workshop: "dev", ProjectId: "42424242", ProjectAlias: "42424242"})
+	c.Check(cname, check.Equals, lxdbackend.CNAME{Workshop: "dev", ProjectId: "42424242", ProjectName: "café", ProjectAlias: "xn--caf-dma"})
+
+	err = cname.UnmarshalText([]byte("dev.42424242.wp,dev-42424242.wp,0  # explanation #,"))
+	c.Assert(err, check.IsNil)
+	c.Check(cname, check.Equals, lxdbackend.CNAME{Workshop: "dev", ProjectId: "42424242", ProjectName: "42424242", ProjectAlias: "42424242", Note: "explanation #,"})
 
 	err = cname.UnmarshalText([]byte("dev-42424242.wp,0"))
 	c.Check(err, check.NotNil)

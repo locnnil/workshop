@@ -150,6 +150,9 @@ func (c *CmdInfo) Run(cmd *cobra.Command, av []string) error {
 	fmt.Fprintf(w, "name:\t%s\n", workshop.Name)
 	fmt.Fprintf(w, "base:\t%s\n", workshop.Base)
 	fmt.Fprintf(w, "project:\t%s\n", escape(cmdutil.ContractHome(project.Path)))
+	if workshop.Hostname != "" {
+		fmt.Fprintf(w, "hostname:\t%s\n", workshop.Hostname)
+	}
 	fmt.Fprintf(w, "status:\t%s\n", strings.ToLower(workshop.Status))
 
 	// get the workshop notes

@@ -26,6 +26,7 @@ Workshop:
   Running: bool
   Sdks: map[string]workshop.SdkInstallation
   Profiles:
+  Hostname:
 BaseImage:
   Name: string
   Fingerprint: string
