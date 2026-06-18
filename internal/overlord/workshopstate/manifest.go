@@ -314,7 +314,9 @@ func (w *WorkshopManager) workshopManifest(ctx context.Context, projectId, name 
 		return nil, err
 	}
 
-	if err := healthstate.CheckWorkshopHealth(w.state, wp, []healthstate.Status{healthstate.ReadyStatus}); err != nil {
+	err = healthstate.CheckWorkshopHealth(
+		w.state, wp, []healthstate.Status{healthstate.ReadyStatus})
+	if err != nil {
 		return nil, err
 	}
 

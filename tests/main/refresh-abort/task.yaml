@@ -1,4 +1,4 @@
-summary: Check a failed non-transactional refresh can be aborted successfully
+summary: Check a failed refresh reports the aborted error and can be reverted
 prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch
@@ -10,6 +10,16 @@ execute: |
 
   echo "Update the workshop file to include a failing SDK"
   sed -i 's/test-sdk-basic-2/test-sdk-setup-fail/g' workshop.yaml
+
+  echo "Check a failed transactional refresh reports the aborted error"
+  ! workshop_exec refresh > error.log 2>&1 || false
+  MATCH '^error: cannot refresh "ws-refresh-abort"; aborted$' < error.log
+  MATCH '^To view details: "workshop tasks [0-9]+"$' < error.log
+
+  echo "Check the transactional refresh reverted the workshop to Ready"
+  workshop_exec list | MATCH "^ws-refresh-abort[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Pause a refresh on the same error with --wait-on-error"
   workshop_exec refresh --wait-on-error || true
   sed -i 's/test-sdk-setup-fail/test-sdk-basic-2/g' workshop.yaml
 
