@@ -223,4 +223,13 @@ mermaid_height = "auto"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes_action
 smartquotes_action = "qe"
 
-# sphinx-llm
+
+# Expose the sphinx_llm "llms_txt_enabled" flag to the HTML templates so the
+# per-page Markdown <link rel="alternate"> in _templates/base.html is emitted
+# only when the Markdown twins are actually generated. Reads app.config so the
+# Makefile autobuild override (-D=llms_txt_enabled=0) is respected.
+def setup(app):
+    def _expose_llms_flag(app, pagename, templatename, context, doctree):
+        context["llms_txt_enabled"] = getattr(app.config, "llms_txt_enabled", True)
+
+    app.connect("html-page-context", _expose_llms_flag)
