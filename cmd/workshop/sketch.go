@@ -571,7 +571,7 @@ func parseSketchYamlUserError(err error) error {
 		return fmt.Errorf(
 			"sketch SDK YAML contains unsupported hook %q; supported hooks: %s",
 			string(invalidHook),
-			strings.Join(sdk.AllowedSketchHooks, ", "),
+			strings.Join(sdk.AllowedHooks, ", "),
 		)
 	case errors.As(err, &unknownField):
 		parts := make([]string, 0, len(unknownField.Fields))

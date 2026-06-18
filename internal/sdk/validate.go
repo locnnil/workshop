@@ -64,8 +64,8 @@ var (
 var (
 	AllowedBases = []string{"ubuntu@20.04", "ubuntu@22.04", "ubuntu@24.04", "ubuntu@26.04"}
 
-	// AllowedSketchHooks lists hook names accepted in sketch SDK YAML.
-	AllowedSketchHooks = []string{"setup-base", "setup-project", "save-state", "restore-state", "check-health"}
+	// AllowedHooks lists hook names accepted in sketch SDK YAML.
+	AllowedHooks = []string{"setup-base", "setup-project", "save-state", "restore-state", "check-health"}
 
 	sdkName = regexp.MustCompile(`^(?:[a-z0-9]-?)*[a-z](?:-?[a-z0-9])*$`)
 	// Regular expression describing correct plug, slot and interface names.
@@ -228,7 +228,7 @@ func ValidateSketchYaml(y *SketchSDKYaml) error {
 	}
 
 	for hookName := range y.Hooks {
-		if !slices.Contains(AllowedSketchHooks, hookName) {
+		if !slices.Contains(AllowedHooks, hookName) {
 			return InvalidSDKHookNameError(hookName)
 		}
 	}
