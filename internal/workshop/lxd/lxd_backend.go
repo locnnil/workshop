@@ -356,33 +356,27 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
+	if err := s.adjustInstanceTemplates(conn, snapshot.Format, req.Name); err != nil {
+		return err
+	}
+
 	fs, err := s.instanceFs(conn, req.Name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	// Workaround https://github.com/canonical/lxd/issues/17983.
-	if err := fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service"); err != nil {
-		return err
+	if snapshot.Format.N > 3 {
+		// cloud-init seems to ignore preserve_hostname in user-data, we have
+		// to bake it into the image instead.
+		cfg := strings.NewReader("preserve_hostname: true\n")
+		if err := fs.AtomicWriteTo(cfg, "/etc/cloud/cloud.cfg.d/99_preserve_hostname.cfg", 0644); err != nil {
+			return err
+		}
 	}
 
-	// Ubuntu 20.04 was released before cloud-init added support for LXD. The
-	// current images contain a more recent version of cloud-init, but the
-	// image metadata.yaml contains templated seed data files. See
-	// https://docs.cloud-init.io/en/latest/development/dir_layout.html#seed.
-	// This forces cloud-init to use the NoCloud data source instead of LXD.
-	//
-	// The seed files contain a hostname and instance-id, both set to the
-	// container name. This is OK when launching a new workshop, or rebuilding
-	// a workshop from an image (although the instance-id is different for
-	// 22.04 and up), but when rebuilding a workshop from a snapshot, it
-	// results in both the hostname and instance-id being taken from the
-	// snapshot. There's no way to remove the seed files before starting the
-	// instance for the first time, but we can force cloud-init to use the LXD
-	// data source by adding a config file.
-	forceLXD := []byte("datasource_list: [LXD]\n")
-	return fs.WriteFile("/etc/cloud/cloud.cfg.d/90_workshop.cfg", forceLXD, 0644)
+	// Workaround https://github.com/canonical/lxd/issues/17983.
+	return fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service")
 }
 
 func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.InstancesPost) error {
@@ -433,6 +427,74 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 		return err
 	}
 	return op.Wait()
+}
+
+// adjustInstanceTemplates sets /etc/hostname to the workshop's name.
+//
+// Also removes cloud-init seed files for NoCloud. The current Ubuntu 20.04
+// images contain a recent version of cloud-init that supports LXD, but these
+// files force it to use NoCloud instead. See
+// https://docs.cloud-init.io/en/latest/development/dir_layout.html#seed.
+//
+// The seed files contain a hostname and instance-id, both set to the instance
+// name. This is OK when launching a new workshop, or rebuilding a workshop
+// from an image (although the instance-id is different for 22.04 and up), but
+// when rebuilding a workshop from a snapshot, it results in both the hostname
+// and instance-id being taken from the snapshot.
+func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Revision, name string) error {
+	metadata, etag, err := conn.GetInstanceMetadata(name)
+	if err != nil {
+		return err
+	}
+
+	modified := false
+	hostname := metadata.Templates["/etc/hostname"]
+	if format.N > 3 && hostname == nil {
+		hostname = &api.ImageMetadataTemplate{
+			When:     []string{"create", "copy"},
+			Template: "hostname.tpl",
+		}
+		if metadata.Templates == nil {
+			metadata.Templates = map[string]*api.ImageMetadataTemplate{}
+		}
+		metadata.Templates["/etc/hostname"] = hostname
+		modified = true
+	}
+
+	deleted := make([]string, 0, len(metadata.Templates))
+	for path, template := range metadata.Templates {
+		if !strings.HasPrefix(path, "/var/lib/cloud/seed/nocloud-net/") {
+			continue
+		}
+		delete(metadata.Templates, path)
+		modified = true
+		if template != nil {
+			deleted = append(deleted, template.Template)
+		}
+	}
+
+	if format.N > 3 {
+		// LXD uses an old version of pongo2 which doesn't support [].
+		tpl := `{{ config_get("user.workshop.name", "") }}
+`
+		if err := conn.CreateInstanceTemplateFile(name, hostname.Template, strings.NewReader(tpl)); err != nil {
+			return err
+		}
+	}
+
+	if modified {
+		if err := conn.UpdateInstanceMetadata(name, *metadata, etag); err != nil {
+			return err
+		}
+	}
+
+	for _, template := range deleted {
+		if err := conn.DeleteInstanceTemplateFile(name, template); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, timeout int) error {
@@ -1115,6 +1177,12 @@ runcmd:
     eth0:
       dhcp4: true
       dhcp-identifier: mac
+{{- if gt .Format 3}}
+      dhcp4-overrides:
+        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
+      dhcp6-overrides:
+        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
+{{- end -}}
 {{- if gt .Format 2}}
       nameservers:
         search: [{{printf "%s.%s" .ProjectID .Domain | printf "%q"}}, {{printf "%q" .Domain}}]
@@ -1126,10 +1194,12 @@ runcmd:
 		Format    int
 		Domain    string
 		ProjectID string
+		Workshop  string
 	}{
 		Format:    format.N,
 		Domain:    networkDomain,
 		ProjectID: projectId,
+		Workshop:  file.Name,
 	}
 	cloudConfig := mustExecute("cloud-config", cloudConfigTemplate, dot)
 	networkConfig := mustExecute("network-config", networkConfigTemplate, dot)

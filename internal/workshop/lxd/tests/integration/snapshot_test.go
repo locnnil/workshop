@@ -446,11 +446,13 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Check(files[0].hostname, check.Not(check.Equals), files[1].hostname)
 	c.Check(files[0].instanceID, check.Not(check.Equals), files[1].instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), files[1].machineID)
+	c.Check(files[0].networkCfg, check.Not(check.Equals), files[1].networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), files[1].sshKey)
 
 	c.Check(files[0].hostname, check.Not(check.Equals), files[2].hostname)
 	c.Check(files[0].instanceID, check.Not(check.Equals), files[2].instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), files[2].machineID)
+	c.Check(files[0].networkCfg, check.Not(check.Equals), files[2].networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), files[2].sshKey)
 
 	// Check for unexpected differences.
@@ -486,6 +488,7 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Check(files[0].hostname, check.Equals, restored.hostname)
 	c.Check(files[0].instanceID, check.Equals, restored.instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), restored.machineID)
+	c.Check(files[0].networkCfg, check.Equals, restored.networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), restored.sshKey)
 
 	// Check for unexpected differences.
@@ -517,6 +520,7 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Check(files[0].hostname, check.Equals, refreshed.hostname)
 	c.Check(files[0].instanceID, check.Equals, refreshed.instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), refreshed.machineID)
+	c.Check(files[0].networkCfg, check.Equals, refreshed.networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), refreshed.sshKey)
 
 	c.Check(files[2].machineID, check.Not(check.Equals), refreshed.machineID)
@@ -563,6 +567,7 @@ type uniqueFiles struct {
 	hostname   string
 	instanceID string
 	machineID  string
+	networkCfg string
 	sshKey     string
 }
 
@@ -576,12 +581,15 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	c.Assert(err, check.IsNil)
 	machineID, err := os.ReadFile(filepath.Join(path, "etc", "machine-id"))
 	c.Assert(err, check.IsNil)
+	networkCfg, err := os.ReadFile(filepath.Join(path, "etc", "netplan", "50-cloud-init.yaml"))
+	c.Assert(err, check.IsNil)
 	sshKey, err := os.ReadFile(filepath.Join(path, "etc", "ssh", "ssh_host_ed25519_key.pub"))
 	c.Assert(err, check.IsNil)
 
 	files := []string{
 		"etc/hostname",
 		"etc/machine-id",
+		"etc/netplan/50-cloud-init.yaml",
 		"etc/sudoers.d/90-cloud-init-users",
 		"var/cache/ldconfig/aux-cache",
 		"var/lib/workshop/run/workshop.socket.untrusted",
@@ -620,6 +628,7 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 		hostname:   string(hostname),
 		instanceID: string(instanceID),
 		machineID:  string(machineID),
+		networkCfg: string(networkCfg),
 		sshKey:     string(sshKey),
 	}
 }

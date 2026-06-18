@@ -15,7 +15,7 @@ launched:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: '455d5bc625e5fe93bbafa53c6f89b547f303a9e80bf4677a6a6114c0d8d781d55764fbcba34d2c27ef1b8e92d7597f9a'
+    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
     user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
@@ -54,7 +54,7 @@ started:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: '455d5bc625e5fe93bbafa53c6f89b547f303a9e80bf4677a6a6114c0d8d781d55764fbcba34d2c27ef1b8e92d7597f9a'
+    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
     user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
@@ -93,7 +93,7 @@ sdk-attached:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: '455d5bc625e5fe93bbafa53c6f89b547f303a9e80bf4677a6a6114c0d8d781d55764fbcba34d2c27ef1b8e92d7597f9a'
+    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
     user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
@@ -144,7 +144,7 @@ sdk-mounted:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: '455d5bc625e5fe93bbafa53c6f89b547f303a9e80bf4677a6a6114c0d8d781d55764fbcba34d2c27ef1b8e92d7597f9a'
+    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
     user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
