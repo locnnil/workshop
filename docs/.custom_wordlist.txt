@@ -99,6 +99,7 @@ linters
 localhost
 l ookups
 lookups
+loopback
 lspci
 lxc
 lxd
