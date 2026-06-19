@@ -132,6 +132,12 @@ func (e *ChangeConflictError) Error() string {
 	return fmt.Sprintf("workshop %q has changes in progress", e.Workshop)
 }
 
+// String returns the reason value, such as "no-change", implementing
+// [fmt.Stringer].
+func (w WaitingChangeReason) String() string {
+	return string(w)
+}
+
 // Error returns a human-readable fallback description of the resume failure.
 // Callers that can render their own message should branch on
 // [WaitingChangeError.Reason] instead.
