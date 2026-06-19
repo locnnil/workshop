@@ -198,15 +198,14 @@ Workshop definition
 .. @artefact workshop base image
 .. @artefact workshop definition
 
-This is a YAML file
+The workshop definition is a YAML file
 that lists the base image of the workshop
 and the specific components installed on top of it.
-The definition acts as a single source of truth about the workshop.
-It usually takes a few tries
-to produce a definition that works for your project,
+It acts as a single source of truth about the workshop.
+It usually takes a few tries to produce a definition that works for your project,
 so you can edit and update the file iteratively.
 
-A simple definition might look like this:
+A simple workshop definition might look like this:
 
 .. code-block:: yaml
    :caption: workshop.yaml
@@ -215,7 +214,7 @@ A simple definition might look like this:
    base: ubuntu@22.04
    sdks:
      - name: go
-       channel: 1.26
+       channel: "1.26"
 
 
 .. @artefact SDK
@@ -588,6 +587,7 @@ Explanation:
 
 How-to guides:
 
+- :ref:`how_add_actions`
 - :ref:`how_use_workshops`
 
 

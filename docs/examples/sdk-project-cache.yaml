@@ -1,0 +1,10 @@
+name: ccache
+version: "0.1"
+summary: Shared ccache
+description: |
+  Project-specific SDK that exposes a mount target
+  for preserving cache across workshop updates.
+plugs:
+  ccache:
+    interface: mount
+    workshop-target: /home/workshop/.cache/ccache
