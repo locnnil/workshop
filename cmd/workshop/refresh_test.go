@@ -261,6 +261,40 @@ func (m *workshopRefresh) TestRefreshWaitOnErrorAbortedSuccessfully(c *check.C) 
 	c.Check(n, check.Equals, 3)
 }
 
+// TestRefreshAbortNoWaitingChange checks that aborting with no paused refresh
+// reports the spec message built from the command's own context, without the
+// generic "cannot refresh" wrapper.
+func (m *workshopRefresh) TestRefreshAbortNoWaitingChange(c *check.C) {
+	cmd := &CmdRefresh{root: &CmdRoot{}}
+	cmd.Abort = true
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]any{"action": "refresh",
+				"names": []any{"ws"}, "options": map[string]any{"mode": "abort"}})
+			w.WriteHeader(400)
+			fmt.Fprintln(w, `{"type":"error","status-code":400,"result":{"message":"cannot abort: no waiting change in progress","kind":"no-waiting-change-in-progress","value":{"reason":"no-change"}}}`)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.NotNil)
+	c.Check(err.Error(), check.Equals, "cannot abort: no refresh in progress")
+	c.Check(n, check.Equals, 2)
+}
+
 func (m *workshopRefresh) TestRefreshWaitOnErrorContinuedSuccessfully(c *check.C) {
 	cmd := &CmdRefresh{root: &CmdRoot{}}
 	cmd.Continue = true
