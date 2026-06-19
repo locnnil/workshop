@@ -220,6 +220,18 @@ copybutton_line_continuation_character = "\\"
 # vertical whitespace. Fullscreen view overrides this with !important.
 mermaid_height = "auto"
 
+# Disable Mermaid's useMaxWidth so each diagram carries explicit pixel
+# dimensions. Otherwise the extension stylesheet stretches every diagram to the
+# full content width and, with mermaid_height = "auto" above, narrow state
+# diagrams render many times too tall. The matching SVG sizing override lives in
+# _static/workshop.css. Keep startOnLoad False; the extension renders manually.
+mermaid_init_config = {
+    "startOnLoad": False,
+    "flowchart": {"useMaxWidth": False},
+    "sequence": {"useMaxWidth": False},
+    "state": {"useMaxWidth": False},
+}
+
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-smartquotes_action
 smartquotes_action = "qe"
 
