@@ -3,6 +3,11 @@ execute: |
   . "$TESTSLIB"/utils.sh
 
   cp workshop.setup-fail.yaml workshop.yaml
+
+  echo "Check launch --abort with no paused launch reports a clear error"
+  output="$(workshop_exec launch --abort || true)"
+  echo "$output" | MATCH 'cannot abort: no launch in progress'
+
   workshop_exec launch --wait-on-error || true
 
   echo "Check the workshop is in Waiting state"

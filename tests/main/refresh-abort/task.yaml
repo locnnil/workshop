@@ -8,6 +8,10 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  echo "Check refresh --abort with no paused refresh reports a clear error"
+  output="$(workshop_exec refresh --abort || true)"
+  echo "$output" | MATCH 'cannot abort: no refresh in progress'
+
   echo "Update the workshop file to include a failing SDK"
   sed -i 's/test-sdk-basic-2/test-sdk-setup-fail/g' workshop.yaml
   workshop_exec refresh --wait-on-error || true
