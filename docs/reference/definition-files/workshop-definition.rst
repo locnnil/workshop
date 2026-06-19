@@ -152,7 +152,7 @@ Each item in :samp:`sdks` is an object with these fields:
      - object
      - Plug bindings or additional plug definitions grafted onto the SDK
        by this workshop.
-       See :ref:`ref_workshop_definition_plug_entry`
+       See :ref:`ref_workshop_definition_plug_slot`
        and :ref:`ref_workshop_definition_interfaces`.
 
    * - :samp:`slots`
@@ -163,13 +163,15 @@ Each item in :samp:`sdks` is an object with these fields:
        See :ref:`ref_workshop_definition_interfaces`.
 
 
-.. _ref_workshop_definition_plug_entry:
+.. _ref_workshop_definition_plug_slot:
 
-Plug entry (under an SDK)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Plug or slot entry (under an SDK)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Each plug under an SDK is either an inline plug definition
 or a binding to another plug.
+Slots under an SDK are always inline slot definitions;
+slots cannot be bound.
 
 .. list-table::
    :header-rows: 1

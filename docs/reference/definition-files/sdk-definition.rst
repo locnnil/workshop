@@ -64,7 +64,7 @@ Top-level fields
        Cannot be :samp:`agent`, :samp:`system`, :samp:`sketch`,
        or start with :samp:`try-` or :samp:`project-`; those names are reserved.
 
-   * - :samp:`architecture` (required)
+   * - :samp:`architecture` (required for built SDKs)
      - string
      - CPU architecture the SDK is built for,
        following `Debian's naming scheme <https://www.debian.org/ports/>`__
@@ -124,6 +124,10 @@ Top-level fields
      - URL
      - Where the SDK's source code is hosted.
 
+   * - :samp:`website`
+     - URL
+     - The web page for the SDK.
+
    * - :samp:`plugs`
      - object
      - Plugs the SDK requests from the workshop environment.
@@ -145,8 +149,11 @@ Top-level fields
    "Required for built SDKs" means |sdk_markup| writes the field
    when it builds an SDK package;
    for an in-project SDK,
-   you can author :file:`sdk.yaml` with only :samp:`name` and :samp:`architecture`,
+   you can author :file:`sdk.yaml` with only :samp:`name`,
    plus whichever optional fields you need.
+   In particular,
+   :samp:`architecture` for in-project SDKs is assumed
+   to match the host (or :samp:`all`).
 
 
 .. _ref_sdk_definition_interfaces:
@@ -187,7 +194,7 @@ and describes the structure above:
    that is, the file |sdk_markup| writes when it packs an SDK.
    The :samp:`required` list reflects what a packed SDK must carry;
    for an in-project :file:`sdk.yaml` you author by hand,
-   only :samp:`name` and :samp:`architecture` are mandatory
+   only :samp:`name` is mandatory
    (see the note below the table).
 
    Numeric bounds use pydantic-style :samp:`ge`, :samp:`le`, and :samp:`lt` keywords.
@@ -209,7 +216,7 @@ In-project SDK that declares a mount plug:
 
 .. literalinclude:: ../../examples/sdk-project-cache.yaml
    :language: yaml
-   :caption: .workshop/cache/sdk.yaml
+   :caption: .workshop/ccache/sdk.yaml
 
 Runtime :file:`sdk.yaml` written by |sdk_markup| for a Go development SDK:
 
