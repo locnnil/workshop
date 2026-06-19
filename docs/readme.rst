@@ -54,6 +54,35 @@ Workshop downloads and installs the SDKs your definition lists;
 the project is now ready to use them.
 
 
+Reference SDKs
+--------------
+
+The Workshop team maintains a curated collection of
+`reference SDKs <https://github.com/canonical/reference-sdks>`__:
+ready-to-use components for languages, runtimes, AI agents, GPUs, and more.
+In particular, language and runtime SDKs include
+``go``, ``node``, ``rust``, ``flutter``, and ``uv``.
+
+Add any of them to a workshop the same way.
+For example, to start a Node.js LTS environment:
+
+.. code-block:: console
+
+   workshop init web --sdks node/24/stable
+   workshop launch
+
+
+Each SDK is published on the SDK Store through channels
+of the form ``<TRACK>/<RISK>``, defaulting to ``latest/stable``.
+Where an SDK follows an upstream release line, its tracks mirror it:
+the ``node`` SDK exposes a track per Node.js LTS line
+(``node/20/stable``, ``node/22/stable``, ``node/24/stable``),
+and the ``go`` SDK a track per Go release line
+(``go/1.24/stable``, ``go/1.25/stable``, ``go/1.26/stable``).
+Pin a track to stay on that line,
+or omit the channel to follow the latest stable release.
+
+
 Installation
 ------------
 
