@@ -24,13 +24,12 @@ so agents don't have to rediscover the CLIs every session.
 LLM-readable docs
 -----------------
 
-..
-   |ws_markup| publishes two files that follow the
-.. `llms.txt convention <https://llmstxt.org/>`_:
-.. `llms.txt <https://ubuntu.com/workshop/docs/llms.txt>`_
-.. indexes every page with a one-line summary,
-.. and `llms-full.txt <https://ubuntu.com/workshop/docs/llms-full.txt>`_
-.. concatenates every page as Markdown.
+|ws_markup| publishes two files that follow the
+`llms.txt convention <https://llmstxt.org/>`_:
+`llms.txt <https://ubuntu.com/workshop/docs/llms.txt>`_
+indexes every page with a one-line summary,
+and `llms-full.txt <https://ubuntu.com/workshop/docs/llms-full.txt>`_
+concatenates every page as Markdown.
 
 To fetch a single page as Markdown,
 append :file:`.md` to its URL.
