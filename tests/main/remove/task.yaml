@@ -31,7 +31,7 @@ execute: |
   workshop_exec remove ws-remove-mount
   workshop_exec list | MATCH "^ws-remove-mount[[:space:]]+Off[[:space:]]+-$"
 
-  echo "Check the workshop can be removed if in Waiting"
+  echo "Check the workshop can be removed if waiting on refresh"
   workshop_exec launch ws-remove
   cp .workshop/ws-remove.yaml .workshop/ws-remove.yaml.old
   cat <<EOF >> .workshop/ws-remove.yaml
@@ -39,6 +39,10 @@ execute: |
     - name: test-sdk-setup-fail
   EOF
   ! workshop_exec refresh --wait-on-error ws-remove || false
+  workshop_exec remove ws-remove
+
+  echo "Check the workshop can be removed if waiting on launch"
+  ! workshop_exec launch --wait-on-error ws-remove || false
   workshop_exec remove ws-remove
   mv .workshop/ws-remove.yaml.old .workshop/ws-remove.yaml
   workshop_exec list | MATCH "^ws-remove[[:space:]]+Off[[:space:]]+-$"

@@ -181,23 +181,27 @@ func (w *WorkshopManager) maybeDiscardWaitingRefresh(projectId string, file *wor
 		return nil, nil
 	}
 
-	format, err := handlersetup.WorkshopFormat(chg, file.Name, handlersetup.OldWorkshop)
-	if err != nil {
-		return nil, err
-	}
-	image, err := handlersetup.WorkshopBase(chg, file.Name, handlersetup.OldWorkshop)
-	if err != nil {
-		return nil, err
-	}
-	sdks, err := handlersetup.WorkshopSdks(chg, file.Name, handlersetup.OldWorkshop)
-	if err != nil {
-		return nil, err
+	var stashed *Manifest
+	if chg.Kind() == "refresh" {
+		format, err := handlersetup.WorkshopFormat(chg, file.Name, handlersetup.OldWorkshop)
+		if err != nil {
+			return nil, err
+		}
+		image, err := handlersetup.WorkshopBase(chg, file.Name, handlersetup.OldWorkshop)
+		if err != nil {
+			return nil, err
+		}
+		sdks, err := handlersetup.WorkshopSdks(chg, file.Name, handlersetup.OldWorkshop)
+		if err != nil {
+			return nil, err
+		}
+		// The file here is not quite right, but we only use the name field. If
+		// that changes in future, we should reconstruct it from chg.
+		stashed = &Manifest{File: file, Format: format, Image: image, Sdks: sdks}
 	}
 
 	conflict.BackgroundDiscard(chg, file.Name)
-	// The file here is not quite right, but we only use the name field. If
-	// that changes in future, we should reconstruct it from chg.
-	return &Manifest{File: file, Format: format, Image: image, Sdks: sdks}, nil
+	return stashed, nil
 }
 
 type artifactFinder struct {
