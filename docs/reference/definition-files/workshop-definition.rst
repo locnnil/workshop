@@ -235,6 +235,13 @@ Each item in :samp:`connections` links a plug to a slot of the same interface:
      - Slot reference, in the form :samp:`<SDK>:<SLOT>`.
        Same rules as :samp:`plug`.
 
+   * - :samp:`files` (optional)
+     - list of strings
+     - Allowlist of absolute host device paths to expose,
+       for example :samp:`/dev/ttyUSB0`.
+       When set, only the listed device files are shared with the workshop
+       instead of every device in the subsystem.
+
 
 A plug that has a :samp:`bind` set under its SDK entry
 cannot also be listed in :samp:`connections`.

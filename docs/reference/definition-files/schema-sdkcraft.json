@@ -37,6 +37,19 @@
           "minLength": 1,
           "title": "Subsystem",
           "type": "string"
+        },
+        "files": {
+          "description": "Optional allowlist of host device paths. When set, only these device files (instead of every device in the subsystem) are shared with the workshop.",
+          "examples": [
+            "/dev/ttyUSB0",
+            "/dev/ttyUSB1"
+          ],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Files",
+          "type": "array"
         }
       },
       "required": [

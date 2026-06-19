@@ -33,10 +33,47 @@ which is declared in the SDK definition.
 Its structure includes the name of the plug,
 the interface (:samp:`custom-device`),
 and a :samp:`subsystem` attribute.
+It may also include an optional :samp:`files` attribute
+that narrows the shared devices to specific host paths.
 
 Defining the plug in an SDK
 allows the workshops using this SDK to connect to matching devices,
 which can unlock additional SDK functionality.
+
+
+.. _exp_custom_device_files:
+
+Restricting to specific device files
+------------------------------------
+
+.. @artefact custom-device interface attributes
+
+By default, connecting the interface shares
+*every* host device belonging to the plug's subsystem.
+To share only a subset of devices,
+add a :samp:`files` attribute listing the absolute host paths to expose:
+
+.. code-block:: yaml
+
+   plugs:
+     esp32c3:
+       interface: custom-device
+       subsystem: tty
+       files:
+         - /dev/ttyUSB0
+         - /dev/ttyUSB1
+
+When :samp:`files` is set,
+only the listed device files are made available inside the workshop,
+even if other devices in the same subsystem exist on the host.
+The paths are still hot-plugged:
+a listed device that is absent when the interface is connected
+appears inside the workshop as soon as it shows up on the host,
+and is removed again when it is unplugged.
+
+Each path must be absolute.
+The :samp:`subsystem` attribute remains required
+and documents the kind of device the SDK expects.
 
 
 .. _exp_custom_device_subsystem:
@@ -92,7 +129,9 @@ can be invoked manually after the workshop has started:
 
 Establishing a connection means
 that all existing host devices belonging to the plug's subsystem
-will be made available inside the workshop.
+will be made available inside the workshop
+(or, when the plug defines a :ref:`files <exp_custom_device_files>` allowlist,
+only the listed device paths).
 While the connection is active,
 adding new devices on the host will also make them available inside the workshop,
 whereas unplugged devices will also be removed from the workshop.
