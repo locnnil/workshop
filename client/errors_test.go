@@ -50,6 +50,18 @@ func (errorSuite) TestChangeConflictErrorAsFullValue(c *check.C) {
 	})
 }
 
+// TestChangeConflictErrorAsNonMapValue checks that unexpected API error value
+// shapes do not map to [client.ChangeConflictError].
+func (errorSuite) TestChangeConflictErrorAsNonMapValue(c *check.C) {
+	err := &client.Error{
+		Kind:  client.ErrorKindChangeConflict,
+		Value: "not a map",
+	}
+
+	var conflictErr client.ChangeConflictError
+	c.Check(errors.As(err, &conflictErr), check.Equals, false)
+}
+
 // TestChangeConflictErrorAsPartialValue checks that incomplete API error values
 // still map to a partial [client.ChangeConflictError].
 func (errorSuite) TestChangeConflictErrorAsPartialValue(c *check.C) {
@@ -83,14 +95,56 @@ func (errorSuite) TestChangeConflictErrorAsWrongKind(c *check.C) {
 	c.Check(errors.As(err, &conflictErr), check.Equals, false)
 }
 
-// TestChangeConflictErrorAsNonMapValue checks that unexpected API error value
-// shapes do not map to [client.ChangeConflictError].
-func (errorSuite) TestChangeConflictErrorAsNonMapValue(c *check.C) {
+// TestWaitingChangeErrorAsMissingReason checks that a value object without a
+// reason still maps, leaving the reason empty.
+func (errorSuite) TestWaitingChangeErrorAsMissingReason(c *check.C) {
 	err := &client.Error{
-		Kind:  client.ErrorKindChangeConflict,
+		Kind:  client.ErrorKindNoWaitingChange,
+		Value: map[string]any{},
+	}
+
+	var waitingErr client.WaitingChangeError
+	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
+	c.Check(waitingErr.Reason, check.Equals, client.WaitingChangeReason(""))
+}
+
+// TestWaitingChangeErrorAsNonMapValue checks that unexpected API error value
+// shapes do not map to [client.WaitingChangeError].
+func (errorSuite) TestWaitingChangeErrorAsNonMapValue(c *check.C) {
+	err := &client.Error{
+		Kind:  client.ErrorKindNoWaitingChange,
 		Value: "not a map",
 	}
 
-	var conflictErr client.ChangeConflictError
-	c.Check(errors.As(err, &conflictErr), check.Equals, false)
+	var waitingErr client.WaitingChangeError
+	c.Check(errors.As(err, &waitingErr), check.Equals, false)
+}
+
+// TestWaitingChangeErrorAsReason checks that a change-not-waiting API error
+// maps to [client.WaitingChangeError] carrying its reason.
+func (errorSuite) TestWaitingChangeErrorAsReason(c *check.C) {
+	err := &client.Error{
+		Kind: client.ErrorKindNoWaitingChange,
+		Value: map[string]any{
+			"reason": string(client.WaitingChangeNoChange),
+		},
+	}
+
+	var waitingErr client.WaitingChangeError
+	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
+	c.Check(waitingErr, check.DeepEquals, client.WaitingChangeError{
+		Reason: client.WaitingChangeNoChange,
+	})
+}
+
+// TestWaitingChangeErrorAsWrongKind checks that unrelated API error kinds do
+// not map to [client.WaitingChangeError].
+func (errorSuite) TestWaitingChangeErrorAsWrongKind(c *check.C) {
+	err := &client.Error{
+		Kind:  client.ErrorKindChangeConflict,
+		Value: map[string]any{"reason": string(client.WaitingChangeNoChange)},
+	}
+
+	var waitingErr client.WaitingChangeError
+	c.Check(errors.As(err, &waitingErr), check.Equals, false)
 }

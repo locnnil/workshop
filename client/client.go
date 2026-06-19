@@ -450,6 +450,10 @@ const (
 	ErrorKindNoDefaultServices  = "no-default-services"
 	ErrorKindUnsuccessful       = "unsuccessful"
 	ErrorKindNoUpdatesAvailable = "no-updates-available"
+
+	// ErrorKindNoWaitingChange identifies an abort or continue request made
+	// when no paused change is waiting for the workshop.
+	ErrorKindNoWaitingChange = "no-waiting-change-in-progress"
 )
 
 func IsNoUpdatesAvailable(err error) bool {
