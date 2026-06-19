@@ -18,5 +18,6 @@ and publishing the result to the SDK Store.
 
    Build an SDK <build-an-sdk>
    Configure mount ownership <configure-mount-ownership>
+   Declare plugs and slots <declare-plugs-slots>
    Publish an SDK <publish-an-sdk>
    Write runtime hooks <write-runtime-hooks>
