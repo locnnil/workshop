@@ -43,7 +43,7 @@ Before starting:
 
 - LXD 6.6 or later is running on the host.
 
-- An Ubuntu One account that's allowed to publish SDKs.
+- An Ubuntu One account.
 
 - The SDK source tree is clean and ready to build.
 
@@ -163,6 +163,13 @@ Register the SDK name
 
 Each SDK on the Store has a unique name.
 Reserve yours once per SDK, ever.
+
+Any authenticated Ubuntu One account can register an available name
+and publish under it,
+much as anyone can register a new snap name.
+Once a name is registered,
+only the SDK's publisher and collaborators
+can upload or release revisions to it.
 
 Authenticate first:
 
@@ -296,6 +303,37 @@ and never rebuilds or re-uploads;
 it only adjusts the channel map.
 
 
+Release to a non-default track
+------------------------------
+
+Releasing to :samp:`latest` needs no setup;
+the :samp:`latest` track always exists.
+Releasing to any other track requires that the track exist first.
+The :command:`sdkcraft create-track` command creates one:
+
+.. code-block:: console
+
+   $ sdkcraft create-track <NAME> --track 1.x
+
+
+It only creates track names
+that the SDK Store already permits through a *guardrail* for your SDK,
+a Store-side pattern such as one matching :samp:`1.x`-style version tracks.
+Without a matching guardrail, :command:`sdkcraft create-track` is rejected.
+
+Guardrails are not self-service.
+To request one,
+open a `GitHub issue <https://github.com/canonical/workshop/issues>`_
+on the |ws_markup| repository,
+naming the SDK and the track pattern you need
+(for example, version tracks like :samp:`1.x` or :samp:`2.x`).
+The |ws_markup| team triages the request
+and coordinates track creation with the SDK Store team.
+For the level of detail a request should carry,
+see how the wider ecosystem handles
+`snap track and guardrail requests <https://forum.snapcraft.io/t/create-new-track-and-guardrails-for-registry-snap/51209>`_.
+
+
 Consume the published SDK
 -------------------------
 
@@ -333,6 +371,7 @@ How-to guides:
 
 Reference:
 
+- :ref:`ref_sdkcraft_create_track`
 - :ref:`ref_sdkcraft_login`
 - :ref:`ref_sdkcraft_pack`
 - :ref:`ref_sdkcraft_register`
@@ -341,3 +380,8 @@ Reference:
 - :ref:`ref_sdkcraft_try`
 - :ref:`ref_sdkcraft_upload`
 - :ref:`ref_workshop_definition`
+
+
+Tutorial:
+
+- :ref:`tut_craft_sdks`
