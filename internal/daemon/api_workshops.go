@@ -55,6 +55,14 @@ type changeConflictValue struct {
 	Workshop   string `json:"workshop"`
 }
 
+// waitingChangeValue is the value of a no-waiting-change-in-progress API
+// error. It carries the reason an abort or continue had no change paused
+// waiting on error to act on, letting the client render its own message.
+type waitingChangeValue struct {
+	// Reason is a [conflict.WaitingChangeReason], such as "no-change".
+	Reason string `json:"reason"`
+}
+
 type workshopReq struct {
 	Names   []string   `json:"names"`
 	Action  string     `json:"action"`
@@ -147,6 +155,22 @@ func changeInProgressErrorResponse(
 				ChangeKind: conflictErr.ChangeKind,
 				ProjectID:  conflictErr.ProjectID,
 				Workshop:   conflictErr.Workshop,
+			},
+		},
+	}
+}
+
+// noWaitingChangeResponse converts a [conflict.WaitingChangeError] into a
+// no-waiting-change-in-progress API error response carrying its reason.
+func noWaitingChangeResponse(waitingErr conflict.WaitingChangeError) Response {
+	return &resp{
+		Type:   ResponseTypeError,
+		Status: http.StatusBadRequest,
+		Result: &errorResult{
+			Kind:    errorKindNoWaitingChange,
+			Message: waitingErr.Error(),
+			Value: waitingChangeValue{
+				Reason: waitingErr.Reason.String(),
 			},
 		},
 	}
@@ -606,10 +630,13 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	}
 
 	var conflictErr healthstate.ChangeInProgressError
+	var waitingErr conflict.WaitingChangeError
 	switch {
 	case err == nil:
 	case errors.As(err, &conflictErr):
 		return changeInProgressErrorResponse(conflictErr)
+	case errors.As(err, &waitingErr):
+		return noWaitingChangeResponse(waitingErr)
 	case err != nil:
 		return statusBadRequest("%w", err)
 	}

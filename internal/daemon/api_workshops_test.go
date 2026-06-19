@@ -914,6 +914,7 @@ type expectedResp struct {
 	Status    int
 	Message   string
 	Kind      string
+	Reason    string // expected reason in a no-waiting-change error value
 	Summary   string
 	ChangeErr string // an error that happens during the change execution
 }
@@ -947,6 +948,12 @@ func (s *apiSuite) runActionTest(c *check.C, buffers []*bytes.Buffer, expected [
 		if rsp.Type == ResponseTypeError {
 			c.Check(string(rsp.Result.(*errorResult).Kind), check.Equals, expected[num].Kind)
 			c.Check(rsp.Result.(*errorResult).Message, check.Equals, expected[num].Message)
+		}
+
+		if expected[num].Reason != "" {
+			value, ok := rsp.Result.(*errorResult).Value.(waitingChangeValue)
+			c.Assert(ok, check.Equals, true)
+			c.Check(value.Reason, check.Equals, expected[num].Reason)
 		}
 
 		if rsp.Type == ResponseTypeAsync {
@@ -3793,12 +3800,16 @@ func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot continue: no waiting change in progress",
+			Reason:  "no-change",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot abort: no waiting change in progress",
+			Reason:  "no-change",
 		},
 	}
 
@@ -3956,8 +3967,8 @@ func (s *apiSuite) TestValidateIncorrectActionModeInputs(c *check.C) {
 				"":              `cannot launch "basic": workshop definition .*`,
 				"transactional": `cannot launch "basic": workshop definition .*`,
 				"wait-on-error": `cannot launch "basic": workshop definition .*`,
-				"continue":      "cannot continue: no wait in progress",
-				"abort":         "cannot abort: no wait in progress",
+				"continue":      "cannot continue: no waiting change in progress",
+				"abort":         "cannot abort: no waiting change in progress",
 				"invalid-mode":  `cannot launch: "invalid-mode" is not a valid mode`,
 			},
 		}, {
@@ -3966,8 +3977,8 @@ func (s *apiSuite) TestValidateIncorrectActionModeInputs(c *check.C) {
 				"":              `cannot refresh "basic": workshop definition .*`,
 				"transactional": `cannot refresh "basic": workshop definition .*`,
 				"wait-on-error": `cannot refresh "basic": workshop definition .*`,
-				"continue":      "cannot continue: no wait in progress",
-				"abort":         "cannot abort: no wait in progress",
+				"continue":      "cannot continue: no waiting change in progress",
+				"abort":         "cannot abort: no waiting change in progress",
 				"invalid-mode":  `cannot refresh: "invalid-mode" is not a valid mode`,
 			},
 		}, {
@@ -4322,12 +4333,16 @@ func (s *apiSuite) TestLaunchWorkshopNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot continue: no waiting change in progress",
+			Reason:  "no-change",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot abort: no waiting change in progress",
+			Reason:  "no-change",
 		},
 	}
 

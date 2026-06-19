@@ -119,6 +119,7 @@ type errorKind string
 
 const (
 	errorKindChangeConflict     = errorKind("change-conflict")
+	errorKindNoWaitingChange    = errorKind("no-waiting-change-in-progress")
 	errorKindLoginRequired      = errorKind("login-required")
 	errorKindDaemonRestart      = errorKind("daemon-restart")
 	errorKindSystemRestart      = errorKind("system-restart")
