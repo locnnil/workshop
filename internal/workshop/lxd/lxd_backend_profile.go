@@ -168,6 +168,14 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 			}
+		case "unix-char":
+			devtype := config[DeviceTypeConfigKey(devname)]
+			switch devtype {
+			case "custom-device":
+				// Ignore the real device files, config is under type=none.
+			default:
+				logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
+			}
 		case "none":
 			cfg, exist := config[DeviceConfigKey(devname)]
 			if !exist {
@@ -189,6 +197,12 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 					return pr, err
 				}
 				pr.Mounts[name] = mnt
+			case "custom-device":
+				var cd workshop.CustomDevice
+				if err := json.Unmarshal([]byte(cfg), &cd); err != nil {
+					return pr, err
+				}
+				pr.CustomDevices = append(pr.CustomDevices, cd)
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)
 			}

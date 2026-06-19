@@ -20,7 +20,9 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 
 	"github.com/canonical/workshop/internal/interfaces"
@@ -51,7 +53,23 @@ const customDeviceBaseDeclarationPlugs = `
     deny-auto-connection: true
 `
 
-var knownCustomDeviceAttributes = []string{"subsystem"}
+var knownCustomDeviceAttributes = []string{"subsystem", "files"}
+
+// attrReader is implemented by both *sdk.PlugInfo and *interfaces.ConnectedPlug.
+type attrReader interface {
+	Attr(key string, val any) error
+}
+
+// customDeviceFiles returns the optional "files" allowlist for the plug. It
+// returns an empty slice when the attribute is absent.
+func customDeviceFiles(plug attrReader) ([]string, error) {
+	var files []string
+	var attrErr *sdk.AttributeNotFoundError
+	if err := plug.Attr("files", &files); err != nil && !errors.As(err, &attrErr) {
+		return nil, err
+	}
+	return files, nil
+}
 
 type customDeviceInterface struct{}
 
@@ -83,6 +101,19 @@ func (iface *customDeviceInterface) BeforePreparePlug(plug *sdk.PlugInfo) error 
 		return fmt.Errorf(`custom-device plug "subsystem" is empty`)
 	}
 
+	files, err := customDeviceFiles(plug)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if file == "" {
+			return fmt.Errorf(`custom-device plug "files" entry is empty`)
+		}
+		if !filepath.IsAbs(filepath.Clean(file)) {
+			return fmt.Errorf(`custom-device plug "files" entry %q is not an absolute path`, file)
+		}
+	}
+
 	return nil
 }
 
@@ -96,7 +127,11 @@ func (iface *customDeviceInterface) MountConnectedPlug(spec *lxd_device.Specific
 	if err := plug.Attr("subsystem", &subsystem); err != nil {
 		return err
 	}
-	return spec.AddCustomDevice(workshop.CustomDevice{Name: plug.Name(), Subsystem: subsystem})
+	files, err := customDeviceFiles(plug)
+	if err != nil {
+		return err
+	}
+	return spec.AddCustomDevice(workshop.CustomDevice{Name: plug.Name(), Subsystem: subsystem, Files: files})
 }
 
 func init() {

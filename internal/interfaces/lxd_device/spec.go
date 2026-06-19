@@ -286,13 +286,43 @@ func (s *Specification) AddCustomDevice(device workshop.CustomDevice) error {
 	s.Profile.CustomDevices = append(s.Profile.CustomDevices, device)
 
 	name := lxdbackend.DeviceName(s.Profile.Sdk, device.Name)
-	s.devices[name] = map[string]string{
-		"type":              "unix-hotplug",
-		"subsystem":         device.Subsystem,
-		"required":          "false",
-		"ownership.inherit": "true",
+
+	if len(device.Files) == 0 {
+		// No allowlist: expose every host device in the subsystem.
+		s.devices[name] = map[string]string{
+			"type":              "unix-hotplug",
+			"subsystem":         device.Subsystem,
+			"required":          "false",
+			"ownership.inherit": "true",
+		}
+		s.config[lxdbackend.DeviceTypeConfigKey(name)] = "custom-device"
+		return nil
 	}
+
+	// Allowlist: expose only the listed host paths. LXD matches unix-char
+	// devices by path rather than subsystem, and with required=false it
+	// hot-plugs them in and out as they (dis)appear on the host. The device
+	// definition is also stored as a type=none JSON blob so the subsystem and
+	// file list survive a profile round-trip.
+	s.devices[name] = map[string]string{"type": "none"}
+	buf, err := json.Marshal(device)
+	if err != nil {
+		return err
+	}
+	s.config[lxdbackend.DeviceConfigKey(name)] = string(buf)
 	s.config[lxdbackend.DeviceTypeConfigKey(name)] = "custom-device"
+
+	for i, file := range device.Files {
+		fileName := lxdbackend.DeviceName(s.Profile.Sdk, device.Name, strconv.Itoa(i))
+		s.devices[fileName] = map[string]string{
+			"type":     "unix-char",
+			"source":   file,
+			"required": "false",
+			"uid":      workshop.User.Uid,
+			"gid":      workshop.User.Gid,
+		}
+		s.config[lxdbackend.DeviceTypeConfigKey(fileName)] = "custom-device"
+	}
 
 	return nil
 }

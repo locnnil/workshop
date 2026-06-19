@@ -105,6 +105,14 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 			Mounts:        map[string]workshop.Mount{},
 			CustomDevices: []workshop.CustomDevice{{Name: "mydevice", Subsystem: "accel"}},
 		},
+		{
+			Sdk:    "sdk",
+			Mounts: map[string]workshop.Mount{},
+			CustomDevices: []workshop.CustomDevice{{
+				Name:      "serial",
+				Subsystem: "tty",
+				Files:     []string{"/dev/tnt0", "/dev/tnt1"}}},
+		},
 	}
 
 	for i, t := range []struct {
@@ -212,6 +220,28 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					"ownership.inherit": "true"}},
 			map[string]string{
 				"user.workshop.sdk_mydevice.type": "custom-device"},
+		}, {
+			"sdk",
+			map[string]map[string]string{
+				"sdk_serial": {
+					"type": "none"},
+				"sdk_serial_0": {
+					"type":     "unix-char",
+					"source":   "/dev/tnt0",
+					"required": "false",
+					"uid":      "1000",
+					"gid":      "1000"},
+				"sdk_serial_1": {
+					"type":     "unix-char",
+					"source":   "/dev/tnt1",
+					"required": "false",
+					"uid":      "1000",
+					"gid":      "1000"}},
+			map[string]string{
+				"user.workshop.sdk_serial":        `{"name":"serial","subsystem":"tty","files":["/dev/tnt0","/dev/tnt1"]}`,
+				"user.workshop.sdk_serial.type":   "custom-device",
+				"user.workshop.sdk_serial_0.type": "custom-device",
+				"user.workshop.sdk_serial_1.type": "custom-device"},
 		},
 	} {
 		res, err := lxdbackend.LxdToSdkProfile(t.name, t.devs, t.cfg)

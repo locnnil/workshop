@@ -94,6 +94,66 @@ slots:
 	c.Assert(deviceSpec.Profile.CustomDevices, check.DeepEquals, expectedDevices)
 }
 
+func (s *customDeviceSuite) TestCustomDeviceInterfaceWithFiles(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    files:
+      - /dev/tnt0
+      - /dev/tnt1
+`, s.projectId, "ws", "consumer", "mydevice")
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@22.04
+slots:
+  custom-device:
+`, s.projectId, "ws", "producer", "custom-device")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	expectedDevices := []workshop.CustomDevice{{
+		Name:      "mydevice",
+		Subsystem: "tty",
+		Files:     []string{"/dev/tnt0", "/dev/tnt1"},
+	}}
+	c.Assert(deviceSpec.Profile.CustomDevices, check.DeepEquals, expectedDevices)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugRelativeFile(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    files:
+      - dev/tnt0
+`, s.projectId, "ws", "consumer", "mydevice")
+	err := interfaces.BeforePreparePlug(s.iface, plug)
+	c.Check(err, check.ErrorMatches, `custom-device plug "files" entry "dev/tnt0" is not an absolute path`)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugEmptyFile(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@22.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    files:
+      - ""
+`, s.projectId, "ws", "consumer", "mydevice")
+	err := interfaces.BeforePreparePlug(s.iface, plug)
+	c.Check(err, check.ErrorMatches, `custom-device plug "files" entry is empty`)
+}
+
 func (s *customDeviceSuite) TestSanitizePlugUnknownAttribute(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04

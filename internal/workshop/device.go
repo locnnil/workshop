@@ -66,6 +66,9 @@ type Camera struct {
 type CustomDevice struct {
 	Name      string `json:"name"`
 	Subsystem string `json:"subsystem"`
+	// Files, when non-empty, restricts the devices shared with the workshop to
+	// the listed host paths instead of every device in the subsystem.
+	Files []string `json:"files,omitempty"`
 }
 
 type Mount struct {

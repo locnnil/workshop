@@ -17,6 +17,7 @@ package lxd_device
 import (
 	"context"
 	"os/user"
+	"strconv"
 	"testing"
 
 	"github.com/canonical/lxd/shared/api"
@@ -51,6 +52,69 @@ func (s *lxdSpecSuite) TearDownTest(c *check.C) {
 	}
 	s.restoreUserEnv()
 	s.restoreUserLookup()
+}
+
+func (s *lxdSpecSuite) TestAddCustomDeviceSubsystem(c *check.C) {
+	s.restoreLxdInfo = MockLxdServerInfo(func(ctx context.Context) (*api.Resources, error) {
+		return &api.Resources{}, nil
+	})
+
+	spec, err := NewSpecification("testuser", "test-sdk")
+	c.Assert(err, check.IsNil)
+
+	err = spec.AddCustomDevice(workshop.CustomDevice{Name: "mydevice", Subsystem: "tty"})
+	c.Assert(err, check.IsNil)
+
+	// Without a files allowlist, a single unix-hotplug device matches the
+	// whole subsystem.
+	c.Assert(spec.devices, check.HasLen, 1)
+	dev, ok := spec.devices["test-sdk_mydevice"]
+	c.Assert(ok, check.Equals, true)
+	c.Check(dev["type"], check.Equals, "unix-hotplug")
+	c.Check(dev["subsystem"], check.Equals, "tty")
+	c.Check(dev["required"], check.Equals, "false")
+	c.Check(dev["ownership.inherit"], check.Equals, "true")
+	c.Check(spec.config["user.workshop.test-sdk_mydevice.type"], check.Equals, "custom-device")
+}
+
+func (s *lxdSpecSuite) TestAddCustomDeviceFiles(c *check.C) {
+	s.restoreLxdInfo = MockLxdServerInfo(func(ctx context.Context) (*api.Resources, error) {
+		return &api.Resources{}, nil
+	})
+
+	spec, err := NewSpecification("testuser", "test-sdk")
+	c.Assert(err, check.IsNil)
+
+	device := workshop.CustomDevice{
+		Name:      "mydevice",
+		Subsystem: "tty",
+		Files:     []string{"/dev/tnt0", "/dev/tnt1"},
+	}
+	err = spec.AddCustomDevice(device)
+	c.Assert(err, check.IsNil)
+
+	// With a files allowlist: one type=none JSON blob plus one unix-char per
+	// allowed path.
+	c.Assert(spec.devices, check.HasLen, 3)
+
+	blob, ok := spec.devices["test-sdk_mydevice"]
+	c.Assert(ok, check.Equals, true)
+	c.Check(blob["type"], check.Equals, "none")
+	c.Check(spec.config["user.workshop.test-sdk_mydevice.type"], check.Equals, "custom-device")
+	c.Check(spec.config["user.workshop.test-sdk_mydevice"], check.Equals,
+		`{"name":"mydevice","subsystem":"tty","files":["/dev/tnt0","/dev/tnt1"]}`)
+
+	for i, path := range device.Files {
+		name := "test-sdk_mydevice_" + strconv.Itoa(i)
+		dev, ok := spec.devices[name]
+		c.Assert(ok, check.Equals, true, check.Commentf("missing device %q", name))
+		c.Check(dev["type"], check.Equals, "unix-char")
+		c.Check(dev["source"], check.Equals, path)
+		c.Check(dev["required"], check.Equals, "false")
+		c.Check(dev["uid"], check.Equals, workshop.User.Uid)
+		c.Check(dev["gid"], check.Equals, workshop.User.Gid)
+		c.Check(spec.config["user.workshop."+name+".type"], check.Equals, "custom-device")
+	}
 }
 
 func (s *lxdSpecSuite) TestSetGpuCDINoGpuDetected(c *check.C) {
