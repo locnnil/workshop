@@ -15,6 +15,7 @@
 package conflict_test
 
 import (
+	"errors"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -186,7 +187,12 @@ func (s *conflictSuite) TestResumeAfterWaitNothingInProgress(c *check.C) {
 	defer s.state.Unlock()
 
 	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
-	c.Check(err, check.ErrorMatches, ".* no wait in progress")
+	var waitingErr conflict.WaitingChangeError
+	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
+	c.Check(waitingErr, check.DeepEquals, conflict.WaitingChangeError{
+		Mode:   conflict.ChangeContinue,
+		Reason: conflict.WaitingChangeNoChange,
+	})
 }
 
 func (s *conflictSuite) TestResumeAfterWaitIncorrectMode(c *check.C) {
@@ -214,7 +220,12 @@ func (s *conflictSuite) TestResumeAfterWaitNoWaitingOnError(c *check.C) {
 	_ = s.newChange("refresh")
 
 	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
-	c.Check(err, check.ErrorMatches, ".* no wait in progress")
+	var waitingErr conflict.WaitingChangeError
+	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
+	c.Check(waitingErr, check.DeepEquals, conflict.WaitingChangeError{
+		Mode:   conflict.ChangeContinue,
+		Reason: conflict.WaitingChangeRunning,
+	})
 }
 
 func (s *conflictSuite) TestResumeChangeContinue(c *check.C) {

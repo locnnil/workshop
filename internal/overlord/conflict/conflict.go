@@ -23,6 +23,20 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 )
 
+type ChangeActionMismatch string
+
+// ChangeConflictError represents an error because of snap conflicts between changes.
+type ChangeConflictError struct {
+	ProjectId    string
+	Workshop     string
+	ChangeKind   string
+	ChangeStatus string
+	// a Message is optional, otherwise one is composed from the other information
+	Message string
+	// ChangeID can optionally be set to the ID of the change with which the operation conflicts
+	ChangeID string
+}
+
 type ChangeSetup struct {
 	Mode string `json:"mode"`
 }
@@ -35,6 +49,31 @@ const (
 	ChangeContinue
 	ChangeAbort
 )
+
+// WaitingChangeReason classifies why an abort or continue had no change paused
+// waiting on error to act on. Its values are carried in the change-not-waiting
+// API error.
+type WaitingChangeReason string
+
+const (
+	// WaitingChangeNoChange indicates no change is in progress for the
+	// workshop, so there is nothing for an abort or continue to act on.
+	WaitingChangeNoChange WaitingChangeReason = "no-change"
+
+	// WaitingChangeRunning indicates the change to be resumed exists but is
+	// still running rather than paused waiting on error.
+	WaitingChangeRunning WaitingChangeReason = "running"
+)
+
+// WaitingChangeError reports that an abort or continue had no change paused
+// waiting on error to act on.
+type WaitingChangeError struct {
+	// Mode is the resume mode requested, abort or continue.
+	Mode Mode
+
+	// Reason classifies why no waiting change was available.
+	Reason WaitingChangeReason
+}
 
 func (s Mode) String() string {
 	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
@@ -79,16 +118,8 @@ func ParseRefreshSetting(s string) (RefreshOption, error) {
 	return -1, errors.New(`refresh behaviour must be any of: "update", "restore"`)
 }
 
-// ChangeConflictError represents an error because of snap conflicts between changes.
-type ChangeConflictError struct {
-	ProjectId    string
-	Workshop     string
-	ChangeKind   string
-	ChangeStatus string
-	// a Message is optional, otherwise one is composed from the other information
-	Message string
-	// ChangeID can optionally be set to the ID of the change with which the operation conflicts
-	ChangeID string
+func (e ChangeActionMismatch) Error() string {
+	return string(e)
 }
 
 func (e *ChangeConflictError) Error() string {
@@ -99,6 +130,16 @@ func (e *ChangeConflictError) Error() string {
 		return fmt.Sprintf("workshop %q has %q change in progress", e.Workshop, e.ChangeKind)
 	}
 	return fmt.Sprintf("workshop %q has changes in progress", e.Workshop)
+}
+
+// Error returns a human-readable fallback description of the resume failure.
+// Callers that can render their own message should branch on
+// [WaitingChangeError.Reason] instead.
+func (e WaitingChangeError) Error() string {
+	if e.Reason == WaitingChangeRunning {
+		return fmt.Sprintf("cannot %s: change is running", e.Mode)
+	}
+	return fmt.Sprintf("cannot %s: no waiting change in progress", e.Mode)
 }
 
 func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
@@ -226,11 +267,12 @@ func ResumeAfterWait(st *state.State,
 		return nil, err
 	}
 	if chg == nil {
-		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
+		return nil, WaitingChangeError{Mode: mode, Reason: WaitingChangeNoChange}
 	}
 
 	if chg.Kind() != action {
 		return nil, fmt.Errorf("cannot %s: %s requested but %s is in progress", mode, action, chg.Kind())
+
 	}
 
 	if chg.Kind() != "refresh" && chg.Kind() != "launch" {
@@ -238,7 +280,7 @@ func ResumeAfterWait(st *state.State,
 	}
 
 	if chg.Status() != state.WaitStatus {
-		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
+		return nil, WaitingChangeError{Mode: mode, Reason: WaitingChangeRunning}
 	}
 
 	if mode == ChangeContinue {
