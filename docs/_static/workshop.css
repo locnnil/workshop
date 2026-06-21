@@ -12,3 +12,19 @@ blockquote{
 blockquote {
     background: #f8f8f8;
 }
+
+/* Render Mermaid diagrams at their natural size instead of stretching them to
+   the full content width. sphinxcontrib-mermaid sets `width: 100%` on the
+   diagram SVG; paired with `mermaid_height = "auto"` (conf.py) that made narrow
+   state diagrams render many times too tall. Honor the explicit dimensions
+   Mermaid emits (see mermaid_init_config in conf.py), cap at the content width
+   so wide diagrams still shrink responsively, and center the result. */
+pre.mermaid {
+    text-align: center;
+}
+
+pre.mermaid > svg {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+}

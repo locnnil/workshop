@@ -28,6 +28,19 @@ or install them directly into a workshop.
    Parts <parts>
 
 
+SDK lifecycle
+-------------
+
+Most SDKs move through the same stages,
+from a quick local hack in a single workshop
+to a consumable artifact on the SDK Store:
+
+.. toctree::
+   :maxdepth: 1
+
+   lifecycle
+
+
 SDK design
 ----------
 
