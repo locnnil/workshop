@@ -259,6 +259,7 @@ func (s *Backend) userProjects(ctx context.Context) ([]workshop.Project, error) 
 // remove the project from the list.
 func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, projects []workshop.Project) ([]workshop.Project, bool, error) {
 	pruned := make([]workshop.Project, 0, len(projects))
+	removed := make([]workshop.Project, 0, len(projects))
 	modified := false
 
 	for _, prj := range projects {
@@ -298,8 +299,13 @@ func (s *Backend) pruneProjects(client lxd.InstanceServer, ctx context.Context, 
 		if len(workshops) > 0 {
 			pruned = append(pruned, prj)
 		} else {
+			removed = append(removed, prj)
 			modified = true
 		}
+	}
+
+	if err := s.pruneWorkshopCNAMEs(client, ctx, removed); err != nil {
+		logger.Noticef("On pruneProjects: failed to prune workshop CNAME records: %v", err)
 	}
 
 	return pruned, modified, nil

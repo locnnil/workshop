@@ -38,6 +38,8 @@ apps:
         socket-mode: 0666
   workshopctl:
     command: bin/workshopctl
+  configure-dns:
+    command: bin/workshopd configure-dns
   sdk:
     environment:
       WORKSHOP_SOCKET: $SNAP_COMMON/workshop/workshop.socket

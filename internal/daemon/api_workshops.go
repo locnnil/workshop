@@ -111,6 +111,7 @@ type WorkshopInfo struct {
 	Base      string     `json:"base"`
 	Status    string     `json:"status"`
 	Sdks      []*SdkInfo `json:"sdks,omitempty"`
+	Hostname  string     `json:"hostname,omitempty"`
 	Notes     []string   `json:"notes,omitempty"`
 }
 
@@ -235,6 +236,12 @@ func workshopToInfo(username string, w *workshop.Workshop, health healthstate.He
 		info.Notes = append(info.Notes, health.Code)
 	}
 	info.Status = health.Status.String()
+
+	info.Hostname = w.Hostname.Domain
+	if w.Hostname.Note != "" {
+		info.Notes = append(info.Notes, w.Hostname.Note)
+	}
+
 	return &info, nil
 }
 
@@ -299,6 +306,11 @@ func workshopToInfoFull(ctx context.Context, username string, w *workshop.Worksh
 		info.Notes = append(info.Notes, health.Code)
 	}
 	info.Status = health.Status.String()
+
+	info.Hostname = w.Hostname.Domain
+	if w.Hostname.Note != "" {
+		info.Notes = append(info.Notes, w.Hostname.Note)
+	}
 
 	return &info, nil
 }

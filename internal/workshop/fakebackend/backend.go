@@ -22,6 +22,7 @@ import (
 	"io/fs"
 	"maps"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -140,6 +141,15 @@ type FakeWorkshopBackend struct {
 }
 
 var _ workshop.Backend = (*FakeWorkshopBackend)(nil)
+
+type FakeNetworkManager struct {
+	Addrs []netip.Addr
+	Err   error
+}
+
+func (f FakeNetworkManager) InterfaceAddrs(context.Context, string) ([]netip.Addr, error) {
+	return f.Addrs, f.Err
+}
 
 func New(baseDir string) (*FakeWorkshopBackend, error) {
 	var be FakeWorkshopBackend

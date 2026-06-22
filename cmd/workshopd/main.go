@@ -65,6 +65,7 @@ func main() {
 
 	workshopd.SetVersionTemplate("{{.Version}}\n")
 	workshopd.AddCommand((&cmdRun{}).Command())
+	workshopd.AddCommand((&cmdConfigureDNS{}).Command())
 	if err = workshopd.Execute(); err != nil {
 		os.Exit(1)
 	}

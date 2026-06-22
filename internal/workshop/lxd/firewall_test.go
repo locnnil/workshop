@@ -1,16 +1,12 @@
 package lxdbackend
 
 import (
-	"testing"
-
 	"gopkg.in/check.v1"
 )
 
 type FirewallTests struct{}
 
 var _ = check.Suite(&FirewallTests{})
-
-func TestFirewallSuite(t *testing.T) { check.TestingT(t) }
 
 // nft -j output samples for testing. These mirror real `nft -j list table ip
 // filter` output with the metainfo object omitted for brevity.

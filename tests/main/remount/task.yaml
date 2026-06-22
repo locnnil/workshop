@@ -4,6 +4,9 @@ restore: |
 
   workshop_exec warnings
   workshop_exec okay || true
+
+  umount /home/ubuntu/other-fs || true
+  rm -rf /home/ubuntu/{one,two,other-fs,two.1,two.2}
 execute: |
   . "$TESTSLIB"/utils.sh
 

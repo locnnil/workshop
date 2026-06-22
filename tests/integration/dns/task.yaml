@@ -1,0 +1,9 @@
+summary: Test systemd-resolved integration
+
+execute: |
+  rm -rf cover
+  mkdir cover
+
+  go test -cover "$SPREAD_PATH"/internal/dns -timeout=30m -tags=integration -check.v -check.f resolvedSuite -coverpkg=github.com/canonical/workshop/internal/dns -args -test.gocoverdir="$PWD"/cover
+artifacts:
+  - cover

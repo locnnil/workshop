@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -49,6 +50,11 @@ const (
 
 	networkName = "workshopbr0"
 	networkType = "bridge"
+
+	// networkDomain is the DNS domain served by the workshop bridge. Workshop
+	// instances are reachable as "<instance>.<networkDomain>", and configure-dns
+	// registers this domain with the host resolver.
+	networkDomain = "wp"
 
 	// NetworkBridgeName is the name of the LXD bridge network used by
 	// workshops, exported for use by other packages (e.g. firewall checks).
@@ -265,18 +271,14 @@ func New() (*Backend, error) {
 		return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q (expected %q)", storagePool, pools[idx].Driver, storagePoolDriver)
 	}
 
-	networks, err := conn.GetNetworks()
-	if err != nil {
-		return nil, err
-	}
-
-	if idx := slices.IndexFunc(networks, func(n api.Network) bool { return n.Name == networkName }); idx < 0 {
+	network, etag, err := conn.GetNetwork(networkName)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		req := api.NetworksPost{
 			Name: networkName,
 			Type: networkType,
 			NetworkPut: api.NetworkPut{
 				Config: map[string]string{
-					"dns.domain": "workshop",
+					"dns.domain": networkDomain,
 				},
 				Description: "Bridge network for workshops",
 			},
@@ -289,8 +291,19 @@ func New() (*Backend, error) {
 		if err := op.Wait(); err != nil {
 			return nil, err
 		}
-	} else if networks[idx].Type != networkType {
-		return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, networks[idx].Type)
+	} else if err != nil {
+		return nil, err
+	} else if network.Type != networkType {
+		return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, network.Type)
+	} else if network.Config["dns.domain"] != networkDomain {
+		network.Config["dns.domain"] = networkDomain
+		op, err := conn.UpdateNetwork(network.Name, network.Writable(), etag)
+		if err != nil {
+			return nil, err
+		}
+		if err := op.Wait(); err != nil {
+			return nil, err
+		}
 	}
 
 	return &server, nil
@@ -343,33 +356,27 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
+	if err := s.adjustInstanceTemplates(conn, snapshot.Format, req.Name); err != nil {
+		return err
+	}
+
 	fs, err := s.instanceFs(conn, req.Name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	// Workaround https://github.com/canonical/lxd/issues/17983.
-	if err := fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service"); err != nil {
-		return err
+	if snapshot.Format.N > 3 {
+		// cloud-init seems to ignore preserve_hostname in user-data, we have
+		// to bake it into the image instead.
+		cfg := strings.NewReader("preserve_hostname: true\n")
+		if err := fs.AtomicWriteTo(cfg, "/etc/cloud/cloud.cfg.d/99_preserve_hostname.cfg", 0644); err != nil {
+			return err
+		}
 	}
 
-	// Ubuntu 20.04 was released before cloud-init added support for LXD. The
-	// current images contain a more recent version of cloud-init, but the
-	// image metadata.yaml contains templated seed data files. See
-	// https://docs.cloud-init.io/en/latest/development/dir_layout.html#seed.
-	// This forces cloud-init to use the NoCloud data source instead of LXD.
-	//
-	// The seed files contain a hostname and instance-id, both set to the
-	// container name. This is OK when launching a new workshop, or rebuilding
-	// a workshop from an image (although the instance-id is different for
-	// 22.04 and up), but when rebuilding a workshop from a snapshot, it
-	// results in both the hostname and instance-id being taken from the
-	// snapshot. There's no way to remove the seed files before starting the
-	// instance for the first time, but we can force cloud-init to use the LXD
-	// data source by adding a config file.
-	forceLXD := []byte("datasource_list: [LXD]\n")
-	return fs.WriteFile("/etc/cloud/cloud.cfg.d/90_workshop.cfg", forceLXD, 0644)
+	// Workaround https://github.com/canonical/lxd/issues/17983.
+	return fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service")
 }
 
 func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.InstancesPost) error {
@@ -420,6 +427,74 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 		return err
 	}
 	return op.Wait()
+}
+
+// adjustInstanceTemplates sets /etc/hostname to the workshop's name.
+//
+// Also removes cloud-init seed files for NoCloud. The current Ubuntu 20.04
+// images contain a recent version of cloud-init that supports LXD, but these
+// files force it to use NoCloud instead. See
+// https://docs.cloud-init.io/en/latest/development/dir_layout.html#seed.
+//
+// The seed files contain a hostname and instance-id, both set to the instance
+// name. This is OK when launching a new workshop, or rebuilding a workshop
+// from an image (although the instance-id is different for 22.04 and up), but
+// when rebuilding a workshop from a snapshot, it results in both the hostname
+// and instance-id being taken from the snapshot.
+func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Revision, name string) error {
+	metadata, etag, err := conn.GetInstanceMetadata(name)
+	if err != nil {
+		return err
+	}
+
+	modified := false
+	hostname := metadata.Templates["/etc/hostname"]
+	if format.N > 3 && hostname == nil {
+		hostname = &api.ImageMetadataTemplate{
+			When:     []string{"create", "copy"},
+			Template: "hostname.tpl",
+		}
+		if metadata.Templates == nil {
+			metadata.Templates = map[string]*api.ImageMetadataTemplate{}
+		}
+		metadata.Templates["/etc/hostname"] = hostname
+		modified = true
+	}
+
+	deleted := make([]string, 0, len(metadata.Templates))
+	for path, template := range metadata.Templates {
+		if !strings.HasPrefix(path, "/var/lib/cloud/seed/nocloud-net/") {
+			continue
+		}
+		delete(metadata.Templates, path)
+		modified = true
+		if template != nil {
+			deleted = append(deleted, template.Template)
+		}
+	}
+
+	if format.N > 3 {
+		// LXD uses an old version of pongo2 which doesn't support [].
+		tpl := `{{ config_get("user.workshop.name", "") }}
+`
+		if err := conn.CreateInstanceTemplateFile(name, hostname.Template, strings.NewReader(tpl)); err != nil {
+			return err
+		}
+	}
+
+	if modified {
+		if err := conn.UpdateInstanceMetadata(name, *metadata, etag); err != nil {
+			return err
+		}
+	}
+
+	for _, template := range deleted {
+		if err := conn.DeleteInstanceTemplateFile(name, template); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, timeout int) error {
@@ -524,6 +599,10 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		return err
 	}
 
+	if err := s.addWorkshopCNAMEs(conn, ctx, name); err != nil {
+		logger.Noticef("On StartWorkshop: failed to add %q workshop CNAME records: %v", name, err)
+	}
+
 	rev.Success()
 	return nil
 }
@@ -548,12 +627,20 @@ func (s *Backend) stopWorkshop(conn lxd.InstanceServer, ctx context.Context, nam
 	if force {
 		timeout = 10
 	}
-	if err := s.updateInstanceState(conn, ctx, name, "stop", timeout); err != nil && force {
-		logger.Noticef("On stopWorkshop: failed to stop %q workshop: %v", name, err)
-		return s.updateInstanceState(conn, ctx, name, "stop", 0)
-	} else {
+	err := s.updateInstanceState(conn, ctx, name, "stop", timeout)
+	if err != nil && force {
+		logger.Noticef("On StopWorkshop: failed to stop %q workshop: %v", name, err)
+		err = s.updateInstanceState(conn, ctx, name, "stop", 0)
+	}
+	if err != nil {
 		return err
 	}
+
+	if err := s.removeWorkshopCNAMEs(conn, ctx, name); err != nil {
+		logger.Noticef("On StopWorkshop: failed to remove %q workshop CNAME records: %v", name, err)
+	}
+
+	return nil
 }
 
 func (s *Backend) setAutoStart(conn lxd.InstanceServer, ctx context.Context, name string, autostart bool) error {
@@ -768,7 +855,21 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		return nil, err
 	}
 
-	workshop, err := s.loadWorkshop(conn, inst, p)
+	var cnames []cname
+	network, _, err := conn.GetNetwork(networkName)
+	if err != nil {
+		if !api.StatusErrorCheck(err, http.StatusNotFound) {
+			return nil, err
+		}
+	} else {
+		cnames, _ = unmarshalDnsmasq(network.Config["raw.dnsmasq"])
+	}
+	if cnames == nil {
+		// Tell loadWorkshop to add the hostname-not-found note.
+		cnames = []cname{}
+	}
+
+	workshop, err := s.loadWorkshop(conn, inst, p, cnames)
 	if err != nil {
 		return nil, err
 	}
@@ -786,7 +887,7 @@ func workshopFile(lxdConfig map[string]string) (*workshop.File, error) {
 	return &f, nil
 }
 
-func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p workshop.Project) (*workshop.Workshop, error) {
+func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p workshop.Project, cnames []cname) (*workshop.Workshop, error) {
 	f, err := workshopFile(inst.Config)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load workshop: %v", err)
@@ -826,17 +927,42 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 		profs[s.Name] = sp
 	}
 
+	running := inst.StatusCode == api.Running || inst.StatusCode == api.Ready
+	hostname := b.hostname(f.Name, p, format, running, cnames)
+
 	return &workshop.Workshop{
 		Backend:  b,
 		Project:  p,
 		Name:     f.Name,
 		Format:   format,
 		Image:    image,
-		Running:  inst.StatusCode == api.Running || inst.StatusCode == api.Ready,
+		Running:  running,
 		Sdks:     sdks,
 		Profiles: profs,
 		File:     f,
+		Hostname: hostname,
 	}, nil
+}
+
+func (s *Backend) hostname(name string, p workshop.Project, format sdk.Revision, running bool, cnames []cname) workshop.Hostname {
+	var hostname workshop.Hostname
+	if cnames == nil {
+		// Skip adding notes if we weren't given the CNAME entries (i.e. when
+		// loading multiple workshops).
+		return hostname
+	}
+
+	idx := slices.IndexFunc(cnames, func(c cname) bool {
+		return c.Workshop == name && c.ProjectId == p.ProjectId
+	})
+	if idx >= 0 {
+		hostname.Domain = cnames[idx].friendly()
+		hostname.Note = cnames[idx].Note
+	} else if running && format.N > 3 {
+		hostname.Note = "hostname-not-found"
+	}
+
+	return hostname
 }
 
 func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, error) {
@@ -879,7 +1005,7 @@ func (s *Backend) ProjectWorkshops(ctx context.Context) ([]*workshop.Workshop, e
 
 	var workshops []*workshop.Workshop
 	for _, i := range instances {
-		ws, err := s.loadWorkshop(conn, &i, p)
+		ws, err := s.loadWorkshop(conn, &i, p, nil)
 		if err != nil {
 			logger.Debugf("Workshop Backend on ProjectsWorkshops: %v", err)
 			continue
@@ -998,49 +1124,16 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
-	cloudInitConfig := `#cloud-config
+	cloudConfigTemplate := `
+#cloud-config
 users:
   - default
   - name: workshop
     primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-    {GROUPS}
-apt:
-  conf: |
-    # Installed by workshop
-
-    # Don't automatically install recommended packages
-    APT::Install-Recommends "0";
-
-    # Don't automatically install suggested packages
-    APT::Install-Suggests "0";
-
-    # Bypass confirmation prompts
-    APT::Get::Assume-Yes "1";
-grub_dpkg:
-  enabled: false
-ssh_genkeytypes: [ed25519]
-write_files:
-- content: |
-    [DHCPv4]
-    SendRelease=false
-
-    [DHCPv6]
-    SendRelease=false
-  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
-runcmd:
-  # Project directory is required for 'workshop exec'.
-  - install --directory --mode=755 /project
-  # Create XDG base directories so SDKs don't need an extra mode=700 step.
-  - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
-  # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
-  - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
-  # Required to load above DHCP config.
-  - networkctl reload
-`
-
-	groups := `create_groups: false
+{{- if gt .Format 1}}
+    create_groups: false
     groups:
     - 'adm'
     - 'cdrom'
@@ -1077,23 +1170,78 @@ bootcmd:
   maybe_groupadd 110 render-compat-110
   maybe_groupadd 990 render-compat-990
   maybe_groupadd 992 render-compat-992
-`
-	if format.N < 2 {
-		groups = `groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
-`
-	}
-	cloudInitConfig = strings.Replace(cloudInitConfig, "{GROUPS}\n", groups, 1)
+{{else}}
+    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
+{{end -}}
+apt:
+  conf: |
+    # Installed by workshop
+
+    # Don't automatically install recommended packages
+    APT::Install-Recommends "0";
+
+    # Don't automatically install suggested packages
+    APT::Install-Suggests "0";
+
+    # Bypass confirmation prompts
+    APT::Get::Assume-Yes "1";
+grub_dpkg:
+  enabled: false
+ssh_genkeytypes: [ed25519]
+write_files:
+- content: |
+    [DHCPv4]
+    SendRelease=false
+
+    [DHCPv6]
+    SendRelease=false
+  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
+runcmd:
+  # Project directory is required for 'workshop exec'.
+  - install --directory --mode=755 /project
+  # Create XDG base directories so SDKs don't need an extra mode=700 step.
+  - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
+  # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
+  - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
+  # Required to load above DHCP config.
+  - networkctl reload
+`[1:]
 
 	// Based on lxd-imagebuilder Ubuntu template. By default
 	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
 	// which can change when refreshing to a new base image.
-	cloudInitNetwork := `network:
+	networkConfigTemplate := `network:
   version: 2
   ethernets:
     eth0:
       dhcp4: true
       dhcp-identifier: mac
+{{- if gt .Format 3}}
+      dhcp4-overrides:
+        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
+      dhcp6-overrides:
+        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
+{{- end -}}
+{{- if gt .Format 2}}
+      nameservers:
+        search: [{{printf "%s.%s" .ProjectID .Domain | printf "%q"}}, {{printf "%q" .Domain}}]
+{{else}}
+{{end -}}
 `
+
+	dot := struct {
+		Format    int
+		Domain    string
+		ProjectID string
+		Workshop  string
+	}{
+		Format:    format.N,
+		Domain:    networkDomain,
+		ProjectID: projectId,
+		Workshop:  file.Name,
+	}
+	cloudConfig := mustExecute("cloud-config", cloudConfigTemplate, dot)
+	networkConfig := mustExecute("network-config", networkConfigTemplate, dot)
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
@@ -1106,8 +1254,8 @@ bootcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"user.user-data":                 cloudInitConfig,
-		"user.network-config":            cloudInitNetwork,
+		"user.user-data":                 cloudConfig,
+		"user.network-config":            networkConfig,
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
@@ -1122,6 +1270,20 @@ bootcmd:
 	}
 
 	return cfg, nil
+}
+
+func mustExecute(name, text string, dot any) string {
+	t, err := template.New(name).Parse(text)
+	if err != nil {
+		panic(err)
+	}
+
+	var builder strings.Builder
+	if err := t.Execute(&builder, dot); err != nil {
+		panic(err)
+	}
+
+	return builder.String()
 }
 
 func FakeStartCommand(script string) func() {

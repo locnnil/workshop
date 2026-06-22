@@ -14,6 +14,7 @@ execute: |
   fi
   if [ $SPREAD_REBOOT = 1 ]; then
     workshop_exec list | MATCH 'Ready'
+    resolvectl query "ws-autostart-$(< .workshop.lock).wp" | MATCH 'link: workshopbr0'
   fi
 
   echo "Make sure a workshop can start independently of the workshop daemon"
@@ -24,6 +25,7 @@ execute: |
   if [ $SPREAD_REBOOT = 2 ]; then
     snap start --enable workshop
     workshop_exec list | MATCH 'Ready'
+    resolvectl query "ws-autostart-$(< .workshop.lock).wp" | MATCH 'link: workshopbr0'
   fi
 
   echo "Make sure a stopped workshop remains stopped after reboot"

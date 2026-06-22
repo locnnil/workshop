@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -72,8 +73,9 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	f.usr = &user.User{Username: "testuser", Uid: "1000", Gid: "1000", HomeDir: c.MkDir()}
 	f.project = workshop.Project{
 		ProjectId: "42424242",
-		Path:      c.MkDir(),
+		Path:      filepath.Join(c.MkDir(), "testprj"),
 	}
+	c.Assert(os.Mkdir(f.project.Path, os.ModePerm), check.IsNil)
 	f.ctx = helper.CreateTestContext(f.usr.Username, "42424242")
 
 	f.restoreDevices = workshop.FakeDefaultDevices(helper.DefaultTestDevices)
@@ -241,16 +243,14 @@ func includeWhenCopying(key string) bool {
 
 func ipAddresses(inst *api.InstanceFull) []string {
 	var addresses []string
-	for _, network := range inst.State.Network {
-		for _, address := range network.Addresses {
-			if !slices.Contains([]string{"inet", "inet6"}, address.Family) {
-				continue
-			}
-			if slices.Contains([]string{"link", "local"}, address.Scope) {
-				continue
-			}
-			addresses = append(addresses, address.Address)
+	for _, address := range inst.State.Network["eth0"].Addresses {
+		if !slices.Contains([]string{"inet", "inet6"}, address.Family) {
+			continue
 		}
+		if slices.Contains([]string{"link", "local"}, address.Scope) {
+			continue
+		}
+		addresses = append(addresses, address.Address)
 	}
 	return addresses
 }
@@ -1281,4 +1281,94 @@ func (f *wsOps) TestLxdBackendSnapshotHashCollision(c *check.C) {
 
 	err = f.bd.TakeSnapshot(f.ctx, "test", snapshot)
 	c.Check(err, check.ErrorMatches, `hash collision detected: "system-.*" snapshot has unexpected revision of "system" SDK`)
+}
+
+func (f *wsOps) TestLxdBackendWorkshopCNAMEs(c *check.C) {
+	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
+	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)
+
+	// Create second project.
+	projectDir := filepath.Join(c.MkDir(), "testprj")
+	createWFile(c, projectDir, "other", "name: other")
+	restore := testutil.FakeFunc(func() (string, error) {
+		return "24242424", nil
+	}, &workshop.NewProjectId)
+	_, _, err := f.bd.CreateOrLoadProject(f.ctx, projectDir)
+	restore()
+	c.Assert(err, check.IsNil)
+
+	// Check initial CNAME.
+	conn, err := f.bd.LxdClient(f.ctx)
+	c.Assert(err, check.IsNil)
+	defer conn.Disconnect()
+
+	network, _, err := conn.GetNetwork("workshopbr0")
+	c.Assert(err, check.IsNil)
+	want := `
+cname=test.42424242.wp,test.testprj.wp,test-42424242.wp,0
+`[1:]
+	c.Check(network.Config["raw.dnsmasq"], check.Equals, want)
+
+	// Check CNAME removed on stop.
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
+
+	network, etag, err := conn.GetNetwork(network.Name)
+	c.Assert(err, check.IsNil)
+	c.Check(network.Config["raw.dnsmasq"], check.Equals, "")
+
+	// Test config merging.
+	network.Config["raw.dnsmasq"] = `
+# fake custom config line
+cname=other.24242424.wp,other.testprj.wp,other-24242424.wp,0
+# fake custom config line 2
+`[1:]
+	op, err := conn.UpdateNetwork(network.Name, network.Writable(), etag)
+	c.Assert(err, check.IsNil)
+	c.Assert(op.Wait(), check.IsNil)
+
+	err = f.bd.StartWorkshop(f.ctx, "test")
+	c.Assert(err, check.IsNil)
+
+	network, _, err = conn.GetNetwork(network.Name)
+	c.Assert(err, check.IsNil)
+	want = `
+cname=other.24242424.wp,other.testprj.wp,other-24242424.wp,0
+cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
+# fake custom config line
+# fake custom config line 2
+`[1:]
+	c.Check(network.Config["raw.dnsmasq"], check.Equals, want)
+
+	// Prune second project.
+	err = os.RemoveAll(projectDir)
+	c.Assert(err, check.IsNil)
+	_, err = f.bd.Projects(f.ctx)
+	c.Assert(err, check.IsNil)
+
+	network, _, err = conn.GetNetwork(network.Name)
+	c.Assert(err, check.IsNil)
+	want = `
+cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
+# fake custom config line
+# fake custom config line 2
+`[1:]
+	c.Check(network.Config["raw.dnsmasq"], check.Equals, want)
+
+	// Remove CNAME again.
+	err = f.bd.StopWorkshop(f.ctx, "test", true)
+	c.Assert(err, check.IsNil)
+
+	network, etag, err = conn.GetNetwork(network.Name)
+	c.Assert(err, check.IsNil)
+	want = `
+# fake custom config line
+# fake custom config line 2
+`[1:]
+	c.Check(network.Config["raw.dnsmasq"], check.Equals, want)
+
+	network.Config["raw.dnsmasq"] = ""
+	op, err = conn.UpdateNetwork(network.Name, network.Writable(), etag)
+	c.Assert(err, check.IsNil)
+	c.Assert(op.Wait(), check.IsNil)
 }

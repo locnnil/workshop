@@ -58,6 +58,15 @@ type Workshop struct {
 	Sdks map[string]SdkInstallation
 	// Workshop devices installed.
 	Profiles map[string]SdkProfile
+	Hostname Hostname
+}
+
+type Hostname struct {
+	// Domain is the workshop's DNS name (e.g. "ws.myapp.wp" or "ws.42424242.wp"),
+	// if available.
+	Domain string
+	// Note explains why Domain uses the project ID instead of basename.
+	Note string
 }
 
 type SdkInstallation struct {

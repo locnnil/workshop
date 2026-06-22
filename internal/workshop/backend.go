@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"os/user"
 	"slices"
@@ -174,6 +175,11 @@ type SdkManager interface {
 
 	// Get the SDK volume information.
 	Sdk(ctx context.Context, setup sdk.Setup) (SdkVolume, error)
+}
+
+type NetworkManager interface {
+	// InterfaceAddrs lists the IP addresses configured for the given device.
+	InterfaceAddrs(ctx context.Context, iface string) ([]netip.Addr, error)
 }
 
 type ExecArgs struct {
