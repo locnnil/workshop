@@ -33,7 +33,6 @@ a path that already exists keeps its ownership and permissions.
 - :samp:`mode` defaults to :samp:`0o755` when the :samp:`uid`,
   set explicitly or resolved by the previous rule, is :samp:`0` (root),
   and to :samp:`0o775` otherwise.
-  The maximum allowed value is :samp:`0o777`.
 
 - :samp:`read-only` defaults to :samp:`false`.
 
