@@ -1,6 +1,6 @@
 .. meta::
    :description: Workshop SDK documentation, providing access to
-                 explanations of SDK concepts, data storage, lifecycle hooks,
+                 explanations of SDK concepts, data storage, runtime hooks,
                  and comparisons with traditional container approaches.
 
 SDKs
@@ -26,6 +26,7 @@ or install them directly into a workshop.
 
    concepts
    Parts <parts>
+   Runtime hooks <runtime-hooks>
 
 
 SDK lifecycle

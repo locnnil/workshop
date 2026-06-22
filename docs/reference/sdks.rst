@@ -598,7 +598,6 @@ Explanation:
 - :ref:`exp_interface_concepts`
 - :ref:`exp_mount_interface`
 - :ref:`exp_sdks`
-- :ref:`exp_sdk_state`
 - :ref:`exp_ssh_interface`
 - :ref:`exp_system_sdk`
 - :ref:`exp_tunnel_interface`
