@@ -17,4 +17,5 @@ and publishing the result to the SDK Store.
    :maxdepth: 1
 
    Build an SDK <build-an-sdk>
+   Configure mount ownership <configure-mount-ownership>
    Publish an SDK <publish-an-sdk>
