@@ -14,7 +14,10 @@
 
 package client
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // ChangeConflictError describes an operation blocked by another change.
 type ChangeConflictError struct {
@@ -31,28 +34,10 @@ type ChangeConflictError struct {
 	Workshop string
 }
 
-// WaitingChangeError describes an abort or continue request that could not be
-// applied because no change is paused waiting on error for the workshop.
-type WaitingChangeError struct {
-	// Reason classifies why no waiting change was available. It is one of the
-	// WaitingChange* reason constants.
-	Reason WaitingChangeReason
-}
-
-// WaitingChangeReason classifies why an abort or continue had no change paused
-// waiting on error to act on. Its values are carried in the change-not-waiting
-// API error.
-type WaitingChangeReason string
-
-const (
-	// WaitingChangeNoChange indicates no change is in progress for the
-	// workshop, so there is nothing for an abort or continue to act on.
-	WaitingChangeNoChange WaitingChangeReason = "no-change"
-
-	// WaitingChangeRunning indicates the change to be resumed exists but is
-	// still running rather than paused waiting on error.
-	WaitingChangeRunning WaitingChangeReason = "running"
-)
+// ErrorNoWaitingChange signals that an abort or continue request could not be
+// applied because no change is in progress to resume for the workshop. Match
+// it with [errors.Is].
+var ErrorNoWaitingChange = errors.New("no waiting change in progress")
 
 // As maps generic API errors into richer client-side error types.
 func (e *Error) As(target any) bool {
@@ -63,12 +48,16 @@ func (e *Error) As(target any) bool {
 			return false
 		}
 		return toChangeConflictError(*e, conflict)
-	case ErrorKindNoWaitingChange:
-		waiting, ok := target.(*WaitingChangeError)
-		if !ok {
-			return false
-		}
-		return toWaitingChangeError(*e, waiting)
+	default:
+		return false
+	}
+}
+
+// Is reports whether the error matches a sentinel for the error's kind.
+func (e *Error) Is(target error) bool {
+	switch target {
+	case ErrorNoWaitingChange:
+		return e.Kind == ErrorKindNoWaitingChange
 	default:
 		return false
 	}
@@ -84,12 +73,6 @@ func (e ChangeConflictError) Error() string {
 		)
 	}
 	return fmt.Sprintf("workshop %q has changes in progress", e.Workshop)
-}
-
-// Error returns a human-readable fallback description. Callers that can render
-// their own message should branch on [WaitingChangeError.Reason] instead.
-func (e WaitingChangeError) Error() string {
-	return "no waiting change in progress"
 }
 
 // toChangeConflictError extracts change-conflict details from a generic API
@@ -114,25 +97,6 @@ func toChangeConflictError(err Error, conflict *ChangeConflictError) bool {
 		ChangeKind: changeKind,
 		ProjectID:  projectID,
 		Workshop:   workshop,
-	}
-	return true
-}
-
-// toWaitingChangeError extracts change-not-waiting details from a generic API
-// error. It returns true when the error value has the expected object shape,
-// even if the reason is missing or not a string; in that case the
-// [WaitingChangeError.Reason] field remains empty. It returns false when the
-// error value is not an object and therefore cannot represent the payload.
-func toWaitingChangeError(err Error, waiting *WaitingChangeError) bool {
-	value, ok := err.Value.(map[string]any)
-	if !ok {
-		return false
-	}
-
-	reason, _ := value["reason"].(string)
-
-	*waiting = WaitingChangeError{
-		Reason: WaitingChangeReason(reason),
 	}
 	return true
 }

@@ -142,15 +142,12 @@ func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av 
 	return c.wait(cli, changeId)
 }
 
-// waitingChangeError renders the message for an abort or continue that could
-// not be applied to a refresh.
-func (c *CmdRefresh) waitingChangeError(e client.WaitingChangeError) error {
+// waitingChangeError renders the message for an abort or continue requested
+// when no refresh is in progress to resume.
+func (c *CmdRefresh) waitingChangeError() error {
 	verb := "abort"
 	if c.Continue {
 		verb = "continue"
-	}
-	if e.Reason == client.WaitingChangeRunning {
-		return fmt.Errorf("cannot %s: refresh is in progress", verb)
 	}
 	return fmt.Errorf("cannot %s: no refresh in progress", verb)
 }
@@ -177,7 +174,7 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 
 	chg, err := c.RunRefresh(cli, project, av)
 
-	var waitingErr client.WaitingChangeError
+	var conflictErr client.ChangeConflictError
 	switch {
 	case err == nil:
 		fmt.Fprintf(Stdout, "%s refreshed\n", strutil.Quoted(av))
@@ -186,8 +183,14 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(Stdout, "no updates available for %s\n", strutil.Quoted(av))
 	case errors.Is(err, errUndone):
 		fmt.Fprintf(Stdout, "%s refresh aborted\n", strutil.Quoted(av))
-	case errors.As(err, &waitingErr):
-		return c.waitingChangeError(waitingErr)
+	case errors.Is(err, client.ErrorNoWaitingChange):
+		return c.waitingChangeError()
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(
+			"cannot refresh %[1]q: %[2]s change is in progress",
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+		)
 	case errors.Is(err, errWaitOnError):
 		w := workshopName(av[0])
 		return fmt.Errorf(`

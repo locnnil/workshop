@@ -161,7 +161,7 @@ func (m *workshopLaunch) TestLaunchAbortNoWaitingChange(c *check.C) {
 			c.Check(DecodedRequestBody(c, r), check.DeepEquals, map[string]any{"action": "launch",
 				"names": []any{"ws"}, "options": map[string]any{"mode": "abort"}})
 			w.WriteHeader(400)
-			fmt.Fprintln(w, `{"type":"error","status-code":400,"result":{"message":"cannot abort: no waiting change in progress","kind":"no-waiting-change-in-progress","value":{"reason":"no-change"}}}`)
+			fmt.Fprintln(w, `{"type":"error","status-code":400,"result":{"message":"cannot abort: no waiting change in progress","kind":"no-waiting-change-in-progress"}}`)
 		default:
 			c.Errorf("expected 2 calls, now on %d", n)
 		}
@@ -170,6 +170,37 @@ func (m *workshopLaunch) TestLaunchAbortNoWaitingChange(c *check.C) {
 	err := cmd.Run(nil, []string{"ws"})
 	c.Assert(err, check.NotNil)
 	c.Check(err.Error(), check.Equals, "cannot abort: no launch in progress")
+	c.Check(n, check.Equals, 2)
+}
+
+// TestLaunchAbortChangeConflict checks that aborting while another change is in
+// progress reports the blocking change's kind.
+func (m *workshopLaunch) TestLaunchAbortChangeConflict(c *check.C) {
+	cmd := &CmdLaunch{root: &CmdRoot{}}
+	cmd.Abort = true
+
+	n := 0
+	m.RedirectClientToTestServer(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		switch n {
+		case 1:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, "/v1/projects")
+			r := fmt.Sprintf(`{"type": "sync", "result": {"id":"%s","path":"%s"}}`, m.prjId, m.prjDir)
+			fmt.Fprintln(w, r)
+		case 2:
+			c.Check(r.Method, check.Equals, "POST")
+			c.Assert(r.URL.Path, check.Equals, fmt.Sprintf("/v1/projects/%s/workshops", m.prjId))
+			w.WriteHeader(400)
+			fmt.Fprintln(w, `{"type":"error","status-code":400,"result":{"message":"workshop \"ws\" has \"refresh\" change in progress","kind":"change-conflict","value":{"change-kind":"refresh","workshop":"ws"}}}`)
+		default:
+			c.Errorf("expected 2 calls, now on %d", n)
+		}
+	})
+
+	err := cmd.Run(nil, []string{"ws"})
+	c.Assert(err, check.NotNil)
+	c.Check(err.Error(), check.Equals, `cannot launch "ws": refresh change is in progress`)
 	c.Check(n, check.Equals, 2)
 }
 

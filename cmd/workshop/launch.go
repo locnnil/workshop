@@ -99,15 +99,12 @@ $ workshop launch`,
 	return cmd
 }
 
-// waitingChangeError renders the message for an abort or continue that could
-// not be applied to a launch.
-func (c *CmdLaunch) waitingChangeError(e client.WaitingChangeError) error {
+// waitingChangeError renders the message for an abort or continue requested
+// when no launch is in progress to resume.
+func (c *CmdLaunch) waitingChangeError() error {
 	verb := "abort"
 	if c.Continue {
 		verb = "continue"
-	}
-	if e.Reason == client.WaitingChangeRunning {
-		return fmt.Errorf("cannot %s: launch is in progress", verb)
 	}
 	return fmt.Errorf("cannot %s: no launch in progress", verb)
 }
@@ -146,11 +143,17 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 
 	changeId, err := cli.Launch(project.Id, av, mode, c.verbose)
 
-	var waitingErr client.WaitingChangeError
+	var conflictErr client.ChangeConflictError
 	switch {
 	case err == nil:
-	case errors.As(err, &waitingErr):
-		return c.waitingChangeError(waitingErr)
+	case errors.Is(err, client.ErrorNoWaitingChange):
+		return c.waitingChangeError()
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(
+			"cannot launch %[1]q: %[2]s change is in progress",
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+		)
 	default:
 		return err
 	}

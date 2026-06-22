@@ -95,56 +95,22 @@ func (errorSuite) TestChangeConflictErrorAsWrongKind(c *check.C) {
 	c.Check(errors.As(err, &conflictErr), check.Equals, false)
 }
 
-// TestWaitingChangeErrorAsMissingReason checks that a value object without a
-// reason still maps, leaving the reason empty.
-func (errorSuite) TestWaitingChangeErrorAsMissingReason(c *check.C) {
-	err := &client.Error{
-		Kind:  client.ErrorKindNoWaitingChange,
-		Value: map[string]any{},
-	}
-
-	var waitingErr client.WaitingChangeError
-	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
-	c.Check(waitingErr.Reason, check.Equals, client.WaitingChangeReason(""))
-}
-
-// TestWaitingChangeErrorAsNonMapValue checks that unexpected API error value
-// shapes do not map to [client.WaitingChangeError].
-func (errorSuite) TestWaitingChangeErrorAsNonMapValue(c *check.C) {
-	err := &client.Error{
-		Kind:  client.ErrorKindNoWaitingChange,
-		Value: "not a map",
-	}
-
-	var waitingErr client.WaitingChangeError
-	c.Check(errors.As(err, &waitingErr), check.Equals, false)
-}
-
-// TestWaitingChangeErrorAsReason checks that a change-not-waiting API error
-// maps to [client.WaitingChangeError] carrying its reason.
-func (errorSuite) TestWaitingChangeErrorAsReason(c *check.C) {
+// TestWaitingChangeErrorIs checks that a no-waiting-change API error matches
+// the [client.ErrorNoWaitingChange] sentinel via errors.Is.
+func (errorSuite) TestWaitingChangeErrorIs(c *check.C) {
 	err := &client.Error{
 		Kind: client.ErrorKindNoWaitingChange,
-		Value: map[string]any{
-			"reason": string(client.WaitingChangeNoChange),
-		},
 	}
 
-	var waitingErr client.WaitingChangeError
-	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
-	c.Check(waitingErr, check.DeepEquals, client.WaitingChangeError{
-		Reason: client.WaitingChangeNoChange,
-	})
+	c.Check(errors.Is(err, client.ErrorNoWaitingChange), check.Equals, true)
 }
 
-// TestWaitingChangeErrorAsWrongKind checks that unrelated API error kinds do
-// not map to [client.WaitingChangeError].
-func (errorSuite) TestWaitingChangeErrorAsWrongKind(c *check.C) {
+// TestWaitingChangeErrorIsWrongKind checks that unrelated API error kinds do
+// not match the [client.ErrorNoWaitingChange] sentinel.
+func (errorSuite) TestWaitingChangeErrorIsWrongKind(c *check.C) {
 	err := &client.Error{
-		Kind:  client.ErrorKindChangeConflict,
-		Value: map[string]any{"reason": string(client.WaitingChangeNoChange)},
+		Kind: client.ErrorKindChangeConflict,
 	}
 
-	var waitingErr client.WaitingChangeError
-	c.Check(errors.As(err, &waitingErr), check.Equals, false)
+	c.Check(errors.Is(err, client.ErrorNoWaitingChange), check.Equals, false)
 }
