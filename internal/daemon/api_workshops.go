@@ -152,6 +152,39 @@ func changeInProgressErrorResponse(
 	}
 }
 
+// changeConflictErrorResponse converts a [conflict.ChangeConflictError] into a
+// change-conflict API error response.
+func changeConflictErrorResponse(conflictErr *conflict.ChangeConflictError) Response {
+	return &resp{
+		Type:   ResponseTypeError,
+		Status: http.StatusBadRequest,
+		Result: &errorResult{
+			Kind:    errorKindChangeConflict,
+			Message: conflictErr.Error(),
+			Value: changeConflictValue{
+				ChangeID:   conflictErr.ChangeID,
+				ChangeKind: conflictErr.ChangeKind,
+				ProjectID:  conflictErr.ProjectId,
+				Workshop:   conflictErr.Workshop,
+			},
+		},
+	}
+}
+
+// noWaitingChangeResponse converts a [conflict.ErrorNoWaitingChange] into a
+// no-waiting-change-in-progress API error response, preserving the wrapped
+// message.
+func noWaitingChangeResponse(err error) Response {
+	return &resp{
+		Type:   ResponseTypeError,
+		Status: http.StatusBadRequest,
+		Result: &errorResult{
+			Kind:    errorKindNoWaitingChange,
+			Message: err.Error(),
+		},
+	}
+}
+
 func workshopFileToInfo(pid string, name string, path string) *WorkshopFileInfo {
 	var ws WorkshopFileInfo
 	ws.ProjectId = pid
@@ -605,11 +638,16 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 		change.SetStatus(state.ErrorStatus)
 	}
 
-	var conflictErr healthstate.ChangeInProgressError
+	var inProgressErr healthstate.ChangeInProgressError
+	var changeConflictErr *conflict.ChangeConflictError
 	switch {
 	case err == nil:
-	case errors.As(err, &conflictErr):
-		return changeInProgressErrorResponse(conflictErr)
+	case errors.As(err, &inProgressErr):
+		return changeInProgressErrorResponse(inProgressErr)
+	case errors.As(err, &changeConflictErr):
+		return changeConflictErrorResponse(changeConflictErr)
+	case errors.Is(err, conflict.ErrorNoWaitingChange):
+		return noWaitingChangeResponse(err)
 	case err != nil:
 		return statusBadRequest("%w", err)
 	}

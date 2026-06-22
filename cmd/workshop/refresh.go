@@ -142,6 +142,16 @@ func (c *CmdRefresh) RunRefresh(cli *client.Client, project *client.Project, av 
 	return c.wait(cli, changeId)
 }
 
+// waitingChangeError renders the message for an abort or continue requested
+// when no refresh is in progress to resume.
+func (c *CmdRefresh) waitingChangeError() error {
+	verb := "abort"
+	if c.Continue {
+		verb = "continue"
+	}
+	return fmt.Errorf("cannot %s: no refresh in progress", verb)
+}
+
 func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	cli, err := c.root.client()
 	if err != nil {
@@ -190,6 +200,14 @@ func (c *CmdRefresh) Run(cmd *cobra.Command, av []string) error {
 	case errors.Is(err, errUndone):
 		// An explicit --abort reverted the paused refresh cleanly.
 		fmt.Fprintf(Stdout, "%s refresh aborted\n", strutil.Quoted(av))
+	case errors.Is(err, client.ErrorNoWaitingChange):
+		return c.waitingChangeError()
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(
+			"cannot refresh %[1]q: %[2]s change is in progress",
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+		)
 	case errors.Is(err, errWaitOnError):
 		// This refresh hit an error and paused under --wait-on-error.
 		w := workshopName(av[0])

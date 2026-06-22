@@ -14,7 +14,10 @@
 
 package client
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // ChangeConflictError describes an operation blocked by another change.
 type ChangeConflictError struct {
@@ -31,6 +34,11 @@ type ChangeConflictError struct {
 	Workshop string
 }
 
+// ErrorNoWaitingChange signals that an abort or continue request could not be
+// applied because no change is in progress to resume for the workshop. Match
+// it with [errors.Is].
+var ErrorNoWaitingChange = errors.New("no waiting change in progress")
+
 // As maps generic API errors into richer client-side error types.
 func (e *Error) As(target any) bool {
 	switch e.Kind {
@@ -43,6 +51,28 @@ func (e *Error) As(target any) bool {
 	default:
 		return false
 	}
+}
+
+// Is reports whether the error matches a sentinel for the error's kind.
+func (e *Error) Is(target error) bool {
+	switch target {
+	case ErrorNoWaitingChange:
+		return e.Kind == ErrorKindNoWaitingChange
+	default:
+		return false
+	}
+}
+
+// Error returns a human-readable description of the blocking change.
+func (e ChangeConflictError) Error() string {
+	if e.ChangeKind != "" {
+		return fmt.Sprintf(
+			"workshop %q has %q change in progress",
+			e.Workshop,
+			e.ChangeKind,
+		)
+	}
+	return fmt.Sprintf("workshop %q has changes in progress", e.Workshop)
 }
 
 // toChangeConflictError extracts change-conflict details from a generic API
@@ -69,16 +99,4 @@ func toChangeConflictError(err Error, conflict *ChangeConflictError) bool {
 		Workshop:   workshop,
 	}
 	return true
-}
-
-// Error returns a human-readable description of the blocking change.
-func (e ChangeConflictError) Error() string {
-	if e.ChangeKind != "" {
-		return fmt.Sprintf(
-			"workshop %q has %q change in progress",
-			e.Workshop,
-			e.ChangeKind,
-		)
-	}
-	return fmt.Sprintf("workshop %q has changes in progress", e.Workshop)
 }

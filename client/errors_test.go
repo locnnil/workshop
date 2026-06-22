@@ -50,6 +50,18 @@ func (errorSuite) TestChangeConflictErrorAsFullValue(c *check.C) {
 	})
 }
 
+// TestChangeConflictErrorAsNonMapValue checks that unexpected API error value
+// shapes do not map to [client.ChangeConflictError].
+func (errorSuite) TestChangeConflictErrorAsNonMapValue(c *check.C) {
+	err := &client.Error{
+		Kind:  client.ErrorKindChangeConflict,
+		Value: "not a map",
+	}
+
+	var conflictErr client.ChangeConflictError
+	c.Check(errors.As(err, &conflictErr), check.Equals, false)
+}
+
 // TestChangeConflictErrorAsPartialValue checks that incomplete API error values
 // still map to a partial [client.ChangeConflictError].
 func (errorSuite) TestChangeConflictErrorAsPartialValue(c *check.C) {
@@ -83,14 +95,22 @@ func (errorSuite) TestChangeConflictErrorAsWrongKind(c *check.C) {
 	c.Check(errors.As(err, &conflictErr), check.Equals, false)
 }
 
-// TestChangeConflictErrorAsNonMapValue checks that unexpected API error value
-// shapes do not map to [client.ChangeConflictError].
-func (errorSuite) TestChangeConflictErrorAsNonMapValue(c *check.C) {
+// TestWaitingChangeErrorIs checks that a no-waiting-change API error matches
+// the [client.ErrorNoWaitingChange] sentinel via errors.Is.
+func (errorSuite) TestWaitingChangeErrorIs(c *check.C) {
 	err := &client.Error{
-		Kind:  client.ErrorKindChangeConflict,
-		Value: "not a map",
+		Kind: client.ErrorKindNoWaitingChange,
 	}
 
-	var conflictErr client.ChangeConflictError
-	c.Check(errors.As(err, &conflictErr), check.Equals, false)
+	c.Check(errors.Is(err, client.ErrorNoWaitingChange), check.Equals, true)
+}
+
+// TestWaitingChangeErrorIsWrongKind checks that unrelated API error kinds do
+// not match the [client.ErrorNoWaitingChange] sentinel.
+func (errorSuite) TestWaitingChangeErrorIsWrongKind(c *check.C) {
+	err := &client.Error{
+		Kind: client.ErrorKindChangeConflict,
+	}
+
+	c.Check(errors.Is(err, client.ErrorNoWaitingChange), check.Equals, false)
 }

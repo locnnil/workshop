@@ -99,6 +99,16 @@ $ workshop launch`,
 	return cmd
 }
 
+// waitingChangeError renders the message for an abort or continue requested
+// when no launch is in progress to resume.
+func (c *CmdLaunch) waitingChangeError() error {
+	verb := "abort"
+	if c.Continue {
+		verb = "continue"
+	}
+	return fmt.Errorf("cannot %s: no launch in progress", verb)
+}
+
 func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	av = strutil.Deduplicate(av)
 
@@ -132,7 +142,19 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 	}
 
 	changeId, err := cli.Launch(project.Id, av, mode, c.verbose)
-	if err != nil {
+
+	var conflictErr client.ChangeConflictError
+	switch {
+	case err == nil:
+	case errors.Is(err, client.ErrorNoWaitingChange):
+		return c.waitingChangeError()
+	case errors.As(err, &conflictErr):
+		return fmt.Errorf(
+			"cannot launch %[1]q: %[2]s change is in progress",
+			conflictErr.Workshop,
+			conflictErr.ChangeKind,
+		)
+	default:
 		return err
 	}
 

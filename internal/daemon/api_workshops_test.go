@@ -3846,12 +3846,14 @@ func (s *apiSuite) TestRefreshNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot continue: no waiting change in progress",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot abort: no waiting change in progress",
 		},
 	}
 
@@ -4009,8 +4011,8 @@ func (s *apiSuite) TestValidateIncorrectActionModeInputs(c *check.C) {
 				"":              `cannot launch "basic": workshop definition .*`,
 				"transactional": `cannot launch "basic": workshop definition .*`,
 				"wait-on-error": `cannot launch "basic": workshop definition .*`,
-				"continue":      "cannot continue: no wait in progress",
-				"abort":         "cannot abort: no wait in progress",
+				"continue":      "cannot continue: no waiting change in progress",
+				"abort":         "cannot abort: no waiting change in progress",
 				"invalid-mode":  `cannot launch: "invalid-mode" is not a valid mode`,
 			},
 		}, {
@@ -4019,8 +4021,8 @@ func (s *apiSuite) TestValidateIncorrectActionModeInputs(c *check.C) {
 				"":              `cannot refresh "basic": workshop definition .*`,
 				"transactional": `cannot refresh "basic": workshop definition .*`,
 				"wait-on-error": `cannot refresh "basic": workshop definition .*`,
-				"continue":      "cannot continue: no wait in progress",
-				"abort":         "cannot abort: no wait in progress",
+				"continue":      "cannot continue: no waiting change in progress",
+				"abort":         "cannot abort: no waiting change in progress",
 				"invalid-mode":  `cannot refresh: "invalid-mode" is not a valid mode`,
 			},
 		}, {
@@ -4293,7 +4295,8 @@ func (s *apiSuite) TestLaunchWorkshopRefreshLaunchInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue: refresh requested but launch is in progress",
+			Kind:    "change-conflict",
+			Message: `workshop "manysdks" has "launch" change in progress`,
 		},
 	}
 	s.runActionTest(c, requests, expected)
@@ -4375,12 +4378,14 @@ func (s *apiSuite) TestLaunchWorkshopNoRefreshInProgress(c *check.C) {
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot continue: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot continue: no waiting change in progress",
 		},
 		{
 			Type:    ResponseTypeError,
 			Status:  http.StatusBadRequest,
-			Message: "cannot abort: no wait in progress",
+			Kind:    "no-waiting-change-in-progress",
+			Message: "cannot abort: no waiting change in progress",
 		},
 	}
 

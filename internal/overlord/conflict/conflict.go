@@ -23,6 +23,20 @@ import (
 	"github.com/canonical/workshop/internal/sdk"
 )
 
+type ChangeActionMismatch string
+
+// ChangeConflictError represents an error because of snap conflicts between changes.
+type ChangeConflictError struct {
+	ProjectId    string
+	Workshop     string
+	ChangeKind   string
+	ChangeStatus string
+	// a Message is optional, otherwise one is composed from the other information
+	Message string
+	// ChangeID can optionally be set to the ID of the change with which the operation conflicts
+	ChangeID string
+}
+
 type ChangeSetup struct {
 	Mode string `json:"mode"`
 }
@@ -35,6 +49,11 @@ const (
 	ChangeContinue
 	ChangeAbort
 )
+
+// ErrorNoWaitingChange signals that an abort or continue had no change to
+// resume: no change is in progress for the workshop at all. Match it with
+// [errors.Is].
+var ErrorNoWaitingChange = errors.New("no waiting change in progress")
 
 func (s Mode) String() string {
 	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
@@ -79,16 +98,8 @@ func ParseRefreshSetting(s string) (RefreshOption, error) {
 	return -1, errors.New(`refresh behaviour must be any of: "update", "restore"`)
 }
 
-// ChangeConflictError represents an error because of snap conflicts between changes.
-type ChangeConflictError struct {
-	ProjectId    string
-	Workshop     string
-	ChangeKind   string
-	ChangeStatus string
-	// a Message is optional, otherwise one is composed from the other information
-	Message string
-	// ChangeID can optionally be set to the ID of the change with which the operation conflicts
-	ChangeID string
+func (e ChangeActionMismatch) Error() string {
+	return string(e)
 }
 
 func (e *ChangeConflictError) Error() string {
@@ -215,8 +226,9 @@ func BackgroundDiscard(chg *state.Change, workshop string) {
 // Attempt to resume the change associated with the Resume/Launch operation
 // for the given workshop. Depending on the mode the change will either be
 // turned into Doing (Continue mode) or Abort (Abort mode).
-func ResumeAfterWait(st *state.State,
-	workshop string, projectId string, mode Mode, action string) (*state.Change, error) {
+func ResumeAfterWait(
+	st *state.State, workshop string, projectId string, mode Mode, action string,
+) (*state.Change, error) {
 	if mode != ChangeAbort && mode != ChangeContinue {
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}
@@ -226,19 +238,20 @@ func ResumeAfterWait(st *state.State,
 		return nil, err
 	}
 	if chg == nil {
-		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
+		return nil, fmt.Errorf("cannot %s: %w", mode, ErrorNoWaitingChange)
 	}
 
-	if chg.Kind() != action {
-		return nil, fmt.Errorf("cannot %s: %s requested but %s is in progress", mode, action, chg.Kind())
-	}
-
-	if chg.Kind() != "refresh" && chg.Kind() != "launch" {
-		return nil, fmt.Errorf("cannot %s: no wait in progress (%q is in progress)", chg.Kind(), mode)
-	}
-
-	if chg.Status() != state.WaitStatus {
-		return nil, fmt.Errorf("cannot %s: no wait in progress", mode)
+	// The change exists but cannot be resumed: it is either a different kind
+	// than requested, or the matching kind still running rather than paused
+	// waiting on error. Either way a change is in progress for the workshop.
+	if chg.Kind() != action || chg.Status() != state.WaitStatus {
+		return nil, &ChangeConflictError{
+			ProjectId:    projectId,
+			Workshop:     workshop,
+			ChangeKind:   chg.Kind(),
+			ChangeStatus: chg.Status().String(),
+			ChangeID:     chg.ID(),
+		}
 	}
 
 	if mode == ChangeContinue {
