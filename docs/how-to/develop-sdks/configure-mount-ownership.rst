@@ -5,7 +5,7 @@
                  by setting uid, gid, mode, and read-only attributes,
                  overriding the path-based defaults that Workshop applies.
 
-How to configure mount ownership
+How to configure a mount
 ================================
 
 .. @tests in tests/docs-how-to/configure-mount-ownership/task.yaml
