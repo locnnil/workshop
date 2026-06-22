@@ -17,7 +17,7 @@ and publishing the result to the SDK Store.
    :maxdepth: 1
 
    Build an SDK <build-an-sdk>
-   Configure mount ownership <configure-mount-ownership>
+   Configure a mount <configure-mount>
    Declare plugs and slots <declare-plugs-slots>
    Publish an SDK <publish-an-sdk>
    Write runtime hooks <write-runtime-hooks>
