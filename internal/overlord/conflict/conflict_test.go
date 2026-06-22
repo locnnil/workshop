@@ -187,12 +187,8 @@ func (s *conflictSuite) TestResumeAfterWaitNothingInProgress(c *check.C) {
 	defer s.state.Unlock()
 
 	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
-	var waitingErr conflict.WaitingChangeError
-	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
-	c.Check(waitingErr, check.DeepEquals, conflict.WaitingChangeError{
-		Mode:   conflict.ChangeContinue,
-		Reason: conflict.WaitingChangeNoChange,
-	})
+	c.Check(errors.Is(err, conflict.ErrorNoWaitingChange), check.Equals, true)
+	c.Check(err, check.ErrorMatches, "cannot continue: no waiting change in progress")
 }
 
 func (s *conflictSuite) TestResumeAfterWaitIncorrectMode(c *check.C) {
@@ -207,24 +203,35 @@ func (s *conflictSuite) TestResumeAfterWaitWrongChangeKindInProgress(c *check.C)
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	_ = s.newChange("launch")
+	change := s.newChange("launch")
 
 	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
-	c.Check(err, check.ErrorMatches, `.* refresh requested but launch is in progress`)
+	var conflictErr *conflict.ChangeConflictError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
+		ProjectId:    s.project.ProjectId,
+		Workshop:     "ws",
+		ChangeKind:   "launch",
+		ChangeStatus: change.Status().String(),
+		ChangeID:     change.ID(),
+	})
 }
 
 func (s *conflictSuite) TestResumeAfterWaitNoWaitingOnError(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	_ = s.newChange("refresh")
+	change := s.newChange("refresh")
 
 	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
-	var waitingErr conflict.WaitingChangeError
-	c.Assert(errors.As(err, &waitingErr), check.Equals, true)
-	c.Check(waitingErr, check.DeepEquals, conflict.WaitingChangeError{
-		Mode:   conflict.ChangeContinue,
-		Reason: conflict.WaitingChangeRunning,
+	var conflictErr *conflict.ChangeConflictError
+	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
+	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
+		ProjectId:    s.project.ProjectId,
+		Workshop:     "ws",
+		ChangeKind:   "refresh",
+		ChangeStatus: change.Status().String(),
+		ChangeID:     change.ID(),
 	})
 }
 

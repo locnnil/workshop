@@ -50,30 +50,10 @@ const (
 	ChangeAbort
 )
 
-// WaitingChangeReason classifies why an abort or continue had no change paused
-// waiting on error to act on. Its values are carried in the change-not-waiting
-// API error.
-type WaitingChangeReason string
-
-const (
-	// WaitingChangeNoChange indicates no change is in progress for the
-	// workshop, so there is nothing for an abort or continue to act on.
-	WaitingChangeNoChange WaitingChangeReason = "no-change"
-
-	// WaitingChangeRunning indicates the change to be resumed exists but is
-	// still running rather than paused waiting on error.
-	WaitingChangeRunning WaitingChangeReason = "running"
-)
-
-// WaitingChangeError reports that an abort or continue had no change paused
-// waiting on error to act on.
-type WaitingChangeError struct {
-	// Mode is the resume mode requested, abort or continue.
-	Mode Mode
-
-	// Reason classifies why no waiting change was available.
-	Reason WaitingChangeReason
-}
+// ErrorNoWaitingChange signals that an abort or continue had no change to
+// resume: no change is in progress for the workshop at all. Match it with
+// [errors.Is].
+var ErrorNoWaitingChange = errors.New("no waiting change in progress")
 
 func (s Mode) String() string {
 	return [...]string{"transactional", "wait-on-error", "continue", "abort"}[s]
@@ -130,22 +110,6 @@ func (e *ChangeConflictError) Error() string {
 		return fmt.Sprintf("workshop %q has %q change in progress", e.Workshop, e.ChangeKind)
 	}
 	return fmt.Sprintf("workshop %q has changes in progress", e.Workshop)
-}
-
-// String returns the reason value, such as "no-change", implementing
-// [fmt.Stringer].
-func (w WaitingChangeReason) String() string {
-	return string(w)
-}
-
-// Error returns a human-readable fallback description of the resume failure.
-// Callers that can render their own message should branch on
-// [WaitingChangeError.Reason] instead.
-func (e WaitingChangeError) Error() string {
-	if e.Reason == WaitingChangeRunning {
-		return fmt.Sprintf("cannot %s: change is running", e.Mode)
-	}
-	return fmt.Sprintf("cannot %s: no waiting change in progress", e.Mode)
 }
 
 func checkWorkshop(task *state.Task, projectId, workshop string) (bool, error) {
@@ -262,8 +226,9 @@ func BackgroundDiscard(chg *state.Change, workshop string) {
 // Attempt to resume the change associated with the Resume/Launch operation
 // for the given workshop. Depending on the mode the change will either be
 // turned into Doing (Continue mode) or Abort (Abort mode).
-func ResumeAfterWait(st *state.State,
-	workshop string, projectId string, mode Mode, action string) (*state.Change, error) {
+func ResumeAfterWait(
+	st *state.State, workshop string, projectId string, mode Mode, action string,
+) (*state.Change, error) {
 	if mode != ChangeAbort && mode != ChangeContinue {
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
 	}
@@ -273,20 +238,20 @@ func ResumeAfterWait(st *state.State,
 		return nil, err
 	}
 	if chg == nil {
-		return nil, WaitingChangeError{Mode: mode, Reason: WaitingChangeNoChange}
+		return nil, fmt.Errorf("cannot %s: %w", mode, ErrorNoWaitingChange)
 	}
 
-	if chg.Kind() != action {
-		return nil, fmt.Errorf("cannot %s: %s requested but %s is in progress", mode, action, chg.Kind())
-
-	}
-
-	if chg.Kind() != "refresh" && chg.Kind() != "launch" {
-		return nil, fmt.Errorf("cannot %s: no wait in progress (%q is in progress)", chg.Kind(), mode)
-	}
-
-	if chg.Status() != state.WaitStatus {
-		return nil, WaitingChangeError{Mode: mode, Reason: WaitingChangeRunning}
+	// The change exists but cannot be resumed: it is either a different kind
+	// than requested, or the matching kind still running rather than paused
+	// waiting on error. Either way a change is in progress for the workshop.
+	if chg.Kind() != action || chg.Status() != state.WaitStatus {
+		return nil, &ChangeConflictError{
+			ProjectId:    projectId,
+			Workshop:     workshop,
+			ChangeKind:   chg.Kind(),
+			ChangeStatus: chg.Status().String(),
+			ChangeID:     chg.ID(),
+		}
 	}
 
 	if mode == ChangeContinue {
