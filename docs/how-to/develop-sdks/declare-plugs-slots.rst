@@ -124,23 +124,6 @@ including bare port numbers and unix socket paths.
 See :ref:`ref_tunnel_interface` for the full grammar.
 
 
-Verify the declarations
------------------------
-
-After packing the SDK with :command:`sdkcraft pack`,
-confirm that the declared plugs and slots
-ended up in the SDK metadata by extracting :file:`meta/sdk.yaml`
-from the artifact:
-
-.. code-block:: console
-
-   $ tar xOf <NAME>_<ARCH>_<BASE>.sdk meta/sdk.yaml
-
-
-The output should include the :samp:`plugs:` and :samp:`slots:` blocks
-exactly as they were declared.
-
-
 See also
 --------
 
@@ -155,6 +138,7 @@ Explanation:
 
 How-to guides:
 
+- :ref:`how_build_sdk`
 - :ref:`how_resolve_plug_conflicts`
 
 
