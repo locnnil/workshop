@@ -45,9 +45,15 @@ to the workshop.
   before the project directory is mounted
   and before any plug or slot is connected.
   It runs once when the SDK is first installed
-  and again when its revision changes;
-  a refresh that leaves the SDK intact reuses the post-:samp:`setup-base`
-  snapshot rather than running the hook again.
+  and again when its revision changes.
+  A refresh reuses the post-:samp:`setup-base`
+  :ref:`base snapshot <exp_workshop_definition_sdks>`
+  instead of running the hook again,
+  but only if the base image
+  and the SDKs listed above this one in the definition are unchanged;
+  a change to any of these invalidates the snapshot,
+  causing :samp:`setup-base` to re-run for this SDK
+  and the ones below it in the definition.
 
 - :samp:`setup-project`:
   Per-project preparation,
@@ -58,6 +64,10 @@ to the workshop.
   that depends on the project directory,
   the :samp:`workshop` user's home directory,
   or the slot resources the SDK now has access to.
+  Use it to *prepare the environment*,
+  not to build the project itself;
+  daily build activities belong in :ref:`actions
+  <exp_workshop_definition_actions>`.
 
 - :samp:`check-health`:
   The SDK's report on whether it can operate in this workshop.
@@ -83,7 +93,6 @@ to the workshop.
   but on the *new* SDK revision,
   after every SDK's :samp:`setup-project` has finished,
   and reads back from :envvar:`$SDK_STATE_DIR`.
-  See :ref:`exp_sdk_state` below for the persistence model.
 
 
 Execution contract
@@ -184,7 +193,7 @@ From inside a hook,
 the SDK can call :program:`workshopctl`
 to interact with the workshop daemon.
 
-The most common use is :command:`workshopctl set-health` from
+The only possible use at the moment is :command:`workshopctl set-health` from
 :samp:`check-health`,
 which sets the SDK's health to :samp:`okay`, :samp:`waiting`, or :samp:`error`.
 The workshop's overall :ref:`status <exp_workshop_status>`
@@ -203,35 +212,6 @@ is derived from the union of these results:
   exits without reporting a status,
   or fails to return within five seconds:
   the SDK is moved to *Error*.
-
-
-.. _exp_sdk_state:
-
-State persistence across refresh
---------------------------------
-
-.. @artefact SDK state
-
-A workshop refresh swaps an SDK from one revision to another,
-which means anything the SDK had in the old revision's filesystem
-disappears unless it lives behind a mount plug.
-For state that should survive a refresh
-but is not exposed as a connectable resource,
-:samp:`save-state` and :samp:`restore-state`
-are the right place to put it.
-
-The runner provides :envvar:`$SDK_STATE_DIR` to both hooks,
-pointing at a directory that persists across the refresh.
-:samp:`save-state` runs from the *old* SDK revision
-before the swap,
-and writes whatever needs to outlive the revision into that directory.
-:samp:`restore-state` runs from the *new* SDK revision
-after the swap and after :samp:`setup-project` has run for every SDK,
-and reads from the same directory to reapply what was saved.
-
-:envvar:`$SDK_STATE_DIR` is only set in the environment of
-:samp:`save-state` and :samp:`restore-state`;
-the other hooks do not see the variable.
 
 
 See also

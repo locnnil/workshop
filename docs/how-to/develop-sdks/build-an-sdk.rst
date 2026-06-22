@@ -360,115 +360,14 @@ so use it for anything that depends on project-specific state
 or that should be re-evaluated on every launch.
 
 
-check-health
-~~~~~~~~~~~~
+Other hooks
+~~~~~~~~~~~
 
-:samp:`check-health` runs as root once every other hook has finished:
-on :command:`workshop launch`,
-after :samp:`setup-project` has run for every SDK in the workshop;
-on :command:`workshop refresh`,
-after :samp:`restore-state` has run for every SDK.
-|ws_markup| also re-runs :samp:`check-health` on demand
-when it reassesses the workshop's state.
-Use it to verify the SDK is functional
-and to report status back through :command:`workshopctl set-health`.
-
-The canonical pattern is to exercise a real entry point
-and channel any error output back to the user:
-
-.. code-block:: shell
-   :caption: hooks/check-health
-
-   if ! output=$(sudo -u workshop --login <NAME> --version 2>&1); then
-     workshopctl set-health error "$output"
-     exit
-   fi
-   workshopctl set-health okay
-
-
-Run the command as :samp:`sudo -u workshop --login`
-so it picks up the same environment
-that a workshop user would see interactively;
-this catches PATH wiring bugs in :samp:`setup-base`
-that would otherwise stay hidden.
-
-Three health states are meaningful:
-
-- :samp:`okay`: The SDK is functional.
-
-- :samp:`error`: Something is wrong.
-  Supply a message that helps a user understand what failed.
-
-- :samp:`waiting`: The hook should be retried.
-  |ws_markup| retries up to ten times, once per second.
-  If the SDK never reaches :samp:`okay` or :samp:`error`,
-  the health flips to :samp:`error` after those retries are exhausted.
-
-
-save-state and restore-state
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:samp:`save-state` and :samp:`restore-state` are an optional pair
-that only runs at :command:`workshop refresh`.
-:samp:`save-state` runs in the old SDK revision,
-before |ws_markup| destroys the old workshop.
-:samp:`restore-state` runs in the new SDK revision,
-after :samp:`setup-project` has finished for every SDK.
-Their job is to carry data
-across the refresh boundary in :envvar:`SDK_STATE_DIR`.
-
-Because :samp:`restore-state` runs after :samp:`setup-project`,
-restored files aren't yet present
-while :samp:`setup-project` is still executing;
-keep any setup that depends on restored state
-inside :samp:`restore-state` itself,
-or have :samp:`check-health` retry by reporting :samp:`waiting`
-until the state shows up.
-
-Use them when the SDK keeps configuration or transient data
-that doesn't already live in a mount plug or a project file.
-Both hooks run as :samp:`root`,
-so reference the :samp:`workshop` user's home explicitly
-rather than relying on :samp:`~`:
-
-.. code-block:: shell
-   :caption: hooks/save-state
-
-   if [ -d /home/workshop/.config/<NAME> ]; then
-     cp -a /home/workshop/.config/<NAME> "$SDK_STATE_DIR/config"
-   fi
-
-
-.. code-block:: shell
-   :caption: hooks/restore-state
-
-   if [ -d "$SDK_STATE_DIR/config" ]; then
-     install -d -o workshop -g workshop /home/workshop/.config/<NAME>
-     cp -fa "$SDK_STATE_DIR/config/." /home/workshop/.config/<NAME>/
-     chown -R workshop:workshop /home/workshop/.config/<NAME>
-   fi
-
-
-Skip these hooks entirely when:
-
-- The SDK has no state worth preserving,
-  for example a stateless CLI tool.
-
-- The state already lives in a directory
-  backed by a :samp:`mount` plug,
-  which survives refreshes by definition.
-
-- The state is regenerated cheaply by :samp:`setup-base`
-  or :samp:`setup-project`.
-
-
-.. warning::
-
-   The SDK itself is refreshed as part of any :command:`workshop refresh`.
-   A bug in :samp:`save-state` or :samp:`restore-state`
-   becomes a workshop-wide refresh failure,
-   so test these hooks aggressively
-   before relying on them.
+The other three hooks,
+:samp:`check-health`, :samp:`save-state`, and :samp:`restore-state`,
+report SDK health and carry state across a refresh.
+For elaborate examples of all five hooks,
+see :ref:`how_write_runtime_hooks`.
 
 
 .. _how_build_sdk_try:
@@ -486,7 +385,7 @@ build and install the SDK into a workshop with :command:`sdkcraft try`:
 
 |sdk_markup| packs the SDK for each declared platform
 into files of the form :file:`<NAME>_<ARCH>_<BASE>.sdk`
-and copies them into the :ref:`try area <exp_test_try_sdk>`.
+and copies them into the try area.
 
 Add the SDK to a workshop definition
 using the :samp:`try-` prefix:
@@ -614,6 +513,11 @@ Explanation:
 - :ref:`exp_test_try_sdk`
 - :ref:`exp_workshopctl`
 - :ref:`exp_workshop_definition_sdks`
+
+
+How-to guides:
+
+- :ref:`how_write_runtime_hooks`
 
 
 Reference:

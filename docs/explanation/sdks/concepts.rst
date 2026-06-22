@@ -69,8 +69,7 @@ See :ref:`exp_sdk_hooks` for the contract,
 the per-hook environment,
 and how the SDK can talk back to the daemon with :program:`workshopctl`.
 State that has to outlive an SDK refresh
-is handled by the :samp:`save-state` and :samp:`restore-state` hooks
-described in :ref:`exp_sdk_state`.
+is handled by the :samp:`save-state` and :samp:`restore-state` hooks.
 
 
 SDK platforms

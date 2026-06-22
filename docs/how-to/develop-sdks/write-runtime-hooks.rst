@@ -204,6 +204,11 @@ Build and install the SDK into a workshop with :command:`sdkcraft try`:
    $ sdkcraft try
 
 
+|sdk_markup| lints every hook with
+`ShellCheck <https://www.shellcheck.net/>`_ while packing,
+so a shell error in a hook fails the build at this step.
+
+
 List the SDK in a workshop definition with the :samp:`try-` prefix
 and launch the workshop:
 
