@@ -226,6 +226,11 @@ Explanation:
 - :ref:`exp_workshopctl_cli`
 
 
+How-to guides:
+
+- :ref:`how_write_runtime_hooks`
+
+
 Reference:
 
 - :ref:`ref_sdk_hooks`

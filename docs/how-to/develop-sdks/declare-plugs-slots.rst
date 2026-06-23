@@ -139,6 +139,7 @@ Explanation:
 How-to guides:
 
 - :ref:`how_build_sdk`
+- :ref:`how_configure_mount`
 - :ref:`how_resolve_plug_conflicts`
 
 
