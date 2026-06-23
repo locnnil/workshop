@@ -164,6 +164,8 @@ func LxdToSdkProfile(profile string, devs map[string]map[string]string, config m
 				pr.CustomDevices = append(pr.CustomDevices, workshop.CustomDevice{
 					Name:      name,
 					Subsystem: dev["subsystem"],
+					VendorID:  dev["vendorid"],
+					ProductID: dev["productid"],
 				})
 			default:
 				logger.Noticef("On reading %q SDK profile: unknown device type %q", profile, devtype)

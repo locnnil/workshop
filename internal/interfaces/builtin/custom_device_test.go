@@ -76,6 +76,7 @@ plugs:
     interface: custom-device
     subsystem: accel
 `, s.projectId, "ws", "consumer", "mydevice")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
 	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
 
 	slot := builtin.MockSlot(c, `name: producer
@@ -94,6 +95,101 @@ slots:
 	c.Assert(deviceSpec.Profile.CustomDevices, check.DeepEquals, expectedDevices)
 }
 
+func (s *customDeviceSuite) TestCustomDeviceInterfaceWithFilters(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    vendorid: "0403"
+    productid: "6001"
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@24.04
+slots:
+  custom-device:
+`, s.projectId, "ws", "producer", "custom-device")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	expectedDevices := []workshop.CustomDevice{{
+		Name:      "mydevice",
+		Subsystem: "tty",
+		VendorID:  "0403",
+		ProductID: "6001",
+	}}
+	c.Assert(deviceSpec.Profile.CustomDevices, check.DeepEquals, expectedDevices)
+}
+
+func (s *customDeviceSuite) TestCustomDeviceInterfaceWithVendorIdFilter(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    vendorid: "0403"
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@24.04
+slots:
+  custom-device:
+`, s.projectId, "ws", "producer", "custom-device")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	expectedDevices := []workshop.CustomDevice{{
+		Name:      "mydevice",
+		Subsystem: "tty",
+		VendorID:  "0403",
+	}}
+	c.Assert(deviceSpec.Profile.CustomDevices, check.DeepEquals, expectedDevices)
+}
+
+func (s *customDeviceSuite) TestCustomDeviceInterfaceWithoutSubsystem(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    vendorid: "0403"
+    productid: "6001"
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	connectedPlug := interfaces.NewConnectedPlug(plug, nil, nil)
+
+	slot := builtin.MockSlot(c, `name: producer
+base: ubuntu@24.04
+slots:
+  custom-device:
+`, s.projectId, "ws", "producer", "custom-device")
+	connectedSlot := interfaces.NewConnectedSlot(slot, nil, nil)
+	deviceSpec, err := lxd_device.NewSpecification(testuser.Username, "consumer")
+	c.Assert(err, check.IsNil)
+
+	c.Assert(deviceSpec.AddConnectedPlug(s.iface, connectedPlug, connectedSlot), check.IsNil)
+
+	expectedDevices := []workshop.CustomDevice{{
+		Name:      "mydevice",
+		VendorID:  "0403",
+		ProductID: "6001",
+	}}
+	c.Assert(deviceSpec.Profile.CustomDevices, check.DeepEquals, expectedDevices)
+}
+
 func (s *customDeviceSuite) TestSanitizePlugUnknownAttribute(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
@@ -106,7 +202,7 @@ plugs:
 	c.Check(err, check.ErrorMatches, `unknown attribute for custom-device interface plug: "workshop-target"`)
 }
 
-func (s *customDeviceSuite) TestSanitizePlugMissingSubsystem(c *check.C) {
+func (s *customDeviceSuite) TestSanitizePlugNoFilters(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
 base: ubuntu@22.04
 plugs:
@@ -114,17 +210,94 @@ plugs:
     interface: custom-device
 `, s.projectId, "ws", "consumer", "mydevice")
 	err := interfaces.BeforePreparePlug(s.iface, plug)
-	c.Check(err, check.ErrorMatches, `attribute "subsystem" not found for plug "ws/consumer:mydevice"`)
+	c.Check(err, check.ErrorMatches, `custom-device plug must contain "subsystem", "vendorid", or "productid"`)
 }
 
-func (s *customDeviceSuite) TestSanitizePlugEmptySubsystem(c *check.C) {
+func (s *customDeviceSuite) TestSanitizePlugWithFilters(c *check.C) {
 	plug := builtin.MockPlug(c, `name: consumer
-base: ubuntu@22.04
+base: ubuntu@24.04
 plugs:
   mydevice:
     interface: custom-device
-    subsystem: ""
+    subsystem: tty
+    vendorid: "0403"
+    productid: "6001"
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Check(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugWithVendorIdFilter(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    vendorid: "0403"
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Check(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugProductIdRequiresVendorId(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    productid: "6001"
 `, s.projectId, "ws", "consumer", "mydevice")
 	err := interfaces.BeforePreparePlug(s.iface, plug)
-	c.Check(err, check.ErrorMatches, `custom-device plug "subsystem" is empty`)
+	c.Check(err, check.ErrorMatches, `custom-device plug contains "productid" without "vendorid"`)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugInvalidProductId(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    productid: "60019"
+`, s.projectId, "ws", "consumer", "mydevice")
+	err := interfaces.BeforePreparePlug(s.iface, plug)
+	c.Check(err, check.ErrorMatches, `custom-device plug "productid" must be a hexadecimal number`)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugInvalidVendorId(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+    vendorid: "wxyz"
+`, s.projectId, "ws", "consumer", "mydevice")
+	err := interfaces.BeforePreparePlug(s.iface, plug)
+	c.Check(err, check.ErrorMatches, `custom-device plug "vendorid" must be a hexadecimal number`)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugSubsystemOnly(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    subsystem: tty
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Check(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+}
+
+func (s *customDeviceSuite) TestSanitizePlugNormalizesIds(c *check.C) {
+	plug := builtin.MockPlug(c, `name: consumer
+base: ubuntu@24.04
+plugs:
+  mydevice:
+    interface: custom-device
+    vendorid: "EF01"
+    productid: "ABCD"
+`, s.projectId, "ws", "consumer", "mydevice")
+	c.Assert(interfaces.BeforePreparePlug(s.iface, plug), check.IsNil)
+	c.Check(plug.Attrs["vendorid"], check.Equals, "ef01")
+	c.Check(plug.Attrs["productid"], check.Equals, "abcd")
 }

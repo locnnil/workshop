@@ -286,12 +286,24 @@ func (s *Specification) AddCustomDevice(device workshop.CustomDevice) error {
 	s.Profile.CustomDevices = append(s.Profile.CustomDevices, device)
 
 	name := lxdbackend.DeviceName(s.Profile.Sdk, device.Name)
-	s.devices[name] = map[string]string{
+	lxdDevice := map[string]string{
 		"type":              "unix-hotplug",
-		"subsystem":         device.Subsystem,
 		"required":          "false",
 		"ownership.inherit": "true",
 	}
+	// Only set the device identifiers that are provided so that an unset one does
+	// not constrain which host devices match.
+	if device.Subsystem != "" {
+		lxdDevice["subsystem"] = device.Subsystem
+	}
+	if device.VendorID != "" {
+		lxdDevice["vendorid"] = device.VendorID
+	}
+	if device.ProductID != "" {
+		lxdDevice["productid"] = device.ProductID
+	}
+
+	s.devices[name] = lxdDevice
 	s.config[lxdbackend.DeviceTypeConfigKey(name)] = "custom-device"
 
 	return nil

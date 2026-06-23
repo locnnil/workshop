@@ -101,9 +101,13 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 					Where: "/etc",
 					Type:  workshop.WorkshopWorkshop}}},
 		{
-			Sdk:           "sdk",
-			Mounts:        map[string]workshop.Mount{},
-			CustomDevices: []workshop.CustomDevice{{Name: "mydevice", Subsystem: "accel"}},
+			Sdk:    "sdk",
+			Mounts: map[string]workshop.Mount{},
+			CustomDevices: []workshop.CustomDevice{{
+				Name:      "mydevice",
+				Subsystem: "tty",
+				VendorID:  "0403",
+				ProductID: "6001"}},
 		},
 	}
 
@@ -207,7 +211,9 @@ func (f *LxdBeTests) TestLxdToSdkProfileOK(c *check.C) {
 			map[string]map[string]string{
 				"sdk_mydevice": {
 					"type":              "unix-hotplug",
-					"subsystem":         "accel",
+					"subsystem":         "tty",
+					"vendorid":          "0403",
+					"productid":         "6001",
 					"required":          "false",
 					"ownership.inherit": "true"}},
 			map[string]string{

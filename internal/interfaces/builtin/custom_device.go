@@ -20,8 +20,11 @@
 package builtin
 
 import (
+	"errors"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/interfaces/lxd_device"
@@ -51,7 +54,7 @@ const customDeviceBaseDeclarationPlugs = `
     deny-auto-connection: true
 `
 
-var knownCustomDeviceAttributes = []string{"subsystem"}
+var knownCustomDeviceAttributes = []string{"subsystem", "vendorid", "productid"}
 
 type customDeviceInterface struct{}
 
@@ -75,15 +78,64 @@ func (iface *customDeviceInterface) BeforePreparePlug(plug *sdk.PlugInfo) error 
 		}
 	}
 
-	var subsystem string
-	if err := plug.Attr("subsystem", &subsystem); err != nil {
+	// Every attribute is optional, so the map may be nil; make it writable for
+	// the parse helpers, which default absent attributes.
+	if plug.Attrs == nil {
+		plug.Attrs = make(map[string]any)
+	}
+
+	subsystem, err := parseString(plug.Attrs, "subsystem")
+	if err != nil {
 		return err
 	}
-	if subsystem == "" {
-		return fmt.Errorf(`custom-device plug "subsystem" is empty`)
+	vendorID, err := parseDeviceID(plug.Attrs, "vendorid")
+	if err != nil {
+		return err
+	}
+	productID, err := parseDeviceID(plug.Attrs, "productid")
+	if err != nil {
+		return err
+	}
+
+	// subsystem, productid, and vendorid are each optional, but the plug must
+	// narrow the exposed host devices with at least one of them.
+	if subsystem == nil && vendorID == "" && productID == "" {
+		return fmt.Errorf(`custom-device plug must contain "subsystem", "vendorid", or "productid"`)
+	}
+	// A product ID only identifies a device within a vendor's namespace.
+	if vendorID == "" && productID != "" {
+		return fmt.Errorf(`custom-device plug contains "productid" without "vendorid"`)
 	}
 
 	return nil
+}
+
+func parseString(attrs map[string]any, key string) (*string, error) {
+	object, ok := attrs[key]
+	if !ok {
+		return nil, nil
+	}
+	value, ok := object.(string)
+	if !ok {
+		return nil, fmt.Errorf("custom-device plug %q is not a string (found %T)", key, object)
+	}
+	return &value, nil
+}
+
+func parseDeviceID(attrs map[string]any, key string) (string, error) {
+	value, err := parseString(attrs, key)
+	if value == nil || err != nil {
+		return "", err
+	}
+
+	id, err := strconv.ParseUint(strings.TrimPrefix(*value, "0x"), 16, 16)
+	if err != nil {
+		return "", fmt.Errorf("custom-device plug %q must be a hexadecimal number", key)
+	}
+
+	udevForm := fmt.Sprintf("%04x", id)
+	attrs[key] = udevForm
+	return udevForm, nil
 }
 
 func (iface *customDeviceInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.SlotInfo) bool {
@@ -92,11 +144,20 @@ func (iface *customDeviceInterface) AutoConnect(plug *sdk.PlugInfo, slot *sdk.Sl
 }
 
 func (iface *customDeviceInterface) MountConnectedPlug(spec *lxd_device.Specification, plug *interfaces.ConnectedPlug, slot *interfaces.ConnectedSlot) error {
-	var subsystem string
-	if err := plug.Attr("subsystem", &subsystem); err != nil {
+	device := workshop.CustomDevice{Name: plug.Name()}
+
+	var attrErr *sdk.AttributeNotFoundError
+	if err := plug.Attr("subsystem", &device.Subsystem); err != nil && !errors.As(err, &attrErr) {
 		return err
 	}
-	return spec.AddCustomDevice(workshop.CustomDevice{Name: plug.Name(), Subsystem: subsystem})
+	if err := plug.Attr("vendorid", &device.VendorID); err != nil && !errors.As(err, &attrErr) {
+		return err
+	}
+	if err := plug.Attr("productid", &device.ProductID); err != nil && !errors.As(err, &attrErr) {
+		return err
+	}
+
+	return spec.AddCustomDevice(device)
 }
 
 func init() {
