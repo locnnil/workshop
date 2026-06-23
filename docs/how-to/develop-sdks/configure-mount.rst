@@ -1,4 +1,4 @@
-.. _how_configure_mount_ownership:
+.. _how_configure_mount:
 
 .. meta::
    :description: Configure ownership and permissions on mount interface plugs
@@ -6,9 +6,9 @@
                  overriding the path-based defaults that Workshop applies.
 
 How to configure a mount
-================================
+========================
 
-.. @tests in tests/docs-how-to/configure-mount-ownership/task.yaml
+.. @tests in tests/docs-how-to/configure-mount/task.yaml
 
 .. @artefact mount interface
 .. @artefact interface plug

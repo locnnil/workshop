@@ -1,4 +1,4 @@
-summary: Test 'How to configure mount ownership' to ensure it's operational
+summary: Test 'How to configure a mount' to ensure it's operational
 restore: |
   . "$TESTSLIB"/utils.sh
   workshop_exec remove dev || true

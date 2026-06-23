@@ -1,6 +1,6 @@
 name: ownership-sdk
 base: ubuntu@22.04
-summary: Synthesized SDK for the configure-mount-ownership how-to
+summary: Synthesized SDK for the configure-mount how-to
 description: |
   Declares mount plugs with default-rule, explicit-ownership (state),
   private-mode (secrets), and read-only (toolchain) configurations

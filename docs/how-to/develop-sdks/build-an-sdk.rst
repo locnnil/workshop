@@ -207,43 +207,17 @@ Declare plugs and slots
 
 Plugs and slots wire the SDK
 to host resources and to other SDKs in the workshop.
-A plug requests access to something the workshop provides;
-a slot offers something the SDK exposes.
+For instance,
+an SDK may reach for a :samp:`mount` plug for cache or model directories
+that should survive :command:`workshop refresh`,
+a :samp:`gpu` plug for GPU acceleration,
+or a :samp:`tunnel` slot for services
+that expose a network endpoint.
 
-The most common patterns are:
-
-- A :samp:`mount` plug for cache or model directories
-  that should survive :command:`workshop refresh`.
-
-- A :samp:`gpu` plug for SDKs that need GPU acceleration.
-
-- A :samp:`tunnel` slot for services that expose a network endpoint.
-
-
-For example, an SDK that runs a long-lived HTTP service
-and caches data under :file:`~/.cache/<NAME>/`
-declares both a plug and a slot:
-
-.. code-block:: yaml
-   :caption: sdkcraft.yaml
-
-   plugs:
-     cache:
-       interface: mount
-       workshop-target: /home/workshop/.cache/<NAME>
-
-   slots:
-     api:
-       interface: tunnel
-       endpoint: 8080
-
-
-The :samp:`workshop-target` value is the in-workshop path
-that |ws_markup| backs with persistent host storage;
-SDKs can't pick the host path directly,
-which prevents them from reaching arbitrary host files.
-Workshop users can override the host side at run time
-with :command:`workshop remount`.
+For the mount and tunnel declarations step by step,
+including the required attributes
+and how |ws_markup| connects each one,
+see :ref:`how_declare_plugs_slots`.
 
 
 .. _how_build_sdk_hooks:
@@ -517,6 +491,7 @@ Explanation:
 
 How-to guides:
 
+- :ref:`how_declare_plugs_slots`
 - :ref:`how_write_runtime_hooks`
 
 
