@@ -147,8 +147,12 @@ func defaultDevices(pid, w string) ([]Mount, []ProxyEntry) {
 		Where: dirs.AptCacheDir,
 	}}
 
+	// Connect to this daemon's untrusted socket on the host, but always expose
+	// it inside the workshop at a fixed path. The host socket name varies (e.g.
+	// under "go tool try"), so deriving the instance-side name from it would
+	// leave workshopctl and hooks looking for a socket that does not exist.
 	socketHost := dirs.SocketPath + ".untrusted"
-	socketWorkshop := filepath.Join(dirs.WorkshopRunDir, filepath.Base(socketHost))
+	socketWorkshop := dirs.WorkshopSocketPath + ".untrusted"
 	proxies := []ProxyEntry{{
 		Name:      "workshop.socket",
 		Connect:   ProxyTarget{Address: socketHost, Protocol: "unix"},

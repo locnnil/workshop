@@ -20,14 +20,16 @@ import (
 	"path/filepath"
 )
 
-// defaultBaseDir is the Workshop directory used if $WORKSHOP is not set. It is
-// created by the daemon ("workshopd run") if it doesn't exist, and also used by
-// the workshop client.
-const defaultBaseDir = "/var/lib/workshop"
+const (
+	// defaultBaseDir is the Workshop directory used if $WORKSHOP is not set. It is
+	// created by the daemon ("workshopd run") if it doesn't exist, and also used by
+	// the workshop client.
+	defaultBaseDir = "/var/lib/workshop"
 
-// defaultCacheDir is the Workshop directory used if $WORKSHOP_CACHE is not set. It is
-// created by the daemon ("workshopd run") if it doesn't exist.
-const defaultCacheDir = "/var/cache/workshop"
+	// defaultCacheDir is the Workshop directory used if $WORKSHOP_CACHE is not
+	// set. It is created by the daemon ("workshopd run") if it doesn't exist.
+	defaultCacheDir = "/var/cache/workshop"
+)
 
 // Variables for paths inside a workshop
 var (
@@ -45,6 +47,12 @@ var (
 
 	// Run directory inside workshop
 	WorkshopRunDir = filepath.Join(WorkshopBaseDir, "run")
+
+	// Path to the daemon's unix socket as seen from inside a workshop. The
+	// host daemon's untrusted socket is proxied to this fixed path so that
+	// workshopctl and hooks always find it regardless of the daemon's host
+	// socket name (which varies, e.g. under "go tool try").
+	WorkshopSocketPath = filepath.Join(WorkshopRunDir, "workshop.socket")
 
 	// Directory for actions inside workshop
 	WorkshopActionsDir = filepath.Join(WorkshopRunDir, "actions")
