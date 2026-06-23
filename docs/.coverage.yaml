@@ -290,6 +290,91 @@
   specs:
     - SK026
 
+"sdkcraft build":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft clean":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft create-track":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft init":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft login":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft pack":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft prime":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft pull":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft register":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft release":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft revisions":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft stage":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft test":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft try":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft upload":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft version":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
+"sdkcraft whoami":
+  category: "sdkcraft (CLI)"
+  type: command
+  specs: []
+
 "SSH interface":
   category: interface
   type: concept
@@ -308,6 +393,26 @@
   type: concept
   specs:
   - SK033
+
+"try SDK":
+  category: SDK
+  type: concept
+  specs: []
+
+"UV_LINK_MODE":
+  category: SDK
+  type: envvar
+  specs: []
+
+"uv SDK":
+  category: SDK
+  type: concept
+  specs: []
+
+"workshop":
+  category: "workshop (container)"
+  type: concept
+  specs: []
 
 "workshop (CLI)":
   category: "workshop (CLI)"
@@ -400,6 +505,11 @@
   specs:
     - SK014
     - SK027
+
+"workshop init":
+  category: "workshop (CLI)"
+  type: command
+  specs: []
 
 "workshop launch":
   category: "workshop (CLI)"
