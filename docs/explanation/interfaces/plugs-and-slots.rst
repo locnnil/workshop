@@ -95,24 +95,63 @@ permits the plug to connect to a candidate slot.
 The policy is what gates auto-connection,
 not the number of candidate slots in the workshop.
 
-Auto-connection behavior varies by interface:
+Auto-connection behavior, and which SDK type may declare each endpoint,
+varies by interface.
+In the SDK-type columns, *any* means either a regular SDK or the system SDK.
 
-- The mount interface auto-connects to slots provided by the system SDK.
-  Regular-SDK mount slots are not auto-connected by default;
-  wire them by listing the pair in the workshop's
-  :ref:`top-level connections <exp_workshop_definition_connections>`.
+.. list-table::
+   :header-rows: 1
+   :width: 95
+   :widths: 24 22 22 16
 
-- The GPU interface auto-connects.
+   * - Interface
+     - Plug SDK type
+     - Slot SDK type
+     - Auto-connection
 
-- The tunnel interface auto-connects only from host to workshop,
-  between a plug and a slot of the same name,
-  and only when the plug's endpoint
-  is a loopback address or a Unix domain socket.
-  See :ref:`exp_tunnel_connection` for the full policy.
+   * - :ref:`gpu <exp_gpu_interface>`
+     - regular
+     - system
+     - Yes
 
-- The camera, custom device, desktop, and SSH interfaces
-  do not auto-connect.
-  They have to be connected manually with :command:`workshop connect`.
+   * - :ref:`mount <exp_mount_interface>`
+     - regular
+     - any
+     - Yes
+
+   * - :ref:`tunnel <exp_tunnel_interface>`
+     - any
+     - any
+     - Partial :sup:`*`
+
+   * - :ref:`camera <exp_camera_interface>`
+     - regular
+     - system
+     - No
+
+   * - :ref:`custom-device <exp_custom_device_interface>`
+     - regular
+     - system
+     - No
+
+   * - :ref:`desktop <exp_desktop_interface>`
+     - regular
+     - system
+     - No
+
+   * - :ref:`ssh-agent <exp_ssh_interface>`
+     - regular
+     - system
+     - No
+
+:sup:`*` Tunnel auto-connects only from host to workshop,
+between a plug and a slot of the same name,
+and only when the plug's endpoint
+is a loopback address or a Unix domain socket.
+See :ref:`exp_tunnel_connection` for the full policy.
+
+Interfaces marked No are wired manually
+with :command:`workshop connect`.
 
 
 When more than one slot is policy-eligible for the same plug,
