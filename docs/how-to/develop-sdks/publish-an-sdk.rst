@@ -1,7 +1,7 @@
 .. _how_publish_sdk:
 
 .. meta::
-   :description: How-to guide for publishing a Workshop SDK to the SDK Store with
+   :description: How-to guide for publishing a Workshop SDK to the SDK Store with
                  SDKcraft, covering pack, test, try, register, upload, and release,
                  plus how to consume the published SDK from a workshop definition.
 
@@ -11,25 +11,25 @@ How to publish an SDK
 .. @tests in tests/docs-how-to/publish-an-sdk/task.yaml
 
 .. @artefact SDK
-.. @artefact SDK Store
+.. @artefact SDK Store
 .. @artefact sdkcraft (CLI)
 .. @artefact try SDK
 
 Publishing turns a packed SDK
-into something other |ws_markup| users can pull from the SDK Store.
+into something other |ws_markup| users can pull from the SDK Store.
 If the SDK isn't yet packed, tested, and tried locally,
 go through :ref:`how_build_sdk` first.
 
 The publishing flow has four steps:
 
 #. **Pack** the SDK into one :file:`.sdk` artifact per platform.
-#. **Register** the SDK name on the SDK Store.
+#. **Register** the SDK name on the SDK Store.
 #. **Upload** a revision.
 #. **Release** the revision to one or more channels.
 
 
 The first step runs on your machine.
-The last three talk to the live SDK Store
+The last three talk to the live SDK Store
 at :samp:`api.charmhub.io`
 and require an authenticated account.
 
@@ -192,7 +192,7 @@ Then register the SDK name:
    $ sdkcraft register <NAME>
 
 
-Names are global to the SDK Store
+Names are global to the SDK Store
 and normally cannot be re-registered after release.
 Pick a name that matches the SDK's :samp:`name` field in :file:`sdkcraft.yaml`
 and that you intend to keep.
@@ -326,7 +326,7 @@ Channels follow the :samp:`[<TRACK>/]<RISK>[/<BRANCH>]` shape:
   .. caution::
      Do not use the base (for example, :samp:`24.04`)
      as the track name.
-     The SDK Store tracks revisions per platform automatically
+     The SDK Store tracks revisions per platform automatically
      (see the platforms listed in :file:`sdkcraft.yaml`),
      so a per-base track only duplicates that
      and limits how revisions can be grouped meaningfully.

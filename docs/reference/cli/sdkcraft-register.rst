@@ -20,7 +20,7 @@ Register an SDK name on the store
 .. rubric:: Description
 
 
-Register an SDK name on the SDK Store.
+Register an SDK name on the SDK Store.
 
 This reserves the SDK name for your account, allowing you to upload
 revisions under that name. SDK names must be registered before uploading.

@@ -9,7 +9,7 @@ sdkcraft create-track
 
 .. @artefact sdkcraft create-track
 
-Create one or more tracks for an SDK on the SDK Store
+Create one or more tracks for an SDK on the SDK Store
 
 .. rubric:: Usage
 
@@ -20,7 +20,7 @@ Create one or more tracks for an SDK on the SDK Store
 .. rubric:: Description
 
 
-Create one or more tracks for an SDK on the SDK Store.
+Create one or more tracks for an SDK on the SDK Store.
 
 The command lists all tracks it created.
 Tracks must match an existing guardrail for this SDK.

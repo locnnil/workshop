@@ -5,7 +5,7 @@ Workshop
 
 List your dependencies and components in YAML to define an environment. The key
 pieces of a definition are SDKs, independent but connectable units of
-functionality created by software publishers and available on the SDK Store.
+functionality created by software publishers and available on the SDK Store.
 Workshop simplifies experiments with your environment layout.
 
 It allows you to focus on adding value to your project. With Workshop, you can
@@ -72,7 +72,7 @@ For example, to start a Node.js LTS environment:
    workshop launch
 
 
-Each SDK is published on the SDK Store through channels
+Each SDK is published on the SDK Store through channels
 of the form ``<TRACK>/<RISK>``, defaulting to ``latest/stable``.
 Where an SDK follows an upstream release line, its tracks mirror it:
 the ``node`` SDK exposes a track per Node.js LTS line

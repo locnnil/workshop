@@ -554,10 +554,10 @@ and runs the declared scenarios end-to-end.
 Publish the SDK
 ---------------
 
-.. @artefact SDK Store
+.. @artefact SDK Store
 
 When an SDK is ready, built, and tried,
-publish it to the SDK Store
+publish it to the SDK Store
 for use with |ws_markup|.
 
 Authenticate, register the SDK name, and upload the artifact:
@@ -570,7 +570,7 @@ Authenticate, register the SDK name, and upload the artifact:
 
 
 This uploads the newly created SDK
-and releases it under the :samp:`latest/beta` channel in the SDK Store.
+and releases it under the :samp:`latest/beta` channel in the SDK Store.
 
 For the full publish flow, including how to release
 already-uploaded revisions to additional channels,

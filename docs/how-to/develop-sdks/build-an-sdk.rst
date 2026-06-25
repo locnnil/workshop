@@ -470,7 +470,7 @@ Next steps
 When the SDK behaves correctly under :command:`sdkcraft try`
 and its test suite passes,
 proceed to :ref:`how_publish_sdk`
-to register the SDK name on the SDK Store and upload a revision.
+to register the SDK name on the SDK Store and upload a revision.
 
 
 See also

@@ -3,14 +3,14 @@
 .. meta::
    :description: A comprehensive overview of SDK concepts in Workshop, explaining
                  what SDKs are, how they install packages and configure environments,
-                 and how they're distributed through an SDK Store with channel-based versioning.
+                 and how they're distributed through an SDK Store with channel-based versioning.
 
 SDK concepts
 ============
 
 .. @artefact SDK
 .. @artefact SDK publisher
-.. @artefact SDK Store
+.. @artefact SDK Store
 
 With |sdk_markup|, you can package and publish software dependencies
 as isolated *SDKs* to be used in a workshop definition by |ws_markup|,
@@ -21,7 +21,7 @@ Publishers handle installation and updates for SDKs,
 freeing users from maintaining complex image definitions or configurations.
 
 Most SDKs are designed by publishers
-and made available via the SDK Store,
+and made available via the SDK Store,
 but some are specific to a particular project or user.
 A single workshop can include multiple SDKs from different sources.
 SDKs are distributed through channels similar to
@@ -107,7 +107,7 @@ System SDK
 
 Every workshop contains a special *system SDK*
 that exposes system resources through its slots.
-It cannot be installed from the SDK Store.
+It cannot be installed from the SDK Store.
 Instead, it is automatically installed first during :command:`workshop launch`
 and removed last during :command:`workshop remove`
 to ensure internal consistency.
@@ -131,7 +131,7 @@ Sketch SDK
 .. @artefact sketch SDK
 
 The sketch SDK is another special type of SDK.
-Like the system SDK, it's unavailable from the SDK Store;
+Like the system SDK, it's unavailable from the SDK Store;
 instead, you define it inside the workshop
 using the :command:`workshop sketch-sdk` command.
 Its purpose is to allow |ws_markup| users
@@ -193,7 +193,7 @@ In-project SDKs
 .. @artefact in-project SDK
 
 An *in-project SDK* resides within your project's :file:`.workshop/` directory.
-Unlike regular SDKs, which are published and distributed through the SDK Store,
+Unlike regular SDKs, which are published and distributed through the SDK Store,
 in-project SDKs are specific to your project
 and are version-controlled alongside your project's source code.
 
