@@ -196,6 +196,8 @@ of any directory that |ws_markup| creates on behalf of the plug.
 Defaults are :samp:`1000:1000` for targets
 under :file:`/home/workshop/`, :file:`/project/`, or :file:`/run/user/1000/`,
 and root otherwise.
+For the full ownership rules and override examples,
+see :ref:`how_configure_mount`.
 
 As with any remounted plug,
 :command:`workshop remove` leaves the host directory in place.
@@ -285,6 +287,11 @@ Explanation:
 - :ref:`exp_best_dependencies`
 - :ref:`exp_mount_interface`
 - :ref:`exp_system_sdk`
+
+
+How-to guides:
+
+- :ref:`how_configure_mount`
 
 
 Reference:

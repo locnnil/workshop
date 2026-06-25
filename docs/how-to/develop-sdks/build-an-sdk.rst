@@ -500,6 +500,7 @@ Reference:
 - :ref:`ref_sdk_definition`
 - :ref:`ref_sdk_hooks`
 - :ref:`ref_sdk_parts`
+- :ref:`ref_sdkcraft_definition`
 - :ref:`ref_workshop_sketch-sdk`
 - :ref:`ref_workshopctl__cli`
 

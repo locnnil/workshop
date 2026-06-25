@@ -217,6 +217,7 @@ Explanation:
 
 - :ref:`exp_interfaces`
 - :ref:`exp_projects`
+- :ref:`exp_sdk_lifecycle`
 - :ref:`exp_workshop`
 
 

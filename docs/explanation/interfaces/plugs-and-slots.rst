@@ -277,6 +277,7 @@ Explanation:
 
 How-to guides:
 
+- :ref:`how_declare_plugs_slots`
 - :ref:`how_resolve_plug_conflicts`
 
 
