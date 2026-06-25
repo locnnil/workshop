@@ -15,6 +15,7 @@ execute: |
 
   sdk_exec info ollama > sdk-info.log
   MATCH '^name:[[:space:]]+ollama$' < sdk-info.log
+  MATCH '^website:[[:space:]]+https://github.com/canonical/ollama-sdk$' < sdk-info.log
   MATCH '[[:space:]]+cpu/stable[[:space:]]' < sdk-info.log
   MATCH '[[:space:]]+vulkan/stable[[:space:]]' < sdk-info.log
 

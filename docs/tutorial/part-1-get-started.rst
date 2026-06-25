@@ -165,6 +165,7 @@ inspect its details:
      name:       ollama
      publisher:  Canonical (canonical)
      license:    MIT
+     website:    https://github.com/canonical/ollama-sdk
 
      Get up and running with Llama 3.3, ...
 
