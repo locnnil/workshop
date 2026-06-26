@@ -272,7 +272,7 @@ Explanation:
 
 - :ref:`exp_sdk_best_practices`
 - :ref:`exp_sdk_hooks`
-- :ref:`exp_workshopctl_cli`
+- :ref:`workshopctl CLI <exp_workshopctl_cli>`
 
 
 Reference:

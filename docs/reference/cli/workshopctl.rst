@@ -79,7 +79,7 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshopctl_cli`
+- :ref:`workshopctl CLI <exp_workshopctl_cli>`
 
 
 Reference:

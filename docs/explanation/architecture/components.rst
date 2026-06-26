@@ -95,7 +95,7 @@ error handling, and request-response serialization.
 The client supports both synchronous and asynchronous operations.
 
 For further details,
-see :ref:`exp_workshop_cli`.
+see :ref:`the workshop CLI <exp_workshop_cli>`.
 
 
 .. _exp_arch_workshopctl:

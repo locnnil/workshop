@@ -229,7 +229,7 @@
                 <td></td>
                 <td><a href="tutorial/part-1-get-started.rst#L117">[part-1-get-started.rst]</a><br><a href="tutorial/part-4-craft-sdks.rst#L13">[part-4-craft-sdks.rst]</a><br><a href="tutorial/part-4-craft-sdks.rst#L457">[part-4-craft-sdks.rst]</a></td>
                 <td><a href="how-to/develop-sdks/build-an-sdk.rst#L18">[build-an-sdk.rst]</a><br><a href="how-to/develop-sdks/declare-plugs-slots.rst#L15">[declare-plugs-slots.rst]</a><br><a href="how-to/develop-sdks/publish-an-sdk.rst#L15">[publish-an-sdk.rst]</a></td>
-                <td><a href="explanation/sdks/concepts.rst#L160">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L51">[concepts.rst]</a><br><a href="explanation/sdks/lifecycle.rst#L15">[lifecycle.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L197">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/sdks/sdkcraft-cli.rst#L13">[sdkcraft-cli.rst]</a></td>
+                <td><a href="explanation/cli.rst#L144">[cli.rst]</a><br><a href="explanation/sdks/concepts.rst#L160">[concepts.rst]</a><br><a href="explanation/sdks/concepts.rst#L51">[concepts.rst]</a><br><a href="explanation/sdks/lifecycle.rst#L15">[lifecycle.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L197">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/cli/index.rst#L18">[index.rst]</a><br><a href="reference/cli/sdkcraft.rst#L10">[sdkcraft.rst]</a><br><a href="reference/definition-files/sdkcraft-definition.rst#L11">[sdkcraft-definition.rst]</a><br><a href="reference/sdks.rst#L116">[sdks.rst]</a></td>
                 <td>SK026</td>
             </tr><tr>
@@ -418,7 +418,7 @@
                 <td>tool</td>
                 <td></td>
                 <td></td>
-                <td><a href="explanation/sdks/sdk-cli.rst#L12">[sdk-cli.rst]</a></td>
+                <td><a href="explanation/cli.rst#L111">[cli.rst]</a></td>
                 <td><a href="reference/cli/index.rst#L17">[index.rst]</a><br><a href="reference/cli/sdk.rst#L10">[sdk.rst]</a></td>
                 <td>SK048<br>SK049</td>
             </tr><tr>
@@ -463,7 +463,7 @@
                 <td>concept</td>
                 <td><a href="tutorial/part-4-craft-sdks.rst#L300">[part-4-craft-sdks.rst]</a></td>
                 <td><a href="how-to/develop-sdks/build-an-sdk.rst#L16">[build-an-sdk.rst]</a><br><a href="how-to/develop-sdks/write-runtime-hooks.rst#L11">[write-runtime-hooks.rst]</a></td>
-                <td><a href="explanation/sdks/best-practices.rst#L13">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L61">[concepts.rst]</a><br><a href="explanation/sdks/runtime-hooks.rst#L12">[runtime-hooks.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L95">[sdk-vs-dockerfile.rst]</a><br><a href="explanation/sdks/workshopctl-cli.rst#L14">[workshopctl-cli.rst]</a></td>
+                <td><a href="explanation/cli.rst#L207">[cli.rst]</a><br><a href="explanation/sdks/best-practices.rst#L13">[best-practices.rst]</a><br><a href="explanation/sdks/concepts.rst#L61">[concepts.rst]</a><br><a href="explanation/sdks/runtime-hooks.rst#L12">[runtime-hooks.rst]</a><br><a href="explanation/sdks/sdk-vs-dockerfile.rst#L95">[sdk-vs-dockerfile.rst]</a></td>
                 <td><a href="reference/cli/workshopctl.rst#L12">[workshopctl.rst]</a></td>
                 <td>SK000<br>SK005</td>
             </tr><tr>
@@ -598,7 +598,7 @@
                 <td>tool</td>
                 <td><a href="tutorial/part-1-get-started.rst#L42">[part-1-get-started.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/architecture/components.rst#L41">[components.rst]</a><br><a href="explanation/architecture/components.rst#L75">[components.rst]</a><br><a href="explanation/workshops/workshop-cli.rst#L13">[workshop-cli.rst]</a></td>
+                <td><a href="explanation/architecture/components.rst#L41">[components.rst]</a><br><a href="explanation/architecture/components.rst#L75">[components.rst]</a><br><a href="explanation/cli.rst#L26">[cli.rst]</a></td>
                 <td><a href="reference/cli/index.rst#L16">[index.rst]</a><br><a href="reference/cli/workshop.rst#L10">[workshop.rst]</a></td>
                 <td>SK000</td>
             </tr><tr>
@@ -904,7 +904,7 @@
                 <td>tool</td>
                 <td><a href="tutorial/part-4-craft-sdks.rst#L414">[part-4-craft-sdks.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/architecture/components.rst#L106">[components.rst]</a><br><a href="explanation/architecture/components.rst#L43">[components.rst]</a><br><a href="explanation/sdks/runtime-hooks.rst#L188">[runtime-hooks.rst]</a><br><a href="explanation/sdks/workshopctl-cli.rst#L13">[workshopctl-cli.rst]</a></td>
+                <td><a href="explanation/architecture/components.rst#L106">[components.rst]</a><br><a href="explanation/architecture/components.rst#L43">[components.rst]</a><br><a href="explanation/cli.rst#L206">[cli.rst]</a><br><a href="explanation/sdks/runtime-hooks.rst#L188">[runtime-hooks.rst]</a></td>
                 <td><a href="reference/cli/index.rst#L19">[index.rst]</a><br><a href="reference/cli/workshopctl.rst#L11">[workshopctl.rst]</a><br><a href="reference/sdks.rst#L423">[sdks.rst]</a></td>
                 <td>SK023</td>
             </tr><tr>
@@ -922,7 +922,7 @@
                 <td>daemon</td>
                 <td><a href="tutorial/part-1-get-started.rst#L41">[part-1-get-started.rst]</a></td>
                 <td></td>
-                <td><a href="explanation/architecture/components.rst#L199">[components.rst]</a><br><a href="explanation/architecture/components.rst#L42">[components.rst]</a><br><a href="explanation/workshops/workshop-cli.rst#L14">[workshop-cli.rst]</a></td>
+                <td><a href="explanation/architecture/components.rst#L199">[components.rst]</a><br><a href="explanation/architecture/components.rst#L42">[components.rst]</a><br><a href="explanation/cli.rst#L27">[cli.rst]</a></td>
                 <td><a href="reference/workshops.rst#L17">[workshops.rst]</a></td>
                 <td>SK009<br>SK013</td>
             </tr>

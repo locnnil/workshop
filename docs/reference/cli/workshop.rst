@@ -171,4 +171,4 @@ See also
 
 Explanation:
 
-- :ref:`exp_workshop_cli`
+- :ref:`workshop CLI <exp_workshop_cli>`
