@@ -24,7 +24,7 @@ in-project SDKs by hand under :file:`.workshop/`.
 Filename and location
 ---------------------
 
-.. @artefact SDK definition file
+.. @artefact SDK definition
 
 - Store SDKs and SDKs from :command:`sdkcraft try` ship :file:`sdk.yaml`
   inside their packed contents at :file:`meta/sdk.yaml`.

@@ -178,6 +178,9 @@ pa11y: pa11y-install html
 # Without --return-code-scheme explicit, pymarkdownlnt returns 1 for multiple scenarios
 # By using the explicit scheme, it only returns 1 when no files are found,
 # which should not result in failure
+#
+# .workshop/dev.yaml runs this target with DOCS_VENVDIR set to an out-of-tree venv
+# ($HOME/.docs-venv), so the on-disk docs/.venv is excluded by its literal name too.
 lint-md: pymarkdownlnt-install
 	@. $(DOCS_VENV); pymarkdownlnt \
 		--config $(DEV_DIR)/.pymarkdown.json \
@@ -187,6 +190,7 @@ lint-md: pymarkdownlnt-install
 			--exclude=$(DEV_DIR)/** \
 			--exclude=$(DOCS_BUILDDIR)/** \
 			--exclude=$(DOCS_VENVDIR)/** \
+			--exclude=.venv/** \
 			$(DOCS_SOURCEDIR); \
 	status=$$?; \
 	if [ $$status -eq 1 ]; then \

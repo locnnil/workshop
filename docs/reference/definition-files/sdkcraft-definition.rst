@@ -27,7 +27,7 @@ for build orchestration. Many fields are inherited from :samp:`craft-application
 Filename and location
 ---------------------
 
-.. @artefact SDK definition file
+.. @artefact SDK definition
 
 - The definition file is :file:`sdkcraft.yaml` or :file:`.sdkcraft.yaml`
   at the project root.

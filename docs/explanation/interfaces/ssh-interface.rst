@@ -9,7 +9,7 @@
 SSH interface
 =============
 
-.. @artefact ssh interface
+.. @artefact SSH interface
 
 The SSH interface
 provides access to the host system's SSH agent
