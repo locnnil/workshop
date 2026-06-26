@@ -1334,7 +1334,7 @@ cname=other.24242424.wp,other.testprj.wp,other-24242424.wp,0
 	c.Assert(err, check.IsNil)
 	want = `
 cname=other.24242424.wp,other.testprj.wp,other-24242424.wp,0
-cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
+cname=test.42424242.wp,test-42424242.wp,0  # hostname-fallback
 # fake custom config line
 # fake custom config line 2
 `[1:]
@@ -1349,7 +1349,7 @@ cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
 	network, _, err = conn.GetNetwork(network.Name)
 	c.Assert(err, check.IsNil)
 	want = `
-cname=test.42424242.wp,test-42424242.wp,0  # project-name-in-use
+cname=test.42424242.wp,test-42424242.wp,0  # hostname-fallback
 # fake custom config line
 # fake custom config line 2
 `[1:]

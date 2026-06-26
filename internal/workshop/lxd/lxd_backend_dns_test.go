@@ -84,7 +84,7 @@ func (s *dnsSuite) TestGenerateCNAMEValidation(c *check.C) {
 		ProjectId:    "42424242",
 		ProjectName:  "42424242",
 		ProjectAlias: "42424242",
-		Note:         "invalid-project-name",
+		Note:         "hostname-fallback",
 	}
 	replaced := lxdbackend.CNAME{
 		Workshop:     "dev",
@@ -160,7 +160,7 @@ func (s *dnsSuite) TestGenerateCNAMETakenByID(c *check.C) {
 		ProjectId:    "42424242",
 		ProjectName:  "42424242",
 		ProjectAlias: "42424242",
-		Note:         "project-name-in-use",
+		Note:         "hostname-fallback",
 	})
 }
 
@@ -182,7 +182,7 @@ func (s *dnsSuite) TestGenerateCNAMETakenByName(c *check.C) {
 		ProjectId:    "42424242",
 		ProjectName:  "42424242",
 		ProjectAlias: "42424242",
-		Note:         "project-name-in-use",
+		Note:         "hostname-fallback",
 	})
 }
 

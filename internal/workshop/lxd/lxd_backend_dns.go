@@ -151,7 +151,7 @@ func generateCNAME(cnames []cname, projects []workshop.Project, projectId string
 
 	projectAlias, err := idna.Lookup.ToASCII(projectName)
 	if err != nil {
-		result.Note = "invalid-project-name"
+		result.Note = "hostname-fallback"
 		return result, nil //nolint:nilerr
 	}
 
@@ -162,7 +162,7 @@ func generateCNAME(cnames []cname, projects []workshop.Project, projectId string
 		return strings.EqualFold(c.ProjectId, projectAlias) || strings.EqualFold(c.ProjectAlias, projectAlias)
 	})
 	if conflict {
-		result.Note = "project-name-in-use"
+		result.Note = "hostname-fallback"
 		return result, nil
 	}
 
