@@ -71,7 +71,10 @@ that ships the project skeleton:
   version branch and opens PRs to bump :file:`VERSION` as they ship,
 
 - CI workflows under :file:`.github/workflows/` that build on pull requests
-  and upload to the SDK Store on push to the version branch,
+  and upload to the SDK Store on push to the version branch
+  (the upload workflow needs SDK Store credentials,
+  configured once as a GitHub Actions secret;
+  see :ref:`how_publish_sdk_ci`),
 
 - a README template aligned to the rest of the project shape.
 

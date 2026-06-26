@@ -230,6 +230,8 @@ upload both;
 the Store tracks revisions per platform.
 
 
+.. _how_publish_sdk_ci:
+
 Automate uploads from CI
 ------------------------
 
@@ -245,9 +247,58 @@ Renovate opens a PR bumping :file:`VERSION`,
 the merge of that PR triggers the upload workflow,
 and the new revision shows up in the configured channels.
 
-The workflow expects Store credentials
-in the repository's GitHub Actions secrets;
-configure them once.
+The workflow runs non-interactively,
+so it authenticates to the SDK Store
+from credentials passed in the
+:envvar:`SDKCRAFT_STORE_CREDENTIALS` environment variable.
+The template's :file:`.github/workflows/upload.yml`
+feeds that variable from a repository secret.
+Create that secret once.
+
+First, log in locally,
+if you haven't already,
+so the credentials are stored in your keyring:
+
+.. code-block:: console
+
+   $ sdkcraft login
+
+
+Install the :samp:`libsecret-tools` package,
+which provides :command:`secret-tool`:
+
+.. code-block:: console
+
+   $ sudo apt install libsecret-tools
+
+
+Read the stored credentials back out of the keyring:
+
+.. code-block:: console
+
+   $ secret-tool search --all service sdkcraft
+
+
+In your SDK repository on GitHub,
+navigate to
+:guilabel:`Settings` > :guilabel:`Secrets and variables` > :guilabel:`Actions`,
+select :guilabel:`New repository secret`,
+and add the credentials under the name :samp:`SDKCRAFT_STORE_CREDENTIALS_PROD`.
+
+The template ships :file:`.github/workflows/upload.yml`
+pointed at a staging secret,
+so a freshly created SDK doesn't publish
+to the production Store before it's ready.
+To publish for real,
+point the :samp:`secrets:` mapping at the secret you just created:
+
+.. code-block:: yaml
+   :caption: .github/workflows/upload.yml
+
+   secrets:
+     SDKCRAFT_STORE_CREDENTIALS: ${{ secrets.SDKCRAFT_STORE_CREDENTIALS_PROD }}
+
+
 For what else the template ships,
 see :ref:`how_build_sdk`.
 
