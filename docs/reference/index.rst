@@ -2,7 +2,7 @@
 
 .. meta::
    :description: Workshop reference guides, providing technical background
-                 for using Workshop and SDKcraft, including command-line interfaces.
+                 for using Workshop and SDKcraft, including command-line tools.
 
 Reference
 =========
@@ -14,8 +14,8 @@ that may be required to use |ws_markup| and |sdk_markup|.
 
 .. _ref_cli:
 
-Command-line interfaces
------------------------
+Command-line tools
+------------------
 
 |ws_markup| and |sdk_markup| ship with a small set of command-line tools:
 
