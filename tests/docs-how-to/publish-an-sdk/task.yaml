@@ -57,6 +57,7 @@ execute: |
   #   secret-tool search --all service sdkcraft
   # is deliberately not run: it needs a D-Bus session bus and an unlocked
   # secret service, neither of which exists in a headless spread container.
+  retry 5 apt-get update
   retry 5 apt-get install -y libsecret-tools
   command -v secret-tool
   secret-tool 2>&1 | MATCH 'search'
