@@ -33,28 +33,6 @@ Before getting started, ensure you have:
 - A workshop definition committed to the repository,
   at :file:`workshop.yaml` or :file:`.workshop/<NAME>.yaml`
 
-- A `personal access token
-  <https://github.com/settings/tokens?type=beta>`__
-  with :samp:`Contents: read` and :samp:`Metadata: read` permissions
-  on :samp:`canonical/workshop`
-
-
-Configure the workshop token
-----------------------------
-
-The action installs |ws_markup| from :samp:`canonical/workshop`,
-which is an internal repository.
-The token granting read access to that repository
-must be stored as an Actions secret in your project repository.
-
-In your project repository on GitHub,
-navigate to
-:guilabel:`Settings` > :guilabel:`Secrets and variables` > :guilabel:`Actions`,
-select :guilabel:`New repository secret`,
-and add the token under the name :samp:`WORKSHOP_TOKEN`.
-
-The action reads this secret via the :samp:`token` input.
-
 
 Add the action to a workflow
 ----------------------------
@@ -77,9 +55,7 @@ and runs a command inside it:
        steps:
          - uses: actions/checkout@v6
 
-         - uses: canonical/launch-workshop@v0
-           with:
-             token: ${{ secrets.WORKSHOP_TOKEN }}
+         - uses: canonical/launch-workshop@v1
 
          - run: workshop exec -- pytest
 
@@ -91,7 +67,7 @@ For repositories with several workshops under :file:`.workshop/`,
 set the :samp:`workshop` input to the one you need.
 
 For production use, pin the action to a specific commit SHA.
-The :samp:`@v0` shorthand shown above tracks the latest :samp:`v0.*`
+The :samp:`@v1` shorthand shown above tracks the latest :samp:`v1.*`
 release and can be moved between versions;
 :samp:`@main` is even less stable.
 
@@ -104,7 +80,7 @@ parameterize the :samp:`workshop` input with a matrix:
 
 .. code-block:: yaml
    :caption: .github/workflows/matrix.yaml
-   :emphasize-lines: 6,13
+   :emphasize-lines: 6,12
 
    jobs:
      test:
@@ -115,9 +91,8 @@ parameterize the :samp:`workshop` input with a matrix:
        steps:
          - uses: actions/checkout@v6
 
-         - uses: canonical/launch-workshop@v0
+         - uses: canonical/launch-workshop@v1
            with:
-             token: ${{ secrets.WORKSHOP_TOKEN }}
              workshop: ${{ matrix.workshop }}
 
          - run: workshop run "$WS" unit-tests
@@ -143,8 +118,8 @@ with :command:`workshop connections`:
 
    $ workshop connections --all
 
-     INTERFACE  PLUG              SLOT          NOTES
-     mount      python:pip-cache  system:mount  -
+     INTERFACE  PLUG      SLOT          NOTES
+     mount      uv:cache  system:mount  -
 
 
 Pass the matching :samp:`<SDK>:<PLUG>` lines to the :samp:`cache` input,
@@ -152,17 +127,15 @@ one per line:
 
 .. code-block:: yaml
    :caption: .github/workflows/test.yaml
-   :emphasize-lines: 5-9
+   :emphasize-lines: 4-7
 
    steps:
-     - uses: canonical/launch-workshop@v0
+     - uses: canonical/launch-workshop@v1
        with:
-         token: ${{ secrets.WORKSHOP_TOKEN }}
          cache: |
-           cargo:git
-           cargo:registry
            go:mod-cache
-           python:pip-cache
+           rust:cargo-registry
+           uv:cache
 
 
 Each listed plug is mounted from a GitHub-managed cache,
@@ -182,11 +155,13 @@ The action exposes the following inputs:
    * - Input
      - Description
 
-   * - :samp:`token`
-     - Access token for :samp:`canonical/workshop`. Required.
+   * - :samp:`channel`
+     - Channel used to install the |ws_markup| snap.
+       Optional; defaults to :samp:`latest/stable`.
 
-   * - :samp:`version`
-     - |ws_markup| version or range of versions. Defaults to :samp:`latest`.
+   * - :samp:`revision`
+     - Specific revision of the |ws_markup| snap to install.
+       Optional.
 
    * - :samp:`project`
      - Directory containing a workshop to launch.
@@ -206,19 +181,8 @@ Security considerations
 
 When integrating the action into your workflows:
 
-- Store the token as an Actions secret;
-  never commit it to the repository or paste it into logs.
-
-- Prefer a fine-grained personal access token
-  scoped to :samp:`canonical/workshop`
-  with only :samp:`Contents: read` and :samp:`Metadata: read` permissions.
-
 - Pin the action to a commit SHA
   so a compromised tag cannot push unreviewed code into your workflows.
-
-- Rotate :samp:`WORKSHOP_TOKEN` immediately
-  if it ever appears in logs, chat history,
-  or any other shared transcript.
 
 
 See also
