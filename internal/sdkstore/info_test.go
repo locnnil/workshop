@@ -154,15 +154,11 @@ func (s *InfoSuite) TestInfoPayload(c *check.C) {
 }
 
 var allInfoFields = []string{
-	"categories",
 	"channel-map",
-	"contact",
 	"created-at",
 	"description",
 	"download",
 	"license",
-	"links",
-	"media",
 	"private",
 	"publisher",
 	"revision",
@@ -170,7 +166,6 @@ var allInfoFields = []string{
 	"summary",
 	"title",
 	"version",
-	"website",
 }
 
 func (s *InfoSuite) TestInfoPayloadMultiBase(c *check.C) {
