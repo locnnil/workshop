@@ -8,7 +8,7 @@ require (
 	github.com/canonical/lxd v0.0.0-20260521084752-704f941eaeb2
 	github.com/canonical/x-go v0.0.0-20230522092633-7947a7587f5b
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-	github.com/godbus/dbus/v5 v5.1.0
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
