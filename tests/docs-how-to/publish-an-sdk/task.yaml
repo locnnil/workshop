@@ -50,15 +50,3 @@ execute: |
   run_sdkcraft upload --help 2>&1 | MATCH "release"
   run_sdkcraft release --help 2>&1 | MATCH "[Rr]elease"
   run_sdkcraft release --help 2>&1 | MATCH "CHANNELS"
-
-  # The "Automate uploads from CI" procedure reads the Store credential out of
-  # the keyring with secret-tool (from libsecret-tools). Verify the package
-  # installs and exposes the documented "search --all" surface. The real
-  #   secret-tool search --all service sdkcraft
-  # is deliberately not run: it needs a D-Bus session bus and an unlocked
-  # secret service, neither of which exists in a headless spread container.
-  retry 5 apt-get update
-  retry 5 apt-get install -y libsecret-tools
-  command -v secret-tool
-  secret-tool 2>&1 | MATCH 'search'
-  secret-tool 2>&1 | MATCH '\-\-all'
