@@ -10,9 +10,8 @@ execute: |
 
   # Verify workshop info contains the hostname used for SSH connection information
 
-  hostname="$(workshop_exec info dev | yq '.hostname')"
+  hostname="$(workshop_exec info dev | yq -er '.hostname')"
   test -n "$hostname"
-  test "$hostname" != "null"
   echo "$hostname" | MATCH '^dev\..*\.wp$'
 
 
