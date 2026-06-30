@@ -8,9 +8,11 @@ execute: |
   workshop_exec list
 
 
-  # Verify tasks output contains SSH connection information
+  # Verify workshop info contains the hostname used for SSH connection information
 
-  workshop_exec tasks | MATCH 'VS Code → Open Remote Window → Connect to host → workshop@'
+  hostname="$(workshop_exec info dev | yq -er '.hostname')"
+  test -n "$hostname"
+  echo "$hostname" | MATCH '^dev\..*\.wp$'
 
 
   # Clean up

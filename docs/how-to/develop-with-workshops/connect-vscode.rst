@@ -32,18 +32,23 @@ After that, add the :samp:`vscode-remote` SDK to your workshop definition:
 
 
 Launch the workshop.
-Next, the output from :command:`workshop tasks` will hint at the next steps:
+Then find the workshop hostname:
 
 .. code-block:: console
 
-   $ workshop tasks
+   $ workshop info dev
 
-     ...
-     VS Code → Open Remote Window → Connect to host → workshop@10.41.49.51
+   name:      dev
+   base:      ubuntu@24.04
+   project:   ~/my-project
+   hostname:  dev.my-project.wp
+   ...
 
 
-Follow this guidance and type in the SSH address listed in the output
-(:samp:`workshop@10.41.49.51` in the sample above).
+In VS Code, choose :guilabel:`Open Remote Window`,
+then :guilabel:`Connect to host`,
+and type :samp:`workshop@dev.my-project.wp`
+using the hostname from the :command:`workshop info` output.
 In the terminal prompt, you'll see that the IDE is running inside your workshop.
 
 .. note::
@@ -63,5 +68,5 @@ Explanation:
 
 Reference:
 
+- :ref:`ref_workshop_info`
 - :ref:`ref_workshop_launch`
-- :ref:`ref_workshop_tasks`
