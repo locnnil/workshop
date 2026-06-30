@@ -83,6 +83,19 @@ as well as between the different SDKs that are part of a workshop.
    interfaces/index
 
 
+Command-line tools
+------------------
+
+|ws_markup| works through four command-line tools,
+one for each audience and stage of the workflow.
+
+.. toctree::
+   :titlesonly:
+   :class: flat-toctree
+
+   cli
+
+
 Security considerations
 -----------------------
 

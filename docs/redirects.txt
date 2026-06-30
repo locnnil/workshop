@@ -6,3 +6,8 @@
 # The old path must be a file that doesn"t exist in the source. The current path must be
 # a file that does exist in the source.
 
+"explanation/sdks/sdk-cli" "explanation/cli"
+"explanation/sdks/sdkcraft-cli" "explanation/cli"
+"explanation/sdks/workshopctl-cli" "explanation/cli"
+"explanation/workshops/workshop-cli" "explanation/cli"
+

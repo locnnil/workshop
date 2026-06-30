@@ -1,7 +1,7 @@
 .. meta::
    :description: Workshop explanation documentation, providing access to
                  explanations of core workshop concepts, change tracking,
-                 project management, and command-line interface usage.
+                 and project management.
 
 Workshops
 =========
@@ -30,11 +30,9 @@ and mount inside the running containers:
 Operations and tooling
 ----------------------
 
-|ws_markup| tracks state through a system of changes and tasks,
-and exposes its functionality through the :program:`workshop` CLI:
+|ws_markup| tracks state through a system of changes and tasks:
 
 .. toctree::
    :maxdepth: 1
 
    changes-tasks
-   workshop-cli

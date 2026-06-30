@@ -54,19 +54,3 @@ and what design patterns lead to maintainable, reusable packages:
 
    Design best practices <best-practices>
    SDKs versus Dockerfiles <sdk-vs-dockerfile>
-
-
-Operations and tooling
-----------------------
-
-|ws_markup| exposes available SDKs through the :program:`sdk` CLI,
-lets SDK authors build and publish them with the :program:`sdkcraft` CLI,
-and ships the in-workshop :program:`workshopctl` helper
-for SDK hooks to talk back to the daemon:
-
-.. toctree::
-   :maxdepth: 1
-
-   sdk-cli
-   sdkcraft-cli
-   workshopctl-cli

@@ -89,4 +89,4 @@ See also
 
 Explanation:
 
-- :ref:`exp_sdk_cli`
+- :ref:`sdk CLI <exp_sdk_cli>`
