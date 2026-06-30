@@ -603,12 +603,8 @@
   ],
   "default-track": null,
   "metadata": {
-    "categories": [],
-    "contact": "",
     "description": "Test SDK info multi-base description",
     "license": "LGPL-3.0",
-    "links": {},
-    "media": [],
     "private": false,
     "publisher": {
       "display-name": "Dmitry Lyfar",
@@ -617,8 +613,7 @@
       "validation": "unproven"
     },
     "summary": "Test SDK which supports multiple bases and architectures",
-    "title": "Test SDK info multi-base title",
-    "website": null
+    "title": "Test SDK info multi-base title"
   },
   "name": "test-sdk-info-multi-base-1",
   "package-id": "x2hQwbuopxeELn5p1G9h3b9ZB3XM0JeG"
