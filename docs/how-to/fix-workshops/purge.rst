@@ -17,6 +17,23 @@ A thorough purge involves removing the workshop's containers, metadata,
 and files in a deliberate sequence.
 
 
+Prerequisites
+-------------
+
+Before starting, ensure you have these requirements satisfied:
+
+- Identified the workshop and project you intend to purge.
+
+- Tried :command:`workshop remove <WORKSHOP>`
+  or confirmed that the standard removal flow cannot be used.
+
+- Backed up any workshop data you need to keep;
+  manual cleanup can permanently delete containers, metadata, and files.
+
+- Access to :command:`sudo` and :command:`lxc`
+  for manual LXD cleanup.
+
+
 Standard removal procedure
 --------------------------
 

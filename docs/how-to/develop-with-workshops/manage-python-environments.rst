@@ -21,6 +21,16 @@ The typical day-to-day flow boils down to running :program:`uv` commands
 against a project virtual environment whose location you control.
 
 
+Prerequisites
+-------------
+
+Before starting, ensure you have these requirements satisfied:
+
+- A Python project in the directory you launch the workshop from,
+  with a :file:`pyproject.toml` or :file:`requirements.txt`
+  that :program:`uv` can read.
+
+
 Add the uv SDK to your workshop
 -------------------------------
 
@@ -40,9 +50,6 @@ which is sufficient for most projects:
 Place your project at the host directory
 that you launch the workshop from;
 |ws_markup| bind-mounts it inside the workshop at :file:`/project/`.
-The project should contain a :file:`pyproject.toml`
-(or a :file:`requirements.txt`)
-that :program:`uv` can read.
 
 
 Run uv from your project

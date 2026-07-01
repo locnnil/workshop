@@ -39,14 +39,13 @@ before any thought of publishing.
 Prerequisites
 -------------
 
-Before starting,
-ensure the following are in place:
+Before starting, ensure you have these requirements satisfied:
 
-- |sdk_markup| is installed.
+- |sdk_markup| installed.
 
-- LXD 6.6 or later is running on the host.
+- LXD 6.8 or later running on the host.
 
-- |ws_markup| is installed and configured
+- |ws_markup| installed and configured
   so that you can launch a workshop
   to try the SDK against.
 

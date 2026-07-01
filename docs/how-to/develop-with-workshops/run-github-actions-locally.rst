@@ -35,11 +35,10 @@ Running jobs locally makes a few things easier:
 Prerequisites
 -------------
 
-Before getting started, ensure you have:
+Before starting, ensure you have these requirements satisfied:
 
-- |ws_markup| installed and properly configured
 - A GitHub account with admin permissions on the target repository,
-  or "self-hosted runners" permission for organization-level runners
+  or "self-hosted runners" permission for organization-level runners.
 
 
 Set up the workshop

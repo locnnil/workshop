@@ -37,11 +37,11 @@ and require an authenticated account.
 Prerequisites
 -------------
 
-Before starting:
+Before starting, ensure you have these requirements satisfied:
 
-- |sdk_markup| is installed.
+- |sdk_markup| installed.
 
-- LXD 6.6 or later is running on the host.
+- LXD 6.8 or later running on the host.
 
 - An Ubuntu One account.
 
