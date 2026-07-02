@@ -1,14 +1,14 @@
 .. meta::
-   :description: How-to guides on daily usage of workshops, including adding actions,
-                 forwarding ports, moving projects, and using multiple workshops
-                 within the Workshop ecosystem.
+   :description: How-to guides on daily usage of workshops, including adding
+                 actions, mounts, ports, host devices, projects, and multiple
+                 workshops within the Workshop ecosystem.
 
 How to use workshops
 ====================
 
-Day-to-day |ws_markup| usage covers a handful of recurring scenarios:
-adding actions, forwarding ports, moving projects, and running multiple
-workshops in parallel:
+Day-to-day |ws_markup| usage covers recurring customization scenarios:
+adding actions, adding mounts, forwarding ports, using host devices,
+moving projects, and running multiple workshops in parallel:
 
 .. toctree::
    :maxdepth: 1
