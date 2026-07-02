@@ -1,0 +1,43 @@
+summary: Test 'How to use host devices' to ensure it's operational
+restore: |
+  . "$TESTSLIB"/utils.sh
+  systemctl stop workshop-test-input.service 2>/dev/null || true
+  workshop_exec remove dev || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+  chown -R ubuntu:ubuntu .
+
+  workshop_exec launch dev
+
+  attach_device() {
+    systemd-run --collect --property=KillSignal=SIGINT --same-dir --service-type=notify --unit=workshop-test-input python3 fakeinput.py
+  }
+  detect_device() {
+    device_name=$(grep -l '^workshop-test-input$' /sys/class/input/*/device/name)
+    device_basename=$(basename -- "$(dirname -- "$(dirname -- "$device_name")")")
+    device_node="/dev/input/$device_basename"
+  }
+
+  echo "Identify the device subsystem: udevadm reports the input subsystem"
+  attach_device
+  detect_device
+  udevadm info --query=property --property=SUBSYSTEM "$device_node" | MATCH "^SUBSYSTEM=input$"
+
+  echo "The custom-device plug is not connected automatically after launch"
+  workshop_exec connections dev | MATCH "^custom-device.+dev/input-sdk:input-device.+\-.+\-$"
+  workshop_exec exec dev test ! -e "$device_node"
+
+  echo "Connect the interface to the system custom-device slot"
+  workshop_exec connect dev/input-sdk:input-device :custom-device
+
+  echo "Verify the connection is reported as manual"
+  workshop_exec connections dev | MATCH "^custom-device.+dev/input-sdk:input-device.+:custom-device.+manual$"
+
+  echo "Access the devices: the host input device is now visible in the workshop"
+  workshop_exec exec dev test -e "$device_node"
+  workshop_exec exec dev -- ls /dev/input/ | MATCH "$device_basename"
+
+  echo "Disconnecting the plug revokes access"
+  workshop_exec disconnect dev/input-sdk:input-device
+  workshop_exec connections dev | MATCH "^custom-device.+dev/input-sdk:input-device.+\-.+\-$"
+  workshop_exec exec dev test ! -e "$device_node"

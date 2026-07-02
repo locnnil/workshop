@@ -17,4 +17,5 @@ workshops in parallel:
    Add mounts <add-mounts>
    Forward ports <forward-ports>
    Move projects around <move-projects>
+   Use host devices <use-host-devices>
    Use multiple workshops <use-multiple-workshops>
