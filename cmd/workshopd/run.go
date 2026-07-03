@@ -196,9 +196,14 @@ out:
 		case <-tic.C:
 			if err := syscheck.CheckSystem(); err != nil {
 				degradedErr := fmt.Errorf("system is not healthy: %w", err)
-				logger.Noticef("%s", degradedErr)
+				if !d.IsDegraded() {
+					logger.Noticef("%s", degradedErr)
+				}
 				d.SetDegradedMode(degradedErr)
 			} else {
+				if d.IsDegraded() {
+					logger.Noticef("System is healthy.")
+				}
 				d.SetDegradedMode(nil)
 			}
 		case <-stop:

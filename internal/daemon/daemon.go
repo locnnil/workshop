@@ -414,6 +414,10 @@ func (d *Daemon) SetDegradedMode(err error) {
 	d.degradedErr = err
 }
 
+func (d *Daemon) IsDegraded() bool {
+	return d.degradedErr != nil
+}
+
 func (d *Daemon) addRoutes() {
 	d.router = mux.NewRouter()
 
