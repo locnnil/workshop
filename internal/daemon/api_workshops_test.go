@@ -1162,7 +1162,7 @@ line 1: cannot unmarshal !!seq into string`,
 	c.Assert(err, check.IsNil)
 	c.Assert(s.secBackend.SetupCalls, check.HasLen, 0)
 	repo := s.d.overlord.InterfaceManager().Repository()
-	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 6)
+	c.Assert(repo.Slots(s.project.ProjectId, "basic", sdk.System.String()), check.HasLen, 7)
 
 	c.Assert(s.b.DownloadBaseCalls, check.HasLen, 1)
 
@@ -2162,6 +2162,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}, {
 		name: "basic",
@@ -2176,6 +2177,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}, {
 		name: "manysdks",
@@ -2190,6 +2192,7 @@ func (s *apiSuite) TestRefreshMany(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -2292,6 +2295,7 @@ func (s *apiSuite) TestRefreshAddSdk(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -2373,6 +2377,7 @@ func (s *apiSuite) TestRefreshInsertNewSdk(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -2453,6 +2458,7 @@ func (s *apiSuite) TestRefreshRemoveSdk(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -2550,6 +2556,7 @@ func (s *apiSuite) TestRefreshSdkNewRevision(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 	s.ensureWorkshops(c, want)
@@ -2760,6 +2767,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 	s.ensureWorkshops(c, want)
@@ -2808,6 +2816,7 @@ func (s *apiSuite) TestRefreshTrySdk(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 	s.ensureWorkshops(c, want)
@@ -2875,6 +2884,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 	s.ensureWorkshops(c, want)
@@ -2922,6 +2932,7 @@ func (s *apiSuite) TestRefreshSdkNewProjectFiles(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 	s.ensureWorkshops(c, want)
@@ -3003,6 +3014,7 @@ func (s *apiSuite) TestRefreshConnectionsChanged(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3085,6 +3097,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugChanged(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3159,6 +3172,7 @@ func (s *apiSuite) TestRefreshSystemDefinitionExtended(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 			"system:tunnel",
 		},
 	}}
@@ -3240,6 +3254,7 @@ func (s *apiSuite) TestRefreshSdkRecordPlugRemoved(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3318,6 +3333,7 @@ func (s *apiSuite) TestRefreshNoChanges(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3397,6 +3413,7 @@ func (s *apiSuite) TestRefreshRestore(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3479,6 +3496,7 @@ func (s *apiSuite) TestRefreshBaseChange(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3578,6 +3596,7 @@ func (s *apiSuite) TestRefreshBaseUpdate(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3655,6 +3674,7 @@ func (s *apiSuite) TestRefreshSystemSdkInstalledFirst(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3724,6 +3744,7 @@ func (s *apiSuite) TestRefreshAllSdksRemoved(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -3805,6 +3826,7 @@ func (s *apiSuite) TestRefreshRestoreFromStash(c *check.C) {
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -4499,6 +4521,7 @@ base: ubuntu@22.04
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
@@ -4552,6 +4575,7 @@ plugs:
 			"system:gpu",
 			"system:mount",
 			"system:ssh-agent",
+			"system:virtualization",
 		},
 	}}
 
