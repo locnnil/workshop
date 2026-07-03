@@ -66,7 +66,6 @@ func (f *wsOps) SetUpSuite(c *check.C) {
 	c.Assert(dirs.CreateDirs(), check.IsNil)
 
 	var err error
-
 	f.bd, err = lxdbackend.New()
 	c.Assert(err, check.IsNil)
 
@@ -839,10 +838,11 @@ func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
 	c.Check(w.Image, check.Equals, image)
 }
 
-func (f *wsOps) TestLxdBackendNewIsIdempotent(c *check.C) {
-	// New already ran once in SetUpSuite, creating the storage pool and
-	// network. Running it again must reconcile the existing resources rather
-	// than fail, so that it is safe to re-run as a system check.
+func (f *wsOps) TestLxdBackendSetupIsIdempotent(c *check.C) {
+	// The backend setup already ran once in SetUpSuite, creating the storage
+	// pool and network. Running it again must reconcile the existing resources
+	// rather than fail, so the degraded-mode recovery loop can safely re-run it
+	// once LXD is installed or refreshed.
 	_, err := lxdbackend.New()
 	c.Check(err, check.IsNil)
 

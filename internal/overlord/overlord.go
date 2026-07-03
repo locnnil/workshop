@@ -135,9 +135,12 @@ func New(dir string, restartHandler restart.Handler) (*Overlord, error) {
 	if workshopBackendOverride != nil {
 		workshop.ReplaceBackend(s, workshopBackendOverride)
 	} else {
+		// New always returns a usable backend even when LXD is not yet ready.
+		// Any setup error is reported by the system check, which puts the
+		// daemon into degraded mode and retries until LXD becomes available.
 		wbe, err := lxdbackend.New()
 		if err != nil {
-			return nil, err
+			logger.Noticef("LXD backend setup failed, will retry: %v", err)
 		}
 		workshop.ReplaceBackend(s, wbe)
 	}

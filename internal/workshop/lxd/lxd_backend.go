@@ -207,6 +207,10 @@ func checkServerCapabilities() error {
 	return checkStorage(info.Environment.StorageSupportedDrivers)
 }
 
+// New constructs the LXD backend and attempts to prepare the required LXD
+// storage pool and network. It always returns a usable backend; if LXD is not
+// yet ready the error is reported by the system check (see init), which puts
+// the daemon into degraded mode and retries until LXD becomes available.
 func New() (*Backend, error) {
 	server := Backend{}
 
@@ -214,11 +218,7 @@ func New() (*Backend, error) {
 		imageServer = srv
 	}
 
-	if err := ensureBackendReady(); err != nil {
-		return nil, err
-	}
-
-	return &server, nil
+	return &server, ensureBackendReady()
 }
 
 // ensureBackendReady creates the LXD storage pool and network the backend
