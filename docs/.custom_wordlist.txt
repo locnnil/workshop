@@ -141,6 +141,7 @@ ns
 ollama
 Ollama
 onboarding
+opencode
 OpenVINO
 passthrough
 pathname
