@@ -40,8 +40,6 @@ and a matching plug to the :samp:`system` SDK:
            endpoint: localhost:8080        # port on the host
 
 
-
-
 Refresh the workshop and start the service,
 so the host can reach it at :samp:`localhost:8080`:
 
@@ -59,6 +57,63 @@ or the tunnel will fail to activate.
 
    |ws_markup| doesn't resolve hostnames, but supports the aliases
    :samp:`localhost`, :samp:`ip6-localhost`, and :samp:`ip6-loopback`.
+
+
+Expose the service to your local network
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default, the host plug listens on :samp:`localhost`,
+so only the host can reach the service.
+To let other machines on the network reach it,
+bind the :samp:`system` SDK plug to a non-loopback address
+such as :samp:`0.0.0.0` (all host interfaces):
+
+.. code-block:: yaml
+   :caption: workshop.yaml
+
+   sdks:
+     - name: go
+       slots:
+         caddy:
+           interface: tunnel
+           endpoint: localhost:8080        # service in the workshop
+     - name: system
+       plugs:
+         caddy:
+           interface: tunnel
+           endpoint: 0.0.0.0:8080          # all host interfaces
+
+
+A plug on a non-loopback address isn't connected automatically,
+for security reasons,
+so connect it manually after refreshing:
+
+.. code-block:: console
+
+   $ workshop refresh
+   $ workshop connect web/system:caddy web/go:caddy
+
+
+Confirm the connection with :command:`workshop connections`
+(the :samp:`manual` note marks a hand-made connection):
+
+.. code-block:: console
+
+   $ workshop connections --all
+
+     INTERFACE  PLUG              SLOT          NOTES
+     ...
+     tunnel     web/system:caddy  web/go:caddy  manual
+
+
+Other machines can now reach the service
+at the host's IP address on port :samp:`8080`.
+
+.. note::
+
+   Exposing a service to the network has no built-in authentication,
+   so anyone who can reach the host port can use it.
+   You may also need to open the port in the host's firewall.
 
 
 Share host services
