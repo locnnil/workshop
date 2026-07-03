@@ -839,6 +839,17 @@ func (f *wsOps) TestLxdBackendWorkshopLaunch(c *check.C) {
 	c.Check(w.Image, check.Equals, image)
 }
 
+func (f *wsOps) TestLxdBackendNewIsIdempotent(c *check.C) {
+	// New already ran once in SetUpSuite, creating the storage pool and
+	// network. Running it again must reconcile the existing resources rather
+	// than fail, so that it is safe to re-run as a system check.
+	_, err := lxdbackend.New()
+	c.Check(err, check.IsNil)
+
+	_, err = lxdbackend.New()
+	c.Check(err, check.IsNil)
+}
+
 func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
 	helper.LaunchTestWorkshop(c, f.ctx, f.bd, f.project.Path)
 	defer helper.RemoveTestWorkshop(c, f.ctx, f.bd)

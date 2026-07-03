@@ -88,7 +88,12 @@ func init() {
 		storagePoolDriver = "btrfs"
 	}
 
+	// Order matters: capabilities (version and storage) must be validated
+	// before ensureBackendReady attempts to create the storage pool and
+	// network. Registering it as a check also lets the daemon recover after
+	// LXD is installed or refreshed, without a restart.
 	syscheck.RegisterCheck(checkServerCapabilities)
+	syscheck.RegisterCheck(ensureBackendReady)
 }
 
 type Backend struct {
