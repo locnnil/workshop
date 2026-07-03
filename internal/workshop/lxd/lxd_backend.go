@@ -133,14 +133,12 @@ func ErrorLxdBackend(err error) error {
 		return fmt.Errorf(`cannot connect to LXD: %w
 
 Maybe LXD daemon isn't active?
-To start the LXD daemon: 'sudo snap start lxd'
-To restart the workshop daemon: 'sudo snap restart workshop'`, err)
+To start the LXD daemon: 'sudo snap start lxd'`, err)
 	case errors.Is(err, os.ErrNotExist):
 		return fmt.Errorf(`cannot connect to LXD: %w
 
 Maybe LXD isn't installed?
-To install LXD: 'sudo snap install lxd'
-To restart the workshop daemon: 'sudo snap restart workshop'`, err)
+To install LXD: 'sudo snap install --channel=6/stable lxd'`, err)
 	default:
 		return err
 	}
@@ -165,7 +163,7 @@ func checkVersion(version string) error {
 	}
 
 	if major < minimalLXDMajor || (major == minimalLXDMajor && minor < minimalLXDMinor) {
-		return fmt.Errorf("%w: LXD server version %q is not supported; required >= %d.%d.*", workshop.ErrIncompatibleBackend, version, minimalLXDMajor, minimalLXDMinor)
+		return fmt.Errorf("%w: LXD server version %q is not supported; required >= %d.%d.*\nTo refresh LXD: 'sudo snap refresh --channel=6/stable lxd'", workshop.ErrIncompatibleBackend, version, minimalLXDMajor, minimalLXDMinor)
 	}
 	return nil
 }

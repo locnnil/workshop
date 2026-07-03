@@ -5,6 +5,7 @@ prepare: |
   # Remove LXD so Docker is the first to enable ip_forward and sets FORWARD
   # policy to DROP.
   "$TESTSLIB"/wait-snapshots-unmounted.sh
+  snap stop workshop
   snap remove lxd --purge
   sysctl -w net.ipv4.ip_forward=0
 
@@ -23,7 +24,7 @@ prepare: |
 
   # Bring LXD back and reinstall workshop with clean state.
   setup_lxd
-  snap restart workshop
+  snap start workshop
 restore: |
   . "$TESTSLIB"/utils.sh
 
@@ -34,6 +35,7 @@ restore: |
   # to clean state. LXD recreates its own rules on setup.
   nft flush ruleset
   "$TESTSLIB"/wait-snapshots-unmounted.sh
+  snap stop workshop
   snap remove lxd --purge
   setup_lxd
   rm -f /home/ubuntu/.cache/workshop/warnings.json
