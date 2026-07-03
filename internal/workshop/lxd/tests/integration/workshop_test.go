@@ -40,6 +40,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/progress"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
@@ -848,6 +849,12 @@ func (f *wsOps) TestLxdBackendSetupIsIdempotent(c *check.C) {
 
 	_, err = lxdbackend.New()
 	c.Check(err, check.IsNil)
+}
+
+func (f *wsOps) TestLxdBackendStorageSpaceCheckHealthy(c *check.C) {
+	// With a freshly created pool the storage space check must not put the
+	// daemon into degraded mode.
+	c.Check(syscheck.CheckSystem(), check.IsNil)
 }
 
 func (f *wsOps) TestLxdBackendWorkshopRebuild(c *check.C) {
