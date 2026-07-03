@@ -209,6 +209,16 @@ func New() (*Backend, error) {
 		imageServer = srv
 	}
 
+	if err := ensureBackendReady(); err != nil {
+		return nil, err
+	}
+
+	return &server, nil
+}
+
+// ensureBackendReady creates the LXD storage pool and network the backend
+// relies on, it is idempotent.
+func ensureBackendReady() error {
 	// TODO: run this logic for a specific user. The code below implies the
 	// default project activated for the connection. As we have seen, every user
 	// has to create its own storage pool to avoid issues with id mapping of a
@@ -216,14 +226,14 @@ func New() (*Backend, error) {
 	// system SDK that cannot be successfully mounted for another user).
 	conn, err := lxd.ConnectLXDUnix("", nil)
 	if err != nil {
-		return nil, ErrorLxdBackend(err)
+		return ErrorLxdBackend(err)
 	}
 	defer conn.Disconnect()
 
 	// Create LXD storage pool if it doesn't exist.
 	pools, err := conn.GetStoragePools()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if idx := slices.IndexFunc(pools, func(p api.StoragePool) bool { return p.Name == storagePool }); idx < 0 {
 		req := api.StoragePoolsPost{
@@ -232,21 +242,21 @@ func New() (*Backend, error) {
 		}
 		op, err := conn.CreateStoragePool(req)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if err := op.Wait(); err != nil {
-			return nil, err
+			return err
 		}
 
 		// Ensure the new pool has enough total space available.
 		pool, etag, err := conn.GetStoragePool(storagePool)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		res, err := conn.GetStoragePoolResources(storagePool)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		gibTotal := uint64(res.Space.Total) / (1024 * 1024 * 1024)
@@ -258,17 +268,17 @@ func New() (*Backend, error) {
 			pool.Config["size"] = strconv.FormatUint(storagePoolMinimalGiB*1024*1024*1024, 10)
 			op, err = conn.UpdateStoragePool(storagePool, pool.Writable(), etag)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if err := op.Wait(); err != nil {
-				logger.Noticef("On Backend.New: failed to set storage pool to the minimal size: %dGiB, %s", storagePoolMinimalGiB, err)
-				return nil, err
+				logger.Noticef("On ensureBackendReady: failed to set storage pool to the minimal size: %dGiB, %s", storagePoolMinimalGiB, err)
+				return err
 			}
 
-			logger.Noticef("On Backend.New: set storage pool to the minimal size: %dGiB", storagePoolMinimalGiB)
+			logger.Noticef("On ensureBackendReady: set storage pool to the minimal size: %dGiB", storagePoolMinimalGiB)
 		}
 	} else if pools[idx].Driver != storagePoolDriver {
-		return nil, fmt.Errorf("storage pool %q already exists with a different driver: %q (expected %q)", storagePool, pools[idx].Driver, storagePoolDriver)
+		return fmt.Errorf("storage pool %q already exists with a different driver: %q (expected %q)", storagePool, pools[idx].Driver, storagePoolDriver)
 	}
 
 	network, etag, err := conn.GetNetwork(networkName)
@@ -286,27 +296,27 @@ func New() (*Backend, error) {
 
 		op, err := conn.CreateNetwork(req)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if err := op.Wait(); err != nil {
-			return nil, err
+			return err
 		}
 	} else if err != nil {
-		return nil, err
+		return err
 	} else if network.Type != networkType {
-		return nil, fmt.Errorf("network %q already exists with a different type: %q", networkName, network.Type)
+		return fmt.Errorf("network %q already exists with a different type: %q", networkName, network.Type)
 	} else if network.Config["dns.domain"] != networkDomain {
 		network.Config["dns.domain"] = networkDomain
 		op, err := conn.UpdateNetwork(network.Name, network.Writable(), etag)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if err := op.Wait(); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return &server, nil
+	return nil
 }
 
 func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
