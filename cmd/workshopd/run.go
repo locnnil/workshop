@@ -149,15 +149,17 @@ func runDaemon(rcmd *cmdRun, ch chan os.Signal, ready chan<- func()) error {
 	// Run sanity check now, if anything goes wrong with the
 	// check we go into "degraded" mode where we always report
 	// the given error to any client.
-	var checkTicker <-chan time.Time
-	var tic *time.Ticker
+	//
+	// Keep the ticker running even when the initial check passes so the
+	// daemon can detect and recover from LXD becoming unavailable after
+	// startup (e.g. due to a refresh).
 	if err := syscheck.CheckSystem(); err != nil {
 		degradedErr := fmt.Errorf("system is not healthy: %w", err)
 		logger.Noticef("%s", degradedErr)
 		d.SetDegradedMode(degradedErr)
-		tic = time.NewTicker(checkRunningConditionsRetryDelay)
-		checkTicker = tic.C
 	}
+	tic := time.NewTicker(checkRunningConditionsRetryDelay)
+	defer tic.Stop()
 
 	d.Version = version.Version
 	if err = d.Start(); err != nil {
@@ -191,10 +193,13 @@ out:
 			// something called Stop()
 			logger.Noticef("Server exiting!")
 			break out
-		case <-checkTicker:
-			if err := syscheck.CheckSystem(); err == nil {
+		case <-tic.C:
+			if err := syscheck.CheckSystem(); err != nil {
+				degradedErr := fmt.Errorf("system is not healthy: %w", err)
+				logger.Noticef("%s", degradedErr)
+				d.SetDegradedMode(degradedErr)
+			} else {
 				d.SetDegradedMode(nil)
-				tic.Stop()
 			}
 		case <-stop:
 			break out
