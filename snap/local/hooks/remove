@@ -16,6 +16,12 @@ if command -v systemctl &>/dev/null; then
     systemctl disable snap.workshop.configure-dns.service || true
     rm -f /etc/systemd/system/snap.workshop.configure-dns.service
     systemctl daemon-reload || true
+
+    rm -f /etc/udev/rules.d/85-workshop-unmanaged.rules
+    systemctl reload systemd-udevd.service || true
+
+    rm -f /etc/NetworkManager/conf.d/85-workshop-unmanaged.conf
+    systemctl reload NetworkManager.service || true
 fi
 
 remove_completion /var/lib/snapd/desktop/bash-completion/completions/sdk
