@@ -360,18 +360,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	if err := s.adjustInstanceTemplates(conn, req.Name); err != nil {
-		return err
-	}
-
-	fs, err := s.instanceFs(conn, req.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// Workaround https://github.com/canonical/lxd/issues/17983.
-	return fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service")
+	return s.adjustInstanceTemplates(conn, req.Name)
 }
 
 func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.InstancesPost) error {
