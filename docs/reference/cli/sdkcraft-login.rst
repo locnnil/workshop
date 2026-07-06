@@ -9,7 +9,7 @@ sdkcraft login
 
 .. @artefact sdkcraft login
 
-Log in to the SDK Store
+Log in to the SDK Store
 
 .. rubric:: Usage
 
@@ -20,7 +20,7 @@ Log in to the SDK Store
 .. rubric:: Description
 
 
-Log in to the SDK Store.
+Log in to the SDK Store.
 
 The login command requires a working keyring on the system it is used on.
 As an alternative, export 'SDKCRAFT_STORE_CREDENTIALS'

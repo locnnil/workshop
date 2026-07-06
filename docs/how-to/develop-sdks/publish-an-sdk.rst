@@ -1,7 +1,7 @@
 .. _how_publish_sdk:
 
 .. meta::
-   :description: How-to guide for publishing a Workshop SDK to the SDK Store with
+   :description: How-to guide for publishing a Workshop SDK to the SDK Store with
                  SDKcraft, covering pack, test, try, register, upload, and release,
                  plus how to consume the published SDK from a workshop definition.
 
@@ -11,25 +11,25 @@ How to publish an SDK
 .. @tests in tests/docs-how-to/publish-an-sdk/task.yaml
 
 .. @artefact SDK
-.. @artefact SDK Store
+.. @artefact SDK Store
 .. @artefact sdkcraft (CLI)
 .. @artefact try SDK
 
 Publishing turns a packed SDK
-into something other |ws_markup| users can pull from the SDK Store.
+into something other |ws_markup| users can pull from the SDK Store.
 If the SDK isn't yet packed, tested, and tried locally,
 go through :ref:`how_build_sdk` first.
 
 The publishing flow has four steps:
 
 #. **Pack** the SDK into one :file:`.sdk` artifact per platform.
-#. **Register** the SDK name on the SDK Store.
+#. **Register** the SDK name on the SDK Store.
 #. **Upload** a revision.
 #. **Release** the revision to one or more channels.
 
 
 The first step runs on your machine.
-The last three talk to the live SDK Store
+The last three talk to the live SDK Store
 at :samp:`api.charmhub.io`
 and require an authenticated account.
 
@@ -37,18 +37,18 @@ and require an authenticated account.
 Prerequisites
 -------------
 
-Before starting:
+Before starting, ensure you have these requirements satisfied:
 
-- |sdk_markup| is installed.
+- Complete :ref:`how_build_sdk`
+  so that the SDK is fully built, tested, and tried locally.
 
-- LXD 6.6 or later is running on the host.
+- |sdk_markup| installed.
+
+- LXD 6.8 or later running on the host.
 
 - An Ubuntu One account.
 
 - The SDK source tree is clean and ready to build.
-
-- The SDK passes :command:`sdkcraft try` end-to-end
-  in at least one workshop.
 
 
 There is no local-only or dry-run mode for the Store-side commands.
@@ -80,82 +80,6 @@ clean and rebuild from scratch:
 .. code-block:: console
 
    $ sdkcraft clean && sdkcraft pack
-
-
-Test the SDK
-------------
-
-If the SDK ships a :file:`tests/` directory with
-`spread <https://github.com/canonical/spread>`__ tests,
-run them against the freshly packed artifacts:
-
-.. code-block:: console
-
-   $ sdkcraft test
-
-
-|sdk_markup| provisions a clean LXD container for each test,
-installs the packed SDK into a workshop,
-and runs the declared scenarios end-to-end.
-
-:command:`sdkcraft init` scaffolds a starter test under
-:file:`tests/main/launch/` and a :file:`tests/spread.yaml`
-declaring the suites that :command:`sdkcraft test` should pick up.
-Add more tests next to the starter,
-each in its own subdirectory of the same suite:
-
-.. code-block:: yaml
-   :caption: tests/main/smoke/task.yaml
-
-   summary: SDK installs and reports healthy
-   execute: |
-     workshop launch --verbose --wait-on-error
-     workshop info | grep -E 'status:\s+okay'
-
-
-Try the SDK
------------
-
-The final pre-publish step is to install the packed SDK
-in a real workshop and use it the way an end user would:
-
-.. code-block:: console
-
-   $ sdkcraft try
-
-
-:command:`sdkcraft try` packs the SDK
-and copies it into the :ref:`try area <exp_test_try_sdk>`.
-Add it to a workshop with the :samp:`try-` prefix:
-
-.. code-block:: yaml
-   :caption: workshop.yaml
-
-   name: dev
-   base: ubuntu@24.04
-   sdks:
-     - name: try-<NAME>
-
-
-Then launch the workshop and exercise the SDK:
-
-.. code-block:: console
-
-   $ workshop launch --verbose --wait-on-error
-
-
-This is the last chance to catch problems
-before the SDK is on the Store.
-Pay particular attention to:
-
-- Hook output in :command:`workshop changes` and :command:`workshop tasks`.
-
-- The SDK's :samp:`status` in :command:`workshop info`;
-  a :samp:`waiting` or :samp:`error` state
-  is the SDK telling you something is wrong.
-
-- The interaction between this SDK and any other SDKs
-  it's meant to be installed alongside.
 
 
 Register the SDK name
@@ -192,7 +116,7 @@ Then register the SDK name:
    $ sdkcraft register <NAME>
 
 
-Names are global to the SDK Store
+Names are global to the SDK Store
 and normally cannot be re-registered after release.
 Pick a name that matches the SDK's :samp:`name` field in :file:`sdkcraft.yaml`
 and that you intend to keep.
@@ -326,7 +250,7 @@ Channels follow the :samp:`[<TRACK>/]<RISK>[/<BRANCH>]` shape:
   .. caution::
      Do not use the base (for example, :samp:`24.04`)
      as the track name.
-     The SDK Store tracks revisions per platform automatically
+     The SDK Store tracks revisions per platform automatically
      (see the platforms listed in :file:`sdkcraft.yaml`),
      so a per-base track only duplicates that
      and limits how revisions can be grouped meaningfully.

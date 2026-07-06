@@ -544,7 +544,7 @@ that brings these distributed components together:
         (mounts, camera, GPU, networking, and so on).
 
     * - :ref:`Regular SDKs <exp_sdk_concepts>`
-      - Distributed via the SDK Store
+      - Distributed via the SDK Store
         with :samp:`channel` versioning
       - Downloaded, cached on the host,
         and installed in the workshop at launch

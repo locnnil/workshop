@@ -52,7 +52,7 @@ Develop SDKs
 
 These guides cover the work of authoring an SDK with |sdk_markup|,
 from project layout and interface declarations
-to runtime hooks and publishing to the SDK Store:
+to runtime hooks and publishing to the SDK Store:
 
 .. toctree::
    :titlesonly:

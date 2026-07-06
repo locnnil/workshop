@@ -11,7 +11,7 @@ How to develop SDKs
 These how-to guides cover the work of an SDK author:
 laying out the project,
 writing runtime hooks,
-and publishing the result to the SDK Store.
+and publishing the result to the SDK Store.
 
 .. toctree::
    :maxdepth: 1

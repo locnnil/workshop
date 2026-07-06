@@ -20,7 +20,7 @@ Upload an SDK artifact to the store
 .. rubric:: Description
 
 
-Upload an SDK artifact to the SDK Store.
+Upload an SDK artifact to the SDK Store.
 
 The artifact must be a .sdk file created by the pack command.
 Optionally, the uploaded revision can be released to specified channels.

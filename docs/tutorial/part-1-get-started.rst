@@ -117,7 +117,7 @@ it lists the components of the workshop to be instantiated at launch.
 .. @artefact sdkcraft (CLI)
 .. @artefact SDK
 .. @artefact SDK publisher
-.. @artefact SDK Store
+.. @artefact SDK Store
 
 A definition can list many moving parts;
 perhaps, the most important are SDKs,
@@ -138,7 +138,7 @@ which provides a local AI model server.
 .. @artefact sdk find
 
 Before adding an SDK to a workshop,
-search the SDK Store to confirm it exists
+search the SDK Store to confirm it exists
 and check its publisher and current version:
 
 .. code-block:: console
@@ -231,7 +231,7 @@ The command writes the definition to :file:`.workshop/dev.yaml`:
        channel: cpu/stable
 
 
-Here, the specific version to retrieve from the SDK Store
+Here, the specific version to retrieve from the SDK Store
 comes from the :samp:`cpu/stable` channel of the :samp:`cpu` track.
 
 To confirm that |ws_markup| sees the definition,
@@ -350,7 +350,7 @@ stored on the machine, regardless of which workshop pulled it:
 Each row is a distinct SDK volume on disk.
 Until you launch a workshop that references an SDK,
 it won't appear here;
-at launch, |ws_markup| has pulled the SDK from the SDK Store
+at launch, |ws_markup| has pulled the SDK from the SDK Store
 and the revision shown matches the one in :command:`workshop info`.
 
 .. @artefact workshop .lock

@@ -323,14 +323,14 @@ Convert to in-project SDK
 -------------------------
 
 .. @artefact in-project SDK
-.. @artefact SDK Store
+.. @artefact SDK Store
 
 If you're happy with your sketch SDK,
 your first option is to convert it into an
 :ref:`in-project SDK <exp_in_project_sdk>`.
 This makes it a permanent, version-controllable part of your project,
 shareable with your team;
-a good step before deciding to publish it to the SDK Store for wider use.
+a good step before deciding to publish it to the SDK Store for wider use.
 
 To convert the sketch, you *eject* it with the :option:`!--eject` option.
 This creates a new in-project SDK
@@ -338,7 +338,7 @@ by moving the sketch's definition files
 into the :file:`.workshop/` subdirectory of your project.
 The original sketch SDK is removed from the workshop.
 |ws_markup| can then pull the SDK directly from this directory,
-bypassing the SDK Store.
+bypassing the SDK Store.
 
 By default, the new SDK is named after the project directory;
 to change this, use the :option:`!--name` option:

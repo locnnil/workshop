@@ -116,7 +116,7 @@ Each item in :samp:`sdks` is an object with these fields:
 
        Use a prefix to select the source:
 
-       - no prefix: an SDK from the SDK Store (default).
+       - no prefix: an SDK from the SDK Store (default).
        - :samp:`try-<NAME>`:
          a locally tried SDK in the :ref:`try area <ref_sdkcraft_try>`.
 

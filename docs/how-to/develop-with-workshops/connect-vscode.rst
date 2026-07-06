@@ -15,11 +15,20 @@ A local VS Code instance can connect to a remote workshop environment
 via the :samp:`vscode-remote` SDK,
 giving you the full VS Code experience against |ws_markup|.
 
-First, you'll need to have the `remote development extension pack
-<https://code.visualstudio.com/docs/remote/remote-overview>`__
-installed.
 
-After that, add the :samp:`vscode-remote` SDK to your workshop definition:
+Prerequisites
+-------------
+
+Before starting, ensure you have these requirements satisfied:
+
+- The `VS Code Remote Development extension pack <https://code.visualstudio.com/docs/remote/remote-overview>`__
+   installed in VS Code.
+
+
+Add the SDK
+-----------
+
+Add the :samp:`vscode-remote` SDK to your workshop definition:
 
 .. code-block:: yaml
    :caption: workshop.yaml

@@ -28,11 +28,11 @@ When you launch a workshop, you create and start a container with a base image.
 The image is downloaded from the container engine server and cached locally.
 
 .. @artefact SDK
-.. @artefact SDK Store
+.. @artefact SDK Store
 
 On top of the base image, one or more SDKs are usually applied,
 which provide tools for development and runtime tasks.
-SDKs are downloaded from the SDK Store that is specific to |ws_markup|.
+SDKs are downloaded from the SDK Store that is specific to |ws_markup|.
 
 SDKs are installed in the order dictated by the workshop definition:
 first :samp:`system`, then user-listed SDKs, and finally :samp:`sketch`.

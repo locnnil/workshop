@@ -17,7 +17,7 @@ Understanding SDKs
 ------------------
 
 At their core, SDKs are bundles of software dependencies
-distributed through the SDK Store or defined locally;
+distributed through the SDK Store or defined locally;
 they can pre-package libraries, tools, and configurations
 or install them directly into a workshop.
 
@@ -34,7 +34,7 @@ SDK lifecycle
 
 Most SDKs move through the same stages,
 from a quick local hack in a single workshop
-to a consumable artifact on the SDK Store:
+to a consumable artifact on the SDK Store:
 
 .. toctree::
    :maxdepth: 1

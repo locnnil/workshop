@@ -30,7 +30,7 @@ that come agent-ready**.
 into reliable and reproducible definitions of languages, libraries, and tooling**.
 The key pieces of a definition are SDKs:
 independent, connectable units of functionality
-that publishers package and share on the SDK Store,
+that publishers package and share on the SDK Store,
 and teams can define in their repositories.
 
 **Workshops enable sandboxed experimentation,

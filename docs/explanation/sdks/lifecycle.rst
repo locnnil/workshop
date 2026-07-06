@@ -3,13 +3,13 @@
 .. meta::
    :description: Explanation of the SDK lifecycle in Workshop, walking through
                  sketching, in-project SDKs, standalone SDKs built with SDKcraft,
-                 publishing to the SDK Store, and consumption in a workshop.
+                 publishing to the SDK Store, and consumption in a workshop.
 
 SDK lifecycle
 =============
 
 .. @artefact SDK
-.. @artefact SDK Store
+.. @artefact SDK Store
 .. @artefact in-project SDK
 .. @artefact sketch SDK
 .. @artefact sdkcraft (CLI)
@@ -17,7 +17,7 @@ SDK lifecycle
 An SDK rarely springs into existence ready to publish.
 It usually starts as a quick local hack,
 hardens into a project-private artifact,
-and only then graduates into a fully packaged release on the SDK Store.
+and only then graduates into a fully packaged release on the SDK Store.
 The shape of the definition stays similar throughout;
 what changes is where it lives,
 who can see it,
@@ -38,7 +38,7 @@ The lifecycle has five stages:
    with parts, hooks, platforms, and tests.
 
 #. **Publish the SDK.**
-   Register the name on the SDK Store,
+   Register the name on the SDK Store,
    upload built artifacts,
    and release them to channels.
 
@@ -60,7 +60,7 @@ to be presented as a single flow:
          commands used at that stage. A sketch SDK (workshop sketch-sdk) is
          ejected (workshop sketch-sdk --eject) into an in-project SDK, which is
          promoted into a standalone SDK project built with sdkcraft init, pack,
-         try, and test, then published to the SDK Store with sdkcraft login,
+         try, and test, then published to the SDK Store with sdkcraft login,
          register, create-track, upload, and release, and finally consumed in a
          workshop with sdk find, workshop launch, and workshop info. An
          in-project SDK can also be authored by hand.
@@ -99,7 +99,7 @@ Each stage trades immediacy for reach.
 A sketch is instant but lives and dies with one workshop;
 an in-project SDK is shared through the project repository;
 a published SDK is packaged once
-and consumed anywhere through the SDK Store.
+and consumed anywhere through the SDK Store.
 Each command above is documented in the SDK CLI reference,
 while the deeper mechanics of each stage,
 from hooks and parts to channels and guardrails,
