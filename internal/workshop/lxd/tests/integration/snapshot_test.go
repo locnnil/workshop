@@ -268,10 +268,10 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	delete(inst.Config, "user.workshop.format-revision")
 
 	// These ones are a bit long, replace with hash for readability.
-	digest := sha3.Sum384([]byte(inst.Config["user.network-config"]))
-	inst.Config["user.network-config"] = hex.EncodeToString(digest[:])
-	digest = sha3.Sum384([]byte(inst.Config["user.user-data"]))
-	inst.Config["user.user-data"] = hex.EncodeToString(digest[:])
+	digest := sha3.Sum384([]byte(inst.Config["cloud-init.network-config"]))
+	inst.Config["cloud-init.network-config"] = hex.EncodeToString(digest[:])
+	digest = sha3.Sum384([]byte(inst.Config["cloud-init.user-data"]))
+	inst.Config["cloud-init.user-data"] = hex.EncodeToString(digest[:])
 
 	// Host paths of default devices can change without affecting the
 	// workshop, so we exclude them from the hash. Other device options
