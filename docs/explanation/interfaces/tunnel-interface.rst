@@ -87,6 +87,10 @@ provided that:
 
 Otherwise, it isn't connected automatically,
 for security reasons.
+For example, a system SDK plug bound to a non-loopback address
+such as :samp:`0.0.0.0`,
+which exposes the service to other machines on the network,
+must be connected manually.
 The :command:`workshop connect` and :command:`workshop disconnect` commands
 can be invoked after the workshop has started:
 
@@ -219,6 +223,11 @@ Explanation:
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdk_definition`
 - :ref:`exp_workshop_definition`
+
+
+How-to guides:
+
+- :ref:`how_forward_ports`
 
 
 Reference:
