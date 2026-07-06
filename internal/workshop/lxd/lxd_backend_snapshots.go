@@ -15,7 +15,6 @@
 package lxdbackend
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"crypto/sha3"
@@ -396,7 +395,7 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		}
 	})
 
-	if err := s.resetMachineID(snapshotConn, snapshotName); err != nil {
+	if err := s.resetCloudInit(snapshotConn, snapshotName); err != nil {
 		return err
 	}
 
@@ -504,20 +503,12 @@ func (s *Backend) checkPartialSnapshot(snapshotConn lxd.InstanceServer, snapshot
 	return workshop.ErrSnapshotAlreadyExists
 }
 
-func (s *Backend) resetMachineID(snapshotConn lxd.InstanceServer, name string) error {
+func (s *Backend) resetCloudInit(snapshotConn lxd.InstanceServer, name string) error {
 	fs, err := s.instanceFs(snapshotConn, name)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
-
-	// There are a few ways to reset the machine-id: delete it, clear it, or
-	// replace it with "uninitialized." To match the base image, we clear it.
-	// This prevents systemd from treating the launch as a "first boot," which
-	// triggers service presets that we don't particularly want.
-	if err := fs.AtomicWriteTo(bytes.NewReader(nil), "/etc/machine-id", 0444); err != nil {
-		return err
-	}
 
 	// Remove old cloud-init data. Without this, the instance-id of the current
 	// workshop may be present in the snapshot. If the current workshop is
@@ -859,7 +850,7 @@ func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.
 // replay some of the install-sdk and setup-base tasks. These can be handled in
 // the same way as in-progress launches and refreshes.
 func (s *Backend) FormatRevision() sdk.Revision {
-	return sdk.R(5)
+	return sdk.R(6)
 }
 
 func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {

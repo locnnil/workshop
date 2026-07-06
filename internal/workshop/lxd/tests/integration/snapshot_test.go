@@ -463,12 +463,12 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Assert(err, check.IsNil)
 	restored := extractUniqueFiles(c, roots[0])
 
-	// Check that only LXD-managed attributes are preserved. Ideally the
-	// machine-id and SSH key should be preserved too, but in the meantime we
-	// should enforce the current behaviour.
+	// Check that only Workshop-managed attributes are preserved. Ideally the
+	// SSH key should be preserved too, but in the meantime we should enforce
+	// the current behaviour.
 	c.Check(files[0].hostname, check.Equals, restored.hostname)
 	c.Check(files[0].instanceID, check.Equals, restored.instanceID)
-	c.Check(files[0].machineID, check.Not(check.Equals), restored.machineID)
+	c.Check(files[0].machineID, check.Equals, restored.machineID)
 	c.Check(files[0].networkCfg, check.Equals, restored.networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), restored.sshKey)
 
@@ -497,14 +497,13 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Assert(err, check.IsNil)
 	refreshed := extractUniqueFiles(c, roots[0])
 
-	// Check that only LXD-managed attributes are preserved.
+	// Check that only Workshop-managed attributes are preserved.
 	c.Check(files[0].hostname, check.Equals, refreshed.hostname)
 	c.Check(files[0].instanceID, check.Equals, refreshed.instanceID)
-	c.Check(files[0].machineID, check.Not(check.Equals), refreshed.machineID)
+	c.Check(files[0].machineID, check.Equals, refreshed.machineID)
 	c.Check(files[0].networkCfg, check.Equals, refreshed.networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), refreshed.sshKey)
 
-	c.Check(files[2].machineID, check.Not(check.Equals), refreshed.machineID)
 	c.Check(files[2].sshKey, check.Not(check.Equals), refreshed.sshKey)
 
 	// Check for unexpected differences.

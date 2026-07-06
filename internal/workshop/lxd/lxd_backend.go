@@ -421,6 +421,7 @@ var instanceTemplates embed.FS
 //   - /etc/cloud/cloud.cfg.d/90_workshop.cfg (configure cloud-init settings
 //     before it runs)
 //   - /etc/hostname (set to the workshop's name)
+//   - /etc/machine-id (set to the LXD UUID, without dashes)
 //   - /var/lib/workshop/run/workshop.socket.untrusted (empty, to be replaced
 //     with a proxy socket)
 //
@@ -446,6 +447,10 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 		"/etc/hostname": {
 			When:     fromSnapshot,
 			Template: "hostname.tpl",
+		},
+		"/etc/machine-id": {
+			When:     fromSnapshot,
+			Template: "machine-id.tpl",
 		},
 		dirs.WorkshopSocketPath + ".untrusted": {
 			When:       fromImage,
@@ -1217,15 +1222,11 @@ runcmd:
   - networkctl reload
 `[1:]
 
-	// Based on lxd-imagebuilder Ubuntu template. By default
-	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
-	// which can change when refreshing to a new base image.
 	networkConfigTemplate := `network:
   version: 2
   ethernets:
     eth0:
       dhcp4: true
-      dhcp-identifier: mac
       dhcp4-overrides:
         hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
       dhcp6-overrides:
