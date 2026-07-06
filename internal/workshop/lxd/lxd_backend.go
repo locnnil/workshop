@@ -370,13 +370,6 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	}
 	defer fs.Close()
 
-	// cloud-init seems to ignore preserve_hostname in user-data, we have
-	// to bake it into the image instead.
-	cfg := strings.NewReader("preserve_hostname: true\n")
-	if err := fs.AtomicWriteTo(cfg, "/etc/cloud/cloud.cfg.d/99_preserve_hostname.cfg", 0644); err != nil {
-		return err
-	}
-
 	// Workaround https://github.com/canonical/lxd/issues/17983.
 	return fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service")
 }
@@ -434,8 +427,13 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 //go:embed templates/*.tpl
 var instanceTemplates embed.FS
 
-// adjustInstanceTemplates ensures LXD sets /etc/hostname to the workshop's
-// name and creates /var/lib/workshop/run (for the workshopd socket).
+// adjustInstanceTemplates ensures LXD creates certain files before the
+// instance starts. The files are:
+//   - /etc/cloud/cloud.cfg.d/90_workshop.cfg (configure cloud-init settings
+//     before it runs)
+//   - /etc/hostname (set to the workshop's name)
+//   - /var/lib/workshop/run/workshop.socket.untrusted (empty, to be replaced
+//     with a proxy socket)
 //
 // Also removes cloud-init seed files for NoCloud. The current Ubuntu 20.04
 // images contain a recent version of cloud-init that supports LXD, but these
@@ -452,6 +450,10 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 	fromSnapshot := []string{"create", "copy"}
 
 	templates := map[string]*api.ImageMetadataTemplate{
+		"/etc/cloud/cloud.cfg.d/90_workshop.cfg": {
+			When:     fromImage,
+			Template: "cloud.cfg.tpl",
+		},
 		"/etc/hostname": {
 			When:     fromSnapshot,
 			Template: "hostname.tpl",
