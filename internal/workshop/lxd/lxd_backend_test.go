@@ -114,10 +114,10 @@ func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	err = lxdbackend.CheckServerVersion("6.7")
-	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
+	c.Assert(err, check.ErrorMatches, `(?s).*LXD server version.*is not supported.*`)
 
 	err = lxdbackend.CheckServerVersion("5.9")
-	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
+	c.Assert(err, check.ErrorMatches, `(?s).*LXD server version.*is not supported.*`)
 
 	err = lxdbackend.CheckServerVersion("unreachable")
 	c.Assert(err, check.ErrorMatches, ".*cannot parse LXD server version.*")
@@ -132,5 +132,5 @@ func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	err = lxdbackend.CheckServerVersion("6.7.9")
-	c.Assert(err, check.ErrorMatches, ".*LXD server version.*is not supported.*")
+	c.Assert(err, check.ErrorMatches, `(?s).*LXD server version.*is not supported.*`)
 }

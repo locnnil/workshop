@@ -30,14 +30,16 @@ import (
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 	"github.com/canonical/workshop/internal/x11"
 )
 
 type InterfaceManager struct {
-	state   *state.State
-	backend workshop.Backend
-	repo    *interfaces.Repository
+	state        *state.State
+	backend      workshop.Backend
+	repo         *interfaces.Repository
+	backendReady bool
 }
 
 func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
@@ -49,6 +51,11 @@ func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	s.Lock()
 	m.backend = workshop.WorkshopBackend(s)
 	s.Unlock()
+
+	// Register the LXD-dependent initialization as a system check so the
+	// daemon stays in degraded mode until both LXD is healthy and the
+	// interface manager has loaded all existing workshops and connections.
+	syscheck.RegisterCheck(m.ensureBackendInit)
 
 	r.AddHandler("resolve-interfaces", OnDo(m.doResolveInterfaces), nil)
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
@@ -133,25 +140,49 @@ func (m *InterfaceManager) ConnectionStates() (connStateByRef map[string]Connect
 
 func (m *InterfaceManager) StartUp() error {
 	m.state.Lock()
-	defer m.state.Unlock()
 	for _, backend := range allSecurityBackends() {
 		if err := backend.Initialize(); err != nil {
+			m.state.Unlock()
 			return err
 		}
 		if err := m.repo.AddBackend(backend); err != nil {
+			m.state.Unlock()
 			return err
 		}
 	}
 
 	for _, iface := range builtin.Interfaces() {
 		if err := m.repo.AddInterface(iface); err != nil {
+			m.state.Unlock()
 			return err
 		}
 	}
+	m.state.Unlock()
+
+	if err := m.ensureBackendInit(); err != nil {
+		// LXD may not be available yet; do not propagate the error so the
+		// daemon can start. The syscheck registered in New() keeps the daemon
+		// in degraded mode and retries via the recovery ticker until it succeeds.
+		logger.Noticef("Interface manager backend init deferred: %v", err)
+	}
+	return nil
+}
+
+// ensureBackendInit performs the LXD-dependent part of startup: it loads all
+// existing projects and workshops, recreates internal mounts, registers SDK
+// interfaces, and reloads connections. It is registered as a syscheck (see
+// New) so the daemon stays in degraded mode until it succeeds.
+func (m *InterfaceManager) ensureBackendInit() error {
+	if m.backendReady {
+		return nil
+	}
+
+	m.state.Lock()
+	defer m.state.Unlock()
 
 	allprojects, err := m.backend.Projects(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("interface manager not ready: %w", err)
 	}
 
 	for user, projects := range allprojects {
@@ -196,9 +227,11 @@ func (m *InterfaceManager) StartUp() error {
 			logger.Noticef("cannot copy Xauthority file for user %q, X11 applications may not work: %v", user, err)
 		}
 	}
-	if _, err := m.reloadConnections("", "", ""); err != nil {
+	_, err = m.reloadConnections("", "", "")
+	if err != nil {
 		return err
 	}
+	m.backendReady = true
 	return nil
 }
 

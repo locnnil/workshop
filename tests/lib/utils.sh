@@ -16,9 +16,9 @@ function setup_lxd() {
     fi
     lxd waitready --timeout=180
 
-    # can already be initialised if reused
+    # can already be initialised if reused or if a non-default pool exists
     # https://discuss.linuxcontainers.org/t/how-do-i-know-if-lxd-is-initialized/15473/3
-    if [ "$(lxc storage list -f compact | grep -c default)" -eq 0 ]; then
+    if [ "$(lxc storage list --format=csv | wc -l)" -eq 0 ]; then
         lxd init --auto --storage-backend=zfs
     fi
 }
