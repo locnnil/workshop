@@ -28,6 +28,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 	"golang.org/x/net/idna"
 
+	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -151,6 +152,7 @@ func generateCNAME(cnames []cname, projects []workshop.Project, projectId string
 
 	projectAlias, err := idna.Lookup.ToASCII(projectName)
 	if err != nil {
+		logger.Noticef("On StartWorkshop: invalid domain name %q, using %q instead", projectName+"."+networkDomain, result.friendly())
 		result.Note = "hostname-fallback"
 		return result, nil //nolint:nilerr
 	}
@@ -162,6 +164,7 @@ func generateCNAME(cnames []cname, projects []workshop.Project, projectId string
 		return strings.EqualFold(c.ProjectId, projectAlias) || strings.EqualFold(c.ProjectAlias, projectAlias)
 	})
 	if conflict {
+		logger.Noticef("On StartWorkshop: domain name %q in use, using %q instead", projectAlias+"."+networkDomain, result.friendly())
 		result.Note = "hostname-fallback"
 		return result, nil
 	}

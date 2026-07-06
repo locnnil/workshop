@@ -861,7 +861,7 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		cnames, _ = unmarshalDnsmasq(network.Config["raw.dnsmasq"])
 	}
 	if cnames == nil {
-		// Tell loadWorkshop to add the hostname-missing note.
+		// Tell loadWorkshop to add the hostname-fallback note.
 		cnames = []cname{}
 	}
 
@@ -955,7 +955,8 @@ func (s *Backend) hostname(name string, p workshop.Project, running bool, cnames
 		hostname.Domain = cnames[idx].friendly()
 		hostname.Note = cnames[idx].Note
 	} else if running {
-		hostname.Note = "hostname-missing"
+		hostname.Domain = InstanceName(name, p.ProjectId) + "." + networkDomain
+		hostname.Note = "hostname-fallback"
 	}
 
 	return hostname
