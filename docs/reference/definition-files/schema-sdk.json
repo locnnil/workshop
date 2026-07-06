@@ -20,6 +20,9 @@
       "type": "string"
     },
     "CustomDevicePlug": {
+      "$ref": "#/$defs/CustomDevicePlugModel"
+    },
+    "CustomDevicePlugModel": {
       "additionalProperties": false,
       "description": "SDKcraft project custom-device plug definition.",
       "properties": {
@@ -29,21 +32,38 @@
           "type": "string"
         },
         "subsystem": {
+          "default": "",
           "description": "Device subsystem.",
           "examples": [
             "accel",
             "usb"
           ],
-          "minLength": 1,
           "title": "Subsystem",
           "type": "string"
+        },
+        "vendorid": {
+          "$ref": "#/$defs/DeviceID",
+          "default": "",
+          "description": "Restrict the exposed devices to those with this vendor ID.",
+          "examples": [
+            "0403"
+          ],
+          "title": "Vendor ID"
+        },
+        "productid": {
+          "$ref": "#/$defs/DeviceID",
+          "default": "",
+          "description": "Restrict the exposed devices to those with this product ID.",
+          "examples": [
+            "6001"
+          ],
+          "title": "Product ID"
         }
       },
       "required": [
-        "interface",
-        "subsystem"
+        "interface"
       ],
-      "title": "CustomDevicePlug",
+      "title": "CustomDevicePlugModel",
       "type": "object"
     },
     "DesktopPlug": {
@@ -61,6 +81,10 @@
       ],
       "title": "DesktopPlug",
       "type": "object"
+    },
+    "DeviceID": {
+      "pattern": "^(?:0x)?[a-fA-F0-9]+$",
+      "type": "string"
     },
     "Endpoint": {
       "type": "string"
@@ -442,6 +466,20 @@
       ],
       "default": null,
       "title": "Source-Code"
+    },
+    "website": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Website"
     },
     "license": {
       "anyOf": [

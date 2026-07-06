@@ -65,7 +65,9 @@ type Camera struct {
 
 type CustomDevice struct {
 	Name      string `json:"name"`
-	Subsystem string `json:"subsystem"`
+	Subsystem string `json:"subsystem,omitempty"`
+	VendorID  string `json:"vendorid,omitempty"`
+	ProductID string `json:"productid,omitempty"`
 }
 
 type Mount struct {

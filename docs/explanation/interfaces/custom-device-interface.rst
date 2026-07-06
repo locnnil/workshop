@@ -32,7 +32,9 @@ which is declared in the SDK definition.
 
 Its structure includes the name of the plug,
 the interface (:samp:`custom-device`),
-and a :samp:`subsystem` attribute.
+and the optional :samp:`subsystem`, :samp:`vendorid`,
+and :samp:`productid` device filters.
+At least one of these filters must be set.
 
 Defining the plug in an SDK
 allows the workshops using this SDK to connect to matching devices,
@@ -55,6 +57,29 @@ One way to query device properties is :command:`udevadm info`:
    $ udevadm info --query=property --property=SUBSYSTEM /dev/input/event0
 
      SUBSYSTEM=input
+
+
+.. _exp_custom_device_filters:
+
+Product and vendor filters
+--------------------------
+
+When a subsystem matches more devices than wanted,
+the optional :samp:`vendorid` and :samp:`productid` attributes
+narrow the selection down to devices
+reporting the given vendor and product ID.
+Both are matched against the respective identifiers reported by the kernel,
+which can be queried with :command:`udevadm info`:
+
+.. code-block:: console
+
+   $ udevadm info --query=property --property=ID_VENDOR_ID --property=ID_MODEL_ID /dev/ttyUSB0
+
+     ID_VENDOR_ID=0403
+     ID_MODEL_ID=6001
+
+Because a product ID is only meaningful within a vendor's namespace,
+setting :samp:`productid` also requires :samp:`vendorid`.
 
 
 .. _exp_custom_device_slot:
