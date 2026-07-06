@@ -1,0 +1,5 @@
+name: input-sdk
+plugs:
+  input-device:
+    interface: custom-device
+    subsystem: input

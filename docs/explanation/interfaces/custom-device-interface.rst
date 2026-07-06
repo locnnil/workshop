@@ -134,6 +134,11 @@ Explanation:
 - :ref:`exp_workshop_definition`
 
 
+How-to guides:
+
+- :ref:`how_use_host_devices`
+
+
 Reference:
 
 - :ref:`ref_workshop_connect`
