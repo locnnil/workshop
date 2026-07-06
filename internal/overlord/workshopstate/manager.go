@@ -23,6 +23,7 @@ import (
 	"github.com/canonical/workshop/internal/logger"
 	. "github.com/canonical/workshop/internal/overlord/handlersetup"
 	"github.com/canonical/workshop/internal/overlord/state"
+	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/workshop"
 	lxdbackend "github.com/canonical/workshop/internal/workshop/lxd"
 )
@@ -176,4 +177,9 @@ func (w *WorkshopManager) Workshops(ctx context.Context, pId string) ([]*worksho
 	}
 
 	return workshops, nil
+}
+
+// Returns the current snapshot format revision.
+func (w *WorkshopManager) FormatRevision() sdk.Revision {
+	return w.backend.FormatRevision()
 }

@@ -1,0 +1,4 @@
+# Based on 85-nm-unmanaged.rules; in addition to veth devices it doesn't
+# really make sense to let NetworkManager or systemd-networkd think they own
+# a device created by LXD (and Workshop).
+SUBSYSTEM=="net", ACTION=="add|change|move", ENV{ID_NET_DRIVER}=="bridge", ENV{INTERFACE}=="workshopbr[0-9]*", ENV{NM_UNMANAGED}="1", ENV{ID_NET_MANAGED_BY}="com.ubuntu.Workshop"

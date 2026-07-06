@@ -3,9 +3,9 @@
 # snapshotSuite.TestLxdBackendSnapshotFormat test. It records the writable
 # parts of workshops and snapshots at each step from launch to snapshot.
 # Changes to this file may or may not influence the snapshot format. For
-# instance the cloud-init config (user.user-data) is likely to modify files
-# and therefore change the snapshot format. Other options like boot.autostart
-# are omitted from snapshots and have no effect.
+# instance cloud-init.user-data is likely to modify files and therefore change
+# the snapshot format. Other options like boot.autostart are omitted from
+# snapshots and have no effect.
 launched:
   architecture: ''
   config:
@@ -15,8 +15,7 @@ launched:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
-    user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -54,8 +53,7 @@ started:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
-    user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -93,8 +91,7 @@ sdk-attached:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
-    user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -144,8 +141,7 @@ sdk-mounted:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    user.network-config: 'c430dc387765e5a465f12dab5afee35b11930e1e4d4eb4e381707f479e1d856877940293fcf860a8f59636a96ffa412d'
-    user.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''

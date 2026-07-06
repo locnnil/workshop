@@ -26,7 +26,6 @@ import (
 	"gopkg.in/tomb.v2"
 
 	"github.com/canonical/workshop/internal/dirs"
-	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/interfaces"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/overlord"
@@ -372,8 +371,8 @@ func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsJammy)
 
-	reset := s.backend.SetWorkshopFsCallback(func(ctx context.Context, name string) (fsutil.Fs, error) {
-		return fsutil.Fs{}, errors.New("fs is unavailable")
+	reset := s.backend.SetLaunchOrRebuildCallback(func(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
+		return errors.New("contrived error")
 	})
 	defer reset()
 
@@ -395,7 +394,7 @@ func (s *workshopHandlers) TestCreateWorkshopCleanup(c *check.C) {
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(contrived error\)`)
 	_, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, testutil.ErrorIs, workshop.ErrWorkshopNotLaunched)
 }
@@ -405,8 +404,8 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	defer s.state.Unlock()
 	s.createWFile(c, "ws", wsJammy)
 
-	reset := s.backend.SetWorkshopFsCallback(func(ctx context.Context, name string) (fsutil.Fs, error) {
-		return fsutil.Fs{}, errors.New("fs is unavailable")
+	reset := s.backend.SetLaunchOrRebuildCallback(func(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
+		return errors.New("contrived error")
 	})
 	defer reset()
 
@@ -429,7 +428,7 @@ func (s *workshopHandlers) TestRebuildWorkshopNoCleanup(c *check.C) {
 	s.state.Lock()
 
 	c.Assert(t1.Status(), check.Equals, state.ErrorStatus)
-	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(fs is unavailable\)`)
+	c.Check(chg.Err(), check.ErrorMatches, `(?s).*\(contrived error\)`)
 	ws, err := s.backend.Workshop(s.ctx, "ws")
 	c.Assert(err, check.IsNil)
 	c.Check(ws.Image, check.Equals, image)

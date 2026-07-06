@@ -290,7 +290,7 @@ func (s *manifestSuite) TestRefreshOK(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Update format revision number
-	s.backend.SetFormatRevision(sdk.R(2))
+	defer s.backend.SetFormatRevision(sdk.R(2))()
 
 	// Retrieve manifests.
 	current, latest, err := s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1", "test-2"}, conflict.RefreshUpdate)
@@ -440,6 +440,18 @@ func (s *manifestSuite) TestRefreshRequiresStatusReady(c *check.C) {
 
 	_, _, err = s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1", "test-2", "test-3"}, conflict.RefreshRestore)
 	c.Assert(err, check.ErrorMatches, `cannot refresh "test-2": not running`)
+}
+
+func (s *manifestSuite) TestRestoreRequiresCurrentFormat(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	s.launchWorkshopWithSDKs(c, "test-1", "ubuntu@20.04", nil)
+
+	defer s.backend.SetFormatRevision(sdk.R(2))()
+
+	_, _, err := s.manager.RefreshManifests(s.ctx, s.project, []string{"test-1"}, conflict.RefreshRestore)
+	c.Assert(err, check.ErrorMatches, `cannot refresh "test-1": workshop created using incompatible Workshop version`)
 }
 
 // TestRefreshManifestsWaitingReturnsChangeConflict checks that refresh returns a

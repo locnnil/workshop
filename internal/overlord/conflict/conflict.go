@@ -227,7 +227,7 @@ func BackgroundDiscard(chg *state.Change, workshop string) {
 // for the given workshop. Depending on the mode the change will either be
 // turned into Doing (Continue mode) or Abort (Abort mode).
 func ResumeAfterWait(
-	st *state.State, workshop string, projectId string, mode Mode, action string,
+	st *state.State, format sdk.Revision, workshop string, projectId string, mode Mode, action string,
 ) (*state.Change, error) {
 	if mode != ChangeAbort && mode != ChangeContinue {
 		return nil, fmt.Errorf("cannot resume: only abort or continue can be used to resume the operation")
@@ -260,6 +260,16 @@ func ResumeAfterWait(
 			return nil, err
 		}
 		chg.Set("attempt", attempt+1)
+	}
+
+	if mode == ChangeContinue && (chg.Kind() == "launch" || chg.Kind() == "refresh") {
+		var chgFormat sdk.Revision
+		if err := chg.Get(workshop+"_new_format", &chgFormat); err != nil {
+			return nil, fmt.Errorf("internal error: %q workshop new format not found (change ID: %s)", workshop, chg.ID())
+		}
+		if chgFormat != format {
+			return nil, fmt.Errorf("cannot %s: %s started by an incompatible Workshop version", mode, chg.Kind())
+		}
 	}
 
 	for _, tsk := range chg.Tasks() {

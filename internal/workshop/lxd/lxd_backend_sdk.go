@@ -451,15 +451,20 @@ func (s *Backend) InstallSdk(ctx context.Context, name string, setup sdk.Setup) 
 	}
 	defer conn.Disconnect()
 
-	if mount.MakeWhere {
-		if err := s.mkdir(conn, InstanceName(name, projectId), mount.Where, mount.Mode); err != nil {
-			return err
-		}
-	}
-
 	inst, etag, err := conn.GetInstance(InstanceName(name, projectId))
 	if err != nil {
 		return err
+	}
+
+	// Without this LXC creates the SDK directory with 000 permissions before
+	// mounting over it. If the instance isn't running, it means we're
+	// reinstalling SDKs after rebuilding from a snapshot, and the directory
+	// already exists (with correct permissions) inside the snapshot.
+	running := inst.StatusCode == api.Running || inst.StatusCode == api.Ready
+	if running && mount.MakeWhere {
+		if err := s.mkdir(conn, InstanceName(name, projectId), mount.Where, mount.Mode); err != nil {
+			return err
+		}
 	}
 
 	if _, exist := inst.Devices[mount.Name]; exist {

@@ -18,16 +18,21 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"embed"
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
+	"os/user"
+	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-	"text/template"
+	"syscall"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -35,11 +40,14 @@ import (
 	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sshutil"
 	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -358,44 +366,30 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	}
 
 	if !snapshot.IsBase() {
-		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot)
+		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, usr, req, snapshot)
 	}
 
 	req.Source = api.InstanceSource{
 		Type:        api.SourceTypeImage,
 		Fingerprint: snapshot.Image.Fingerprint,
 	}
-	if err := s.launchOrRebuildFromImage(conn, req); err != nil {
+	if err := s.launchOrRebuildFromImage(conn, usr, req); err != nil {
 		return err
 	}
 
-	if err := s.adjustInstanceTemplates(conn, snapshot.Format, req.Name); err != nil {
-		return err
-	}
-
-	fs, err := s.instanceFs(conn, req.Name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	if snapshot.Format.N > 3 {
-		// cloud-init seems to ignore preserve_hostname in user-data, we have
-		// to bake it into the image instead.
-		cfg := strings.NewReader("preserve_hostname: true\n")
-		if err := fs.AtomicWriteTo(cfg, "/etc/cloud/cloud.cfg.d/99_preserve_hostname.cfg", 0644); err != nil {
-			return err
-		}
-	}
-
-	// Workaround https://github.com/canonical/lxd/issues/17983.
-	return fs.RemoveIfExists("/etc/systemd/system/graphical.target.wants/udisks2.service")
+	return s.adjustInstanceTemplates(conn, req.Name)
 }
 
-func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.InstancesPost) error {
+func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, usr *user.User, req api.InstancesPost) error {
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		// Create a new workshop.
+		config, err := sshConfig(usr, req.Name+"."+networkDomain)
+		if err != nil {
+			return err
+		}
+		maps.Copy(req.Config, config)
+
 		op, err := conn.CreateInstance(req)
 		if err != nil {
 			return err
@@ -442,7 +436,21 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 	return op.Wait()
 }
 
-// adjustInstanceTemplates sets /etc/hostname to the workshop's name.
+//go:embed templates/*.tpl
+var instanceTemplates embed.FS
+
+// adjustInstanceTemplates ensures LXD creates certain files before the
+// instance starts. The files are:
+//   - /etc/cloud/cloud.cfg.d/90_workshop.cfg (configure cloud-init settings
+//     before it runs)
+//   - /etc/hostname (set to the workshop's name)
+//   - /etc/machine-id (set to the LXD UUID, without dashes)
+//   - /etc/ssh_* (set workshop-specific SSH keys)
+//   - /etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf (set
+//     systemd-networkd options that are workshop-specific or unsupported by
+//     clout-init)
+//   - /var/lib/workshop/run/workshop.socket.untrusted (empty, to be replaced
+//     with a proxy socket)
 //
 // Also removes cloud-init seed files for NoCloud. The current Ubuntu 20.04
 // images contain a recent version of cloud-init that supports LXD, but these
@@ -454,51 +462,87 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 // from an image (although the instance-id is different for 22.04 and up), but
 // when rebuilding a workshop from a snapshot, it results in both the hostname
 // and instance-id being taken from the snapshot.
-func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Revision, name string) error {
+func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) error {
+	fromImage := []string{"create"}
+	fromSnapshot := []string{"create", "copy"}
+
+	templates := map[string]*api.ImageMetadataTemplate{
+		"/etc/cloud/cloud.cfg.d/90_workshop.cfg": {
+			When:     fromImage,
+			Template: "cloud.cfg.tpl",
+		},
+		"/etc/hostname": {
+			When:     fromSnapshot,
+			Template: "hostname.tpl",
+		},
+		"/etc/machine-id": {
+			When:     fromSnapshot,
+			Template: "machine-id.tpl",
+		},
+		"/etc/ssh/ssh_host_ed25519_key": {
+			When:     fromSnapshot,
+			Template: "ssh_host_ed25519_key.tpl",
+		},
+		"/etc/ssh/ssh_host_ed25519_key.pub": {
+			When:     fromSnapshot,
+			Template: "ssh_host_ed25519_key.pub.tpl",
+		},
+		"/etc/ssh/ssh_host_ed25519_key-cert.pub": {
+			When:     fromSnapshot,
+			Template: "ssh_host_ed25519_key-cert.pub.tpl",
+		},
+		"/etc/ssh/ssh_ca_ed25519_key.pub": {
+			When:     fromSnapshot,
+			Template: "ssh_ca_ed25519_key.pub.tpl",
+		},
+		"/etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf": {
+			When:       fromSnapshot,
+			Template:   "eth0.network.tpl",
+			Properties: map[string]string{"domain": networkDomain},
+		},
+		dirs.WorkshopSocketPath + ".untrusted": {
+			When:       fromImage,
+			CreateOnly: true,
+			Template:   "workshop.socket.untrusted.tpl",
+		},
+	}
+
 	metadata, etag, err := conn.GetInstanceMetadata(name)
 	if err != nil {
 		return err
 	}
 
-	modified := false
-	hostname := metadata.Templates["/etc/hostname"]
-	if format.N > 3 && hostname == nil {
-		hostname = &api.ImageMetadataTemplate{
-			When:     []string{"create", "copy"},
-			Template: "hostname.tpl",
-		}
-		if metadata.Templates == nil {
-			metadata.Templates = map[string]*api.ImageMetadataTemplate{}
-		}
-		metadata.Templates["/etc/hostname"] = hostname
-		modified = true
-	}
-
 	deleted := make([]string, 0, len(metadata.Templates))
 	for path, template := range metadata.Templates {
-		if !strings.HasPrefix(path, "/var/lib/cloud/seed/nocloud-net/") {
+		if strings.HasPrefix(path, "/var/lib/cloud/seed/nocloud-net/") {
+			// Remove NoCloud metadata and fall through to remove templates.
+			delete(metadata.Templates, path)
+		} else if t := templates[path]; t == nil || template == nil || t.Template == template.Template {
+			// Skip other templates unless we're about to replace them.
 			continue
 		}
-		delete(metadata.Templates, path)
-		modified = true
 		if template != nil {
 			deleted = append(deleted, template.Template)
 		}
 	}
 
-	if format.N > 3 {
-		// LXD uses an old version of pongo2 which doesn't support [].
-		tpl := `{{ config_get("user.workshop.name", "") }}
-`
-		if err := conn.CreateInstanceTemplateFile(name, hostname.Template, strings.NewReader(tpl)); err != nil {
+	if metadata.Templates == nil {
+		metadata.Templates = map[string]*api.ImageMetadataTemplate{}
+	}
+	maps.Copy(metadata.Templates, templates)
+
+	files, err := instanceTemplates.ReadDir("templates")
+	if err != nil {
+		return err
+	}
+	for _, entry := range files {
+		if err := createInstanceTemplateFile(conn, name, entry.Name()); err != nil {
 			return err
 		}
 	}
 
-	if modified {
-		if err := conn.UpdateInstanceMetadata(name, *metadata, etag); err != nil {
-			return err
-		}
+	if err := conn.UpdateInstanceMetadata(name, *metadata, etag); err != nil {
+		return err
 	}
 
 	for _, template := range deleted {
@@ -508,6 +552,15 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Re
 	}
 
 	return nil
+}
+
+func createInstanceTemplateFile(conn lxd.InstanceServer, instance, filename string) error {
+	f, err := instanceTemplates.Open(path.Join("templates", filename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return conn.CreateInstanceTemplateFile(instance, filename, f.(io.ReadSeeker))
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, timeout int) error {
@@ -878,7 +931,7 @@ func (s *Backend) Workshop(ctx context.Context, name string) (*workshop.Workshop
 		cnames, _ = unmarshalDnsmasq(network.Config["raw.dnsmasq"])
 	}
 	if cnames == nil {
-		// Tell loadWorkshop to add the hostname-missing note.
+		// Tell loadWorkshop to add the hostname-fallback note.
 		cnames = []cname{}
 	}
 
@@ -941,7 +994,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	running := inst.StatusCode == api.Running || inst.StatusCode == api.Ready
-	hostname := b.hostname(f.Name, p, format, running, cnames)
+	hostname := b.hostname(f.Name, p, running, cnames)
 
 	return &workshop.Workshop{
 		Backend:  b,
@@ -957,7 +1010,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}, nil
 }
 
-func (s *Backend) hostname(name string, p workshop.Project, format sdk.Revision, running bool, cnames []cname) workshop.Hostname {
+func (s *Backend) hostname(name string, p workshop.Project, running bool, cnames []cname) workshop.Hostname {
 	var hostname workshop.Hostname
 	if cnames == nil {
 		// Skip adding notes if we weren't given the CNAME entries (i.e. when
@@ -971,8 +1024,9 @@ func (s *Backend) hostname(name string, p workshop.Project, format sdk.Revision,
 	if idx >= 0 {
 		hostname.Domain = cnames[idx].friendly()
 		hostname.Note = cnames[idx].Note
-	} else if running && format.N > 3 {
-		hostname.Note = "hostname-missing"
+	} else if running {
+		hostname.Domain = InstanceName(name, p.ProjectId) + "." + networkDomain
+		hostname.Note = "hostname-fallback"
 	}
 
 	return hostname
@@ -1137,7 +1191,7 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
-	cloudConfigTemplate := `
+	cloudConfig := `
 #cloud-config
 users:
   - default
@@ -1145,7 +1199,6 @@ users:
     primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-{{- if gt .Format 1}}
     create_groups: false
     groups:
     - 'adm'
@@ -1183,9 +1236,7 @@ bootcmd:
   maybe_groupadd 110 render-compat-110
   maybe_groupadd 990 render-compat-990
   maybe_groupadd 992 render-compat-992
-{{else}}
-    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
-{{end -}}
+- chmod 0600 /etc/ssh/ssh_host_ed25519_key
 apt:
   conf: |
     # Installed by workshop
@@ -1200,15 +1251,15 @@ apt:
     APT::Get::Assume-Yes "1";
 grub_dpkg:
   enabled: false
+ssh_deletekeys: false
 ssh_genkeytypes: [ed25519]
 write_files:
-- content: |
-    [DHCPv4]
-    SendRelease=false
-
-    [DHCPv6]
-    SendRelease=false
-  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
+  - path: /etc/cloud/cloud-init.disabled
+    defer: true
+  - path: /etc/ssh/sshd_config.d/90-workshop.conf
+    content: |
+      HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+      TrustedUserCAKeys /etc/ssh/ssh_ca_ed25519_key.pub
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1216,45 +1267,7 @@ runcmd:
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
-  # Required to load above DHCP config.
-  - networkctl reload
 `[1:]
-
-	// Based on lxd-imagebuilder Ubuntu template. By default
-	// systemd-networkd derives the DHCP client ID from /etc/machine-id,
-	// which can change when refreshing to a new base image.
-	networkConfigTemplate := `network:
-  version: 2
-  ethernets:
-    eth0:
-      dhcp4: true
-      dhcp-identifier: mac
-{{- if gt .Format 3}}
-      dhcp4-overrides:
-        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
-      dhcp6-overrides:
-        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
-{{- end -}}
-{{- if gt .Format 2}}
-      nameservers:
-        search: [{{printf "%s.%s" .ProjectID .Domain | printf "%q"}}, {{printf "%q" .Domain}}]
-{{else}}
-{{end -}}
-`
-
-	dot := struct {
-		Format    int
-		Domain    string
-		ProjectID string
-		Workshop  string
-	}{
-		Format:    format.N,
-		Domain:    networkDomain,
-		ProjectID: projectId,
-		Workshop:  file.Name,
-	}
-	cloudConfig := mustExecute("cloud-config", cloudConfigTemplate, dot)
-	networkConfig := mustExecute("network-config", networkConfigTemplate, dot)
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
@@ -1267,8 +1280,7 @@ runcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"user.user-data":                 cloudConfig,
-		"user.network-config":            networkConfig,
+		"cloud-init.user-data":           cloudConfig,
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
@@ -1285,18 +1297,219 @@ runcmd:
 	return cfg, nil
 }
 
-func mustExecute(name, text string, dot any) string {
-	t, err := template.New(name).Parse(text)
+func sshConfig(usr *user.User, hostname string) (map[string]string, error) {
+	identity, authority, err := createOrLoadCAKeys(usr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	var builder strings.Builder
-	if err := t.Execute(&builder, dot); err != nil {
-		panic(err)
+	pub, priv, err := sshutil.GenerateKey("root@" + hostname)
+	if err != nil {
+		return nil, err
+	}
+	data, err := priv.MarshalText()
+	if err != nil {
+		return nil, err
 	}
 
-	return builder.String()
+	cert, err := authority.SignHostKey(*pub)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"user.ed25519-key.private":     string(data),
+		"user.ed25519-key.public":      pub.String(),
+		"user.ed25519-key.certificate": cert.String(),
+		"user.ed25519-key.workshop-ca": identity.String(),
+	}, nil
+}
+
+func createOrLoadCAKeys(usr *user.User) (*sshutil.PublicKey, *sshutil.PrivateKey, error) {
+	identity, authority, err := loadCAKeys(usr)
+	if !errors.Is(err, os.ErrNotExist) {
+		return identity, authority, err
+	}
+
+	if err := ensureCAKeys(usr); err != nil {
+		return nil, nil, err
+	}
+	return loadCAKeys(usr)
+}
+
+func loadCAKeys(usr *user.User) (*sshutil.PublicKey, *sshutil.PrivateKey, error) {
+	data, err := os.ReadFile(filepath.Join(dirs.WorkshopSSHDir, usr.Uid, "id_ed25519_ca.pub"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	identity, err := sshutil.ParsePublicKey(data)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data, err = os.ReadFile(filepath.Join(dirs.WorkshopSSHDir, usr.Uid, "id_ed25519_ca"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authority, err := sshutil.ParsePrivateKey(data, identity.Comment())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return identity, authority, nil
+}
+
+func ensureCAKeys(usr *user.User) error {
+	if err := os.MkdirAll(dirs.WorkshopSSHDir, 0755); err != nil {
+		return err
+	}
+
+	removeTemp := revert.New()
+	defer removeTemp.Fail()
+
+	temp, err := os.MkdirTemp(dirs.WorkshopSSHDir, usr.Uid+".*~")
+	if err != nil {
+		return err
+	}
+	removeTemp.Add(func() { _ = os.RemoveAll(temp) })
+
+	closeDir := revert.New()
+	defer closeDir.Fail()
+
+	d, err := os.Open(temp)
+	if err != nil {
+		return err
+	}
+	closeDir.Add(func() { d.Close() })
+
+	if err := d.Chmod(0755); err != nil {
+		return err
+	}
+
+	target := filepath.Join(dirs.WorkshopSSHDir, usr.Uid)
+	if err := writeCAKeys(usr, temp, target); err != nil {
+		return err
+	}
+
+	if err := d.Sync(); err != nil {
+		return err
+	}
+	if err := d.Close(); err != nil {
+		return err
+	}
+	closeDir.Success()
+
+	// One error comes from Go's pre-existence check, the other from syscall.Rename.
+	if err := os.Rename(temp, target); errors.Is(err, os.ErrExist) || errors.Is(err, syscall.ENOTEMPTY) {
+		// Someone else beat us to it, discard the keys and temp dir.
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	removeTemp.Success()
+	return nil
+}
+
+func writeCAKeys(usr *user.User, temp, target string) error {
+	identity, authority, err := sshutil.GenerateKey("Workshop-CA")
+	if err != nil {
+		return err
+	}
+
+	pub, priv, err := sshutil.GenerateKey(workshop.User.Username + "@" + networkDomain)
+	if err != nil {
+		return err
+	}
+
+	cert, err := authority.SignUserKey(*pub, []string{workshop.User.Username})
+	if err != nil {
+		return err
+	}
+
+	uid, gid, err := osutil.UidGid(usr)
+	if err != nil {
+		return err
+	}
+
+	certPath, err1 := escapeSSHPath(target, "id_ed25519-cert.pub")
+	privPath, err2 := escapeSSHPath(target, "id_ed25519")
+	knownHostsPath, err3 := escapeSSHPath(target, "known_hosts")
+	if err := cmp.Or(err1, err2, err3); err != nil {
+		return err
+	}
+
+	knownHosts := fmt.Sprintf("@cert-authority *.%s %s\n", networkDomain, identity)
+	configTemplate := `
+Host *.%s
+	CertificateFile %s
+	IdentitiesOnly yes
+	IdentityFile %s
+	User %s
+	UserKnownHostsFile %s
+`[1:]
+	config := fmt.Sprintf(configTemplate, networkDomain, certPath, privPath, workshop.User.Username, knownHostsPath)
+
+	if err := writePublicKey(filepath.Join(temp, "id_ed25519_ca.pub"), *identity, osutil.NoChown, osutil.NoChown); err != nil {
+		return err
+	}
+	if err := writePrivateKey(filepath.Join(temp, "id_ed25519_ca"), *authority, osutil.NoChown, osutil.NoChown); err != nil {
+		return err
+	}
+	if err := writePublicKey(filepath.Join(temp, "id_ed25519.pub"), *pub, uid, gid); err != nil {
+		return err
+	}
+	if err := writePrivateKey(filepath.Join(temp, "id_ed25519"), *priv, uid, gid); err != nil {
+		return err
+	}
+	if err := writePublicKey(filepath.Join(temp, "id_ed25519-cert.pub"), *cert, uid, gid); err != nil {
+		return err
+	}
+	if err := writeFileSync(filepath.Join(temp, "known_hosts"), []byte(knownHosts), 0644, uid, gid); err != nil {
+		return err
+	}
+	return writeFileSync(filepath.Join(temp, "config"), []byte(config), 0644, uid, gid)
+}
+
+func escapeSSHPath(elem ...string) (string, error) {
+	path := filepath.Join(elem...)
+	if strings.Contains(path, "${") || strings.Contains(path, "\n") {
+		return "", fmt.Errorf("unrepresentable SSH config value: %q", path)
+	}
+
+	path = strings.ReplaceAll(path, "%", "%%")
+	path = strings.ReplaceAll(path, "\\", "\\\\")
+	path = strings.ReplaceAll(path, "\"", "\\\"")
+	return "\"" + path + "\"", nil
+}
+
+func writePublicKey(name string, key sshutil.PublicKey, uid sys.UserID, gid sys.GroupID) error {
+	return writeFileSync(name, []byte(key.String()+"\n"), 0644, uid, gid)
+}
+
+func writePrivateKey(name string, key sshutil.PrivateKey, uid sys.UserID, gid sys.GroupID) error {
+	pem, err := key.MarshalText()
+	if err != nil {
+		return err
+	}
+	return writeFileSync(name, pem, 0600, uid, gid)
+}
+
+func writeFileSync(name string, data []byte, perm os.FileMode, uid sys.UserID, gid sys.GroupID) error {
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err == nil && (uid != osutil.NoChown || gid != osutil.NoChown) {
+		err = sys.Chown(f, uid, gid)
+	}
+	if err == nil {
+		err = f.Sync()
+	}
+	return cmp.Or(err, f.Close())
 }
 
 func FakeStartCommand(script string) func() {

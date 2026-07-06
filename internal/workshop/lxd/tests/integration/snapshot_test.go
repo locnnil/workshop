@@ -39,7 +39,6 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -109,29 +108,17 @@ func (s *snapshotSuite) TearDownSuite(c *check.C) {
 // This suite deliberately doesn't override the default devices, so the test
 // snapshots match the real ones more closely. As a consequence we have to do a
 // bit of extra work to launch a workshop.
-func (s *snapshotSuite) launchWorkshop(c *check.C, file *workshop.File, snapshot workshop.Snapshot) *revert.Reverter {
+func (s *snapshotSuite) launchWorkshop(c *check.C, file *workshop.File, snapshot workshop.Snapshot) func() {
 	err := os.MkdirAll(workshop.AptCacheDir(s.project.ProjectId, file.Name), 0755)
 	c.Assert(err, check.IsNil)
 
-	rev := revert.New()
-	defer rev.Fail()
-
 	err = s.bd.LaunchOrRebuildWorkshop(s.ctx, file, snapshot)
 	c.Assert(err, check.IsNil)
-	rev.Add(func() {
+
+	return func() {
 		reverr := s.bd.RemoveWorkshop(s.ctx, file.Name)
 		c.Check(reverr, check.IsNil)
-	})
-
-	fs, err := s.bd.WorkshopFs(s.ctx, file.Name)
-	c.Assert(err, check.IsNil)
-	err = fs.MkdirAll(dirs.WorkshopRunDir, 0755)
-	fs.Close()
-	c.Assert(err, check.IsNil)
-
-	clone := rev.Clone()
-	rev.Success()
-	return clone
+	}
 }
 
 //go:embed snapshot-format.yaml
@@ -163,8 +150,9 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 		},
 	}
 	snapshot := workshop.BaseOnly(s.bd.FormatRevision(), image.Name, image.Fingerprint)
-	rev := s.launchWorkshop(c, wf, snapshot)
-	defer rev.Fail()
+
+	remove := s.launchWorkshop(c, wf, snapshot)
+	defer remove()
 
 	// Validate post-launch metadata.
 	launched := s.workshopFormat(c, wf, snapshot)
@@ -267,15 +255,9 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, snapshot.Format.String())
 	delete(inst.Config, "user.workshop.format-revision")
 
-	// Hardware-dependent, not much influence on snapshots.
-	delete(inst.Config, "nvidia.driver.capabilities")
-	delete(inst.Config, "nvidia.runtime")
-
-	// These ones are a bit long, replace with hash for readability.
-	digest := sha3.Sum384([]byte(inst.Config["user.network-config"]))
-	inst.Config["user.network-config"] = hex.EncodeToString(digest[:])
-	digest = sha3.Sum384([]byte(inst.Config["user.user-data"]))
-	inst.Config["user.user-data"] = hex.EncodeToString(digest[:])
+	// This one is a bit long, replace with hash for readability.
+	digest := sha3.Sum384([]byte(inst.Config["cloud-init.user-data"]))
+	inst.Config["cloud-init.user-data"] = hex.EncodeToString(digest[:])
 
 	// Host paths of default devices can change without affecting the
 	// workshop, so we exclude them from the hash. Other device options
@@ -354,17 +336,14 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	err = s.bd.DownloadBase(s.ctx, image, nil)
 	c.Assert(err, check.IsNil)
 
-	rev := revert.New()
-	defer rev.Fail()
-
 	// Launch first workshop.
 	wf1 := &workshop.File{
 		Name: "test1",
 		Base: base,
 	}
 	baseOnly := workshop.BaseOnly(s.bd.FormatRevision(), image.Name, image.Fingerprint)
-	r := s.launchWorkshop(c, wf1, baseOnly)
-	revert.Copy(rev, r)
+	remove := s.launchWorkshop(c, wf1, baseOnly)
+	defer remove()
 
 	// Start first workshop to take snapshot.
 	err = s.bd.StartWorkshop(s.ctx, "test1")
@@ -385,8 +364,8 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 		Name: "test2",
 		Base: base,
 	}
-	r = s.launchWorkshop(c, wf2, baseOnly)
-	revert.Copy(rev, r)
+	remove = s.launchWorkshop(c, wf2, baseOnly)
+	defer remove()
 
 	// Start second workshop to run cloud-init.
 	err = s.bd.StartWorkshop(s.ctx, "test2")
@@ -400,8 +379,8 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 		Name: "test3",
 		Base: base,
 	}
-	r = s.launchWorkshop(c, wf3, snapshot)
-	revert.Copy(rev, r)
+	remove = s.launchWorkshop(c, wf3, snapshot)
+	defer remove()
 
 	// Start third workshop to run cloud-init (again).
 	err = s.bd.StartWorkshop(s.ctx, "test3")
@@ -444,13 +423,11 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 
 	// Ensure certain files are unique.
 	c.Check(files[0].hostname, check.Not(check.Equals), files[1].hostname)
-	c.Check(files[0].instanceID, check.Not(check.Equals), files[1].instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), files[1].machineID)
 	c.Check(files[0].networkCfg, check.Not(check.Equals), files[1].networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), files[1].sshKey)
 
 	c.Check(files[0].hostname, check.Not(check.Equals), files[2].hostname)
-	c.Check(files[0].instanceID, check.Not(check.Equals), files[2].instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), files[2].machineID)
 	c.Check(files[0].networkCfg, check.Not(check.Equals), files[2].networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), files[2].sshKey)
@@ -482,14 +459,11 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Assert(err, check.IsNil)
 	restored := extractUniqueFiles(c, roots[0])
 
-	// Check that only LXD-managed attributes are preserved. Ideally the
-	// machine-id and SSH key should be preserved too, but in the meantime we
-	// should enforce the current behaviour.
+	// Check that only Workshop-managed attributes are preserved.
 	c.Check(files[0].hostname, check.Equals, restored.hostname)
-	c.Check(files[0].instanceID, check.Equals, restored.instanceID)
-	c.Check(files[0].machineID, check.Not(check.Equals), restored.machineID)
+	c.Check(files[0].machineID, check.Equals, restored.machineID)
 	c.Check(files[0].networkCfg, check.Equals, restored.networkCfg)
-	c.Check(files[0].sshKey, check.Not(check.Equals), restored.sshKey)
+	c.Check(files[0].sshKey, check.Equals, restored.sshKey)
 
 	// Check for unexpected differences.
 	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[1], roots[0]).CombinedOutput()
@@ -516,15 +490,11 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Assert(err, check.IsNil)
 	refreshed := extractUniqueFiles(c, roots[0])
 
-	// Check that only LXD-managed attributes are preserved.
+	// Check that only Workshop-managed attributes are preserved.
 	c.Check(files[0].hostname, check.Equals, refreshed.hostname)
-	c.Check(files[0].instanceID, check.Equals, refreshed.instanceID)
-	c.Check(files[0].machineID, check.Not(check.Equals), refreshed.machineID)
+	c.Check(files[0].machineID, check.Equals, refreshed.machineID)
 	c.Check(files[0].networkCfg, check.Equals, refreshed.networkCfg)
-	c.Check(files[0].sshKey, check.Not(check.Equals), refreshed.sshKey)
-
-	c.Check(files[2].machineID, check.Not(check.Equals), refreshed.machineID)
-	c.Check(files[2].sshKey, check.Not(check.Equals), refreshed.sshKey)
+	c.Check(files[0].sshKey, check.Equals, refreshed.sshKey)
 
 	// Check for unexpected differences.
 	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[2], roots[0]).CombinedOutput()
@@ -565,7 +535,6 @@ func (s *snapshotSuite) rootfsMount(name string) (mount, error) {
 
 type uniqueFiles struct {
 	hostname   string
-	instanceID string
 	machineID  string
 	networkCfg string
 	sshKey     string
@@ -577,11 +546,9 @@ type uniqueFiles struct {
 func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	hostname, err := os.ReadFile(filepath.Join(path, "etc", "hostname"))
 	c.Assert(err, check.IsNil)
-	instanceID, err := os.ReadFile(filepath.Join(path, "var", "lib", "cloud", "data", "instance-id"))
-	c.Assert(err, check.IsNil)
 	machineID, err := os.ReadFile(filepath.Join(path, "etc", "machine-id"))
 	c.Assert(err, check.IsNil)
-	networkCfg, err := os.ReadFile(filepath.Join(path, "etc", "netplan", "50-cloud-init.yaml"))
+	networkCfg, err := os.ReadFile(filepath.Join(path, "etc", "systemd", "network", "10-cloud-init-eth0.network.d", "workshop.conf"))
 	c.Assert(err, check.IsNil)
 	sshKey, err := os.ReadFile(filepath.Join(path, "etc", "ssh", "ssh_host_ed25519_key.pub"))
 	c.Assert(err, check.IsNil)
@@ -589,8 +556,11 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	files := []string{
 		"etc/hostname",
 		"etc/machine-id",
-		"etc/netplan/50-cloud-init.yaml",
+		"etc/ssh/ssh_host_ed25519_key",
+		"etc/ssh/ssh_host_ed25519_key.pub",
+		"etc/ssh/ssh_host_ed25519_key-cert.pub",
 		"etc/sudoers.d/90-cloud-init-users",
+		"etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf",
 		"var/cache/ldconfig/aux-cache",
 		"var/lib/workshop/run/workshop.socket.untrusted",
 		"var/log/cloud-init.log",
@@ -609,7 +579,6 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	}
 
 	dirs := []string{
-		"etc/ssh",
 		"var/cache/snapd",
 		"var/lib/cloud",
 		"var/lib/snapd",
@@ -626,7 +595,6 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 
 	return uniqueFiles{
 		hostname:   string(hostname),
-		instanceID: string(instanceID),
 		machineID:  string(machineID),
 		networkCfg: string(networkCfg),
 		sshKey:     string(sshKey),

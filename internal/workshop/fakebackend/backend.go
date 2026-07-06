@@ -129,12 +129,13 @@ type FakeWorkshopBackend struct {
 
 	formatRevision sdk.Revision
 
-	snapshotLock         sync.Mutex
-	LaunchOrRebuildCalls []LaunchOrRebuildCall
-	SnapshotCalls        []SnapshotCall
-	SnapshotCallback     func(ctx context.Context, name string, snapshot workshop.Snapshot) error
-	Snapshots            []FakeSnapshot
-	RemovedSnapshots     []workshop.Snapshot
+	snapshotLock            sync.Mutex
+	LaunchOrRebuildCallback func(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error
+	LaunchOrRebuildCalls    []LaunchOrRebuildCall
+	SnapshotCalls           []SnapshotCall
+	SnapshotCallback        func(ctx context.Context, name string, snapshot workshop.Snapshot) error
+	Snapshots               []FakeSnapshot
+	RemovedSnapshots        []workshop.Snapshot
 
 	BaseDir     string
 	SnapshotDir string
@@ -206,6 +207,21 @@ func (f *FakeWorkshopBackend) project(user, id string) *workshop.Project {
 	return nil
 }
 
+func (s *FakeWorkshopBackend) SetLaunchOrRebuildCallback(c func(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error) func() {
+	s.workshopLock.Lock()
+	defer s.workshopLock.Unlock()
+
+	old := s.LaunchOrRebuildCallback
+	s.LaunchOrRebuildCallback = c
+
+	return func() {
+		s.workshopLock.Lock()
+		defer s.workshopLock.Unlock()
+
+		s.LaunchOrRebuildCallback = old
+	}
+}
+
 func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.File, snapshot workshop.Snapshot) error {
 	_, projectId, err := f.userProject(ctx)
 	if err != nil {
@@ -256,6 +272,10 @@ func (f *FakeWorkshopBackend) LaunchOrRebuildWorkshop(ctx context.Context, file 
 
 	call := LaunchOrRebuildCall{Workshop: ws.Name, File: file, Snapshot: snapshot}
 	f.LaunchOrRebuildCalls = append(f.LaunchOrRebuildCalls, call)
+
+	if f.LaunchOrRebuildCallback != nil {
+		return f.LaunchOrRebuildCallback(ctx, file, snapshot)
+	}
 	return nil
 }
 

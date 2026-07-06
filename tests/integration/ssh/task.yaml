@@ -1,0 +1,9 @@
+summary: Test SSH integration
+
+execute: |
+  rm -rf cover
+  mkdir cover
+
+  go test -cover "$SPREAD_PATH"/internal/sshutil -timeout=30m -tags=integration -check.v -check.f sshSuite -coverpkg=github.com/canonical/workshop/internal/sshutil -args -test.gocoverdir="$PWD"/cover
+artifacts:
+  - cover
