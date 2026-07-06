@@ -102,6 +102,7 @@ func init() {
 	// LXD is installed or refreshed, without a restart.
 	syscheck.RegisterCheck(checkServerCapabilities)
 	syscheck.RegisterCheck(ensureBackendReady)
+	syscheck.RegisterCheck(checkStorageSpace)
 }
 
 type Backend struct {
@@ -176,7 +177,7 @@ func checkVersion(version string) error {
 	return nil
 }
 
-func checkStorage(drivers []api.ServerStorageDriverInfo) error {
+func checkStorageDriver(drivers []api.ServerStorageDriverInfo) error {
 	hasDriver := func(driver api.ServerStorageDriverInfo) bool {
 		return driver.Name == storagePoolDriver
 	}
@@ -189,6 +190,46 @@ func checkStorage(drivers []api.ServerStorageDriverInfo) error {
 	//  exit status 1 (modprobe: FATAL: Module zfs not found ...)
 	// We keep the first part for consistency, the rest doesn't add much.
 	return fmt.Errorf(`suitable storage backend not found: error loading %q module`, storagePoolDriver)
+}
+
+// checkStorageSpace puts the daemon into degraded mode when the workshop
+// storage pool is 90% or more full, preventing further launches from failing
+// weirdly (e.g. on workshop remove causing troubles with backup yaml files
+// removal) due to lack of space.
+func checkStorageSpace() error {
+	const fullThresholdPct = 90
+
+	conn, err := lxd.ConnectLXDUnix("", nil)
+	if err != nil {
+		// LXD is not available; checkServerCapabilities handles this case.
+		return nil
+	}
+	defer conn.Disconnect()
+
+	res, err := conn.GetStoragePoolResources(storagePool)
+	if api.StatusErrorCheck(err, http.StatusNotFound) {
+		// Pool not yet created; ensureBackendReady handles this case.
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	if res.Space.Total == 0 {
+		// Cannot determine usage (e.g. directory-backed pools report zero).
+		return nil
+	}
+
+	usedPct := float64(res.Space.Used) / float64(res.Space.Total) * 100
+	if usedPct >= fullThresholdPct {
+		availGiB := float64(res.Space.Total-res.Space.Used) / (1024 * 1024 * 1024)
+		return fmt.Errorf("storage pool %q is %.0f%% full (%.1f GiB available); "+
+			"free up space or expand the pool with `lxc storage volume set workshop size=<N>GiB`\n"+
+			"For details see: https://ubuntu.com/workshop/docs/reference/workshops/#storage-pools-and-drivers",
+			storagePool, usedPct, availGiB)
+	}
+
+	return nil
 }
 
 func checkServerCapabilities() error {
@@ -210,7 +251,7 @@ func checkServerCapabilities() error {
 		return err
 	}
 
-	return checkStorage(info.Environment.StorageSupportedDrivers)
+	return checkStorageDriver(info.Environment.StorageSupportedDrivers)
 }
 
 // New constructs the LXD backend and attempts to prepare the required LXD
