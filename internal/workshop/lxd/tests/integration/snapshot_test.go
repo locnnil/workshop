@@ -267,10 +267,6 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, snapshot.Format.String())
 	delete(inst.Config, "user.workshop.format-revision")
 
-	// Hardware-dependent, not much influence on snapshots.
-	delete(inst.Config, "nvidia.driver.capabilities")
-	delete(inst.Config, "nvidia.runtime")
-
 	// These ones are a bit long, replace with hash for readability.
 	digest := sha3.Sum384([]byte(inst.Config["user.network-config"]))
 	inst.Config["user.network-config"] = hex.EncodeToString(digest[:])
