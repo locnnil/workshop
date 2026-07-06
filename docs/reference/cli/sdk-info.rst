@@ -21,7 +21,7 @@ Show SDK info.
 
 
 Prints the SDK's metadata,
-shows the revisions currently available in the SDK Store,
+shows the revisions currently available in the SDK Store,
 and lists workshops where the SDK is installed.
 
 Notes:
