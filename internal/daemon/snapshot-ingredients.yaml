@@ -54,6 +54,7 @@ FakeWorkshopBackend:
   DownloadBaseCallback:
   DownloadBaseCalls:
   AttachVolumeCalls:
+  LaunchOrRebuildCallback:
   LaunchOrRebuildCalls:
   SnapshotCalls:
   SnapshotCallback:

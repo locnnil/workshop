@@ -24,7 +24,6 @@ import (
 
 	"gopkg.in/tomb.v2"
 
-	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/osutil/sys"
@@ -119,18 +118,6 @@ func (m *WorkshopManager) doConstructWorkshop(task *state.Task, tomb *tomb.Tomb)
 
 	if err := m.backend.LaunchOrRebuildWorkshop(ctx, wf, *snapshot); err != nil {
 		return err
-	}
-
-	if snapshot.IsBase() {
-		// Create workshop base and run directories
-		fs, err := m.backend.WorkshopFs(ctx, wf.Name)
-		if err != nil {
-			return err
-		}
-		defer fs.Close()
-		if err = fs.MkdirAll(dirs.WorkshopRunDir, 0755); err != nil {
-			return err
-		}
 	}
 
 	rev.Success()

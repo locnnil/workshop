@@ -39,7 +39,6 @@ import (
 
 	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/osutil"
-	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
@@ -109,29 +108,17 @@ func (s *snapshotSuite) TearDownSuite(c *check.C) {
 // This suite deliberately doesn't override the default devices, so the test
 // snapshots match the real ones more closely. As a consequence we have to do a
 // bit of extra work to launch a workshop.
-func (s *snapshotSuite) launchWorkshop(c *check.C, file *workshop.File, snapshot workshop.Snapshot) *revert.Reverter {
+func (s *snapshotSuite) launchWorkshop(c *check.C, file *workshop.File, snapshot workshop.Snapshot) func() {
 	err := os.MkdirAll(workshop.AptCacheDir(s.project.ProjectId, file.Name), 0755)
 	c.Assert(err, check.IsNil)
 
-	rev := revert.New()
-	defer rev.Fail()
-
 	err = s.bd.LaunchOrRebuildWorkshop(s.ctx, file, snapshot)
 	c.Assert(err, check.IsNil)
-	rev.Add(func() {
+
+	return func() {
 		reverr := s.bd.RemoveWorkshop(s.ctx, file.Name)
 		c.Check(reverr, check.IsNil)
-	})
-
-	fs, err := s.bd.WorkshopFs(s.ctx, file.Name)
-	c.Assert(err, check.IsNil)
-	err = fs.MkdirAll(dirs.WorkshopRunDir, 0755)
-	fs.Close()
-	c.Assert(err, check.IsNil)
-
-	clone := rev.Clone()
-	rev.Success()
-	return clone
+	}
 }
 
 //go:embed snapshot-format.yaml
@@ -163,8 +150,9 @@ func (s *snapshotSuite) TestLxdBackendSnapshotFormat(c *check.C) {
 		},
 	}
 	snapshot := workshop.BaseOnly(s.bd.FormatRevision(), image.Name, image.Fingerprint)
-	rev := s.launchWorkshop(c, wf, snapshot)
-	defer rev.Fail()
+
+	remove := s.launchWorkshop(c, wf, snapshot)
+	defer remove()
 
 	// Validate post-launch metadata.
 	launched := s.workshopFormat(c, wf, snapshot)
@@ -350,17 +338,14 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	err = s.bd.DownloadBase(s.ctx, image, nil)
 	c.Assert(err, check.IsNil)
 
-	rev := revert.New()
-	defer rev.Fail()
-
 	// Launch first workshop.
 	wf1 := &workshop.File{
 		Name: "test1",
 		Base: base,
 	}
 	baseOnly := workshop.BaseOnly(s.bd.FormatRevision(), image.Name, image.Fingerprint)
-	r := s.launchWorkshop(c, wf1, baseOnly)
-	revert.Copy(rev, r)
+	remove := s.launchWorkshop(c, wf1, baseOnly)
+	defer remove()
 
 	// Start first workshop to take snapshot.
 	err = s.bd.StartWorkshop(s.ctx, "test1")
@@ -381,8 +366,8 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 		Name: "test2",
 		Base: base,
 	}
-	r = s.launchWorkshop(c, wf2, baseOnly)
-	revert.Copy(rev, r)
+	remove = s.launchWorkshop(c, wf2, baseOnly)
+	defer remove()
 
 	// Start second workshop to run cloud-init.
 	err = s.bd.StartWorkshop(s.ctx, "test2")
@@ -396,8 +381,8 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 		Name: "test3",
 		Base: base,
 	}
-	r = s.launchWorkshop(c, wf3, snapshot)
-	revert.Copy(rev, r)
+	remove = s.launchWorkshop(c, wf3, snapshot)
+	defer remove()
 
 	// Start third workshop to run cloud-init (again).
 	err = s.bd.StartWorkshop(s.ctx, "test3")

@@ -18,12 +18,15 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"embed"
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"os"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -35,6 +38,7 @@ import (
 	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
+	"github.com/canonical/workshop/internal/dirs"
 	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
@@ -427,7 +431,11 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 	return op.Wait()
 }
 
-// adjustInstanceTemplates sets /etc/hostname to the workshop's name.
+//go:embed templates/*.tpl
+var instanceTemplates embed.FS
+
+// adjustInstanceTemplates ensures LXD sets /etc/hostname to the workshop's
+// name and creates /var/lib/workshop/run (for the workshopd socket).
 //
 // Also removes cloud-init seed files for NoCloud. The current Ubuntu 20.04
 // images contain a recent version of cloud-init that supports LXD, but these
@@ -440,48 +448,57 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 // when rebuilding a workshop from a snapshot, it results in both the hostname
 // and instance-id being taken from the snapshot.
 func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) error {
+	fromImage := []string{"create"}
+	fromSnapshot := []string{"create", "copy"}
+
+	templates := map[string]*api.ImageMetadataTemplate{
+		"/etc/hostname": {
+			When:     fromSnapshot,
+			Template: "hostname.tpl",
+		},
+		dirs.WorkshopSocketPath + ".untrusted": {
+			When:       fromImage,
+			CreateOnly: true,
+			Template:   "workshop.socket.untrusted.tpl",
+		},
+	}
+
 	metadata, etag, err := conn.GetInstanceMetadata(name)
 	if err != nil {
 		return err
 	}
 
-	modified := false
-	hostname := metadata.Templates["/etc/hostname"]
-	if hostname == nil {
-		hostname = &api.ImageMetadataTemplate{
-			When:     []string{"create", "copy"},
-			Template: "hostname.tpl",
-		}
-		if metadata.Templates == nil {
-			metadata.Templates = map[string]*api.ImageMetadataTemplate{}
-		}
-		metadata.Templates["/etc/hostname"] = hostname
-		modified = true
-	}
-
 	deleted := make([]string, 0, len(metadata.Templates))
 	for path, template := range metadata.Templates {
-		if !strings.HasPrefix(path, "/var/lib/cloud/seed/nocloud-net/") {
+		if strings.HasPrefix(path, "/var/lib/cloud/seed/nocloud-net/") {
+			// Remove NoCloud metadata and fall through to remove templates.
+			delete(metadata.Templates, path)
+		} else if t := templates[path]; t == nil || template == nil || t.Template == template.Template {
+			// Skip other templates unless we're about to replace them.
 			continue
 		}
-		delete(metadata.Templates, path)
-		modified = true
 		if template != nil {
 			deleted = append(deleted, template.Template)
 		}
 	}
 
-	// LXD uses an old version of pongo2 which doesn't support [].
-	tpl := `{{ config_get("user.workshop.name", "") }}
-`
-	if err := conn.CreateInstanceTemplateFile(name, hostname.Template, strings.NewReader(tpl)); err != nil {
+	if metadata.Templates == nil {
+		metadata.Templates = map[string]*api.ImageMetadataTemplate{}
+	}
+	maps.Copy(metadata.Templates, templates)
+
+	files, err := instanceTemplates.ReadDir("templates")
+	if err != nil {
 		return err
 	}
-
-	if modified {
-		if err := conn.UpdateInstanceMetadata(name, *metadata, etag); err != nil {
+	for _, entry := range files {
+		if err := createInstanceTemplateFile(conn, name, entry.Name()); err != nil {
 			return err
 		}
+	}
+
+	if err := conn.UpdateInstanceMetadata(name, *metadata, etag); err != nil {
+		return err
 	}
 
 	for _, template := range deleted {
@@ -491,6 +508,15 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 	}
 
 	return nil
+}
+
+func createInstanceTemplateFile(conn lxd.InstanceServer, instance, filename string) error {
+	f, err := instanceTemplates.Open(path.Join("templates", filename))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return conn.CreateInstanceTemplateFile(instance, filename, f.(io.ReadSeeker))
 }
 
 func (s *Backend) updateInstanceState(conn lxd.InstanceServer, ctx context.Context, name, action string, timeout int) error {

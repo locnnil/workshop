@@ -9,7 +9,6 @@ system:
     - drwxr-xr-x var
     - drwxr-xr-x var/lib
     - drwxr-xr-x var/lib/workshop
-    - drwxr-xr-x var/lib/workshop/run
     - drwxr-xr-x var/lib/workshop/sdk
     - Lrwxrwxrwx var/lib/workshop/sdk/system
   tasks:
@@ -17,14 +16,13 @@ system:
     start-workshop: 1
     install-sdk: 1
     run-hook: 1
-  fs-calls: 5
+  fs-calls: 4
   exec-calls: []
 test-sdk-3:
   files:
     - drwxr-xr-x var
     - drwxr-xr-x var/lib
     - drwxr-xr-x var/lib/workshop
-    - drwxr-xr-x var/lib/workshop/run
     - drwxr-xr-x var/lib/workshop/sdk
     - Lrwxrwxrwx var/lib/workshop/sdk/system
     - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-3
@@ -34,14 +32,13 @@ test-sdk-3:
     install-sdk: 2
     run-hook: 2
     snapshot-sdk: 1
-  fs-calls: 9
+  fs-calls: 8
   exec-calls: []
 test-sdk-2:
   files:
     - drwxr-xr-x var
     - drwxr-xr-x var/lib
     - drwxr-xr-x var/lib/workshop
-    - drwxr-xr-x var/lib/workshop/run
     - drwxr-xr-x var/lib/workshop/sdk
     - Lrwxrwxrwx var/lib/workshop/sdk/system
     - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk-2
@@ -52,7 +49,7 @@ test-sdk-2:
     install-sdk: 3
     run-hook: 3
     snapshot-sdk: 2
-  fs-calls: 13
+  fs-calls: 12
   exec-calls:
     - ["sudo", "--user=#0", "--group=#0", "--preserve-env=SDK", "--preserve-env=WORKSHOP_COOKIE", "--", "bash", "-l", "-c", 'exec -- "$0" "$@"', "bash", "-o", "errexit", "-o", "pipefail", "/var/lib/workshop/sdk/test-sdk-2/sdk/hooks/setup-base"]
 test-sdk:
@@ -60,7 +57,6 @@ test-sdk:
     - drwxr-xr-x var
     - drwxr-xr-x var/lib
     - drwxr-xr-x var/lib/workshop
-    - drwxr-xr-x var/lib/workshop/run
     - drwxr-xr-x var/lib/workshop/sdk
     - Lrwxrwxrwx var/lib/workshop/sdk/system
     - Lrwxrwxrwx var/lib/workshop/sdk/test-sdk
@@ -72,7 +68,7 @@ test-sdk:
     install-sdk: 4
     run-hook: 4
     snapshot-sdk: 3
-  fs-calls: 17
+  fs-calls: 16
   exec-calls:
     - ["sudo", "--user=#0", "--group=#0", "--preserve-env=SDK", "--preserve-env=WORKSHOP_COOKIE", "--", "bash", "-l", "-c", 'exec -- "$0" "$@"', "bash", "-o", "errexit", "-o", "pipefail", "/var/lib/workshop/sdk/test-sdk-2/sdk/hooks/setup-base"]
     - ["sudo", "--user=#0", "--group=#0", "--preserve-env=SDK", "--preserve-env=WORKSHOP_COOKIE", "--", "bash", "-l", "-c", 'exec -- "$0" "$@"', "bash", "-o", "errexit", "-o", "pipefail", "/var/lib/workshop/sdk/test-sdk/sdk/hooks/setup-base"]
@@ -81,7 +77,6 @@ sketch:
     - drwxr-xr-x var
     - drwxr-xr-x var/lib
     - drwxr-xr-x var/lib/workshop
-    - drwxr-xr-x var/lib/workshop/run
     - drwxr-xr-x var/lib/workshop/sdk
     - Lrwxrwxrwx var/lib/workshop/sdk/sketch
     - Lrwxrwxrwx var/lib/workshop/sdk/system
