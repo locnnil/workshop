@@ -44,6 +44,7 @@ import (
 	"github.com/canonical/workshop/internal/fsutil"
 	"github.com/canonical/workshop/internal/logger"
 	"github.com/canonical/workshop/internal/osutil"
+	"github.com/canonical/workshop/internal/osutil/sys"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
 	"github.com/canonical/workshop/internal/sshutil"
@@ -476,6 +477,10 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 		"/etc/ssh/ssh_host_ed25519_key-cert.pub": {
 			When:     fromSnapshot,
 			Template: "ssh_host_ed25519_key-cert.pub.tpl",
+		},
+		"/etc/ssh/ssh_ca_ed25519_key.pub": {
+			When:     fromSnapshot,
+			Template: "ssh_ca_ed25519_key.pub.tpl",
 		},
 		"/etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf": {
 			When:       fromSnapshot,
@@ -1241,6 +1246,7 @@ write_files:
   - path: /etc/ssh/sshd_config.d/90-workshop.conf
     content: |
       HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+      TrustedUserCAKeys /etc/ssh/ssh_ca_ed25519_key.pub
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1279,7 +1285,7 @@ runcmd:
 }
 
 func sshConfig(usr *user.User, hostname string) (map[string]string, error) {
-	authority, err := createOrLoadCAKey(usr)
+	identity, authority, err := createOrLoadCAKeys(usr)
 	if err != nil {
 		return nil, err
 	}
@@ -1302,27 +1308,44 @@ func sshConfig(usr *user.User, hostname string) (map[string]string, error) {
 		"user.ed25519-key.private":     string(data),
 		"user.ed25519-key.public":      pub.String(),
 		"user.ed25519-key.certificate": cert.String(),
+		"user.ed25519-key.workshop-ca": identity.String(),
 	}, nil
 }
 
-func createOrLoadCAKey(usr *user.User) (*sshutil.PrivateKey, error) {
-	authority, err := loadCAKey(usr)
+func createOrLoadCAKeys(usr *user.User) (*sshutil.PublicKey, *sshutil.PrivateKey, error) {
+	identity, authority, err := loadCAKeys(usr)
 	if !errors.Is(err, os.ErrNotExist) {
-		return authority, err
+		return identity, authority, err
 	}
 
 	if err := ensureCAKeys(usr); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return loadCAKey(usr)
+	return loadCAKeys(usr)
 }
 
-func loadCAKey(usr *user.User) (*sshutil.PrivateKey, error) {
-	data, err := os.ReadFile(filepath.Join(dirs.WorkshopSSHDir, usr.Uid, "id_ed25519_ca"))
+func loadCAKeys(usr *user.User) (*sshutil.PublicKey, *sshutil.PrivateKey, error) {
+	data, err := os.ReadFile(filepath.Join(dirs.WorkshopSSHDir, usr.Uid, "id_ed25519_ca.pub"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return sshutil.ParsePrivateKey(data, "Workshop-CA")
+
+	identity, err := sshutil.ParsePublicKey(data)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data, err = os.ReadFile(filepath.Join(dirs.WorkshopSSHDir, usr.Uid, "id_ed25519_ca"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authority, err := sshutil.ParsePrivateKey(data, identity.Comment())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return identity, authority, nil
 }
 
 func ensureCAKeys(usr *user.User) error {
@@ -1352,7 +1375,8 @@ func ensureCAKeys(usr *user.User) error {
 		return err
 	}
 
-	if err := writeCAKeys(temp); err != nil {
+	target := filepath.Join(dirs.WorkshopSSHDir, usr.Uid)
+	if err := writeCAKeys(usr, temp, target); err != nil {
 		return err
 	}
 
@@ -1364,7 +1388,6 @@ func ensureCAKeys(usr *user.User) error {
 	}
 	closeDir.Success()
 
-	target := filepath.Join(dirs.WorkshopSSHDir, usr.Uid)
 	// One error comes from Go's pre-existence check, the other from syscall.Rename.
 	if err := os.Rename(temp, target); errors.Is(err, os.ErrExist) || errors.Is(err, syscall.ENOTEMPTY) {
 		// Someone else beat us to it, discard the keys and temp dir.
@@ -1377,28 +1400,99 @@ func ensureCAKeys(usr *user.User) error {
 	return nil
 }
 
-func writeCAKeys(path string) error {
+func writeCAKeys(usr *user.User, temp, target string) error {
 	identity, authority, err := sshutil.GenerateKey("Workshop-CA")
 	if err != nil {
 		return err
 	}
-	data, err := authority.MarshalText()
+
+	pub, priv, err := sshutil.GenerateKey(workshop.User.Username + "@" + networkDomain)
 	if err != nil {
 		return err
 	}
 
-	if err := writeFileSync(filepath.Join(path, "id_ed25519_ca"), data, 0600); err != nil {
+	cert, err := authority.SignUserKey(*pub, []string{workshop.User.Username})
+	if err != nil {
 		return err
 	}
-	return writeFileSync(filepath.Join(path, "id_ed25519_ca.pub"), []byte(identity.String()+"\n"), 0644)
+
+	uid, gid, err := osutil.UidGid(usr)
+	if err != nil {
+		return err
+	}
+
+	certPath, err1 := escapeSSHPath(target, "id_ed25519-cert.pub")
+	privPath, err2 := escapeSSHPath(target, "id_ed25519")
+	knownHostsPath, err3 := escapeSSHPath(target, "known_hosts")
+	if err := cmp.Or(err1, err2, err3); err != nil {
+		return err
+	}
+
+	knownHosts := fmt.Sprintf("@cert-authority *.%s %s\n", networkDomain, identity)
+	configTemplate := `
+Host *.%s
+	CertificateFile %s
+	IdentitiesOnly yes
+	IdentityFile %s
+	User %s
+	UserKnownHostsFile %s
+`[1:]
+	config := fmt.Sprintf(configTemplate, networkDomain, certPath, privPath, workshop.User.Username, knownHostsPath)
+
+	if err := writePublicKey(filepath.Join(temp, "id_ed25519_ca.pub"), *identity, osutil.NoChown, osutil.NoChown); err != nil {
+		return err
+	}
+	if err := writePrivateKey(filepath.Join(temp, "id_ed25519_ca"), *authority, osutil.NoChown, osutil.NoChown); err != nil {
+		return err
+	}
+	if err := writePublicKey(filepath.Join(temp, "id_ed25519.pub"), *pub, uid, gid); err != nil {
+		return err
+	}
+	if err := writePrivateKey(filepath.Join(temp, "id_ed25519"), *priv, uid, gid); err != nil {
+		return err
+	}
+	if err := writePublicKey(filepath.Join(temp, "id_ed25519-cert.pub"), *cert, uid, gid); err != nil {
+		return err
+	}
+	if err := writeFileSync(filepath.Join(temp, "known_hosts"), []byte(knownHosts), 0644, uid, gid); err != nil {
+		return err
+	}
+	return writeFileSync(filepath.Join(temp, "config"), []byte(config), 0644, uid, gid)
 }
 
-func writeFileSync(name string, data []byte, perm os.FileMode) error {
+func escapeSSHPath(elem ...string) (string, error) {
+	path := filepath.Join(elem...)
+	if strings.Contains(path, "${") || strings.Contains(path, "\n") {
+		return "", fmt.Errorf("unrepresentable SSH config value: %q", path)
+	}
+
+	path = strings.ReplaceAll(path, "%", "%%")
+	path = strings.ReplaceAll(path, "\\", "\\\\")
+	path = strings.ReplaceAll(path, "\"", "\\\"")
+	return "\"" + path + "\"", nil
+}
+
+func writePublicKey(name string, key sshutil.PublicKey, uid sys.UserID, gid sys.GroupID) error {
+	return writeFileSync(name, []byte(key.String()+"\n"), 0644, uid, gid)
+}
+
+func writePrivateKey(name string, key sshutil.PrivateKey, uid sys.UserID, gid sys.GroupID) error {
+	pem, err := key.MarshalText()
+	if err != nil {
+		return err
+	}
+	return writeFileSync(name, pem, 0600, uid, gid)
+}
+
+func writeFileSync(name string, data []byte, perm os.FileMode, uid sys.UserID, gid sys.GroupID) error {
 	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
 	_, err = f.Write(data)
+	if err == nil && (uid != osutil.NoChown || gid != osutil.NoChown) {
+		err = sys.Chown(f, uid, gid)
+	}
 	if err == nil {
 		err = f.Sync()
 	}

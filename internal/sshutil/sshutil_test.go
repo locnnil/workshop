@@ -72,6 +72,49 @@ func (s *sshSuite) TestSignHostKey(c *check.C) {
 	c.Check(string(out), check.Matches, pattern)
 }
 
+func (s *sshSuite) TestSignUserKey(c *check.C) {
+	pub, _, err := sshutil.GenerateKey("workshop@wp")
+	c.Assert(err, check.IsNil)
+
+	identity, authority, err := sshutil.GenerateKey("Workshop-CA")
+	c.Assert(err, check.IsNil)
+
+	cert, err := authority.SignUserKey(*pub, []string{"workshop"})
+	c.Assert(err, check.IsNil)
+
+	scratch := c.MkDir()
+	err = os.WriteFile(filepath.Join(scratch, "id_ed25519-cert.pub"), []byte(cert.String()+"\n"), 0600)
+	c.Assert(err, check.IsNil)
+
+	cmd := exec.Command("ssh-keygen", "-Lf", "id_ed25519-cert.pub")
+	cmd.Dir = scratch
+	out, err := cmd.Output()
+	c.Assert(err, check.IsNil)
+
+	fingerprint := regexp.QuoteMeta(pub.Fingerprint())
+	ca := regexp.QuoteMeta(identity.Fingerprint())
+
+	template := `id_ed25519-cert.pub:
+\s*Type: ssh-ed25519.* user certificate
+\s*Public key: ED25519-CERT %s
+\s*Signing CA: ED25519 %s \(using ssh-ed25519\)
+\s*Key ID: "workshop@wp"
+\s*Serial: 0
+\s*Valid: forever
+\s*Principals:\s*
+\s*workshop
+\s*Critical Options: \(none\)
+\s*Extensions:\s*
+\s*permit-X11-forwarding
+\s*permit-agent-forwarding
+\s*permit-port-forwarding
+\s*permit-pty
+\s*permit-user-rc
+`
+	pattern := fmt.Sprintf(template, fingerprint, ca)
+	c.Check(string(out), check.Matches, pattern)
+}
+
 func (s *sshSuite) TestGenerateKey(c *check.C) {
 	pub, priv, err := sshutil.GenerateKey("root@dev-42424242.wp")
 	c.Assert(err, check.IsNil)
@@ -88,6 +131,15 @@ func (s *sshSuite) TestGenerateKey(c *check.C) {
 	out, err := cmd.Output()
 	c.Assert(err, check.IsNil)
 	c.Check(string(out), check.Equals, pub.String()+"\n")
+}
+
+func (s *sshSuite) TestParsePublicKey(c *check.C) {
+	pub, _, err := sshutil.GenerateKey("root@dev-42424242.wp")
+	c.Assert(err, check.IsNil)
+
+	key, err := sshutil.ParsePublicKey([]byte(pub.String() + "\n"))
+	c.Assert(err, check.IsNil)
+	c.Check(key.Equal(*pub), check.Equals, true)
 }
 
 func (s *sshSuite) TestParsePrivateKey(c *check.C) {
