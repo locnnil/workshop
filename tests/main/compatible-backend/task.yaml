@@ -30,3 +30,17 @@ execute: |
   # The daemon has a 5-second recovery ticker; no restart required.
   retry 30 workshop_exec list
   workshop_exec list | MATCH "^comp-check[[:space:]]+Off[[:space:]]+-$"
+
+  # Check that workshopd reports a clear error when the LXD daemon is stopped,
+  # and that it recovers automatically once LXD is started again.
+  snap stop lxd
+  # restart to pick the connectivity issue straight away
+  snap restart workshop
+  ! workshop_exec list > error.log 2>&1 || false
+  MATCH "^error: system is not healthy: cannot connect to LXD:.*$" < error.log
+  MATCH "To start the LXD daemon: 'sudo snap start lxd'" < error.log
+  snap start lxd
+  lxd waitready --timeout=180
+  # The daemon has a 5-second recovery ticker; no restart required.
+  retry 30 workshop_exec list
+  workshop_exec list | MATCH "^comp-check[[:space:]]+Off[[:space:]]+-$"
