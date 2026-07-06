@@ -186,7 +186,7 @@ func (s *conflictSuite) TestResumeAfterWaitNothingInProgress(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	_, err := conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
 	c.Check(errors.Is(err, conflict.ErrorNoWaitingChange), check.Equals, true)
 	c.Check(err, check.ErrorMatches, "cannot continue: no waiting change in progress")
 }
@@ -195,7 +195,7 @@ func (s *conflictSuite) TestResumeAfterWaitIncorrectMode(c *check.C) {
 	s.state.Lock()
 	defer s.state.Unlock()
 
-	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeTransactional, "refresh")
+	_, err := conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeTransactional, "refresh")
 	c.Check(err, check.ErrorMatches, "cannot resume: only abort or continue can be used to resume the operation")
 }
 
@@ -205,7 +205,7 @@ func (s *conflictSuite) TestResumeAfterWaitWrongChangeKindInProgress(c *check.C)
 
 	change := s.newChange("launch")
 
-	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	_, err := conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
 	var conflictErr *conflict.ChangeConflictError
 	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
 	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
@@ -223,7 +223,7 @@ func (s *conflictSuite) TestResumeAfterWaitNoWaitingOnError(c *check.C) {
 
 	change := s.newChange("refresh")
 
-	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	_, err := conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
 	var conflictErr *conflict.ChangeConflictError
 	c.Assert(errors.As(err, &conflictErr), check.Equals, true)
 	c.Check(conflictErr, check.DeepEquals, &conflict.ChangeConflictError{
@@ -240,6 +240,7 @@ func (s *conflictSuite) TestResumeChangeContinue(c *check.C) {
 	defer s.state.Unlock()
 
 	change := s.newChange("refresh")
+	change.Set("ws_new_format", sdk.R(1))
 	task := change.Tasks()[0]
 	task.SetToWait(state.HoldStatus)
 
@@ -247,13 +248,26 @@ func (s *conflictSuite) TestResumeChangeContinue(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Check(attempt, check.Equals, 1)
 
-	_, err = conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	_, err = conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
 	c.Assert(err, check.IsNil)
 	c.Assert(task.Status(), check.Equals, state.HoldStatus)
 
 	attempt, err = conflict.ChangeAttempt(change)
 	c.Assert(err, check.IsNil)
 	c.Check(attempt, check.Equals, 2)
+}
+
+func (s *conflictSuite) TestResumeChangeContinueIncompatible(c *check.C) {
+	s.state.Lock()
+	defer s.state.Unlock()
+
+	change := s.newChange("refresh")
+	change.Set("ws_new_format", sdk.R(1))
+	task := change.Tasks()[0]
+	task.SetToWait(state.HoldStatus)
+
+	_, err := conflict.ResumeAfterWait(s.state, sdk.R(2), "ws", s.project.ProjectId, conflict.ChangeContinue, "refresh")
+	c.Check(err, check.ErrorMatches, "cannot continue: refresh started by an incompatible Workshop version")
 }
 
 func (s *conflictSuite) TestResumeChangeAbort(c *check.C) {
@@ -271,7 +285,7 @@ func (s *conflictSuite) TestResumeChangeAbort(c *check.C) {
 	change.AddTask(task2)
 	change.SetStatus(state.WaitStatus)
 
-	_, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeAbort, "refresh")
+	_, err := conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeAbort, "refresh")
 	c.Assert(err, check.IsNil)
 	c.Assert(task.Status(), check.Equals, state.HoldStatus)
 	c.Assert(task2.Status(), check.Equals, state.HoldStatus)

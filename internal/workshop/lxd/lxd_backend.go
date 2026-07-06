@@ -356,7 +356,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 		return err
 	}
 
-	if err := s.adjustInstanceTemplates(conn, snapshot.Format, req.Name); err != nil {
+	if err := s.adjustInstanceTemplates(conn, req.Name); err != nil {
 		return err
 	}
 
@@ -366,13 +366,11 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	}
 	defer fs.Close()
 
-	if snapshot.Format.N > 3 {
-		// cloud-init seems to ignore preserve_hostname in user-data, we have
-		// to bake it into the image instead.
-		cfg := strings.NewReader("preserve_hostname: true\n")
-		if err := fs.AtomicWriteTo(cfg, "/etc/cloud/cloud.cfg.d/99_preserve_hostname.cfg", 0644); err != nil {
-			return err
-		}
+	// cloud-init seems to ignore preserve_hostname in user-data, we have
+	// to bake it into the image instead.
+	cfg := strings.NewReader("preserve_hostname: true\n")
+	if err := fs.AtomicWriteTo(cfg, "/etc/cloud/cloud.cfg.d/99_preserve_hostname.cfg", 0644); err != nil {
+		return err
 	}
 
 	// Workaround https://github.com/canonical/lxd/issues/17983.
@@ -441,7 +439,7 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 // from an image (although the instance-id is different for 22.04 and up), but
 // when rebuilding a workshop from a snapshot, it results in both the hostname
 // and instance-id being taken from the snapshot.
-func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Revision, name string) error {
+func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) error {
 	metadata, etag, err := conn.GetInstanceMetadata(name)
 	if err != nil {
 		return err
@@ -449,7 +447,7 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Re
 
 	modified := false
 	hostname := metadata.Templates["/etc/hostname"]
-	if format.N > 3 && hostname == nil {
+	if hostname == nil {
 		hostname = &api.ImageMetadataTemplate{
 			When:     []string{"create", "copy"},
 			Template: "hostname.tpl",
@@ -473,13 +471,11 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, format sdk.Re
 		}
 	}
 
-	if format.N > 3 {
-		// LXD uses an old version of pongo2 which doesn't support [].
-		tpl := `{{ config_get("user.workshop.name", "") }}
+	// LXD uses an old version of pongo2 which doesn't support [].
+	tpl := `{{ config_get("user.workshop.name", "") }}
 `
-		if err := conn.CreateInstanceTemplateFile(name, hostname.Template, strings.NewReader(tpl)); err != nil {
-			return err
-		}
+	if err := conn.CreateInstanceTemplateFile(name, hostname.Template, strings.NewReader(tpl)); err != nil {
+		return err
 	}
 
 	if modified {
@@ -928,7 +924,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}
 
 	running := inst.StatusCode == api.Running || inst.StatusCode == api.Ready
-	hostname := b.hostname(f.Name, p, format, running, cnames)
+	hostname := b.hostname(f.Name, p, running, cnames)
 
 	return &workshop.Workshop{
 		Backend:  b,
@@ -944,7 +940,7 @@ func (b *Backend) loadWorkshop(conn lxd.InstanceServer, inst *api.Instance, p wo
 	}, nil
 }
 
-func (s *Backend) hostname(name string, p workshop.Project, format sdk.Revision, running bool, cnames []cname) workshop.Hostname {
+func (s *Backend) hostname(name string, p workshop.Project, running bool, cnames []cname) workshop.Hostname {
 	var hostname workshop.Hostname
 	if cnames == nil {
 		// Skip adding notes if we weren't given the CNAME entries (i.e. when
@@ -958,7 +954,7 @@ func (s *Backend) hostname(name string, p workshop.Project, format sdk.Revision,
 	if idx >= 0 {
 		hostname.Domain = cnames[idx].friendly()
 		hostname.Note = cnames[idx].Note
-	} else if running && format.N > 3 {
+	} else if running {
 		hostname.Note = "hostname-missing"
 	}
 
@@ -1124,7 +1120,7 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
-	cloudConfigTemplate := `
+	cloudConfig := `
 #cloud-config
 users:
   - default
@@ -1132,7 +1128,6 @@ users:
     primary_group: workshop
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-{{- if gt .Format 1}}
     create_groups: false
     groups:
     - 'adm'
@@ -1170,9 +1165,6 @@ bootcmd:
   maybe_groupadd 110 render-compat-110
   maybe_groupadd 990 render-compat-990
   maybe_groupadd 992 render-compat-992
-{{else}}
-    groups: adm,cdrom,sudo,dip,plugdev,audio,netdev,lxd,video,render
-{{end -}}
 apt:
   conf: |
     # Installed by workshop
@@ -1216,31 +1208,23 @@ runcmd:
     eth0:
       dhcp4: true
       dhcp-identifier: mac
-{{- if gt .Format 3}}
       dhcp4-overrides:
         hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
       dhcp6-overrides:
         hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
-{{- end -}}
-{{- if gt .Format 2}}
       nameservers:
         search: [{{printf "%s.%s" .ProjectID .Domain | printf "%q"}}, {{printf "%q" .Domain}}]
-{{else}}
-{{end -}}
 `
 
 	dot := struct {
-		Format    int
 		Domain    string
 		ProjectID string
 		Workshop  string
 	}{
-		Format:    format.N,
 		Domain:    networkDomain,
 		ProjectID: projectId,
 		Workshop:  file.Name,
 	}
-	cloudConfig := mustExecute("cloud-config", cloudConfigTemplate, dot)
 	networkConfig := mustExecute("network-config", networkConfigTemplate, dot)
 
 	f, err := yaml.Marshal(file)

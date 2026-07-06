@@ -115,11 +115,16 @@ func (w *WorkshopManager) RefreshManifests(ctx context.Context, project workshop
 		}
 		return a.launchOrRefreshManifests(ctx, names, true)
 	case conflict.RefreshRestore:
+		format := w.backend.FormatRevision()
+
 		manifests := make([]Manifest, 0, len(names))
 		for _, name := range names {
 			manifest, err := w.workshopManifest(ctx, project.ProjectId, name)
 			if err != nil {
 				return nil, nil, fmt.Errorf("cannot refresh %q: %w", name, err)
+			}
+			if manifest.Format != format {
+				return nil, nil, fmt.Errorf("cannot refresh %q: workshop created using incompatible Workshop version", name)
 			}
 			manifests = append(manifests, *manifest)
 		}

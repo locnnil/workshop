@@ -618,7 +618,7 @@ func (s *sdkStateSuite) TestSnapshotSkippedPostResume(c *check.C) {
 	c.Assert(chg.Err(), check.IsNil)
 	c.Assert(chg.Status(), check.Equals, state.WaitStatus)
 
-	chg2, err := conflict.ResumeAfterWait(s.state, "ws", s.project.ProjectId, conflict.ChangeContinue, "launch")
+	chg2, err := conflict.ResumeAfterWait(s.state, sdk.R(1), "ws", s.project.ProjectId, conflict.ChangeContinue, "launch")
 	c.Assert(err, check.IsNil)
 	c.Assert(chg2.ID(), check.Equals, chg.ID())
 

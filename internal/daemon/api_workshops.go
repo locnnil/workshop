@@ -613,14 +613,16 @@ func v1PostProjectWorkshop(c *Command, r *http.Request, _ *userState) Response {
 	st.Lock()
 	defer st.Unlock()
 
+	wsmgr := c.d.overlord.WorkshopManager()
+
 	var change *state.Change
 	var current, latest, stashed []workshopstate.Manifest
 	var tasksets []*state.TaskSet
 
 	if mode.Resume() {
-		change, err = conflict.ResumeAfterWait(st, reqData.Names[0], projectId, mode, reqData.Action)
+		format := wsmgr.FormatRevision()
+		change, err = conflict.ResumeAfterWait(st, format, reqData.Names[0], projectId, mode, reqData.Action)
 	} else {
-		wsmgr := c.d.overlord.WorkshopManager()
 		switch reqData.Action {
 		case "launch":
 			change = newWorkshopChange(st, "launch", user, projectId, reqData.Action, reqData.Names)
