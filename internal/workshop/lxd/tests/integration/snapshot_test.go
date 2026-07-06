@@ -255,10 +255,8 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	c.Check(inst.Config["user.workshop.format-revision"], check.Equals, snapshot.Format.String())
 	delete(inst.Config, "user.workshop.format-revision")
 
-	// These ones are a bit long, replace with hash for readability.
-	digest := sha3.Sum384([]byte(inst.Config["cloud-init.network-config"]))
-	inst.Config["cloud-init.network-config"] = hex.EncodeToString(digest[:])
-	digest = sha3.Sum384([]byte(inst.Config["cloud-init.user-data"]))
+	// This one is a bit long, replace with hash for readability.
+	digest := sha3.Sum384([]byte(inst.Config["cloud-init.user-data"]))
 	inst.Config["cloud-init.user-data"] = hex.EncodeToString(digest[:])
 
 	// Host paths of default devices can change without affecting the
@@ -561,7 +559,7 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	c.Assert(err, check.IsNil)
 	machineID, err := os.ReadFile(filepath.Join(path, "etc", "machine-id"))
 	c.Assert(err, check.IsNil)
-	networkCfg, err := os.ReadFile(filepath.Join(path, "etc", "netplan", "50-cloud-init.yaml"))
+	networkCfg, err := os.ReadFile(filepath.Join(path, "etc", "systemd", "network", "10-cloud-init-eth0.network.d", "workshop.conf"))
 	c.Assert(err, check.IsNil)
 	sshKey, err := os.ReadFile(filepath.Join(path, "etc", "ssh", "ssh_host_ed25519_key.pub"))
 	c.Assert(err, check.IsNil)
@@ -569,8 +567,8 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	files := []string{
 		"etc/hostname",
 		"etc/machine-id",
-		"etc/netplan/50-cloud-init.yaml",
 		"etc/sudoers.d/90-cloud-init-users",
+		"etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf",
 		"var/cache/ldconfig/aux-cache",
 		"var/lib/workshop/run/workshop.socket.untrusted",
 		"var/log/cloud-init.log",

@@ -30,7 +30,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -422,6 +421,9 @@ var instanceTemplates embed.FS
 //     before it runs)
 //   - /etc/hostname (set to the workshop's name)
 //   - /etc/machine-id (set to the LXD UUID, without dashes)
+//   - /etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf (set
+//     systemd-networkd options that are workshop-specific or unsupported by
+//     clout-init)
 //   - /var/lib/workshop/run/workshop.socket.untrusted (empty, to be replaced
 //     with a proxy socket)
 //
@@ -451,6 +453,11 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 		"/etc/machine-id": {
 			When:     fromSnapshot,
 			Template: "machine-id.tpl",
+		},
+		"/etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf": {
+			When:       fromSnapshot,
+			Template:   "eth0.network.tpl",
+			Properties: map[string]string{"domain": networkDomain},
 		},
 		dirs.WorkshopSocketPath + ".untrusted": {
 			When:       fromImage,
@@ -1203,14 +1210,6 @@ apt:
 grub_dpkg:
   enabled: false
 ssh_genkeytypes: [ed25519]
-write_files:
-- content: |
-    [DHCPv4]
-    SendRelease=false
-
-    [DHCPv6]
-    SendRelease=false
-  path: /etc/systemd/network/10-netplan-eth0.network.d/sendrelease.conf
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1218,33 +1217,7 @@ runcmd:
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
-  # Required to load above DHCP config.
-  - networkctl reload
 `[1:]
-
-	networkConfigTemplate := `network:
-  version: 2
-  ethernets:
-    eth0:
-      dhcp4: true
-      dhcp4-overrides:
-        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
-      dhcp6-overrides:
-        hostname: {{printf "%s-%s" .Workshop .ProjectID | printf "%q"}}
-      nameservers:
-        search: [{{printf "%s.%s" .ProjectID .Domain | printf "%q"}}, {{printf "%q" .Domain}}]
-`
-
-	dot := struct {
-		Domain    string
-		ProjectID string
-		Workshop  string
-	}{
-		Domain:    networkDomain,
-		ProjectID: projectId,
-		Workshop:  file.Name,
-	}
-	networkConfig := mustExecute("network-config", networkConfigTemplate, dot)
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
@@ -1258,7 +1231,6 @@ runcmd:
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
 		"cloud-init.user-data":           cloudConfig,
-		"cloud-init.network-config":      networkConfig,
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,
@@ -1273,20 +1245,6 @@ runcmd:
 	}
 
 	return cfg, nil
-}
-
-func mustExecute(name, text string, dot any) string {
-	t, err := template.New(name).Parse(text)
-	if err != nil {
-		panic(err)
-	}
-
-	var builder strings.Builder
-	if err := t.Execute(&builder, dot); err != nil {
-		panic(err)
-	}
-
-	return builder.String()
 }
 
 func FakeStartCommand(script string) func() {

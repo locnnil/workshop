@@ -15,8 +15,7 @@ launched:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.network-config: '1b56c92e89bd363199c213aa20c0b2a9d6e5f575c07ec3555a43187cc81e0dd7c88e39b8f73905aec9c879a77db36f66'
-    cloud-init.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: '3e7181605945746d1d04e7782e3e5efd45e375de1dec4d35f98eca4847fe5053431c06b7f9b24b1e535e45474bd5c620'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -54,8 +53,7 @@ started:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.network-config: '1b56c92e89bd363199c213aa20c0b2a9d6e5f575c07ec3555a43187cc81e0dd7c88e39b8f73905aec9c879a77db36f66'
-    cloud-init.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: '3e7181605945746d1d04e7782e3e5efd45e375de1dec4d35f98eca4847fe5053431c06b7f9b24b1e535e45474bd5c620'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -93,8 +91,7 @@ sdk-attached:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.network-config: '1b56c92e89bd363199c213aa20c0b2a9d6e5f575c07ec3555a43187cc81e0dd7c88e39b8f73905aec9c879a77db36f66'
-    cloud-init.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: '3e7181605945746d1d04e7782e3e5efd45e375de1dec4d35f98eca4847fe5053431c06b7f9b24b1e535e45474bd5c620'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -144,8 +141,7 @@ sdk-mounted:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.network-config: '1b56c92e89bd363199c213aa20c0b2a9d6e5f575c07ec3555a43187cc81e0dd7c88e39b8f73905aec9c879a77db36f66'
-    cloud-init.user-data: '3d5ea3cb0e8e195272207f49a626ff7c17367d021f0b3a36483ee49f557a962429a5e3ebacc3b9a4dbdbc1f47d48bc78'
+    cloud-init.user-data: '3e7181605945746d1d04e7782e3e5efd45e375de1dec4d35f98eca4847fe5053431c06b7f9b24b1e535e45474bd5c620'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
