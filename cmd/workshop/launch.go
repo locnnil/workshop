@@ -168,11 +168,15 @@ func (c *CmdLaunch) Run(cmd *cobra.Command, av []string) error {
 		fmt.Fprintf(Stdout, "%s launch aborted\n", strutil.Quoted(av))
 	case errors.Is(err, errWaitOnError):
 		w := workshopName(av[0])
-		return fmt.Errorf(`cannot complete launch for %q, execution is paused
+		return fmt.Errorf(`
+cannot launch %[1]q; paused
+To view details: "workshop tasks %[2]s"
 
-To proceed, resolve the issue and run "workshop launch --continue %s"
-To cancel and undo: "workshop launch --abort %s"
-To view more information: "workshop tasks %s"`, w, w, w, changeId)
+To abort and undo: "workshop launch --abort %[1]s"
+Otherwise, resolve the error, then run "workshop launch --continue %[1]s"`[1:],
+			w,
+			changeId,
+		)
 	default:
 		return fmt.Errorf("%v\n%s launch aborted", err, strutil.Quoted(av))
 	}
