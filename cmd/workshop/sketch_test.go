@@ -554,10 +554,15 @@ hooks:
 	defer restore()
 
 	err := cmd.Run(cmd.Command(), []string{"ws"})
-	c.Assert(err, check.ErrorMatches, "cannot complete sketch refresh for \"ws\", execution is paused\n\n"+
-		"To proceed, resolve the issue and run \"workshop refresh --continue ws\"\n"+
-		"To cancel and undo: \"workshop refresh --abort ws\"\n"+
-		"To view more information: \"workshop tasks 43\"")
+	c.Assert(err, check.ErrorMatches, `cannot sketch "ws"; paused
+`+
+		`To view details: "workshop tasks 43"
+`+
+		`
+`+
+		`To abort and undo: "workshop refresh --abort ws"
+`+
+		`Otherwise, resolve the error, then run "workshop refresh --continue ws"`)
 
 	err = cmd.Run(cmd.Command(), []string{"ws"})
 	c.Assert(err, check.IsNil)

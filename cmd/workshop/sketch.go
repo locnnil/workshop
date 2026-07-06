@@ -339,11 +339,15 @@ func handleSketchRefreshErrors(wp string, chg *client.Change, err error) error {
 	case errors.Is(err, errUndone):
 		fmt.Fprintf(Stdout, "%q sketch refresh aborted\n", wp)
 	case errors.Is(err, errWaitOnError):
-		return fmt.Errorf(`cannot complete sketch refresh for %q, execution is paused
+		return fmt.Errorf(`
+cannot sketch %[1]q; paused
+To view details: "workshop tasks %[2]s"
 
-To proceed, resolve the issue and run "workshop refresh --continue %s"
-To cancel and undo: "workshop refresh --abort %s"
-To view more information: "workshop tasks %s"`, wp, wp, wp, chg.ID)
+To abort and undo: "workshop refresh --abort %[1]s"
+Otherwise, resolve the error, then run "workshop refresh --continue %[1]s"`[1:],
+			wp,
+			chg.ID,
+		)
 	default:
 		return fmt.Errorf("%v\n%s sketch refresh aborted", err, wp)
 	}
