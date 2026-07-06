@@ -423,13 +423,11 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 
 	// Ensure certain files are unique.
 	c.Check(files[0].hostname, check.Not(check.Equals), files[1].hostname)
-	c.Check(files[0].instanceID, check.Not(check.Equals), files[1].instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), files[1].machineID)
 	c.Check(files[0].networkCfg, check.Not(check.Equals), files[1].networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), files[1].sshKey)
 
 	c.Check(files[0].hostname, check.Not(check.Equals), files[2].hostname)
-	c.Check(files[0].instanceID, check.Not(check.Equals), files[2].instanceID)
 	c.Check(files[0].machineID, check.Not(check.Equals), files[2].machineID)
 	c.Check(files[0].networkCfg, check.Not(check.Equals), files[2].networkCfg)
 	c.Check(files[0].sshKey, check.Not(check.Equals), files[2].sshKey)
@@ -461,14 +459,11 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 	c.Assert(err, check.IsNil)
 	restored := extractUniqueFiles(c, roots[0])
 
-	// Check that only Workshop-managed attributes are preserved. Ideally the
-	// SSH key should be preserved too, but in the meantime we should enforce
-	// the current behaviour.
+	// Check that only Workshop-managed attributes are preserved.
 	c.Check(files[0].hostname, check.Equals, restored.hostname)
-	c.Check(files[0].instanceID, check.Equals, restored.instanceID)
 	c.Check(files[0].machineID, check.Equals, restored.machineID)
 	c.Check(files[0].networkCfg, check.Equals, restored.networkCfg)
-	c.Check(files[0].sshKey, check.Not(check.Equals), restored.sshKey)
+	c.Check(files[0].sshKey, check.Equals, restored.sshKey)
 
 	// Check for unexpected differences.
 	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[1], roots[0]).CombinedOutput()
@@ -497,12 +492,9 @@ func (s *snapshotSuite) snapshotDiff(c *check.C, base string) {
 
 	// Check that only Workshop-managed attributes are preserved.
 	c.Check(files[0].hostname, check.Equals, refreshed.hostname)
-	c.Check(files[0].instanceID, check.Equals, refreshed.instanceID)
 	c.Check(files[0].machineID, check.Equals, refreshed.machineID)
 	c.Check(files[0].networkCfg, check.Equals, refreshed.networkCfg)
-	c.Check(files[0].sshKey, check.Not(check.Equals), refreshed.sshKey)
-
-	c.Check(files[2].sshKey, check.Not(check.Equals), refreshed.sshKey)
+	c.Check(files[0].sshKey, check.Equals, refreshed.sshKey)
 
 	// Check for unexpected differences.
 	output, err = exec.Command("diff", "--brief", "--no-dereference", "--recursive", roots[2], roots[0]).CombinedOutput()
@@ -543,7 +535,6 @@ func (s *snapshotSuite) rootfsMount(name string) (mount, error) {
 
 type uniqueFiles struct {
 	hostname   string
-	instanceID string
 	machineID  string
 	networkCfg string
 	sshKey     string
@@ -555,8 +546,6 @@ type uniqueFiles struct {
 func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	hostname, err := os.ReadFile(filepath.Join(path, "etc", "hostname"))
 	c.Assert(err, check.IsNil)
-	instanceID, err := os.ReadFile(filepath.Join(path, "var", "lib", "cloud", "data", "instance-id"))
-	c.Assert(err, check.IsNil)
 	machineID, err := os.ReadFile(filepath.Join(path, "etc", "machine-id"))
 	c.Assert(err, check.IsNil)
 	networkCfg, err := os.ReadFile(filepath.Join(path, "etc", "systemd", "network", "10-cloud-init-eth0.network.d", "workshop.conf"))
@@ -567,6 +556,8 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	files := []string{
 		"etc/hostname",
 		"etc/machine-id",
+		"etc/ssh/ssh_host_ed25519_key",
+		"etc/ssh/ssh_host_ed25519_key.pub",
 		"etc/sudoers.d/90-cloud-init-users",
 		"etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf",
 		"var/cache/ldconfig/aux-cache",
@@ -587,7 +578,6 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 	}
 
 	dirs := []string{
-		"etc/ssh",
 		"var/cache/snapd",
 		"var/lib/cloud",
 		"var/lib/snapd",
@@ -604,7 +594,6 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 
 	return uniqueFiles{
 		hostname:   string(hostname),
-		instanceID: string(instanceID),
 		machineID:  string(machineID),
 		networkCfg: string(networkCfg),
 		sshKey:     string(sshKey),

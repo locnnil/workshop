@@ -112,6 +112,8 @@ const (
 // Classifies options by key. Based on LXD's InstanceIncludeWhenCopying.
 func optionDomain(key string) configDomain {
 	switch {
+	case strings.HasPrefix(key, "user.ed25519-key."):
+		return uniqueProperty
 	case strings.HasPrefix(key, "image."):
 		return sharedProperty
 	case !strings.HasPrefix(key, "volatile."):
@@ -395,10 +397,6 @@ func (s *Backend) TakeSnapshot(ctx context.Context, name string, snapshot worksh
 		}
 	})
 
-	if err := s.resetCloudInit(snapshotConn, snapshotName); err != nil {
-		return err
-	}
-
 	if err := s.commitPartialSnapshot(snapshotConn, snapshotName); err != nil {
 		return err
 	}
@@ -503,26 +501,6 @@ func (s *Backend) checkPartialSnapshot(snapshotConn lxd.InstanceServer, snapshot
 	return workshop.ErrSnapshotAlreadyExists
 }
 
-func (s *Backend) resetCloudInit(snapshotConn lxd.InstanceServer, name string) error {
-	fs, err := s.instanceFs(snapshotConn, name)
-	if err != nil {
-		return err
-	}
-	defer fs.Close()
-
-	// Remove old cloud-init data. Without this, the instance-id of the current
-	// workshop may be present in the snapshot. If the current workshop is
-	// rebuilt from a descendant of the snapshot, cloud-init skips most of the
-	// setup logic, even if the descendant has a different instance-id. This
-	// means the workshop's SSH keys can embed the wrong hostname. Removing the
-	// cloud-init data avoids this issue, at the cost of rerunning all modules
-	// when the workshop is next started. This doesn't seem to delay the boot
-	// in practice. In future, we might want to adopt a more intricate approach
-	// to preserve SSH keys and machine IDs on refresh. Cleaning the old data
-	// is the simplest correct thing to do for now.
-	return fs.RemoveAll("/var/lib/cloud")
-}
-
 func (s *Backend) commitPartialSnapshot(snapshotConn lxd.InstanceServer, name string) error {
 	copy, etag, err := snapshotConn.GetInstance(name)
 	if err != nil {
@@ -549,7 +527,12 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		inst = &api.Instance{}
+		config, err := sshConfig(req.Name + "." + networkDomain)
+		if err != nil {
+			return err
+		}
+
+		inst = &api.Instance{Config: config}
 	} else if err != nil {
 		return err
 	}
@@ -850,7 +833,7 @@ func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.
 // replay some of the install-sdk and setup-base tasks. These can be handled in
 // the same way as in-progress launches and refreshes.
 func (s *Backend) FormatRevision() sdk.Revision {
-	return sdk.R(6)
+	return sdk.R(7)
 }
 
 func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {

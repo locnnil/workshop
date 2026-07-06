@@ -43,6 +43,7 @@ import (
 	"github.com/canonical/workshop/internal/osutil"
 	"github.com/canonical/workshop/internal/revert"
 	"github.com/canonical/workshop/internal/sdk"
+	"github.com/canonical/workshop/internal/sshutil"
 	"github.com/canonical/workshop/internal/syscheck"
 	"github.com/canonical/workshop/internal/workshop"
 )
@@ -366,6 +367,12 @@ func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.Inst
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		// Create a new workshop.
+		config, err := sshConfig(req.Name + "." + networkDomain)
+		if err != nil {
+			return err
+		}
+		maps.Copy(req.Config, config)
+
 		op, err := conn.CreateInstance(req)
 		if err != nil {
 			return err
@@ -421,6 +428,7 @@ var instanceTemplates embed.FS
 //     before it runs)
 //   - /etc/hostname (set to the workshop's name)
 //   - /etc/machine-id (set to the LXD UUID, without dashes)
+//   - /etc/ssh_* (set workshop-specific SSH keys)
 //   - /etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf (set
 //     systemd-networkd options that are workshop-specific or unsupported by
 //     clout-init)
@@ -453,6 +461,14 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 		"/etc/machine-id": {
 			When:     fromSnapshot,
 			Template: "machine-id.tpl",
+		},
+		"/etc/ssh/ssh_host_ed25519_key": {
+			When:     fromSnapshot,
+			Template: "ssh_host_ed25519_key.tpl",
+		},
+		"/etc/ssh/ssh_host_ed25519_key.pub": {
+			When:     fromSnapshot,
+			Template: "ssh_host_ed25519_key.pub.tpl",
 		},
 		"/etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf": {
 			When:       fromSnapshot,
@@ -1195,6 +1211,7 @@ bootcmd:
   maybe_groupadd 110 render-compat-110
   maybe_groupadd 990 render-compat-990
   maybe_groupadd 992 render-compat-992
+- chmod 0600 /etc/ssh/ssh_host_ed25519_key
 apt:
   conf: |
     # Installed by workshop
@@ -1209,7 +1226,11 @@ apt:
     APT::Get::Assume-Yes "1";
 grub_dpkg:
   enabled: false
+ssh_deletekeys: false
 ssh_genkeytypes: [ed25519]
+write_files:
+  - path: /etc/cloud/cloud-init.disabled
+    defer: true
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1245,6 +1266,22 @@ runcmd:
 	}
 
 	return cfg, nil
+}
+
+func sshConfig(hostname string) (map[string]string, error) {
+	pub, priv, err := sshutil.GenerateKey("root@" + hostname)
+	if err != nil {
+		return nil, err
+	}
+	data, err := priv.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"user.ed25519-key.private": string(data),
+		"user.ed25519-key.public":  pub.String(),
+	}, nil
 }
 
 func FakeStartCommand(script string) func() {

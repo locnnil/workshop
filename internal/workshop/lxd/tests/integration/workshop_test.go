@@ -235,6 +235,9 @@ func fullInstance(c *check.C, conn lxd.InstanceServer, name string) *api.Instanc
 }
 
 func includeWhenCopying(key string) bool {
+	if strings.HasPrefix(key, "user.ed25519-key.") {
+		return false
+	}
 	if !strings.HasPrefix(key, "volatile.") {
 		return true
 	}
