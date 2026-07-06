@@ -24,6 +24,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"os/user"
 	"slices"
 	"strings"
 	"sync"
@@ -514,7 +515,7 @@ func (s *Backend) commitPartialSnapshot(snapshotConn lxd.InstanceServer, name st
 	return op.Wait()
 }
 
-func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, req api.InstancesPost, snapshot workshop.Snapshot) error {
+func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceServer, usr *user.User, req api.InstancesPost, snapshot workshop.Snapshot) error {
 	digest, err := s.HashSnapshot(snapshot)
 	if err != nil {
 		return fmt.Errorf("internal error: hashing snapshot info: %w", err)
@@ -527,7 +528,7 @@ func (s *Backend) launchOrRebuildFromSnapshot(conn, snapshotConn lxd.InstanceSer
 
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
-		config, err := sshConfig(req.Name + "." + networkDomain)
+		config, err := sshConfig(usr, req.Name+"."+networkDomain)
 		if err != nil {
 			return err
 		}
@@ -833,7 +834,7 @@ func (s *Backend) snapshotClients(ctx context.Context) (lxd.InstanceServer, lxd.
 // replay some of the install-sdk and setup-base tasks. These can be handled in
 // the same way as in-progress launches and refreshes.
 func (s *Backend) FormatRevision() sdk.Revision {
-	return sdk.R(7)
+	return sdk.R(8)
 }
 
 func (s *Backend) HashSnapshot(snapshot workshop.Snapshot) (string, error) {

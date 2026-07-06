@@ -83,6 +83,8 @@ var (
 	WorkshopdRunDir string
 	// Locks directory
 	WorkshopdLocksDir string
+	// SSH keys
+	WorkshopSSHDir string
 	// Certificates
 	WorkshopTlsDir string
 )
@@ -125,6 +127,7 @@ func SetRootDir(rootdir string) {
 	BaseDir = rootdir
 
 	WorkshopStateLockFile = filepath.Join(BaseDir, "state.lock")
+	WorkshopSSHDir = filepath.Join(BaseDir, "ssh")
 	WorkshopTlsDir = filepath.Join(BaseDir, "tls")
 	WorkshopdRunDir = filepath.Join(BaseDir, "/run/workshopd")
 	WorkshopdLocksDir = filepath.Join(WorkshopdRunDir, "locks")

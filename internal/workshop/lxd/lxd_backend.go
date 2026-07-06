@@ -26,10 +26,13 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"os/user"
 	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
@@ -349,25 +352,25 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	}
 
 	if !snapshot.IsBase() {
-		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, req, snapshot)
+		return s.launchOrRebuildFromSnapshot(conn, snapshotConn, usr, req, snapshot)
 	}
 
 	req.Source = api.InstanceSource{
 		Type:        api.SourceTypeImage,
 		Fingerprint: snapshot.Image.Fingerprint,
 	}
-	if err := s.launchOrRebuildFromImage(conn, req); err != nil {
+	if err := s.launchOrRebuildFromImage(conn, usr, req); err != nil {
 		return err
 	}
 
 	return s.adjustInstanceTemplates(conn, req.Name)
 }
 
-func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, req api.InstancesPost) error {
+func (s *Backend) launchOrRebuildFromImage(conn lxd.InstanceServer, usr *user.User, req api.InstancesPost) error {
 	inst, _, err := conn.GetInstance(req.Name)
 	if api.StatusErrorCheck(err, http.StatusNotFound) {
 		// Create a new workshop.
-		config, err := sshConfig(req.Name + "." + networkDomain)
+		config, err := sshConfig(usr, req.Name+"."+networkDomain)
 		if err != nil {
 			return err
 		}
@@ -469,6 +472,10 @@ func (s *Backend) adjustInstanceTemplates(conn lxd.InstanceServer, name string) 
 		"/etc/ssh/ssh_host_ed25519_key.pub": {
 			When:     fromSnapshot,
 			Template: "ssh_host_ed25519_key.pub.tpl",
+		},
+		"/etc/ssh/ssh_host_ed25519_key-cert.pub": {
+			When:     fromSnapshot,
+			Template: "ssh_host_ed25519_key-cert.pub.tpl",
 		},
 		"/etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf": {
 			When:       fromSnapshot,
@@ -1231,6 +1238,9 @@ ssh_genkeytypes: [ed25519]
 write_files:
   - path: /etc/cloud/cloud-init.disabled
     defer: true
+  - path: /etc/ssh/sshd_config.d/90-workshop.conf
+    content: |
+      HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
 runcmd:
   # Project directory is required for 'workshop exec'.
   - install --directory --mode=755 /project
@@ -1268,7 +1278,12 @@ runcmd:
 	return cfg, nil
 }
 
-func sshConfig(hostname string) (map[string]string, error) {
+func sshConfig(usr *user.User, hostname string) (map[string]string, error) {
+	authority, err := createOrLoadCAKey(usr)
+	if err != nil {
+		return nil, err
+	}
+
 	pub, priv, err := sshutil.GenerateKey("root@" + hostname)
 	if err != nil {
 		return nil, err
@@ -1278,10 +1293,116 @@ func sshConfig(hostname string) (map[string]string, error) {
 		return nil, err
 	}
 
+	cert, err := authority.SignHostKey(*pub)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]string{
-		"user.ed25519-key.private": string(data),
-		"user.ed25519-key.public":  pub.String(),
+		"user.ed25519-key.private":     string(data),
+		"user.ed25519-key.public":      pub.String(),
+		"user.ed25519-key.certificate": cert.String(),
 	}, nil
+}
+
+func createOrLoadCAKey(usr *user.User) (*sshutil.PrivateKey, error) {
+	authority, err := loadCAKey(usr)
+	if !errors.Is(err, os.ErrNotExist) {
+		return authority, err
+	}
+
+	if err := ensureCAKeys(usr); err != nil {
+		return nil, err
+	}
+	return loadCAKey(usr)
+}
+
+func loadCAKey(usr *user.User) (*sshutil.PrivateKey, error) {
+	data, err := os.ReadFile(filepath.Join(dirs.WorkshopSSHDir, usr.Uid, "id_ed25519_ca"))
+	if err != nil {
+		return nil, err
+	}
+	return sshutil.ParsePrivateKey(data, "Workshop-CA")
+}
+
+func ensureCAKeys(usr *user.User) error {
+	if err := os.MkdirAll(dirs.WorkshopSSHDir, 0755); err != nil {
+		return err
+	}
+
+	removeTemp := revert.New()
+	defer removeTemp.Fail()
+
+	temp, err := os.MkdirTemp(dirs.WorkshopSSHDir, usr.Uid+".*~")
+	if err != nil {
+		return err
+	}
+	removeTemp.Add(func() { _ = os.RemoveAll(temp) })
+
+	closeDir := revert.New()
+	defer closeDir.Fail()
+
+	d, err := os.Open(temp)
+	if err != nil {
+		return err
+	}
+	closeDir.Add(func() { d.Close() })
+
+	if err := d.Chmod(0755); err != nil {
+		return err
+	}
+
+	if err := writeCAKeys(temp); err != nil {
+		return err
+	}
+
+	if err := d.Sync(); err != nil {
+		return err
+	}
+	if err := d.Close(); err != nil {
+		return err
+	}
+	closeDir.Success()
+
+	target := filepath.Join(dirs.WorkshopSSHDir, usr.Uid)
+	// One error comes from Go's pre-existence check, the other from syscall.Rename.
+	if err := os.Rename(temp, target); errors.Is(err, os.ErrExist) || errors.Is(err, syscall.ENOTEMPTY) {
+		// Someone else beat us to it, discard the keys and temp dir.
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	removeTemp.Success()
+	return nil
+}
+
+func writeCAKeys(path string) error {
+	identity, authority, err := sshutil.GenerateKey("Workshop-CA")
+	if err != nil {
+		return err
+	}
+	data, err := authority.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	if err := writeFileSync(filepath.Join(path, "id_ed25519_ca"), data, 0600); err != nil {
+		return err
+	}
+	return writeFileSync(filepath.Join(path, "id_ed25519_ca.pub"), []byte(identity.String()+"\n"), 0644)
+}
+
+func writeFileSync(name string, data []byte, perm os.FileMode) error {
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err == nil {
+		err = f.Sync()
+	}
+	return cmp.Or(err, f.Close())
 }
 
 func FakeStartCommand(script string) func() {

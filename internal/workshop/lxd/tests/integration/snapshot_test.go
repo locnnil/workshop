@@ -558,6 +558,7 @@ func extractUniqueFiles(c *check.C, path string) uniqueFiles {
 		"etc/machine-id",
 		"etc/ssh/ssh_host_ed25519_key",
 		"etc/ssh/ssh_host_ed25519_key.pub",
+		"etc/ssh/ssh_host_ed25519_key-cert.pub",
 		"etc/sudoers.d/90-cloud-init-users",
 		"etc/systemd/network/10-cloud-init-eth0.network.d/workshop.conf",
 		"var/cache/ldconfig/aux-cache",

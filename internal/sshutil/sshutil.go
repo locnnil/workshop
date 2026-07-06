@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/pem"
 	"fmt"
 
@@ -34,6 +35,10 @@ type PrivateKey struct {
 	comment string
 }
 
+type equalPrivateKey interface {
+	Equal(crypto.PrivateKey) bool
+}
+
 func (k PublicKey) String() string {
 	data := ssh.MarshalAuthorizedKey(k.key)
 	data = bytes.TrimSuffix(data, []byte("\n"))
@@ -43,12 +48,40 @@ func (k PublicKey) String() string {
 	return string(data)
 }
 
+func (k PublicKey) Fingerprint() string {
+	return ssh.FingerprintSHA256(k.key)
+}
+
+func (k PrivateKey) Equal(other PrivateKey) bool {
+	key, ok := k.key.(equalPrivateKey)
+	return ok && key.Equal(other.key) && k.comment == other.comment
+}
+
 func (k PrivateKey) MarshalText() ([]byte, error) {
 	block, err := ssh.MarshalPrivateKey(k.key, k.comment)
 	if err != nil {
 		return nil, err
 	}
 	return pem.EncodeToMemory(block), nil
+}
+
+func (k PrivateKey) SignHostKey(key PublicKey) (*PublicKey, error) {
+	signer, err := ssh.NewSignerFromKey(k.key)
+	if err != nil {
+		return nil, err
+	}
+
+	certificate := &ssh.Certificate{
+		Key:         key.key,
+		CertType:    ssh.HostCert,
+		KeyId:       key.comment,
+		ValidBefore: ssh.CertTimeInfinity,
+	}
+	if err := certificate.SignCert(rand.Reader, signer); err != nil {
+		return nil, err
+	}
+
+	return &PublicKey{key: certificate, comment: key.comment}, nil
 }
 
 func GenerateKey(comment string) (*PublicKey, *PrivateKey, error) {
@@ -63,4 +96,15 @@ func GenerateKey(comment string) (*PublicKey, *PrivateKey, error) {
 	}
 
 	return &PublicKey{key: wrapped, comment: comment}, &PrivateKey{key: priv, comment: comment}, nil
+}
+
+// ParsePrivateKey unmarshals an SSH private key and attaches the given
+// comment. The data already contains the comment, but it's better to present
+// this awkward API than attempt to reimplement the parsing ourselves.
+func ParsePrivateKey(content []byte, comment string) (*PrivateKey, error) {
+	key, err := ssh.ParseRawPrivateKey(content)
+	if err != nil {
+		return nil, err
+	}
+	return &PrivateKey{key: key, comment: comment}, nil
 }
