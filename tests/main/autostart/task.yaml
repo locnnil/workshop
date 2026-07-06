@@ -1,4 +1,10 @@
 summary: Ensure that workshop autostart behavior performs correctly
+debug: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec list --global || true
+  lxc list --project workshop.ubuntu || true
+  resolvectl status workshopbr0 || true
+  journalctl -xeu snap.workshop.workshopd.service || true
 prepare: |
   . "$TESTSLIB"/utils.sh
   workshop_exec launch
@@ -8,13 +14,17 @@ restore: |
 execute: |
   . "$TESTSLIB"/utils.sh
 
+  check_dns() {
+    resolvectl query "ws-autostart-$(< .workshop.lock).wp" | MATCH 'link: workshopbr0'
+  }
+
   echo "Make sure a running workshop automatically starts after reboot"
   if [ $SPREAD_REBOOT = 0 ]; then
     REBOOT
   fi
   if [ $SPREAD_REBOOT = 1 ]; then
     workshop_exec list | MATCH 'Ready'
-    resolvectl query "ws-autostart-$(< .workshop.lock).wp" | MATCH 'link: workshopbr0'
+    retry 3 check_dns
   fi
 
   echo "Make sure a workshop can start independently of the workshop daemon"
@@ -25,7 +35,7 @@ execute: |
   if [ $SPREAD_REBOOT = 2 ]; then
     snap start --enable workshop
     workshop_exec list | MATCH 'Ready'
-    resolvectl query "ws-autostart-$(< .workshop.lock).wp" | MATCH 'link: workshopbr0'
+    retry 3 check_dns
   fi
 
   echo "Make sure a stopped workshop remains stopped after reboot"
