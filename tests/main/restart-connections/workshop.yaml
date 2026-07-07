@@ -1,0 +1,5 @@
+name: ws-restart
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-mount
+  - name: test-sdk-gpu

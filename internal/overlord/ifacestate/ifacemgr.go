@@ -52,11 +52,6 @@ func New(s *state.State, r *state.TaskRunner) *InterfaceManager {
 	m.backend = workshop.WorkshopBackend(s)
 	s.Unlock()
 
-	// Register the LXD-dependent initialization as a system check so the
-	// daemon stays in degraded mode until both LXD is healthy and the
-	// interface manager has loaded all existing workshops and connections.
-	syscheck.RegisterCheck(m.ensureBackendInit)
-
 	r.AddHandler("resolve-interfaces", OnDo(m.doResolveInterfaces), nil)
 	r.AddHandler("auto-connect", OnDo(m.doAutoConnect), nil)
 	r.AddHandler("auto-disconnect", OnDo(m.doDisconnectInterfaces), nil)
@@ -161,17 +156,27 @@ func (m *InterfaceManager) StartUp() error {
 
 	if err := m.ensureBackendInit(); err != nil {
 		// LXD may not be available yet; do not propagate the error so the
-		// daemon can start. The syscheck registered in New() keeps the daemon
-		// in degraded mode and retries via the recovery ticker until it succeeds.
+		// daemon can start. The syscheck registered below keeps the daemon in
+		// degraded mode and retries via the recovery ticker until it succeeds.
 		logger.Noticef("Interface manager backend init deferred: %v", err)
 	}
+
+	// Register the syscheck HERE (after adding backends and interfaces to the
+	// repo) so the initial CheckSystem call in runDaemon — which fires before
+	// d.Start() — does not trigger ensureBackendInit prematurely.  Running
+	// ensureBackendInit before AddBackend/AddInterface are called means
+	// repo.Plug returns nil for every connection, causing reloadConnections to
+	// skip all of them.  Once backendReady is mistakenly set to true, the
+	// subsequent call from StartUp() is a no-op and connections are never loaded.
+	syscheck.RegisterCheck(m.ensureBackendInit)
 	return nil
 }
 
 // ensureBackendInit performs the LXD-dependent part of startup: it loads all
 // existing projects and workshops, recreates internal mounts, registers SDK
-// interfaces, and reloads connections. It is registered as a syscheck (see
-// New) so the daemon stays in degraded mode until it succeeds.
+// interfaces, and reloads connections. It is registered as a syscheck at the
+// end of StartUp so the daemon stays in degraded mode until it succeeds and
+// can recover if LXD becomes available later.
 func (m *InterfaceManager) ensureBackendInit() error {
 	if m.backendReady {
 		return nil
