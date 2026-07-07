@@ -1,0 +1,38 @@
+summary: Check that interface connections are reloaded after a workshopd restart
+
+# Regression test: a restart of the workshop snap must not drop existing
+# interface connections. Previously the interface manager registered its
+# LXD-dependent init as a system check that ran before the interface
+# repository was populated, so on restart (with LXD immediately available)
+# every connection was silently skipped while the manager was marked ready.
+
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Auto connections are present after launch"
+  workshop_exec connections ws-restart > before.log
+  MATCH "^mount.+ws-restart/test-sdk-mount:one.+:mount.+\-$" < before.log
+  MATCH "^mount.+ws-restart/test-sdk-mount:two.+:mount.+\-$" < before.log
+  MATCH "^gpu.+ws-restart/test-sdk-gpu:gpu.+:gpu.+\-$" < before.log
+
+  echo "Turn one connection into a manual connection"
+  workshop_exec disconnect ws-restart/test-sdk-mount:one ws-restart/system:mount
+  workshop_exec connect ws-restart/test-sdk-mount:one ws-restart/system:mount
+  workshop_exec connections ws-restart | MATCH "^mount.+ws-restart/test-sdk-mount:one.+:mount.+manual$"
+
+  echo "Restart the workshop snap"
+  snap restart workshop
+  # Wait for the daemon to become responsive again.
+  retry 3 workshop_exec list
+
+  echo "All connections are still loaded after the restart"
+  workshop_exec connections ws-restart > after.log
+  MATCH "^mount.+ws-restart/test-sdk-mount:one.+:mount.+manual$" < after.log
+  MATCH "^mount.+ws-restart/test-sdk-mount:two.+:mount.+\-$" < after.log
+  MATCH "^gpu.+ws-restart/test-sdk-gpu:gpu.+:gpu.+\-$" < after.log
