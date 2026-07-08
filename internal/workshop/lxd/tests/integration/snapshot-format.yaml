@@ -36,6 +36,8 @@ launched:
       bind: instance
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
+      security.gid: '1000'
+      security.uid: '1000'
       type: proxy
     workshop.workshopctl:
       path: /usr/bin/workshopctl
@@ -74,6 +76,8 @@ started:
       bind: instance
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
+      security.gid: '1000'
+      security.uid: '1000'
       type: proxy
     workshop.workshopctl:
       path: /usr/bin/workshopctl
@@ -124,6 +128,8 @@ sdk-attached:
       bind: instance
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
+      security.gid: '1000'
+      security.uid: '1000'
       type: proxy
     workshop.workshopctl:
       path: /usr/bin/workshopctl
@@ -182,6 +188,8 @@ sdk-mounted:
       bind: instance
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
+      security.gid: '1000'
+      security.uid: '1000'
       type: proxy
     workshop.workshopctl:
       path: /usr/bin/workshopctl
