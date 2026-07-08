@@ -1,5 +1,3 @@
-#!/bin/bash
-
 if [ ! -f /var/lib/build-demo/setup-base.marker ]; then
   workshopctl set-health error "setup-base marker missing"
   exit

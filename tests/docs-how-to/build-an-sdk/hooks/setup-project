@@ -1,5 +1,3 @@
-#!/bin/bash -ex
-
 if [ ! -f "$HOME/.build-demo.marker" ]; then
   echo "setup-project ran" > "$HOME/.build-demo.marker"
 fi
