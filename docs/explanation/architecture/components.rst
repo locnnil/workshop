@@ -13,6 +13,10 @@ System components
 and is primarily distributed as a `snap <https://snapcraft.io/>`_.
 It relies on LXD as its containerization backend
 and ZFS for efficient storage management.
+Each workshop runs inside an LXD system container,
+a full operating system environment with its own init system,
+rather than an application container that packages a single service
+(as with :program:`Docker` or :program:`Podman`).
 
 |ws_markup|'s distributed architecture
 organizes functionality across specialized subsystems,
@@ -197,6 +201,22 @@ LXD backend
 ~~~~~~~~~~~
 
 .. @artefact workshopd
+
+|ws_markup| uses LXD system containers rather than application containers.
+A system container runs a full operating system image
+with its own init system (:program:`systemd`)
+and can run many processes and services at once,
+behaving much like a lightweight virtual machine.
+This differs from application containers
+such as :program:`Docker` or :program:`Podman`,
+which typically run a single process.
+
+These containers are also unprivileged:
+the container's root user is mapped through user namespaces
+to an ordinary, non-root user on the host,
+so root inside a workshop holds no privileges on the host system.
+
+For more on LXD system containers, see the `LXD`_ documentation.
 
 The :program:`workshopd` daemon maintains a persistent connection to LXD
 through its Unix domain socket at :file:`/var/snap/lxd/common/lxd/unix.socket`,

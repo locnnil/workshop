@@ -227,6 +227,7 @@ unicode
 unix
 unmounts
 unparam
+unprivileged
 unreviewed
 unstashing
 untrusted

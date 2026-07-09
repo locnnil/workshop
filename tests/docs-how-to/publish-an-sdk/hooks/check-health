@@ -1,5 +1,3 @@
-#!/bin/bash
-
 if ! output=$(sudo -u workshop --login hello-publish-demo 2>&1); then
   workshopctl set-health error "$output"
   exit

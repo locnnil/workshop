@@ -1,4 +1,3 @@
-#!/bin/bash
 if ! sudo -u workshop --login bash -c 'test -f "$HOME/.dotfiles-uid"'; then
   workshopctl set-health error "setup-project marker missing"
   exit 0
