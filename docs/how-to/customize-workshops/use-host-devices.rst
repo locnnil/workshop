@@ -35,9 +35,6 @@ Before starting, ensure you have these requirements satisfied:
 - A host device you want to expose to the workshop,
   such as an input device at :file:`/dev/input/event0`.
 
-- :command:`udevadm` available on the host
-  to identify the device subsystem.
-
 
 Identify the device subsystem
 -----------------------------
