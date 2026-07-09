@@ -18,9 +18,14 @@
    how-to/index
    reference/index
    explanation/index
+
+.. toctree::
+   :hidden:
+
    Release notes <release-notes/index>
+   Contribute <contributing>
    Security <security>
-   Contribution <contributing>
+
 
 
 **Workshops are secure, fast, and composable development environments
@@ -196,7 +201,9 @@ and implemented with
 
 .. rubric:: Get involved
 
-- :ref:`Contribution and participation <contributing>`
+- :ref:`Contribute <contributing>`
+- :ref:`Contribute to development <contributing_development>`
+- :ref:`Contribute to this documentation <contributing_documentation>`
 
 .. rubric:: Releases and roadmap
 

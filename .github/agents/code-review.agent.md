@@ -161,7 +161,7 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
     - **How-to guides**: `docs/how-to/*.rst`
     - **Explanation articles**: `docs/explanation/**/*.rst`
     - **Release notes**: `docs/release-notes/*.md` (for recent features)
-    - **README/Contributing**: `docs/readme.rst`, `docs/contributing.rst`
+    - **README/Contributing**: `docs/readme.rst`, `docs/contributing.rst`, `docs/contributing/development.rst`
     - **Definition file references**: `docs/reference/definition-files/*.rst`
 
 3.  **Record Evidence for Each Finding** (internal validation only):
@@ -252,7 +252,7 @@ Follow these stages sequentially to perform a complete review. Do not skip stage
 
 ### Stage 7: Commit Message & PR Description Review
 **Intent**: Ensure commit messages and PR descriptions follow project conventions.
-**Inputs**: Commit messages, PR description, [`docs/contributing.rst`](../../docs/contributing.rst).
+**Inputs**: Commit messages, PR description, [`docs/contributing/development.rst`](../../docs/contributing/development.rst).
 **Actions**:
 -   **Commit Message Format**:
     -   Start with capitalized summary (no type prefix for code commits)
@@ -389,7 +389,7 @@ All changed entities are properly documented across appropriate Diátaxis pillar
 
 ### Always Do
 -   **Reference `docs/coding-style-guide.md`** when making style suggestions.
--   Check commit message format against [`docs/contributing.rst`](../../docs/contributing.rst).
+-   Check commit message format against [`docs/contributing/development.rst`](../../docs/contributing/development.rst).
 -   Use the coverage mechanism (`docs/.coverage.yaml` and `docs/coverage.md`) to identify documentation gaps.
 -   **Complete verification pass (Stage 6, Sub-stage B)** before reporting documentation findings — search actual docs corpus with ≥2 query variants.
 -   **Provide evidence for all documentation claims**: Include search terms, file paths, line numbers, or explicit "no matches" statements.

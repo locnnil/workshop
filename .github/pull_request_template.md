@@ -23,7 +23,7 @@
  * [ ] Put variable declaration and initialisation together.
  * [ ] Divide large expressions into digestable and self-explanatory ones. Use multiple variables if required.
  * [ ] Put a blank line between two logically different chunks of code.
- * [ ] Follow the [style guide](https://github.com/canonical/workshop/tree/main/docs/contributing.rst#error-messages) for new error messages.
+ * [ ] Follow the [style guide](https://github.com/canonical/workshop/tree/main/docs/coding-style-guide.md#error-handling) for new error messages.
 
 ## Docs
 
