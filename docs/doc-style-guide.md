@@ -186,8 +186,8 @@ can confirm they are ready before following any steps.
   immediately after the opening paragraph and before the first procedure section.
   In a tutorial that installs Workshop, place it as a subsection (H3, tildes)
   under the `Install` section instead.
-- Open the section with `Before starting, ensure you have these requirements
-  satisfied:`, followed by a bullet list with one requirement per item.
+- Open the section with `Before starting, ensure you have these requirements satisfied:`,
+  followed by a bullet list with one requirement per item.
 - List only genuine, non-obvious prerequisites: specific external tools, accounts,
   or hardware, and version-pinned dependencies such as LXD 6.8 or later.
 - Omit the universally assumed baseline (an existing `workshop.yaml`, the Workshop

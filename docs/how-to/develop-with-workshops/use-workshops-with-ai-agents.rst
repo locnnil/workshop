@@ -72,7 +72,7 @@ Before starting, ensure you have these requirements satisfied:
 
 - Access to the :program:`claude-code` and :program:`copilot` agents
   (or similar alternatives).
-  Both SDKs prompt for login credentials on their first run,
+  Both agents prompt for login credentials on their first run,
   so have a browser window open with the respective account signed in.
   Alternatively,
   the agents support token-based API authentication via environment variables,
