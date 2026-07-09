@@ -26,7 +26,7 @@ see :ref:`how_run_github_actions_locally`.
 Prerequisites
 -------------
 
-Before getting started, ensure you have:
+Before starting, ensure you have these requirements satisfied:
 
 - A GitHub repository with Actions enabled
 

@@ -21,14 +21,14 @@ letting you use your favorite JetBrains IDEs against |ws_markup|.
 Prerequisites
 -------------
 
-Before starting, ensure you have:
+Before starting, ensure you have these requirements satisfied:
 
 - `JetBrains Gateway <https://www.jetbrains.com/remote-development/gateway/>`__
-   installed on your host system.
+  installed on your host system.
 
 - An SSH key pair available on the host system.
-   If you don't have one already,
-   generate it with:
+  If you don't have one already,
+  generate it with:
 
   .. code-block:: console
 

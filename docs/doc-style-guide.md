@@ -177,6 +177,35 @@ Use `.. @artefact` comments to mark key concepts for coverage tracking:
 The current list of these concepts is maintained in `docs/coverage.yaml`;
 update it as needed.
 
+**Prerequisites sections**
+
+State a page's prerequisites in a dedicated `Prerequisites` section so readers
+can confirm they are ready before following any steps.
+
+- In a how-to, place `Prerequisites` as a top-level section (H2, dashes)
+  immediately after the opening paragraph and before the first procedure section.
+  In a tutorial that installs Workshop, place it as a subsection (H3, tildes)
+  under the `Install` section instead.
+- Open the section with `Before starting, ensure you have these requirements
+  satisfied:`, followed by a bullet list with one requirement per item.
+- List only genuine, non-obvious prerequisites: specific external tools, accounts,
+  or hardware, and version-pinned dependencies such as LXD 6.8 or later.
+- Omit the universally assumed baseline (an existing `workshop.yaml`, the Workshop
+  CLI, an Ubuntu or snap-enabled host) unless a particular version or
+  configuration matters. If a page needs nothing beyond that baseline, omit the
+  section rather than pad it.
+
+```restructuredtext
+Prerequisites
+-------------
+
+Before starting, ensure you have these requirements satisfied:
+
+- LXD 6.8 or later running on the host.
+
+- An Ubuntu One account.
+```
+
 ---
 
 ## Writing style and tone

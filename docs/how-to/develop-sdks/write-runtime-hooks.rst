@@ -31,9 +31,13 @@ Where it differs is the privilege, working directory, and extra environment.
 Prerequisites
 -------------
 
-You need a working |sdk_markup| installation
-and a workshop you can launch and refresh
-on a host with |ws_markup| installed.
+Before starting, ensure you have these requirements satisfied:
+
+- |sdk_markup| installed.
+
+- A workshop you can launch and refresh
+  on a host with |ws_markup| installed.
+
 The examples use a synthesized SDK named :file:`dotfiles-sdk`.
 If you don't have an SDK yet,
 :ref:`tut_craft_sdks` walks through scaffolding one with
