@@ -15,6 +15,7 @@
 package lxdbackend
 
 import (
+	"bufio"
 	"bytes"
 	"cmp"
 	"context"
@@ -93,8 +94,79 @@ func isWSL() bool {
 	return strings.Contains(version, "microsoft") || strings.Contains(version, "wsl2")
 }
 
+// Locations consulted by ZFS module detection.
+var (
+	zfsLoadedModulePath = "/sys/module/zfs"
+	zfsControlDevice    = "/dev/zfs"
+	kernelModulesDir    = "/lib/modules"
+)
+
+// zfsUsable reports whether the host can back LXD's zfs storage driver, i.e.
+// the zfs kernel module is loaded or loadable for the running kernel. Checking
+// the module directly, rather than the distribution name, makes the btrfs
+// fallback apply to any host without ZFS (e.g. Debian, SUSE, Fedora, WSL) while
+// still using ZFS where available.
+func zfsUsable() bool {
+	return zfsModuleLoaded() || zfsModuleLoadable()
+}
+
+// zfsModuleLoaded reports whether the zfs kernel module is currently loaded,
+// signalled by the module's sysfs directory AND its control device.
+func zfsModuleLoaded() bool {
+	var modulepath, controlDevice bool
+	if _, err := os.Stat(zfsControlDevice); err == nil {
+		controlDevice = true
+	}
+	if _, err := os.Stat(zfsLoadedModulePath); err == nil {
+		modulepath = true
+	}
+	return modulepath && controlDevice
+}
+
+// zfsModuleLoadable reports whether the zfs kernel module can be loaded for the
+// running kernel, by consulting the same module databases modprobe relies on:
+// loadable modules are listed in modules.dep and built-in ones in
+// modules.builtin.
+func zfsModuleLoadable() bool {
+	modulesDir := filepath.Join(kernelModulesDir, osutil.KernelVersion())
+
+	return moduleListed(filepath.Join(modulesDir, "modules.dep"), "zfs") ||
+		moduleListed(filepath.Join(modulesDir, "modules.builtin"), "zfs")
+}
+
+// moduleListed reports whether the given kernel module is referenced in the
+// module database at dbPath. Entries are module file paths such as
+// "kernel/zfs/zfs.ko.zst" or "updates/dkms/zfs.ko" (in modules.dep the first
+// token carries a trailing colon), so the match is done on the file name after
+// stripping any compression suffix.
+func moduleListed(dbPath, module string) bool {
+	f, err := os.Open(dbPath)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	target := module + ".ko"
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		for _, field := range strings.Fields(scanner.Text()) {
+			name := filepath.Base(strings.TrimSuffix(field, ":"))
+			if ext := filepath.Ext(name); ext != ".ko" {
+				name = strings.TrimSuffix(name, ext)
+			}
+			if name == target {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func init() {
-	if isWSL() {
+	// ZFS is the preferred driver, but many hosts can't provide it (e.g. WSL,
+	// Debian and other distributions that don't ship the ZFS kernel module).
+	// Fall back to btrfs whenever a usable ZFS module isn't available.
+	if isWSL() || !zfsUsable() {
 		storagePoolDriver = "btrfs"
 	}
 

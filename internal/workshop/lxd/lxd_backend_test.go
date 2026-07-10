@@ -15,6 +15,8 @@
 package lxdbackend_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"gopkg.in/check.v1"
@@ -133,4 +135,96 @@ func (f *LxdBeTests) TestCheckLxdVersion(c *check.C) {
 
 	err = lxdbackend.CheckServerVersion("6.7.9")
 	c.Assert(err, check.ErrorMatches, `(?s).*LXD server version.*is not supported.*`)
+}
+
+const zfsTestRelease = "6.8.0-51-generic"
+
+// mockZFSPaths returns paths under base that don't exist yet, so no loaded
+// module or module database is detected unless the test creates them.
+func mockZFSPaths(base string) (loadedModulePath, controlDevice, modulesDir string) {
+	return filepath.Join(base, "sys", "module", "zfs"),
+		filepath.Join(base, "dev", "zfs"),
+		filepath.Join(base, "lib", "modules")
+}
+
+func (f *LxdBeTests) TestZFSUsableModuleLoaded(c *check.C) {
+	base := c.MkDir()
+	loadedModulePath, controlDevice, modulesDir := mockZFSPaths(base)
+	// zfsModuleLoaded requires both the sysfs entry and the control device.
+	c.Assert(os.MkdirAll(loadedModulePath, 0755), check.IsNil)
+	c.Assert(os.MkdirAll(filepath.Dir(controlDevice), 0755), check.IsNil)
+	c.Assert(os.WriteFile(controlDevice, nil, 0644), check.IsNil)
+
+	restore := lxdbackend.MockZFSDetection(loadedModulePath, controlDevice, modulesDir, zfsTestRelease)
+	defer restore()
+
+	c.Check(lxdbackend.ZFSUsable(), check.Equals, true)
+}
+
+// A single loaded signal on its own doesn't count as loaded: the module's
+// sysfs entry without its control device (or vice versa) is not a usable ZFS.
+// With no module database present either, such a host falls back to Btrfs.
+func (f *LxdBeTests) TestZFSUsablePartialSignalsNotLoaded(c *check.C) {
+	for _, t := range []struct {
+		desc   string
+		create func(loadedModulePath, controlDevice string) error
+	}{
+		{"only sysfs module dir", func(loadedModulePath, _ string) error {
+			return os.MkdirAll(loadedModulePath, 0755)
+		}},
+		{"only control device", func(_, controlDevice string) error {
+			if err := os.MkdirAll(filepath.Dir(controlDevice), 0755); err != nil {
+				return err
+			}
+			return os.WriteFile(controlDevice, nil, 0644)
+		}},
+	} {
+		base := c.MkDir()
+		loadedModulePath, controlDevice, modulesDir := mockZFSPaths(base)
+		c.Assert(t.create(loadedModulePath, controlDevice), check.IsNil)
+
+		restore := lxdbackend.MockZFSDetection(loadedModulePath, controlDevice, modulesDir, zfsTestRelease)
+		c.Check(lxdbackend.ZFSUsable(), check.Equals, false, check.Commentf("%s", t.desc))
+		restore()
+	}
+}
+
+func (f *LxdBeTests) TestZFSUsableLoadable(c *check.C) {
+	for _, t := range []struct {
+		desc string
+		db   string
+		body string
+	}{
+		{"modules.dep, uncompressed", "modules.dep", "kernel/zfs/zfs.ko: kernel/spl/spl.ko\n"},
+		{"modules.dep, zstd-compressed", "modules.dep", "updates/dkms/zfs.ko.zst: updates/dkms/spl.ko.zst\n"},
+		{"modules.dep, dependency only", "modules.dep", "kernel/foo/foo.ko.zst: kernel/zfs/zfs.ko.zst\n"},
+		{"modules.builtin", "modules.builtin", "kernel/zfs/zfs.ko\n"},
+	} {
+		base := c.MkDir()
+		loadedModulePath, controlDevice, modulesDir := mockZFSPaths(base)
+		relDir := filepath.Join(modulesDir, zfsTestRelease)
+		c.Assert(os.MkdirAll(relDir, 0755), check.IsNil)
+		c.Assert(os.WriteFile(filepath.Join(relDir, t.db), []byte(t.body), 0644), check.IsNil)
+
+		restore := lxdbackend.MockZFSDetection(loadedModulePath, controlDevice, modulesDir, zfsTestRelease)
+		c.Check(lxdbackend.ZFSUsable(), check.Equals, true, check.Commentf("%s", t.desc))
+		restore()
+	}
+}
+
+func (f *LxdBeTests) TestZFSUsableAbsent(c *check.C) {
+	base := c.MkDir()
+	loadedModulePath, controlDevice, modulesDir := mockZFSPaths(base)
+	relDir := filepath.Join(modulesDir, zfsTestRelease)
+	c.Assert(os.MkdirAll(relDir, 0755), check.IsNil)
+	// A module database that lists other modules, including names that merely
+	// contain "zfs", but not the zfs module itself.
+	c.Assert(os.WriteFile(filepath.Join(relDir, "modules.dep"),
+		[]byte("kernel/fs/ext4/ext4.ko.zst: kernel/lib/crc16.ko.zst\nkernel/net/notzfs.ko:\nkernel/zfs/zfsutil.ko:\n"),
+		0644), check.IsNil)
+
+	restore := lxdbackend.MockZFSDetection(loadedModulePath, controlDevice, modulesDir, zfsTestRelease)
+	defer restore()
+
+	c.Check(lxdbackend.ZFSUsable(), check.Equals, false)
 }
