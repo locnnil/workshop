@@ -19,7 +19,8 @@ through the custom device interface,
 identified by the device *subsystem* they belong to
 (for example, :samp:`input`, :samp:`tty`, or :samp:`usb`)
 and, when needed, narrowed by vendor and product identifiers.
-A plug declared on an SDK sets at least one of :samp:`subsystem`, :samp:`vendorid`, or :samp:`productid`;
+A plug declared on an SDK sets at least one of
+:samp:`subsystem`, :samp:`vendorid`, or :samp:`productid`;
 |ws_markup| then passes matching host devices
 into the workshop once the plug is connected.
 
@@ -115,6 +116,19 @@ add the vendor and product identifiers too:
        subsystem: tty
        vendorid: "0403"
        productid: "6001"
+
+
+.. warning::
+
+   Avoid using :samp:`subsystem: tty` by itself for serial adapters.
+   It can match broad host TTY devices that the workshop already provides,
+   such as :file:`/dev/console`, :file:`/dev/tty`,
+   and :file:`/dev/ptmx`,
+   and make the connection fail.
+   For :samp:`tty` devices,
+   add :samp:`vendorid`
+   and, when available, :samp:`productid`
+   to target the specific device model.
 
 
 Quote :samp:`vendorid` and :samp:`productid`
