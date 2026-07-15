@@ -2,9 +2,10 @@
 
 .. meta::
    :description: How-to guide on accessing host devices inside a workshop with
-                 the custom device interface, covering subsystem discovery,
-                 declaring a plug in an SDK, connecting the interface manually,
-                 and reaching the devices inside the workshop.
+                 the custom device interface, covering subsystem and device ID
+                 discovery, declaring a plug in an SDK, connecting the
+                 interface manually, and reaching the devices inside the
+                 workshop.
 
 How to use host devices
 =======================
@@ -16,14 +17,15 @@ How to use host devices
 |ws_markup| exposes arbitrary host devices to a workshop
 through the custom device interface,
 identified by the device *subsystem* they belong to
-(for example, :samp:`input`, :samp:`tty`, or :samp:`usb`).
-A plug declared on an SDK names the subsystem;
-|ws_markup| then passes every host device in that subsystem
+(for example, :samp:`input`, :samp:`tty`, or :samp:`usb`)
+and, when needed, narrowed by vendor and product identifiers.
+A plug declared on an SDK sets at least one of :samp:`subsystem`, :samp:`vendorid`, or :samp:`productid`;
+|ws_markup| then passes matching host devices
 into the workshop once the plug is connected.
 
 The interface is never connected automatically,
 so reaching a host device follows a short sequence:
-find the subsystem, declare a plug, connect the interface,
+find the device attributes, declare a plug, connect the interface,
 then use the devices inside the workshop.
 
 
@@ -36,8 +38,8 @@ Before starting, ensure you have these requirements satisfied:
   such as an input device at :file:`/dev/input/event0`.
 
 
-Identify the device subsystem
------------------------------
+Identify the device attributes
+------------------------------
 
 .. @artefact custom-device interface attributes
 
@@ -54,6 +56,28 @@ Query the subsystem of a device with :command:`udevadm info`:
 
 The device at :file:`/dev/input/event0` belongs to the :samp:`input` subsystem.
 That name is what the plug declares in the next step.
+
+If the subsystem covers more devices than the workshop needs,
+and the device reports vendor and model properties,
+query those properties too:
+
+.. code-block:: console
+
+   $ udevadm info --query=property \
+       --property=SUBSYSTEM \
+       --property=ID_VENDOR_ID \
+       --property=ID_MODEL_ID \
+       /dev/ttyUSB0
+
+     SUBSYSTEM=tty
+     ID_VENDOR_ID=0403
+     ID_MODEL_ID=6001
+
+
+The optional :samp:`vendorid` attribute matches :samp:`ID_VENDOR_ID`.
+The optional :samp:`productid` attribute matches :samp:`ID_MODEL_ID`;
+use :samp:`productid` for the device or product identifier
+reported by :command:`udevadm`.
 
 
 Declare a custom device plug
@@ -76,6 +100,30 @@ naming the subsystem from the previous step:
      input-device:
        interface: custom-device
        subsystem: input
+
+
+If you want only one device model from a subsystem,
+add the vendor and product identifiers too:
+
+.. code-block:: yaml
+   :caption: .workshop/serial-sdk/sdk.yaml
+
+   name: serial-sdk
+   plugs:
+     serial-adapter:
+       interface: custom-device
+       subsystem: tty
+       vendorid: "0403"
+       productid: "6001"
+
+
+Quote :samp:`vendorid` and :samp:`productid`
+so YAML keeps leading zeroes and treats the values as strings.
+At least one of :samp:`subsystem`, :samp:`vendorid`, or :samp:`productid`
+must be set.
+If you set :samp:`productid`,
+also set :samp:`vendorid`,
+because a product ID is only meaningful within a vendor's namespace.
 
 
 Then reference the in-project SDK from the workshop definition:
@@ -123,7 +171,8 @@ The first argument is the plug, :samp:`<WORKSHOP>/<SDK>:<PLUG>`.
 The trailing :samp:`:custom-device` selects the slot
 that the built-in system SDK provides for every workshop.
 
-Connecting the plug makes all existing host devices in the subsystem
+Connecting the plug makes all existing host devices
+that match the plug's declared attributes available inside the workshop.
 available inside the workshop.
 While the connection is live,
 devices attached to the host afterwards appear too,
@@ -156,7 +205,7 @@ Access the devices
 .. @artefact workshop shell
 
 Open a shell in the workshop
-and list the devices from the connected subsystem:
+and list the matching devices:
 
 .. code-block:: console
 
@@ -166,7 +215,7 @@ and list the devices from the connected subsystem:
      event0  event1  mice
 
 
-The host's :samp:`input` devices are now reachable inside the workshop.
+The matching host devices are now reachable inside the workshop.
 
 To revoke access, disconnect the plug:
 
