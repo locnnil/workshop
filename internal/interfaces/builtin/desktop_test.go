@@ -99,7 +99,7 @@ slots:
 				Address:  "/tmp/wayland-1",
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
-				Address:  "/run/user/1000/wayland-0-inside-workshop",
+				Address:  "/run/user/1000/wayland-0",
 				Protocol: "unix"},
 			Direction: workshop.WorkshopToHost}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)
@@ -182,7 +182,7 @@ slots:
 				Address:  "/var/run/wayland-0",
 				Protocol: "unix"},
 			Listen: workshop.ProxyTarget{
-				Address:  "/run/user/1000/wayland-0-inside-workshop",
+				Address:  "/run/user/1000/wayland-0",
 				Protocol: "unix"},
 			Direction: workshop.WorkshopToHost}}
 	c.Assert(deviceSpec.Profile.Desktop, check.DeepEquals, expectedProxy)

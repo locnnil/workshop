@@ -324,6 +324,8 @@ func (s *Specification) addProxyEntry(entry *workshop.ProxyEntry, configKey stri
 			device["uid"] = workshop.User.Uid
 			device["gid"] = workshop.User.Gid
 		}
+		device["security.uid"] = s.User.Uid
+		device["security.gid"] = s.User.Gid
 	case workshop.HostToWorkshop:
 		device["bind"] = "host"
 		if entry.Listen.Protocol == "unix" && !strings.HasPrefix(entry.Listen.Address, "@") {

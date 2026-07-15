@@ -400,7 +400,7 @@ func (s *Backend) LaunchOrRebuildWorkshop(ctx context.Context, file *workshop.Fi
 	req := api.InstancesPost{
 		InstancePut: api.InstancePut{
 			Config:  config,
-			Devices: defaultDevices(projectId, file.Name),
+			Devices: defaultDevices(usr, projectId, file.Name),
 		},
 		Name: InstanceName(file.Name, projectId),
 		Type: api.InstanceTypeContainer,
@@ -1197,7 +1197,7 @@ func (s *Backend) LxdClient(ctx context.Context) (lxd.InstanceServer, error) {
 	return ConnectLxd(ctx)
 }
 
-func defaultDevices(pid, w string) map[string]map[string]string {
+func defaultDevices(usr *user.User, pid, w string) map[string]map[string]string {
 	devices := map[string]map[string]string{
 		"root":             {"type": "disk", "pool": storagePool, "path": "/"},
 		"workshop.network": {"type": "nic", "network": networkName, "name": "eth0"},
@@ -1209,13 +1209,13 @@ func defaultDevices(pid, w string) map[string]map[string]string {
 	}
 
 	for _, proxy := range proxies {
-		devices[proxy.Name] = proxyToLxdDevice(proxy)
+		devices[proxy.Name] = proxyToLxdDevice(usr, proxy)
 	}
 
 	return devices
 }
 
-func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
+func proxyToLxdDevice(usr *user.User, proxy workshop.ProxyEntry) map[string]string {
 	device := map[string]string{
 		"type":    "proxy",
 		"connect": proxy.Connect.Protocol + ":" + proxy.Connect.Address,
@@ -1225,6 +1225,8 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 	switch proxy.Direction {
 	case workshop.WorkshopToHost:
 		device["bind"] = "instance"
+		device["security.uid"] = usr.Uid
+		device["security.gid"] = usr.Gid
 	case workshop.HostToWorkshop:
 		device["bind"] = "host"
 	}
