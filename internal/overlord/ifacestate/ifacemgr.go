@@ -351,22 +351,29 @@ func (m *InterfaceManager) ResolveDisconnect(
 // invalid on the daemon restart / update. Thus, recreating it upon every
 // daemon restart makes sure it still points to the correct files.
 func (m *InterfaceManager) recreateInternalMounts(pctx context.Context, w string) error {
-	// Recreate workshopctl bind mount, this has to be done if, for example,
-	// workshopctl was updated to a new version and is shown as /deleted in a
-	// workshop.
-	workshopctl := workshop.Mount{
-		Name:     "workshop.workshopctl",
+	// Recreate the workshopctl bind mount, this has to be done if, for
+	// example, the Workshop snap was updated to a new revision.
+	mount := workshop.Mount{
+		Name:     "workshop.bin",
 		Type:     workshop.HostWorkshop,
-		What:     filepath.Join(dirs.ExecDir, "workshopctl"),
-		Where:    "/usr/bin/workshopctl",
+		What:     filepath.Dir(dirs.WorkshopCtlPath),
+		Where:    dirs.WorkshopGuestBinDir,
 		ReadOnly: true,
 	}
 
-	_ = m.backend.RemoveWorkshopMount(pctx, w, workshopctl.Name)
+	_ = m.backend.RemoveWorkshopMount(pctx, w, mount.Name)
 
-	if err := m.backend.AddWorkshopMount(pctx, w, workshopctl); err != nil {
+	if err := m.backend.AddWorkshopMount(pctx, w, mount); err != nil {
 		return err
 	}
+
+	// TODO: remove this in future. Old workshops may still have a single-file
+	// workshopctl mount. At some point the source path will no longer exist,
+	// and LXD will complain about it. Currently workshopctl is only used
+	// during launch, refresh and restore. The first two will use the new
+	// symlink in /usr/local/bin/workshopctl. Restore won't happen because
+	// we disallow restoring to an unsupported snapshot revision.
+	_ = m.backend.RemoveWorkshopMount(pctx, w, "workshop.workshopctl")
 
 	return nil
 }

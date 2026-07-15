@@ -36,8 +36,6 @@ apps:
       unix:
         listen-stream: $SNAP_COMMON/workshop/workshop.socket
         socket-mode: 0666
-  workshopctl:
-    command: bin/workshopctl
   configure-dns:
     command: bin/workshopd configure-dns
   sdk:
@@ -66,7 +64,7 @@ parts:
       fi
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshop" ./cmd/workshop
       CGO_ENABLED=1 go build -o "${CRAFT_PART_INSTALL}/bin/workshopd" ./cmd/workshopd
-      CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/workshopctl" ./cmd/workshopctl
+      CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/lib/workshop/guest/workshopctl" ./cmd/workshopctl
       CGO_ENABLED=0 go build -o "${CRAFT_PART_INSTALL}/bin/sdk" ./cmd/sdk
 
       # Set snap version including git commit hash
@@ -81,7 +79,7 @@ parts:
     prime:
       - bin/workshop
       - bin/workshopd
-      - bin/workshopctl
+      - lib/workshop/guest/workshopctl
       - bin/sdk
   zstd:
     plugin: nil

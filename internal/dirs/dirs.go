@@ -36,6 +36,9 @@ var (
 	// base directory inside a workshop
 	WorkshopBaseDir = defaultBaseDir
 
+	// Directory for mounted binaries (i.e. workshopctl)
+	WorkshopGuestBinDir = filepath.Join(WorkshopBaseDir, "bin")
+
 	// SDKs directory to install an SDK in a workshop
 	WorkshopSdksDir = filepath.Join(WorkshopBaseDir, "sdk")
 
@@ -64,8 +67,8 @@ var (
 	BaseDir string
 	// Cache directory for workshopd
 	CacheDir string
-	// Work directory
-	ExecDir string
+	// Path for workshopctl executable
+	WorkshopCtlPath string
 	// The directory to store downloaded base images and associated metadata
 	BaseDownloads string
 	// The directory to store downloaded SDKs
@@ -102,19 +105,30 @@ func getEnvPaths() (workshopdDir, cacheDir, socketPath string) {
 	return workshopdDir, cacheDir, socketPath
 }
 
-func init() {
-	var err error
-	var execPath string
-	execPath, err = os.Executable()
+func getWorkshopCtlPath() string {
+	execPath, err := os.Executable()
 	if err != nil {
-		panic("cannot get working directory")
+		panic(fmt.Errorf("cannot get executable path: %w", err))
 	}
 
-	ExecDir = filepath.Dir(execPath)
+	// Packages use a dedicated $prefix/lib/workshop/guest directory.
+	binDir := filepath.Dir(execPath)
+	workshopctl := filepath.Join(filepath.Dir(binDir), "lib", "workshop", "guest", "workshopctl")
+	if _, err := os.Stat(workshopctl); err == nil {
+		return workshopctl
+	}
+
+	// Local development often uses `go install`, which places all binaries in
+	// the same directory.
+	return filepath.Join(binDir, "workshopctl")
+}
+
+func init() {
 	XdgRuntimeDirBase = "/run/user"
 	BaseDir, CacheDir, SocketPath = getEnvPaths()
 	SetRootDir(BaseDir)
 	SetCacheDir(CacheDir)
+	WorkshopCtlPath = getWorkshopCtlPath()
 }
 
 func SetRootDir(rootdir string) {

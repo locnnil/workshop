@@ -1305,11 +1305,13 @@ write_files:
       TrustedUserCAKeys /etc/ssh/ssh_ca_ed25519_key.pub
 runcmd:
   # Project directory is required for 'workshop exec'.
-  - install --directory --mode=755 /project {{shquote .WorkshopStateDir}}
+  - install --directory --mode=755 /project /usr/local/bin {{shquote .WorkshopStateDir}}
   # Create XDG base directories so SDKs don't need an extra mode=700 step.
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
+  # Put workshopctl on the PATH.
+  - ln -sf {{shquote .WorkshopCtlPath}} /usr/local/bin/workshopctl
 `[1:]
 
 	var cloudConfig strings.Builder
@@ -1317,8 +1319,10 @@ runcmd:
 		"shquote": shlex.Quote,
 	}
 	dot := struct {
+		WorkshopCtlPath  string
 		WorkshopStateDir string
 	}{
+		WorkshopCtlPath:  filepath.Join(dirs.WorkshopGuestBinDir, filepath.Base(dirs.WorkshopCtlPath)),
 		WorkshopStateDir: dirs.WorkshopStateDir,
 	}
 	t := template.Must(template.New("cloud-config").Funcs(funcs).Parse(cloudConfigTemplate))

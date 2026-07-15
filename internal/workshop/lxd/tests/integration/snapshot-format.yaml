@@ -15,7 +15,7 @@ launched:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
+    cloud-init.user-data: 'f3250ef105cf4f516d283ba8534392391fe34bb5d597324bf3ceb65435ef2ad255457a2997137c32ce5494549a34009c'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -37,8 +37,8 @@ launched:
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false
@@ -53,7 +53,7 @@ started:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
+    cloud-init.user-data: 'f3250ef105cf4f516d283ba8534392391fe34bb5d597324bf3ceb65435ef2ad255457a2997137c32ce5494549a34009c'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -75,8 +75,8 @@ started:
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false
@@ -91,7 +91,7 @@ sdk-attached:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
+    cloud-init.user-data: 'f3250ef105cf4f516d283ba8534392391fe34bb5d597324bf3ceb65435ef2ad255457a2997137c32ce5494549a34009c'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -125,8 +125,8 @@ sdk-attached:
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false
@@ -141,7 +141,7 @@ sdk-mounted:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
+    cloud-init.user-data: 'f3250ef105cf4f516d283ba8534392391fe34bb5d597324bf3ceb65435ef2ad255457a2997137c32ce5494549a34009c'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -183,8 +183,8 @@ sdk-mounted:
       listen: unix:/var/lib/workshop/run/workshop.socket.untrusted
       mode: '0666'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false

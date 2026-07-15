@@ -78,10 +78,9 @@ func (s *snapshotSuite) SetUpSuite(c *check.C) {
 
 	dirs.SetRootDir(c.MkDir())
 	dirs.SetCacheDir(c.MkDir())
-	dirs.ExecDir = c.MkDir()
+	dirs.WorkshopCtlPath = filepath.Join(c.MkDir(), "workshopctl")
 	dirs.SocketPath = filepath.Join(dirs.BaseDir, "workshop.socket")
 	c.Assert(dirs.CreateDirs(), check.IsNil)
-	c.Assert(os.WriteFile(filepath.Join(dirs.ExecDir, "workshopctl"), nil, 0644), check.IsNil)
 
 	var err error
 	s.bd, err = lxdbackend.New()
@@ -262,7 +261,7 @@ func (s *snapshotSuite) workshopFormat(c *check.C, file *workshop.File, snapshot
 	// Host paths of default devices can change without affecting the
 	// workshop, so we exclude them from the hash. Other device options
 	// should be included in case they influence the rootfs.
-	delete(inst.Devices["workshop.workshopctl"], "source")
+	delete(inst.Devices["workshop.bin"], "source")
 	delete(inst.Devices["cache.apt"], "source")
 	delete(inst.Devices["workshop.socket"], "connect")
 
