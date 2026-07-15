@@ -149,6 +149,25 @@ so a channel means nothing to them.
 A published SDK is packaged once and consumed anywhere.
 
 
+.. _exp_sdk_channels_platforms:
+
+Channels and platforms
+----------------------
+
+An SDK is versioned through *channels*, such as :samp:`latest/stable`,
+which are independent of platforms.
+The same channel name resolves to a different build for each platform:
+requesting a channel installs the revision
+built for the workshop's :ref:`base <exp_base>` and CPU architecture.
+
+Two workshops that both request :samp:`latest/stable`
+therefore receive different builds when their bases or architectures differ.
+A workshop on an :samp:`ubuntu@24.04` base
+and one on :samp:`ubuntu@22.04`
+each install the :samp:`latest/stable` revision built for its own platform,
+not a single shared build.
+
+
 .. _exp_system_sdk:
 
 System SDK

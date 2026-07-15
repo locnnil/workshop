@@ -580,9 +580,14 @@ Branches are short-lived subdivisions of a channel
 intended for experimentation, e.g. `1.2.3/edge/issue-56789`.
 After 30 days of no activity, a branch will be closed automatically.
 
-.. attention::
+.. note::
 
    SDK channels should not be confused with SDK revisions.
+   Also, a channel is independent of a platform.
+   The same channel resolves to a separate revision
+   for each :ref:`platform <ref_sdk_platform>` the SDK supports,
+   so workshops with different bases or architectures
+   receive different builds under one channel name.
 
 
 See also
