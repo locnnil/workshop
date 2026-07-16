@@ -216,6 +216,10 @@ For instance,
 the :samp:`uv` and :samp:`jupyter` SDKs ship this pattern out of the box:
 :samp:`uv` exposes :file:`/home/workshop/uv-venv/` through a :samp:`venv` slot,
 and :samp:`jupyter` consumes it with a :samp:`venv` plug at :file:`$SDK/venv/`.
+Both declarations are already there,
+so the workshop definition only grafts the pairing on.
+Building the slot and the plug into SDKs you author
+is covered by :ref:`how_share_content_between_sdks`.
 
 The pairing has to be spelled out.
 A mount plug auto-connects only to :samp:`system:mount`,
@@ -261,8 +265,6 @@ Confirm the pairing:
 
 The :samp:`uv:cache` row shows the default that the entry overrides:
 a mount plug nobody wires will land on :samp:`system:mount`.
-See :ref:`how_share_content_between_sdks` for the SDK side of the pattern,
-including the slot and plug declarations.
 
 
 .. _how_reset_remount:

@@ -1,0 +1,18 @@
+name: toolbox
+base: ubuntu@24.04
+summary: Synthesized consuming SDK for the share-content-between-sdks how-to
+description: |
+  Consumes a directory another SDK publishes through its cache plug. The plug
+  and the slot it pairs with carry different names, so only the workshop
+  definition can pair them. The state plug is left unpaired on purpose, to show
+  the system:mount default that an unnamed mount plug falls back to.
+
+sdkcraft-started-at: "2026-05-14T00:00:00.000000+00:00"
+
+plugs:
+  cache:
+    interface: mount
+    workshop-target: /home/workshop/toolbox-cache
+  state:
+    interface: mount
+    workshop-target: /home/workshop/toolbox-state

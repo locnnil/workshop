@@ -1,0 +1,14 @@
+name: cachekit
+base: ubuntu@24.04
+summary: Synthesized providing SDK for the share-content-between-sdks how-to
+description: |
+  Publishes a directory inside the workshop through a mount slot, so that
+  another SDK in the same workshop can read it without routing the content
+  through the host. Paired with toolbox by an explicit connections entry.
+
+sdkcraft-started-at: "2026-05-14T00:00:00.000000+00:00"
+
+slots:
+  shared:
+    interface: mount
+    workshop-source: /home/workshop/cachekit-share
