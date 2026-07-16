@@ -21,6 +21,102 @@ Its :program:`workshopd` daemon exposes a RESTful API
 (see :file:`internal/daemon/api.go`)
 to the clients.
 
+|ws_markup| also develops itself in a workshop.
+The repository is a :ref:`project <exp_projects>`
+whose :file:`.workshop/dev.yaml` definition
+describes a workshop named :samp:`dev`.
+It carries the Go toolchain and the linters,
+pinned to the versions the project checks against,
+and packages them as :ref:`actions <exp_workshop_definition_actions>`.
+
+Your work is split across two environments:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Environment
+     - What runs there
+
+   * - The :samp:`dev` workshop
+     - Go builds, :program:`golangci-lint`, :program:`shellcheck`,
+       unit tests and coverage,
+       and the documentation build, preview, and checks.
+
+   * - The host
+     - :program:`workshopd`, the :program:`spread` suites,
+       and the LXD integration tests.
+
+:program:`workshopd` connects to LXD
+and expects the ZFS storage driver,
+neither of which the :samp:`dev` workshop ships,
+so the host-side commands run outside it.
+
+
+.. _contributing_dev_workshop:
+
+Launch the dev workshop
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Install |ws_markup| and LXD first
+(see :ref:`tut_install`),
+then launch the workshop from the repository root:
+
+.. code-block:: console
+
+   $ workshop launch dev
+
+The definition pins the toolchain
+to the versions the project checks against:
+
+- The :samp:`go` SDK tracks :samp:`1.26/stable`,
+  matching the :samp:`go` directive in :file:`go.mod`.
+
+- :program:`golangci-lint` is pinned to v2.11.3,
+  matching the :samp:`rev` in :file:`.pre-commit-config.yaml`
+  and the linter version in :file:`.github/workflows/lint.yaml`.
+
+Linting in the workshop therefore uses the same version
+as the linting workflow,
+without installing the linters on your host.
+
+The tooling comes from an :ref:`in-project SDK <exp_in_project_sdk>`
+in :file:`.workshop/tools/`,
+which the definition lists as :samp:`project-tools`;
+the :samp:`project-` prefix selects the in-project source
+(see :ref:`ref_workshop_definition_sdk_entry`).
+Its :ref:`hooks <exp_sdk_hooks>` install :program:`make`,
+:program:`shellcheck`, :program:`golangci-lint`, and snapd-testing-tools,
+and report the workshop unhealthy
+when :program:`golangci-lint` is missing
+(see :ref:`exp_workshopctl_health`).
+The SDK also slots a :ref:`tunnel <exp_tunnel_interface>`
+that the :ref:`system SDK <exp_system_sdk>` plugs
+to publish the documentation preview
+on the host at :samp:`127.0.0.1:8000`
+(see :ref:`how_forward_ports`).
+
+List the available actions and run one:
+
+.. code-block:: console
+
+   $ workshop actions dev
+   $ workshop run dev lint
+
+Because :samp:`dev` is the only definition in :file:`.workshop/`,
+you can omit its name.
+See :ref:`ref_workshop_actions` and :ref:`ref_workshop_run`.
+
+Open an interactive shell with :ref:`workshop shell <ref_workshop_shell>`,
+run a single command with :ref:`workshop exec <ref_workshop_exec>`,
+and apply edits to :file:`.workshop/dev.yaml`
+or to the SDK in :file:`.workshop/tools/`
+with :ref:`workshop refresh <ref_workshop_refresh>`.
+
+
+Run the daemon on the host
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The recommended way to run the current sources
 is the :command:`go tool try` development tool
 wired into :file:`go.mod`:
@@ -57,9 +153,14 @@ The client can connect using the daemon's Unix domain socket:
    $ export WORKSHOP=~/workshop
    $ workshop list
 
+
+Install Spread
+~~~~~~~~~~~~~~
+
 `Spread <https://github.com/canonical/spread>`__ is the end-to-end testing tool
 for |ws_markup|.
-Install it from GitHub:
+It launches its own LXD containers,
+so install and run it on the host:
 
 .. code-block:: console
 
@@ -133,57 +234,112 @@ See the :ref:`coding_style_guide` for the full set of patterns and their rationa
 Test
 ~~~~
 
-Run the unit and integration tests before submitting a pull request.
+Run the checks before submitting a pull request.
+The :samp:`dev` workshop runs them
+with the tool versions the project pins
+(see :ref:`contributing_dev_workshop`);
+each check also has a host-native equivalent
+if you have the tools installed.
+
 |ws_markup| tests use
 `gocheck <https://pkg.go.dev/gopkg.in/check.v1#section-readme>`_,
-which integrates with :command:`go test`:
+which integrates with :command:`go test`.
+Run the unit tests with coverage:
+
+.. code-block:: console
+
+   $ workshop run dev cover
+
+Or on the host:
 
 .. code-block:: console
 
    $ go test ./...
-   $ go test -check.f <TEST-NAME|SUITE-NAME>
+   $ go test -covermode=count -coverpkg=./... -coverprofile=coverage.out ./...
 
-Run the end-to-end and integration tests with
-`Spread <https://github.com/canonical/spread>`__:
-
-.. code-block:: console
-
-   $ spread tests/<TEST-PATH-NAME>
-
-To check code coverage:
+To run a single test or suite, name the package first:
 
 .. code-block:: console
 
-   $ go test -coverpkg=<./...|PACKAGE> \
+   $ workshop exec dev -- go test <PACKAGE> -check.f <TEST-NAME|SUITE-NAME>
+
+To control the coverage scope and mode:
+
+.. code-block:: console
+
+   $ workshop exec dev -- go test -coverpkg=<./...|PACKAGE> \
        -covermode=<set|count|atomic> \
        -coverprofile=<OUTPUT-FILE> <./...|PACKAGE>
 
-For example, to measure coverage using all tests:
-
-.. code-block:: console
-
-   $ go test -covermode=count -coverpkg=./... -coverprofile=cover.out ./...
-
-To generate an HTML representation:
+The :samp:`cover` action writes its profile to :file:`coverage.out`.
+Because the project directory is mounted into the workshop at :file:`/project/`,
+you can render the profile on the host:
 
 .. code-block:: console
 
    $ go tool cover -html=<OUTPUT-FILE> -o <OUTPUT-HTML>
 
-For example:
-
-.. code-block:: console
-
-   $ go tool cover -html=cover.out -o cover.html
-
 The output flag can be omitted to open in the default browser:
 
 .. code-block:: console
 
-   $ go tool cover -html=cover.out
+   $ go tool cover -html=coverage.out
 
-The commands above work for unit and integration tests
-instrumented directly with :command:`go test`.
+Formatting and common pitfalls are checked with
+`golangci-lint <https://golangci-lint.run/>`_.
+Lint the sources in both the full and the incremental configuration:
+
+.. code-block:: console
+
+   $ workshop run dev lint
+
+Or on the host:
+
+.. code-block:: console
+
+   $ golangci-lint run
+   $ golangci-lint run --new-from-rev='HEAD~' --config=.golangci.incremental.yaml
+
+Some issues can be fixed automatically:
+
+.. code-block:: console
+
+   $ workshop exec dev -- golangci-lint run --fix
+
+Or on the host:
+
+.. code-block:: console
+
+   $ golangci-lint run --fix
+
+Check the shell scripts and the :program:`spread` task definitions:
+
+.. code-block:: console
+
+   $ workshop run dev shellcheck
+
+If `pre-commit <https://pre-commit.com/index.html#install>`_ is available,
+:program:`git` can run the linters on every commit
+using the same pinned :program:`golangci-lint`:
+
+.. code-block:: console
+
+   $ pre-commit install
+
+The LXD integration tests sit behind a build tag
+and drive LXD directly, so run them on the host:
+
+.. code-block:: console
+
+   $ go test -tags=integration ./internal/workshop/lxd/tests/integration/
+
+Run the end-to-end suites with
+`Spread <https://github.com/canonical/spread>`__, also on the host:
+
+.. code-block:: console
+
+   $ spread tests/<TEST-PATH-NAME>
+
 Integration tests run through :program:`spread`
 create the coverage profile automatically,
 but the artifacts need to be collected from the VM
@@ -192,26 +348,6 @@ with the :option:`!-artifacts` flag:
 .. code-block:: console
 
    $ spread -artifacts=<PATH-TO-DEST> tests/integration/
-
-Formatting and common pitfalls are checked with
-`golangci-lint <https://golangci-lint.run/>`_. Run the checks locally:
-
-.. code-block:: console
-
-   $ golangci-lint run
-
-Some issues can be fixed automatically:
-
-.. code-block:: console
-
-   $ golangci-lint run --fix
-
-If `pre-commit <https://pre-commit.com/index.html#install>`_ is available,
-:program:`git` can run these checks on every commit:
-
-.. code-block:: console
-
-   $ pre-commit install
 
 
 Document your work

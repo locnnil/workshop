@@ -23,8 +23,11 @@ To build and serve it at :samp:`127.0.0.1:8000`:
 
 .. code-block:: console
 
-   $ workshop launch
-   $ workshop run docs-run
+   $ workshop launch dev
+   $ workshop run dev docs-run
+
+The workshop is the same one code contributions use;
+see :ref:`contributing_dev_workshop`.
 
 
 .. _contributing_doc_dependencies:
@@ -118,7 +121,7 @@ which cover Markdown style, spelling, inclusive language, and links:
 
 .. code-block:: console
 
-   $ workshop run docs-check
+   $ workshop run dev docs-check
 
 For the workflows that run the same checks on your pull request,
 see :ref:`contributing_cicd`.
