@@ -27,6 +27,11 @@ A mount plug is described by these attributes:
      - Path inside the workshop used as the plug's target directory.
        Must be an absolute path;
        :envvar:`$SDK` expands to the SDK's installation path in the workshop.
+       |ws_markup| creates the directory if it is missing,
+       so the path must be writable.
+       An SDK's installation tree is mounted read-only,
+       so a target inside it resolves
+       only where the SDK already ships that directory.
 
    * - :samp:`mode`
      - integer
@@ -79,3 +84,5 @@ A mount slot on a regular SDK is described by this attribute:
      - Path inside the workshop used as the slot's source directory.
        Must be an absolute path;
        :envvar:`$SDK` expands to the SDK's installation path in the workshop.
+       The directory must already exist when the connection is established;
+       unlike a plug's target, |ws_markup| does not create it.

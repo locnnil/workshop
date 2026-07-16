@@ -332,23 +332,35 @@ Workshop with an in-project SDK and a plug binding between SDKs:
    :language: yaml
    :caption: .workshop/go-dev.yaml
 
-Workshop that grafts a plug and a slot onto its SDKs
+
+Workshop that grafts a slot and plugs onto its SDKs
 and adds explicit connections;
-besides using the fictional
-:samp:`tensorflow`, :samp:`imagenet` and :samp:`cuda` SDKs,
-it defines an additional slot under the :samp:`imagenet` SDK,
-a plug under :samp:`tensorflow`,
-and two connections:
+besides using the :samp:`ollama`, :samp:`uv` and :samp:`jupyter` SDKs,
+it defines an additional tunnel slot under the :samp:`uv` SDK,
+three tunnel plugs under the :samp:`system` SDK,
+and three connections:
 
-- One that connects the :samp:`tensorflow:images` plug
-  to the newly defined :samp:`imagenet:images` slot.
+- One that connects the :samp:`jupyter:venv` plug
+  to the :samp:`uv:venv` slot, both provided by the SDKs themselves.
+  Without it, :samp:`jupyter:venv` falls back to :samp:`system:mount`
+  and Jupyter gets a private virtual environment on the host.
 
-- Another that connects the :samp:`tensorflow:cuda` plug
-  to the preexisting :samp:`cuda:libs`.
+- One that connects the newly defined :samp:`system:app` plug
+  to the newly defined :samp:`uv:api` slot.
 
-.. literalinclude:: ../../examples/workshop-digits-cuda.yaml
+- One that connects the newly defined :samp:`system:inference` plug
+  to the preexisting :samp:`ollama:ollama-server` slot.
+
+
+The last two connections are required because the names differ:
+a tunnel plug under the :samp:`system` SDK auto-connects
+only to a slot that carries the same name.
+The :samp:`system:jupyter` plug needs no entry for that reason,
+pairing with the :samp:`jupyter:jupyter` slot on its own.
+
+.. literalinclude:: ../../examples/workshop-notebook.yaml
    :language: yaml
-   :caption: .workshop/digits-cuda.yaml
+   :caption: .workshop/notebook.yaml
 
 
 Workshop that pulls an SDK from the try area:

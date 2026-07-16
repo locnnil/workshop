@@ -329,43 +329,54 @@ eventually, all interface connections are
 in a single task *after* all the SDK layers have been created,
 because all components must be in place before the wiring can be done.
 
-This example adds a slot, a plug, and a connection to its SDKs:
+This example adds a slot, a plug, and two connections to its SDKs:
 
 .. code-block:: yaml
    :caption: .workshop/dev.yaml
-   :emphasize-lines: 5-8, 10-13, 15-17
+   :emphasize-lines: 5-8, 11-14, 15-19
 
-   base: ubuntu@22.04
    name: dev
+   base: ubuntu@24.04
    sdks:
-     - name: tensorflow
-       plugs:
-         cuda:
-           interface: mount
-           workshop-target: /usr/local/cuda/lib64
-     - name: imagenet
+     - name: uv
        slots:
-         images:
-           interface: mount
-           workshop-source: $SDK/images
-     - name: cuda
+         api:
+           interface: tunnel
+           endpoint: 8000
+     - name: jupyter
+     - name: system
+       plugs:
+         app:
+           interface: tunnel
+           endpoint: 127.0.0.1:8090
    connections:
-     - plug: tensorflow:cuda
-       slot: cuda:libs
+     - plug: jupyter:venv
+       slot: uv:venv
+     - plug: system:app
+       slot: uv:api
 
 
-This extends the :samp:`tensorflow` SDK
-with a standard path for CUDA runtime libraries.
-In :samp:`connections`,
-we explicitly connect the :samp:`cuda` plug,
-newly defined under the :samp:`tensorflow` SDK,
-to the :samp:`libs` slot from the :samp:`cuda` SDK.
+This extends the :samp:`uv` SDK
+with a tunnel slot for a service its publisher never declared,
+and the :samp:`system` SDK
+with a tunnel plug that exposes that service on the host.
+
+The first entry in :samp:`connections`
+wires a plug and a slot that the SDKs define themselves.
 Thus, upon workshop creation,
-the plug will be connected
+the :samp:`jupyter:venv` plug will be connected
 not to a default system SDK location on the host
 (for example, :file:`.../<ID>/<WORKSHOP>/...`),
-but to a library path *inside* the workshop,
-which is set by :samp:`workshop-target`.
+but to a directory *inside* the workshop,
+which the :samp:`uv:venv` slot sets with :samp:`workshop-source`.
+
+The second entry connects the :samp:`app` plug,
+newly defined under the :samp:`system` SDK,
+to the :samp:`api` slot,
+newly defined under the :samp:`uv` SDK.
+It is needed because the two names differ:
+on its own, |ws_markup| pairs a tunnel plug under the :samp:`system` SDK
+only with a slot that carries the same name.
 
 Mind that the connection established in this way
 is no different from those created via the command line.
