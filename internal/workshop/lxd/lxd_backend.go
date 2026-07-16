@@ -33,10 +33,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/x-go/strutil/shlex"
 	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
@@ -1232,7 +1234,7 @@ func proxyToLxdDevice(proxy workshop.ProxyEntry) map[string]string {
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
-	cloudConfig := `
+	cloudConfigTemplate := `
 #cloud-config
 users:
   - default
@@ -1303,12 +1305,26 @@ write_files:
       TrustedUserCAKeys /etc/ssh/ssh_ca_ed25519_key.pub
 runcmd:
   # Project directory is required for 'workshop exec'.
-  - install --directory --mode=755 /project
+  - install --directory --mode=755 /project {{shquote .WorkshopStateDir}}
   # Create XDG base directories so SDKs don't need an extra mode=700 step.
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
 `[1:]
+
+	var cloudConfig strings.Builder
+	funcs := map[string]any{
+		"shquote": shlex.Quote,
+	}
+	dot := struct {
+		WorkshopStateDir string
+	}{
+		WorkshopStateDir: dirs.WorkshopStateDir,
+	}
+	t := template.Must(template.New("cloud-config").Funcs(funcs).Parse(cloudConfigTemplate))
+	if err := t.Execute(&cloudConfig, dot); err != nil {
+		return nil, err
+	}
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
@@ -1321,7 +1337,7 @@ runcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"cloud-init.user-data":           cloudConfig,
+		"cloud-init.user-data":           cloudConfig.String(),
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,

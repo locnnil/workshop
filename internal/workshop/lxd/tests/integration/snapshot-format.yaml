@@ -15,7 +15,7 @@ launched:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -53,7 +53,7 @@ started:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -91,7 +91,7 @@ sdk-attached:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -141,7 +141,7 @@ sdk-mounted:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: 'b6a1a0844c3cce8ff2d60991700eb2d94f0f95cbef27f42f65d6bf397bfd1ae0d521b695df367f72e89d7ab280f1486a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
