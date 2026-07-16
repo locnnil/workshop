@@ -98,6 +98,63 @@ SDKs that don't ship compiled binaries
 can use the :samp:`all` architecture instead.
 
 
+.. _exp_sdk_store:
+
+SDK Store
+---------
+
+.. @artefact SDK channel
+
+The SDK Store is where an SDK stops being a local artifact
+and becomes something anyone can install.
+It is also the default source:
+an SDK listed in a definition by its bare name comes from the Store,
+and the :samp:`try-` and :samp:`project-` prefixes,
+or the reserved :samp:`system` name,
+are how a definition opts out of it.
+During :command:`workshop launch` and :command:`workshop refresh`,
+|ws_markup| resolves only the unprefixed names against the Store.
+
+A publisher reserves a name on the Store once.
+Names are global,
+and registration draws the ownership boundary:
+from then on, only the SDK's publisher and assigned collaborators
+can upload or release under that name.
+Uploading pushes one built artifact
+and gets back a numbered *revision*,
+one per platform the SDK supports.
+
+Revisions and channels are separate things,
+and the distinction is what the Store is built around.
+A revision is immutable;
+once uploaded, it's a fixed artifact that never changes.
+A channel is a named pointer into revisions.
+Releasing a revision only moves that pointer,
+never rebuilding or re-uploading anything,
+which is why a revision can sit on the Store unreleased,
+present but invisible to everyone else.
+
+For the user on the other side,
+this is why a definition names a channel rather than a revision.
+The channel is a standing choice of maturity, not a one-time version pin.
+The publisher moves the pointer forward as new revisions are released,
+and the workshop picks up the change on its next refresh
+without the definition being edited.
+A channel is optional;
+an SDK that omits one gets the default.
+
+Only Store SDKs have channels.
+The other kinds never reach the Store,
+so a channel means nothing to them.
+Each trades reach for immediacy:
+a :ref:`sketch SDK <exp_sketch_sdk>` reaches a single workshop,
+an :ref:`in-project SDK <exp_in_project_sdk>` reaches whoever clones the project,
+and a :ref:`tried SDK <exp_test_try_sdk>` reaches only the machine that packed it.
+The :ref:`system SDK <exp_system_sdk>` ships inside |ws_markup| itself
+and is never fetched at all.
+A published SDK is packaged once and consumed anywhere.
+
+
 .. _exp_system_sdk:
 
 System SDK
@@ -221,10 +278,19 @@ Explanation:
 - :ref:`exp_workshop`
 
 
+How-to guides:
+
+- :ref:`how_build_sdk`
+- :ref:`how_publish_sdk`
+
+
 Reference:
 
+- :ref:`ref_sdk_channels`
 - :ref:`ref_sdk_definition`
+- :ref:`ref_sdk_find`
 - :ref:`ref_sdk_hooks`
+- :ref:`ref_sdk_info`
 - :ref:`ref_sdk_internals`
 - :ref:`ref_sdkcraft_definition`
 - :ref:`ref_workshop_changes`

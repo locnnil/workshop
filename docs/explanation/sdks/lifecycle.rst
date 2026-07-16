@@ -116,6 +116,7 @@ Explanation:
 - :ref:`exp_sdk_concepts`
 - :ref:`exp_sdk_hooks`
 - :ref:`exp_sdk_parts`
+- :ref:`exp_sdk_store`
 - :ref:`exp_sketch_sdk`
 
 
