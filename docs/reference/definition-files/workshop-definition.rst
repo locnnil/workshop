@@ -333,7 +333,7 @@ Workshop with an in-project SDK and a plug binding between SDKs:
    :caption: .workshop/go-dev.yaml
 
 
-Workshop that grafts a slot and plugs onto its SDKs
+Workshop that grafts a slot and three plugs onto its SDKs
 and adds explicit connections;
 besides using the :samp:`ollama`, :samp:`uv` and :samp:`jupyter` SDKs,
 it defines an additional tunnel slot under the :samp:`uv` SDK,
