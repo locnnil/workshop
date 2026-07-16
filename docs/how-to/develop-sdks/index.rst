@@ -11,6 +11,7 @@ How to develop SDKs
 These how-to guides cover the work of an SDK author:
 laying out the project,
 writing runtime hooks,
+sharing content with other SDKs,
 and publishing the result to the SDK Store.
 
 .. toctree::
@@ -20,4 +21,5 @@ and publishing the result to the SDK Store.
    Configure a mount <configure-mount>
    Declare plugs and slots <declare-plugs-slots>
    Publish an SDK <publish-an-sdk>
+   Share content between SDKs <share-content-between-sdks>
    Write runtime hooks <write-runtime-hooks>

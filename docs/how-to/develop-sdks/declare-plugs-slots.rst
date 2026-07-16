@@ -46,7 +46,7 @@ and may use :envvar:`$SDK` to refer to the SDK installation directory:
 
 .. code-block:: yaml
    :caption: sdkcraft.yaml
-   :emphasize-lines: 3-5
+   :emphasize-lines: 3-6
 
    # ...
 
@@ -57,11 +57,12 @@ and may use :envvar:`$SDK` to refer to the SDK installation directory:
 
 
 When a workshop installs the SDK,
-|ws_markup| connects this plug
-to a matching slot,
-either auto-connecting it to the workshop's :ref:`system SDK <exp_system_sdk>`
-or to another SDK's slot
-when the workshop definition wires that pairing explicitly.
+|ws_markup| auto-connects this plug to :samp:`system:mount`,
+the slot the system SDK provides,
+and the plug receives a directory allocated on the host.
+Pairing it with another SDK's slot instead
+requires an explicit :samp:`connections:` entry in the workshop definition;
+:ref:`how_share_content_between_sdks` covers that flow end to end.
 The :samp:`mode`, :samp:`uid`, :samp:`gid`,
 and :samp:`read-only` attributes are optional.
 
@@ -77,7 +78,7 @@ and may use :envvar:`$SDK`:
 
 .. code-block:: yaml
    :caption: sdkcraft.yaml
-   :emphasize-lines: 3-5
+   :emphasize-lines: 3-6
 
    # ...
 
@@ -88,9 +89,14 @@ and may use :envvar:`$SDK`:
 
 
 This is for cross-SDK sharing within the workshop.
+A mount slot on a regular SDK never auto-connects:
+until a workshop definition names it
+in a :samp:`connections:` entry,
+it stays declared and unconsumed.
+:ref:`how_share_content_between_sdks` covers that flow end to end.
+
 Exposing a directory from the host
-is the responsibility of the
-:ref:`system SDK <exp_system_sdk>`;
+is the responsibility of the system SDK;
 a regular SDK cannot declare a host-rooted mount slot.
 
 
@@ -102,7 +108,7 @@ inside the workshop:
 
 .. code-block:: yaml
    :caption: sdkcraft.yaml
-   :emphasize-lines: 3-5
+   :emphasize-lines: 3-6
 
    # ...
 
@@ -132,6 +138,7 @@ Explanation:
 - :ref:`exp_mount_interface`
 - :ref:`exp_plugs_slots`
 - :ref:`exp_sdks`
+- :ref:`exp_system_sdk`
 - :ref:`exp_tunnel_interface`
 - :ref:`exp_workshop_definition_connections`
 
@@ -141,6 +148,7 @@ How-to guides:
 - :ref:`how_build_sdk`
 - :ref:`how_configure_mount`
 - :ref:`how_resolve_plug_conflicts`
+- :ref:`how_share_content_between_sdks`
 
 
 Reference:

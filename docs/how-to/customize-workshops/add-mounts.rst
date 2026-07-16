@@ -217,6 +217,12 @@ the :samp:`uv` and :samp:`jupyter` SDKs ship this pattern out of the box:
 :samp:`uv` exposes :file:`/home/workshop/uv-venv/` through a :samp:`venv` slot,
 and :samp:`jupyter` consumes it with a :samp:`venv` plug at :file:`$SDK/venv/`.
 
+The pairing has to be spelled out.
+A mount plug auto-connects only to :samp:`system:mount`,
+so without a :samp:`connections:` entry
+:samp:`jupyter:venv` receives a host directory
+and :samp:`uv:venv` stays unconsumed.
+
 List both SDKs and wire them with an explicit :samp:`connections` entry:
 
 .. code-block:: yaml
@@ -241,6 +247,22 @@ List both SDKs and wire them with an explicit :samp:`connections` entry:
 After the refresh,
 :samp:`jupyter` and :samp:`uv` share the same Python virtual environment,
 and neither SDK is aware of the other.
+Confirm the pairing:
+
+.. code-block:: console
+
+   $ workshop connections dev
+
+     INTERFACE  PLUG              SLOT                 NOTES
+     mount      dev/jupyter:venv  dev/uv:venv          -
+     mount      dev/uv:cache      dev/system:mount     -
+     tunnel     -                 dev/jupyter:jupyter  -
+
+
+The :samp:`uv:cache` row shows the default that the entry overrides:
+a mount plug nobody wires will land on :samp:`system:mount`.
+See :ref:`how_share_content_between_sdks` for the SDK side of the pattern,
+including the slot and plug declarations.
 
 
 .. _how_reset_remount:
@@ -292,6 +314,7 @@ Explanation:
 How-to guides:
 
 - :ref:`how_configure_mount`
+- :ref:`how_share_content_between_sdks`
 
 
 Reference:

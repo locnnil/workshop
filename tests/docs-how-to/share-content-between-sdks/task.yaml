@@ -1,0 +1,30 @@
+summary: Test 'How to share content between SDKs' to ensure it's operational
+prepare: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec launch
+restore: |
+  . "$TESTSLIB"/utils.sh
+  workshop_exec remove || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  chown -R ubuntu:ubuntu .
+
+  echo "The connections entry pairs jupyter:venv with the uv:venv slot"
+  workshop_exec connections dev | MATCH "^mount.+dev/jupyter:venv.+dev/uv:venv.+-$"
+  workshop_exec exec -- mountpoint -q /var/lib/workshop/sdk/jupyter/venv
+
+  echo "A mount plug not named in connections auto-connects to system:mount"
+  workshop_exec connections dev | MATCH "^mount.+dev/uv:cache.+dev/system:mount.+-$"
+
+  echo "Naming a workshop already implies --all, so the pair is rejected"
+  workshop_exec connections dev --all 2>&1 | MATCH "cannot use --all with workshop name"
+
+  echo "Without the connections entry, jupyter:venv falls back to system:mount"
+  cp workshop.no-conns.yaml workshop.yaml
+  chown ubuntu:ubuntu workshop.yaml
+  workshop_exec refresh
+  workshop_exec connections dev | MATCH "^mount.+dev/jupyter:venv.+dev/system:mount.+-$"
+
+  echo "and uv:venv is then listed with no plug consuming it"
+  workshop_exec connections dev | MATCH "^mount.+-.+dev/uv:venv.+-$"
