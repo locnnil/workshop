@@ -1,0 +1,47 @@
+/* Topic-category prev/next strips injected under headings by category_nav.py.
+   Colors come from Furo's variables, which the theme already flips for dark
+   mode. */
+
+p.category-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0.25rem 0 1.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-background-border);
+    font-size: 0.85em;
+}
+
+p.category-nav a {
+    color: var(--color-foreground-secondary);
+    text-decoration: none;
+}
+
+p.category-nav a:hover {
+    color: var(--color-brand-content);
+    text-decoration: underline;
+}
+
+p.category-nav a.category-nav-category {
+    font-weight: 600;
+}
+
+.category-nav-siblings {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+}
+
+.category-nav-sep {
+    color: var(--color-foreground-muted);
+}
+
+/* Below the content breakpoint, keep the strip left-aligned rather than
+   stretching category and links to opposite edges. */
+@media (max-width: 46em) {
+    p.category-nav {
+        justify-content: flex-start;
+    }
+}
