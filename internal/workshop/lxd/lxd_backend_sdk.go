@@ -173,6 +173,13 @@ func (s *Backend) ImportSdk(ctx context.Context, meta sdk.Meta, tarball *os.File
 	if err != nil {
 		return err
 	}
+
+	// Shifted means all user namespaces share the same file ownership, thanks to
+	// ID-mapped mounts. This would normally be a security issue (allowing
+	// workshops to create set-user-ID executables owned by real root), but it's
+	// fine because SDK mounts are read-only.
+	volume.Config["security.shifted"] = "true"
+
 	volume.Config["user.kind"] = "sdk"
 	volume.Config["user.sdk.name"] = meta.Name
 	volume.Config["user.sdk.package-id"] = meta.PackageID

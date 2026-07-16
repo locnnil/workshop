@@ -1,0 +1,4 @@
+name: ws-multi-user-2
+base: ubuntu@22.04
+sdks:
+  - name: test-sdk-basic-2
