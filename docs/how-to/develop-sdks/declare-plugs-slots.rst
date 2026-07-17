@@ -89,7 +89,7 @@ and may use :envvar:`$SDK`:
 
 
 This is for cross-SDK sharing within the workshop.
-A mount slot on a regular SDK never auto-connects:
+A mount slot on a regular SDK is not wired on its own:
 until a workshop definition names it
 in a :samp:`connections:` entry,
 it stays declared and unconsumed.

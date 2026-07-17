@@ -2,4 +2,4 @@ name: dev
 base: ubuntu@24.04
 sdks:
   - name: project-cachekit
-  - name: project-toolbox
+  - name: project-builder-sdk

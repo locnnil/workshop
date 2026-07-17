@@ -1,4 +1,4 @@
-name: toolbox
+name: builder-sdk
 base: ubuntu@24.04
 summary: Synthesized consuming SDK for the share-content-between-sdks how-to
 description: |
@@ -12,7 +12,7 @@ sdkcraft-started-at: "2026-05-14T00:00:00.000000+00:00"
 plugs:
   cache:
     interface: mount
-    workshop-target: /home/workshop/toolbox-cache
+    workshop-target: /home/workshop/builder-sdk-cache
   state:
     interface: mount
-    workshop-target: /home/workshop/toolbox-state
+    workshop-target: /home/workshop/builder-sdk-state

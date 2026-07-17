@@ -222,9 +222,9 @@ Building the slot and the plug into SDKs you author
 is covered by :ref:`how_share_content_between_sdks`.
 
 The pairing has to be spelled out.
-A mount plug auto-connects only to :samp:`system:mount`,
-so without a :samp:`connections:` entry
-:samp:`jupyter:venv` receives a host directory
+Without a :samp:`connections:` entry,
+:samp:`jupyter:venv` auto-connects to :samp:`system:mount`,
+receives a host directory,
 and :samp:`uv:venv` stays unconsumed.
 
 List both SDKs and wire them with an explicit :samp:`connections` entry:

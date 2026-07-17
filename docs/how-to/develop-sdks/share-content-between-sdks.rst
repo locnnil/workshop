@@ -33,7 +33,7 @@ Building the slot and the plug into SDKs you author
 is the subject here.
 The examples use two synthesized SDKs:
 :samp:`cachekit`, which publishes a directory,
-and :samp:`toolbox`, which reads it.
+and :samp:`builder-sdk`, which reads it.
 
 
 Prerequisites
@@ -90,7 +90,7 @@ Declare the mount plug
 
 The consuming SDK declares a mount plug
 naming the path where the shared directory appears.
-:samp:`toolbox` reads what :samp:`cachekit` publishes
+:samp:`builder-sdk` reads what :samp:`cachekit` publishes
 through a plug of its own:
 
 .. code-block:: yaml
@@ -102,12 +102,12 @@ through a plug of its own:
    plugs:
      cache:
        interface: mount
-       workshop-target: /home/workshop/toolbox-cache
+       workshop-target: /home/workshop/builder-sdk-cache
 
 
 Neither declaration names the other SDK,
 and the plug and the slot don't have to share a name:
-:samp:`toolbox` calls its plug :samp:`cache`
+:samp:`builder-sdk` calls its plug :samp:`cache`
 while :samp:`cachekit` calls its slot :samp:`shared`.
 Nothing pairs them until the workshop definition does.
 
@@ -116,9 +116,9 @@ Connect the SDKs
 ----------------
 
 Listing both SDKs in a workshop is not enough to pair them.
-A mount plug auto-connects only to a slot that the :samp:`system` SDK provides,
-never to a slot on another regular SDK.
-Left alone, :samp:`toolbox:cache` connects to :samp:`system:mount`
+Left to the SDKs' own rules,
+a mount plug auto-connects only to the slot the :samp:`system` SDK provides,
+so :samp:`builder-sdk:cache` connects to :samp:`system:mount`
 and receives a directory that |ws_markup| allocates on the host,
 while :samp:`cachekit:shared` stays listed but unconsumed.
 
@@ -133,9 +133,9 @@ in a top-level :samp:`connections:` entry:
    base: ubuntu@24.04
    sdks:
      - name: cachekit
-     - name: toolbox
+     - name: builder-sdk
    connections:
-     - plug: toolbox:cache
+     - plug: builder-sdk:cache
        slot: cachekit:shared
 
 
@@ -159,7 +159,7 @@ or :command:`workshop refresh` for a workshop that is already running:
 .. note::
 
    A plug named in :samp:`connections:` is claimed by that entry.
-   It stops auto-connecting to :samp:`system:mount`,
+   It no longer falls back to :samp:`system:mount`,
    so the host directory it used to receive is no longer mounted.
    Removing the entry and refreshing again returns the plug to that default.
 
@@ -173,19 +173,19 @@ Confirm the pairing with :command:`workshop connections`:
 
    $ workshop connections dev
 
-     INTERFACE  PLUG               SLOT                 NOTES
-     mount      dev/toolbox:cache  dev/cachekit:shared  -
-     mount      dev/toolbox:state  dev/system:mount     -
+     INTERFACE  PLUG                   SLOT                 NOTES
+     mount      dev/builder-sdk:cache  dev/cachekit:shared  -
+     mount      dev/builder-sdk:state  dev/system:mount     -
 
 
 On the first row,
 the :samp:`SLOT` column names :samp:`dev/cachekit:shared`
 rather than :samp:`dev/system:mount`,
-which confirms that :samp:`toolbox` reads from :samp:`cachekit`
+which confirms that :samp:`builder-sdk` reads from :samp:`cachekit`
 instead of from a host directory.
 
 The second row shows the default the :samp:`connections:` entry overrides.
-:samp:`toolbox:state` is not named in the workshop definition,
+:samp:`builder-sdk:state` is not named in the workshop definition,
 so it auto-connects to :samp:`system:mount`
 and receives a host directory.
 A dash in the :samp:`PLUG` column marks a slot that nothing consumes,

@@ -8,21 +8,21 @@ execute: |
 
   workshop_exec launch dev
 
-  echo "The connections entry pairs toolbox:cache with the cachekit:shared slot"
-  workshop_exec connections dev | MATCH "^mount.+dev/toolbox:cache.+dev/cachekit:shared.+-$"
+  echo "The connections entry pairs builder-sdk:cache with the cachekit:shared slot"
+  workshop_exec connections dev | MATCH "^mount.+dev/builder-sdk:cache.+dev/cachekit:shared.+-$"
 
-  echo "toolbox reads the directory cachekit publishes, not a host directory"
-  workshop_exec exec dev -- mountpoint -q /home/workshop/toolbox-cache
-  workshop_exec exec dev -- cat /home/workshop/toolbox-cache/marker | MATCH "^cachekit$"
+  echo "builder-sdk reads the directory cachekit publishes, not a host directory"
+  workshop_exec exec dev -- mountpoint -q /home/workshop/builder-sdk-cache
+  workshop_exec exec dev -- cat /home/workshop/builder-sdk-cache/marker | MATCH "^cachekit$"
 
   echo "A mount plug not named in connections auto-connects to system:mount"
-  workshop_exec connections dev | MATCH "^mount.+dev/toolbox:state.+dev/system:mount.+-$"
+  workshop_exec connections dev | MATCH "^mount.+dev/builder-sdk:state.+dev/system:mount.+-$"
 
-  echo "Without the connections entry, toolbox:cache falls back to system:mount"
+  echo "Without the connections entry, builder-sdk:cache falls back to system:mount"
   cp dev.no-conns.yaml .workshop/dev.yaml
   chown ubuntu:ubuntu .workshop/dev.yaml
   workshop_exec refresh dev
-  workshop_exec connections dev | MATCH "^mount.+dev/toolbox:cache.+dev/system:mount.+-$"
+  workshop_exec connections dev | MATCH "^mount.+dev/builder-sdk:cache.+dev/system:mount.+-$"
 
   echo "and cachekit:shared is then listed with no plug consuming it"
   workshop_exec connections dev | MATCH "^mount.+-.+dev/cachekit:shared.+-$"

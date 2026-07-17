@@ -525,9 +525,8 @@ The :samp:`jupyter` SDK shows this pattern:
 
 |ws_markup| users wire the two together
 through a :samp:`connections:` block in their workshop definition.
-A mount plug never auto-connects to a regular SDK's slot,
-however well the pair matches:
-until the workshop definition names the pairing,
+Without that block, the pairing doesn't happen,
+however well the plug and the slot match:
 the consuming SDK falls back to the host directory
 that |ws_markup| automatically provides for the plug,
 so a Python-based SDK still works on its own.
