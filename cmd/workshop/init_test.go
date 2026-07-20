@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -53,6 +54,20 @@ func (s *workshopInit) TestInitBasic(c *check.C) {
 	c.Assert(strings.Contains(string(content), "python"), check.Equals, true)
 
 	c.Assert(s.stdout.String(), check.Matches, `"dev" workshop created at .*\n`)
+}
+
+func (s *workshopInit) TestInitEmptySdks(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.IsNil)
+
+	path := workshop.Filepath(projectDir, "dev")
+	c.Check(path, testutil.FileEquals, `name: dev
+base: ubuntu@24.04
+`)
 }
 
 func (s *workshopInit) TestInitWithSdkChannel(c *check.C) {
@@ -251,16 +266,6 @@ func (s *workshopInit) TestInitDuplicateSdk(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `duplicate SDK "go"`)
 }
 
-func (s *workshopInit) TestInitEmptySdks(c *check.C) {
-	projectDir := c.MkDir()
-	cmd := s.makeCmd(projectDir)
-	cmd.sdks = []string{}
-
-	err := s.run(cmd, "dev")
-	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "at least one SDK must be specified")
-}
-
 func (s *workshopInit) TestInitInvalidChannel(c *check.C) {
 	projectDir := c.MkDir()
 	cmd := s.makeCmd(projectDir)
@@ -439,9 +444,9 @@ func (s *workshopInit) TestParseSdkArgsDuplicate(c *check.C) {
 }
 
 func (s *workshopInit) TestParseSdkArgsEmpty(c *check.C) {
-	_, err := parseSdkArgs([]string{})
-	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "at least one SDK must be specified")
+	sdks, err := parseSdkArgs([]string{})
+	c.Assert(err, check.IsNil)
+	c.Check(sdks, check.HasLen, 0)
 }
 
 func (s *workshopInit) TestParseSdkArgsWhitespace(c *check.C) {
@@ -455,5 +460,5 @@ func (s *workshopInit) TestParseSdkArgsWhitespace(c *check.C) {
 func (s *workshopInit) TestParseSdkArgsOnlyWhitespace(c *check.C) {
 	_, err := parseSdkArgs([]string{" ", "  "})
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "at least one SDK must be specified")
+	c.Assert(err, check.ErrorMatches, `duplicate SDK ""`)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,14 +45,12 @@ Create a workshop with a specific SDK channel:
 $ workshop init dev --sdks go/1.26/stable
 
 Create a workshop using a specific base:
-$ workshop init dev --sdks go --base ubuntu@22.04`,
+$ workshop init dev --base ubuntu@22.04 --sdks go`,
 		RunE: c.Run,
 	}
 
 	cmd.Flags().StringSliceVar(&c.sdks, "sdks", nil, `Comma-separated list of SDKs (e.g., "go,uv/latest/stable").`)
 	cmd.Flags().StringVar(&c.base, "base", defaultBase, "Base image for the workshop.")
-
-	_ = cmd.MarkFlagRequired("sdks")
 
 	return cmd
 }
@@ -93,18 +90,10 @@ func (c *CmdInit) Run(cmd *cobra.Command, args []string) error {
 // parseSdkArgs converts a list of strings like ["go/1.26/stable", "python"]
 // into SdkRecord entries.
 func parseSdkArgs(args []string) ([]workshop.SdkRecord, error) {
-	if len(args) == 0 {
-		return nil, errors.New("at least one SDK must be specified")
-	}
-
 	var sdks []workshop.SdkRecord
 	seen := make(map[string]bool)
 	for _, arg := range args {
 		arg = strings.TrimSpace(arg)
-		if arg == "" {
-			continue
-		}
-
 		yamlName, channel, _ := strings.Cut(arg, "/")
 		name, source := workshop.ParseSdkName(yamlName)
 
@@ -118,10 +107,6 @@ func parseSdkArgs(args []string) ([]workshop.SdkRecord, error) {
 			Channel: channel,
 			Source:  source,
 		})
-	}
-
-	if len(sdks) == 0 {
-		return nil, errors.New("at least one SDK must be specified")
 	}
 
 	return sdks, nil
