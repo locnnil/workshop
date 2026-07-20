@@ -59,10 +59,15 @@ func (c *CmdInit) Run(cmd *cobra.Command, args []string) error {
 	projectDir := c.root.project()
 	name := args[0]
 
+	sdks, err := parseSdkArgs(c.sdks)
+	if err != nil {
+		return err
+	}
+
 	wfile := &workshop.File{
 		Name: name,
 		Base: c.base,
-		Sdks: parseSdkArgs(c.sdks),
+		Sdks: sdks,
 	}
 
 	if err := workshop.ValidateFile(wfile); err != nil {
@@ -84,12 +89,15 @@ func (c *CmdInit) Run(cmd *cobra.Command, args []string) error {
 
 // parseSdkArgs converts a list of strings like ["go/1.26/stable", "python"]
 // into SdkRecord entries.
-func parseSdkArgs(args []string) []workshop.SdkRecord {
+func parseSdkArgs(args []string) ([]workshop.SdkRecord, error) {
 	var sdks []workshop.SdkRecord
 	for _, arg := range args {
 		arg = strings.TrimSpace(arg)
 		yamlName, channel, _ := strings.Cut(arg, "/")
-		name, source := workshop.ParseSdkName(yamlName)
+		name, source, err := workshop.ParseSdkName(yamlName)
+		if err != nil {
+			return nil, err
+		}
 
 		sdks = append(sdks, workshop.SdkRecord{
 			Name:    name,
@@ -98,7 +106,7 @@ func parseSdkArgs(args []string) []workshop.SdkRecord {
 		})
 	}
 
-	return sdks
+	return sdks, nil
 }
 
 // ensureCanCreate checks that no single-file workshop definition exists in the

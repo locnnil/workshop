@@ -306,6 +306,26 @@ func (s *workshopInit) TestInitReservedSdkName(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
 }
 
+func (s *workshopInit) TestInitReservedTrySdkName(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"try-system"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `"system" is a reserved SDK name`)
+}
+
+func (s *workshopInit) TestInitReservedProjectSdkName(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"project-sketch"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `"sketch" is a reserved SDK name`)
+}
+
 func (s *workshopInit) TestInitWorkshopYamlExists(c *check.C) {
 	projectDir := c.MkDir()
 	err := os.WriteFile(filepath.Join(projectDir, "workshop.yaml"), []byte("name: old\n"), 0644)
