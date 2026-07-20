@@ -29,7 +29,7 @@ type CmdRestore struct {
 
 func (c *CmdRestore) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "restore [flags] <WORKSHOP>...",
+		Use:     "restore <WORKSHOP>...",
 		Short:   "Restore workshops to the state of the last launch or refresh",
 		GroupID: GrpCRUD,
 		Long: `

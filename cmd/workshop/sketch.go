@@ -47,7 +47,7 @@ type CmdSketch struct {
 
 func (c *CmdSketch) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "sketch-sdk [--stash|--restore|--eject|--remove] [<WORKSHOP>]",
+		Use:     "sketch-sdk [<WORKSHOP>]",
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Customize a workshop",
 		GroupID: GrpSketch,

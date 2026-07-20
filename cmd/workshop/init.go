@@ -24,7 +24,7 @@ type CmdInit struct {
 
 func (c *CmdInit) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "init <NAME> --sdks <SDKs> [--base <BASE>]",
+		Use:     "init <NAME>",
 		Args:    cobra.ExactArgs(1),
 		Short:   "Create a new workshop definition in the project directory",
 		GroupID: GrpCRUD,
@@ -36,7 +36,7 @@ workshop file at .workshop/<NAME>.yaml. This fails if a workshop with
 the same name already exists.
 
 SDKs are specified as a comma-separated list. Each SDK entry can optionally
-include a channel using the <name>/<channel> syntax (e.g., "go/1.26/stable").
+include a channel using the <NAME>/<CHANNEL> syntax (e.g., "go/1.26/stable").
 `,
 		Example: `
 Create a workshop called "dev" with the Go and UV SDKs:

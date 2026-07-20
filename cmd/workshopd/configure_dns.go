@@ -42,7 +42,7 @@ type cmdConfigureDNS struct{}
 
 func (c *cmdConfigureDNS) Command() *cobra.Command {
 	return &cobra.Command{
-		Use:   "configure-dns <interface> <domain>",
+		Use:   "configure-dns <INTERFACE> <DOMAIN>",
 		Args:  cobra.ExactArgs(2),
 		Short: shortConfigureDNSHelp,
 		Long:  longConfigureDNSHelp,

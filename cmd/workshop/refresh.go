@@ -35,7 +35,7 @@ type CmdRefresh struct {
 
 func (c *CmdRefresh) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "refresh [--abort|--continue|--wait-on-error] <WORKSHOP>...",
+		Use:     "refresh <WORKSHOP>...",
 		Short:   "Update workshops according to their definitions",
 		GroupID: GrpCRUD,
 		Long: `
