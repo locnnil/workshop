@@ -1,0 +1,29 @@
+name: notebook
+base: ubuntu@24.04
+sdks:
+  - name: ollama
+    channel: vulkan/stable
+  - name: uv
+    slots:
+      api:
+        interface: tunnel
+        endpoint: 8000
+  - name: jupyter
+  - name: system
+    plugs:
+      jupyter:
+        interface: tunnel
+        endpoint: 127.0.0.1:8989
+      app:
+        interface: tunnel
+        endpoint: 127.0.0.1:8090
+      inference:
+        interface: tunnel
+        endpoint: 127.0.0.1:11434
+connections:
+  - plug: jupyter:venv
+    slot: uv:venv
+  - plug: system:app
+    slot: uv:api
+  - plug: system:inference
+    slot: ollama:ollama-server
