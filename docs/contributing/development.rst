@@ -184,12 +184,6 @@ Run the documentation end-to-end test suites with:
    $ spread tests/docs-tutorial/
    $ spread tests/docs-how-to/
 
-The tutorial suite requires an |sdk_markup| snap
-in the :file:`tests/` directory
-with a filename matching :file:`sdkcraft_*.snap`.
-Download the latest |sdk_markup| release from the
-`repository <https://github.com/canonical/sdkcraft/releases>`_
-and move it there before running the suite.
 
 
 Choose a task
