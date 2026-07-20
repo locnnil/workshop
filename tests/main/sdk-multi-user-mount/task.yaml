@@ -1,0 +1,28 @@
+summary: Check that multiple users can mount the same SDK volume
+restore: |
+  . "$TESTSLIB"/utils.sh
+
+  workshop_exec remove --project $(pwd)/project-1 || true
+  sudo -u otheruser -- workshop remove --project $(pwd)/project-2 || true
+  loginctl disable-linger otheruser || true
+  deluser --remove-home otheruser || true
+execute: |
+  . "$TESTSLIB"/utils.sh
+
+  echo "Create another user"
+  useradd -m -s /bin/bash otheruser
+  loginctl enable-linger otheruser
+
+  echo "Launch workshops owned by different users"
+  workshop_exec launch --project project-1
+  sudo -u otheruser -- workshop launch --project project-2
+
+  echo "Check workshops are scoped to original user"
+  workshop_exec list --project project-1 | MATCH "^ws-multi-user-1[[:space:]]+Ready[[:space:]]+-$"
+  workshop_exec list --project project-2 | MATCH "^ws-multi-user-2[[:space:]]+Off[[:space:]]+-$"
+  sudo -u otheruser -- workshop list --project project-1 | MATCH "^ws-multi-user-1[[:space:]]+Off[[:space:]]+-$"
+  sudo -u otheruser -- workshop list --project project-2 | MATCH "^ws-multi-user-2[[:space:]]+Ready[[:space:]]+-$"
+
+  echo "Check SDK ownership"
+  workshop_exec exec --project project-1 -- stat -c '%U:%G' /var/lib/workshop/sdk/test-sdk-basic-2/sdk/hooks/setup-project | MATCH '^root:root$'
+  sudo -u otheruser -- workshop exec --project project-2 -- stat -c '%U:%G' /var/lib/workshop/sdk/test-sdk-basic-2/sdk/hooks/setup-project | MATCH '^root:root$'
