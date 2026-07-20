@@ -27,6 +27,15 @@ find the subsystem, declare a plug, connect the interface,
 then use the devices inside the workshop.
 
 
+Prerequisites
+-------------
+
+Before starting, ensure you have these requirements satisfied:
+
+- A host device you want to expose to the workshop,
+  such as an input device at :file:`/dev/input/event0`.
+
+
 Identify the device subsystem
 -----------------------------
 

@@ -21,100 +21,54 @@ letting you use your favorite JetBrains IDEs against |ws_markup|.
 Prerequisites
 -------------
 
-Before starting, ensure you have:
+Before starting, ensure you have these requirements satisfied:
 
 - `JetBrains Gateway <https://www.jetbrains.com/remote-development/gateway/>`__
-   installed on your host system.
-
-- An SSH key pair available on the host system.
-   If you don't have one already,
-   generate it with:
-
-  .. code-block:: console
-
-     $ ssh-keygen -t rsa -b 4096 -C "<your_email@example.com>"
+  installed on your host system.
 
 
-Configure your workshop
------------------------
+Configure SSH access
+--------------------
 
-Configure your workshop to accept SSH connections
-by adding a plug, a slot, and an action to upload your public SSH key.
+|ws_markup| generates an OpenSSH configuration
+for connecting to launched workshops.
+When using the Workshop snap,
+include that generated configuration in your host user's
+:file:`~/.ssh/config` file.
+Replace :samp:`<UID>` with your host user ID,
+which you can find with :command:`id -u`:
 
-.. @artefact tunnel interface
-.. @artefact interface plug
-.. @artefact system SDK
+.. code-block:: text
+   :caption: ~/.ssh/config
 
-#. First, add a tunnel interface plug for the system SDK
-   in the workshop definition:
-
-   .. code-block:: yaml
-      :caption: workshop.yaml
-
-      sdks:
-        - name: system
-          plugs:
-            gateway:
-              interface: tunnel
-              endpoint: 2200
+   Include /var/snap/workshop/current/ssh/<UID>/config
 
 
-   This exposes port :samp:`2200` on the host
-   that you will use in JetBrains Gateway.
+Launch the workshop
+-------------------
+
+Launch the workshop if it isn't already running:
+
+.. code-block:: console
+
+   $ workshop launch
 
 
-#. Next, add a corresponding slot;
-   you can graft it onto an existing SDK
-   or add it with sketching:
+Then find the workshop hostname:
 
-.. @artefact interface slot
+.. code-block:: console
 
-   .. code-block:: yaml
+   $ workshop info
 
-      slots:
-        gateway:
-          interface: tunnel
-          endpoint: 22
-
-
-   This enables connections to the workshop
-   at the default SSH port, :samp:`22`.
+   name:      dev
+   base:      ubuntu@24.04
+   project:   ~/my-project
+   hostname:  dev.my-project.wp
+   ...
 
 
-#. Add an action to upload your public SSH key to the workshop:
-
-   .. code-block:: yaml
-      :caption: workshop.yaml
-
-      actions:
-        upload-public-key: |
-          PUBLIC_KEY="$1"
-          if [ -z "${PUBLIC_KEY}" ]; then
-            echo 'cannot upload public key: pass the public key as the argument' 1>&2
-            exit 1
-          fi
-          echo "${PUBLIC_KEY}" >> $HOME/.ssh/authorized_keys
-
-
-   This appends your public SSH key to the list of authorized keys
-   for the :samp:`workshop` user.
-
-
-#. Refresh the workshop to apply the changes if you haven't done so already:
-
-   .. code-block:: console
-
-      $ workshop refresh
-
-
-#. Use the action to upload your public SSH key to the workshop, for example:
-
-   .. code-block:: console
-
-      $ workshop run dev upload-public-key "$(cat ~/.ssh/id_rsa.pub)"
-
-
-The workshop is now ready to accept SSH connections.
+Use the hostname from the :command:`workshop info` output
+when configuring JetBrains Gateway.
 
 
 Connect with Gateway
@@ -126,27 +80,21 @@ Connect with Gateway
 
    - :guilabel:`Username`: :samp:`workshop`
 
-   - :guilabel:`Host`: :samp:`localhost`
+   - :guilabel:`Host`:
+     The hostname from :command:`workshop info`,
+     for example :samp:`dev.my-project.wp`
 
-   - :guilabel:`Port`: :samp:`2200`
-
-   - :guilabel:`Specify private key`:
-     Your *private* SSH key counterpart to the public key you uploaded earlier.
+   - :guilabel:`Port`: :samp:`22`
 
 
-#. Click :guilabel:`Check connection and continue`.
+#. Click :guilabel:`Check connection and Continue`.
 
-#. At the next screen,
+#. At :guilabel:`Choose IDE and Project`,
    select your preferred JetBrains :guilabel:`IDE version`, e.g. PyCharm.
 
-#. Under :guilabel:`Installation options`,
-   choose :guilabel:`Customize installation path`
-   and set it to a path under :file:`/project/`, e.g. :file:`/project/pycharm/`;
-   this ensures the IDE has enough disk space.
+   For :guilabel:`Project directory`, enter :file:`/project/`.
 
-#. For :guilabel:`Project directory`, choose :file:`/project/`.
-
-#. Click :guilabel:`Start IDE and connect`,
+#. Click :guilabel:`Download IDE and Connect`,
    then wait for the IDE to install and launch;
    this may take a few minutes.
    After the IDE starts,
@@ -162,16 +110,10 @@ See also
 
 Explanation:
 
-- :ref:`exp_sketch_sdk`
-- :ref:`exp_system_sdk`
-- :ref:`exp_tunnel_plug`
-- :ref:`exp_tunnel_slot`
 - :ref:`exp_workshop_definition`
 
 
 Reference:
 
-- :ref:`ref_tunnel_interface`
-- :ref:`ref_workshop_refresh`
-- :ref:`ref_workshop_run`
-- :ref:`ref_workshop_sketch-sdk`
+- :ref:`ref_workshop_info`
+- :ref:`ref_workshop_launch`

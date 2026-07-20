@@ -63,19 +63,21 @@ and synthesizes the optimal approach in different ways:
 Prerequisites
 -------------
 
-Working with AI agents in workshops builds on :ref:`how_git_workshops`
-and :ref:`how_add_actions`,
-particularly the use of Git worktrees with workshops.
-Worktrees help isolate and track different agents' runs and outcomes
-while sharing the same project directory and the workshops in it.
+Before starting, ensure you have these requirements satisfied:
 
-Note that the :program:`claude-code` and :program:`copilot` SDKs
-will prompt for login credentials on their first run;
-you should have a browser window open with the respective account signed in.
-Alternatively,
-the agents support token-based API authentication via environment variables,
-which allows you to skip the login steps below;
-refer to their respective documentation and runtime help for details.
+- Familiarity with Git worktrees in workshops,
+  as covered in :ref:`how_git_workshops` and :ref:`how_add_actions`.
+  Worktrees help isolate and track different agents' runs and outcomes
+  while sharing the same project directory and the workshops in it.
+
+- Access to the :program:`claude-code` and :program:`copilot` agents
+  (or similar alternatives).
+  Both agents prompt for login credentials on their first run,
+  so have a browser window open with the respective account signed in.
+  Alternatively,
+  the agents support token-based API authentication via environment variables,
+  which allows you to skip the login steps below;
+  refer to their respective documentation and runtime help for details.
 
 Agent prompts
 -------------

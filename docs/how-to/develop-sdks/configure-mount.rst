@@ -45,8 +45,11 @@ or when the SDK should not be able to write to the mount.
 Prerequisites
 -------------
 
-You need an :file:`sdkcraft.yaml` that declares at least one mount plug;
-:ref:`ref_sdk_plugs_slots` covers the declarations.
+Before starting, ensure you have these requirements satisfied:
+
+- An :file:`sdkcraft.yaml` that declares at least one mount plug.
+  :ref:`ref_sdk_plugs_slots` covers the declarations.
+
 The attributes below extend the plug entries
 under the top-level :samp:`plugs:` key.
 

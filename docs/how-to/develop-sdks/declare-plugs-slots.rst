@@ -26,11 +26,15 @@ follow the same shape.
 Prerequisites
 -------------
 
-You need a working |sdk_markup| installation
-and an :file:`sdkcraft.yaml` you can edit.
-If you don't have one yet,
-:ref:`tut_craft_sdks` walks through scaffolding an SDK with
-:command:`sdkcraft init`.
+Before starting, ensure you have these requirements satisfied:
+
+- |sdk_markup| installed.
+
+- An :file:`sdkcraft.yaml` you can edit.
+  If you don't have one yet,
+  :ref:`tut_craft_sdks` walks through scaffolding an SDK with
+  :command:`sdkcraft init`.
+
 The declarations below go under top-level
 :samp:`plugs:` and :samp:`slots:` keys in :file:`sdkcraft.yaml`.
 

@@ -22,7 +22,24 @@ Prerequisites
 Before starting, ensure you have these requirements satisfied:
 
 - The `VS Code Remote Development extension pack <https://code.visualstudio.com/docs/remote/remote-overview>`__
-   installed in VS Code.
+  installed in VS Code.
+
+
+Configure SSH access
+--------------------
+
+|ws_markup| generates an OpenSSH configuration
+for connecting to launched workshops.
+When using the Workshop snap,
+include that generated configuration in your host user's
+:file:`~/.ssh/config` file.
+Replace :samp:`<UID>` with your host user ID,
+which you can find with :command:`id -u`:
+
+.. code-block:: text
+   :caption: ~/.ssh/config
+
+   Include /var/snap/workshop/current/ssh/<UID>/config
 
 
 Add the SDK
@@ -40,12 +57,20 @@ Add the :samp:`vscode-remote` SDK to your workshop definition:
      - name: vscode-remote
 
 
-Launch the workshop.
+Launch the workshop
+-------------------
+
+Launch the workshop if it isn't already running:
+
+.. code-block:: console
+
+   $ workshop launch
+
 Then find the workshop hostname:
 
 .. code-block:: console
 
-   $ workshop info dev
+   $ workshop info
 
    name:      dev
    base:      ubuntu@24.04
@@ -54,16 +79,25 @@ Then find the workshop hostname:
    ...
 
 
-In VS Code, choose :guilabel:`Open Remote Window`,
-then :guilabel:`Connect to host`,
-and type :samp:`workshop@dev.my-project.wp`
-using the hostname from the :command:`workshop info` output.
+Use the hostname from the :command:`workshop info` output
+when configuring VS Code.
+
+
+Connect with VS Code
+--------------------
+
+In VS Code, press :guilabel:`F1` to open the command palette,
+start typing :guilabel:`Connect to Host`,
+then choose the :guilabel:`Remote-SSH` option.
+Enter :samp:`workshop@dev.my-project.wp`,
+replacing :samp:`dev.my-project.wp`
+with the hostname from :command:`workshop info`.
 In the terminal prompt, you'll see that the IDE is running inside your workshop.
 
 .. note::
 
-   If you're having trouble finding the :guilabel:`Connect to host` command,
-   mind that it's enabled by the :samp:`Remote-SSH` extension
+   If you're having trouble finding the :guilabel:`Remote-SSH` option,
+   mind that it's enabled by the :samp:`Remote - SSH` extension
    from the extension pack mentioned above.
 
 
