@@ -84,7 +84,7 @@ return fmt.Errorf("%s must be a map or one of the shortcuts 'true' or 'false'", 
 return fmt.Errorf("workshop %s not found", name)
 ```
 
-**Rationale**: `%q` is backed by `strconv.Quote`, the same primitive as `strutil.Quoted`, so dynamic values render consistently across error messages, log output, and list helpers. Reserving backticks as Go raw-string delimiters and double quotes for both literals and `%q` output keeps every quoted artifact in the final message visually uniform. The `docs/contributing.rst` Error messages guidance (path and identifier double-quoting) is the precedent.
+**Rationale**: `%q` is backed by `strconv.Quote`, the same primitive as `strutil.Quoted`, so dynamic values render consistently across error messages, log output, and list helpers. Reserving backticks as Go raw-string delimiters and double quotes for both literals and `%q` output keeps every quoted artifact in the final message visually uniform. The same path and identifier double-quoting applies across Workshop's error messages.
 
 
 ---
@@ -1516,4 +1516,4 @@ When contributing code:
 5. Keep changes focused and atomic
 6. Write clear commit messages
 
-For detailed contribution guidelines, see the [Contributing Guide](contributing.rst) in the documentation.
+For detailed contribution guidelines, see {ref}`Contribute to development <contributing_development>`.

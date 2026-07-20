@@ -2,7 +2,7 @@
 
 This file provides general project context for GitHub Copilot. For review-specific guidance, see:
 - **Code Review**: `.github/agents/code-review.agent.md`
-- **Documentation Review**: `.github/agents/doc-review.agent.md`
+- **Documentation Review**: `.github/skills/documentation-review/SKILL.md`
 
 ## Project Overview
 
@@ -37,7 +37,7 @@ Workshop is a tool for defining and handling ephemeral development environments.
 
 ## Coding Guidelines
 
-See [`docs/contributing.rst`](../docs/contributing.rst) for detailed standards. Key points:
+See [`docs/coding-style-guide.md`](../docs/coding-style-guide.md) for detailed standards. Key points:
 
 - **Error messages**: Lowercase, no trailing punctuation, actionable (`what was attempted: why it went wrong`)
 - **Error handling**: Consistent `if err := f(); err != nil { return err }` pattern
@@ -63,11 +63,11 @@ See [`docs/contributing.rst`](../docs/contributing.rst) for detailed standards. 
 
 ## Available Resources
 
-- **Contributing Guide**: [`docs/contributing.rst`](../docs/contributing.rst) — Setup, standards, workflow
+- **Contributing Guide**: [`docs/contributing/development.rst`](../docs/contributing/development.rst) — Setup, testing, workflow
 - **Documentation Style**: [`docs/doc-style-guide.md`](../docs/doc-style-guide.md) — reST/Markdown conventions
 - **PR Template**: [`.github/pull_request_template.md`](.github/pull_request_template.md) — Self-review checklist
 - **Code Review Agent**: [`.github/agents/code-review.agent.md`](.github/agents/code-review.agent.md) — For PR code reviews
-- **Docs Review Agent**: [`.github/agents/doc-review.agent.md`](.github/agents/doc-review.agent.md) — For PR documentation reviews
+- **Documentation Review Skill**: [`.github/skills/documentation-review/SKILL.md`](skills/documentation-review/SKILL.md) — For documentation reviews
 
 ## Related Repositories
 
@@ -85,15 +85,17 @@ These external repositories provide authoritative context for the Workshop proje
 - `cover.yaml` — Coverage reports
 - `automatic-doc-checks.yml` — Sphinx builds (fail on warnings)
 - `doc-cover.yaml` — Documentation coverage map generation
+- `doc-update-sdk-schema.yml` — Updates SDK schema in docs
+- `fix-redirected-links.yml` — Updates selected redirecting documentation links
 - `release.yaml` — Builds release snaps + generates CLI reference PR
 - `fixup.yaml` — Commit message format validation
 - `scanning.yml` — Security scanning
-- `sphinx-python-dependency-build-checks.yml` — Ensures Sphinx venv builds
-- `markdown-style-checks.yml` — Checks style, spelling, and links
+- `markdown-style-checks.yml` — Markdown linting
 - `build-deps.yaml` — Build dependencies check
-- `doc-update-sdk-schema.yml` — Updates SDK schema in docs
-- `lxd-candidate-check.yml` — Checks LXD candidate channel
-- `update-starter-pack.yml` — Updates documentation starter pack
+- `lxd-candidate-check.yaml` — Checks LXD candidate channel
+- `staging.yaml` — Rejects staged test SDKs
+- `update-sphinx-stack.yaml` — Updates Sphinx Stack files and documentation dependencies
+- `zizmor.yaml` — Audits GitHub Actions workflows
 
 ## Evolution Note
 
