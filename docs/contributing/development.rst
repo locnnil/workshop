@@ -158,7 +158,7 @@ The client can connect using the daemon's Unix domain socket:
 Install Spread
 ~~~~~~~~~~~~~~
 
-`Spread <https://github.com/canonical/spread>`__ is the end-to-end testing tool
+`Spread <https://github.com/dmitry-lyfar/spread>`__ is the end-to-end testing tool
 for |ws_markup|.
 It launches its own LXD containers,
 so install and run it on the host:
