@@ -1,0 +1,3 @@
+mkdir -p /home/workshop/cachekit-share
+echo cachekit >/home/workshop/cachekit-share/marker
+chown -R 1000:1000 /home/workshop/cachekit-share

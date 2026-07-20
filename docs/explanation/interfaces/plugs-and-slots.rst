@@ -117,12 +117,12 @@ In the SDK-type columns, *any* means either a regular SDK or the system SDK.
    * - :ref:`mount <exp_mount_interface>`
      - regular
      - any
-     - Yes
+     - Partial :sup:`*`
 
    * - :ref:`tunnel <exp_tunnel_interface>`
      - any
      - any
-     - Partial :sup:`*`
+     - Partial :sup:`**`
 
    * - :ref:`camera <exp_camera_interface>`
      - regular
@@ -144,7 +144,13 @@ In the SDK-type columns, *any* means either a regular SDK or the system SDK.
      - system
      - No
 
-:sup:`*` Tunnel auto-connects only from host to workshop,
+:sup:`*` Left to the SDKs' own rules,
+a mount plug auto-connects only to the slot
+that the :ref:`system SDK <exp_system_sdk>` provides.
+Naming a regular SDK's slot in a :samp:`connections:` entry
+makes that pair eligible too.
+
+:sup:`**` Tunnel auto-connects only from host to workshop,
 between a plug and a slot of the same name,
 and only when the plug's endpoint
 is a loopback address or a Unix domain socket.
@@ -159,7 +165,7 @@ When more than one slot is policy-eligible for the same plug,
 in an order it does not guarantee.
 The right way to express a specific topology
 is to write it down in the workshop definition's :samp:`connections:` list
-instead of leaving it to auto-connection.
+instead of leaving the target to the interface's default.
 
 
 Wiring mechanisms
@@ -177,7 +183,7 @@ gives you two distinct YAML mechanisms for shaping the topology:
 - A top-level :samp:`connections:` list,
   written at workshop scope,
   pairs a specific plug with a specific slot.
-  Use it to override the default auto-connect target,
+  Use it to override the slot a plug would otherwise auto-connect to,
   for example to wire a mount plug to a regular SDK's slot
   rather than the system SDK's.
   The pair still has to satisfy the interface's auto-connection policy,
@@ -244,8 +250,8 @@ pairs a plug with a slot directly:
    :caption: workshop.yaml
 
    connections:
-     - plug: consumer-sdk:tools
-       slot: provider-sdk:bin
+     - plug: jupyter:venv
+       slot: uv:venv
 
 
 Each entry uses the :samp:`<SDK-NAME>:<NAME>` form
@@ -264,36 +270,37 @@ Example: two SDKs sharing a mount
 
 Consider a workshop that installs two SDKs:
 
-- :samp:`provider-sdk` ships a mount slot named :samp:`bin`
-  that exposes a directory inside its own filesystem.
+- :samp:`uv` ships a mount slot named :samp:`venv`
+  that exposes the Python virtual environment it builds.
 
-- :samp:`consumer-sdk` declares a mount plug named :samp:`tools`
-  whose target is a path under its workshop user's home.
+- :samp:`jupyter` declares a mount plug named :samp:`venv`
+  whose target is a path inside its own SDK directory.
 
 
-Auto-connection alone does not wire :samp:`consumer-sdk:tools`
-to :samp:`provider-sdk:bin`:
+Without configuration, |ws_markup| does not wire :samp:`jupyter:venv`
+to :samp:`uv:venv`:
 the mount interface auto-connects to system SDK slots by default,
-so :samp:`consumer-sdk:tools` lands on :samp:`system:mount`
-and :samp:`provider-sdk:bin` stays listed but unconnected.
-You name the pairing explicitly
+so :samp:`jupyter:venv` lands on :samp:`system:mount`
+and :samp:`uv:venv` stays listed but unconnected.
+Matching names count for nothing here;
+you name the pairing explicitly
 with a top-level :samp:`connections:` entry:
 
 .. code-block:: yaml
    :caption: workshop.yaml
 
    sdks:
-     - name: provider-sdk
-     - name: consumer-sdk
+     - name: uv
+     - name: jupyter
 
    connections:
-     - plug: consumer-sdk:tools
-       slot: provider-sdk:bin
+     - plug: jupyter:venv
+       slot: uv:venv
 
 
 After :command:`workshop launch` or :command:`workshop refresh`,
 :command:`workshop connections` shows the chosen pairing
-and you can verify that :samp:`consumer-sdk` reads from :samp:`provider-sdk`
+and you can verify that :samp:`jupyter` reads from :samp:`uv`
 rather than the system SDK's default mount slot.
 
 
@@ -316,8 +323,10 @@ Explanation:
 
 How-to guides:
 
+- :ref:`how_add_mounts`
 - :ref:`how_declare_plugs_slots`
 - :ref:`how_resolve_plug_conflicts`
+- :ref:`how_share_content_between_sdks`
 
 
 Reference:
