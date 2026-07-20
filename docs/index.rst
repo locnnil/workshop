@@ -79,28 +79,30 @@ In this documentation
        :ref:`Add actions <how_add_actions>` •
        :ref:`Multi-workshop patterns <exp_multi_workshop_patterns>` •
        :ref:`Use multiple workshops <how_use_multiple_workshops>` •
-       :ref:`Forward ports <how_forward_ports>` •
        :ref:`Status diagrams <ref_workshop_status>` •
-       :ref:`Definition file <ref_workshop_definition>`
-
-   * - **SDKs**
-     - :ref:`Concepts <exp_sdk_concepts>` •
-       :ref:`Sketch SDKs in-place <tut_sketch_sdks>` •
-       :ref:`Craft full SDKs <tut_craft_sdks>` •
-       :ref:`Parts <exp_sdk_parts>` •
-       :ref:`Design best practices <exp_sdk_best_practices>` •
-       :ref:`SDKs vs Dockerfiles <exp_dockerfile_vs_sdk>` •
-       :ref:`Definition file <ref_sdk_definition>`
+       :ref:`Definition <ref_workshop_definition>`
 
    * - **Interfaces**
      - :ref:`Concepts <exp_interface_concepts>` •
+       :ref:`Plugs and slots <exp_plugs_slots>` •
        :ref:`Camera <exp_camera_interface>` •
        :ref:`Custom device <exp_custom_device_interface>` •
        :ref:`Desktop <exp_desktop_interface>` •
        :ref:`GPU <exp_gpu_interface>` •
        :ref:`Mounts <exp_mount_interface>` •
        :ref:`SSH agent <exp_ssh_interface>` •
-       :ref:`Networking <exp_tunnel_interface>`
+       :ref:`Networking <exp_tunnel_interface>` •
+       :ref:`Add mounts <how_add_mounts>` •
+       :ref:`Use host devices <how_use_host_devices>` •
+       :ref:`Forward ports <how_forward_ports>`
+
+   * - **SDKs**
+     - :ref:`Concepts <exp_sdk_concepts>` •
+       :ref:`Lifecycle <exp_sdk_lifecycle>` •
+       :ref:`Parts <exp_sdk_parts>` •
+       :ref:`Runtime hooks <exp_sdk_hooks>` •
+       :ref:`SDKs vs Dockerfiles <exp_dockerfile_vs_sdk>` •
+       :ref:`Definition <ref_sdk_definition>`
 
    * - **Projects**
      - :ref:`Concepts <exp_projects>` •
@@ -108,13 +110,31 @@ In this documentation
        :ref:`Update projects <tut_project_updates>` •
        :ref:`Changes and tasks <exp_changes_tasks>`
 
-   * - **Development**
+   * - **Use workshops**
      - :ref:`Connect VS Code <how_vscode_connect_remote>` •
        :ref:`JetBrains Gateway <how_jetbrains_gateway>` •
        :ref:`JupyterLab in browser <how_jupyterlab_run_in_browser>` •
-       :ref:`Use with Git <how_git_workshops>` •
-       :ref:`Run GitHub Actions locally <how_run_github_actions_locally>` •
-       :ref:`AI agents <how_use_workshops_with_ai_agents>`
+       :ref:`Manage Python environments <how_manage_python_environments>` •
+       :ref:`Use with Git <how_git_workshops>`
+
+   * - **Create SDKs**
+     - :ref:`Build an SDK <how_build_sdk>` •
+       :ref:`Declare plugs and slots <how_declare_plugs_slots>` •
+       :ref:`Configure a mount <how_configure_mount>` •
+       :ref:`Write runtime hooks <how_write_runtime_hooks>` •
+       :ref:`Design best practices <exp_sdk_best_practices>` •
+       :ref:`Publish an SDK <how_publish_sdk>` •
+       :ref:`Project definition file <ref_sdkcraft_definition>`
+
+   * - **CI/CD**
+     - :ref:`Run GitHub Actions locally <how_run_github_actions_locally>` •
+       :ref:`Run workshops in GitHub Actions <how_run_workshops_in_github_actions>`
+
+   * - **AI agents**
+     - :ref:`Use with AI agents <how_use_workshops_with_ai_agents>` •
+       :ref:`LLM-readable docs <ref_ai_discovery>` •
+       :ref:`Workshop skill <ref_ai_use_workshop_skill>` •
+       :ref:`SDK designer skill <ref_ai_sdk_designer_skill>`
 
    * - **Troubleshooting**
      - :ref:`Debug workshops <how_debug_issues_workshops>` •
@@ -129,7 +149,8 @@ In this documentation
        :ref:`SDK internals <ref_sdk_internals>`
 
    * - **CLI**
-     - :ref:`Workshop CLI <ref_workshop__cli>` •
+     - :ref:`Concepts <exp_cli>` •
+       :ref:`Workshop CLI <ref_workshop__cli>` •
        :ref:`SDK CLI <ref_sdk__cli>` •
        :ref:`SDKcraft CLI <ref_sdkcraft__cli>` •
        :ref:`workshopctl CLI <ref_workshopctl__cli>`
