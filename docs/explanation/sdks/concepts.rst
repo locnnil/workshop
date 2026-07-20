@@ -146,12 +146,6 @@ an SDK that omits one gets the default.
 Only Store SDKs have channels.
 The other kinds never reach the Store,
 so a channel means nothing to them.
-Each trades reach for immediacy:
-a :ref:`sketch SDK <exp_sketch_sdk>` reaches a single workshop,
-an :ref:`in-project SDK <exp_in_project_sdk>` reaches whoever clones the project,
-and a :ref:`tried SDK <exp_test_try_sdk>` reaches only the machine that packed it.
-The :ref:`system SDK <exp_system_sdk>` ships inside |ws_markup| itself
-and is never fetched at all.
 A published SDK is packaged once and consumed anywhere.
 
 
