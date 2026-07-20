@@ -128,6 +128,34 @@ func (s *workshopInit) TestInitSystemSdk(c *check.C) {
 	c.Assert(strings.Contains(string(content), "system"), check.Equals, true)
 }
 
+func (s *workshopInit) TestInitTrySdk(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"try-uv", "go"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.IsNil)
+
+	path := workshop.Filepath(projectDir, "dev")
+	content, err := os.ReadFile(path)
+	c.Assert(err, check.IsNil)
+	c.Assert(strings.Contains(string(content), "try-uv"), check.Equals, true)
+}
+
+func (s *workshopInit) TestInitProjectSdk(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"project-uv", "go"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.IsNil)
+
+	path := workshop.Filepath(projectDir, "dev")
+	content, err := os.ReadFile(path)
+	c.Assert(err, check.IsNil)
+	c.Assert(strings.Contains(string(content), "project-uv"), check.Equals, true)
+}
+
 // --- Failure: same name already exists ---
 
 func (s *workshopInit) TestInitNameAlreadyExists(c *check.C) {

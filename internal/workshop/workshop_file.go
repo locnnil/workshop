@@ -162,11 +162,11 @@ func (s SdkRecord) MarshalYAML() (any, error) {
 func (s *SdkRecord) UnmarshalYAML(value *yaml.Node) error {
 	type record SdkRecord
 	err := value.Decode((*record)(s))
-	s.Name, s.Source = parseSdkName(s.Name)
+	s.Name, s.Source = ParseSdkName(s.Name)
 	return err
 }
 
-func parseSdkName(name string) (string, sdk.Source) {
+func ParseSdkName(name string) (string, sdk.Source) {
 	if sdk.IsSystem(name) {
 		return name, sdk.SystemSource
 	}

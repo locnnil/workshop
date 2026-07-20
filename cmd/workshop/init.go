@@ -105,7 +105,8 @@ func parseSdkArgs(args []string) ([]workshop.SdkRecord, error) {
 			continue
 		}
 
-		name, channel, _ := strings.Cut(arg, "/")
+		yamlName, channel, _ := strings.Cut(arg, "/")
+		name, source := workshop.ParseSdkName(yamlName)
 
 		if _, ok := seen[name]; ok {
 			return nil, fmt.Errorf("duplicate SDK %q", name)
@@ -115,6 +116,7 @@ func parseSdkArgs(args []string) ([]workshop.SdkRecord, error) {
 		sdks = append(sdks, workshop.SdkRecord{
 			Name:    name,
 			Channel: channel,
+			Source:  source,
 		})
 	}
 
