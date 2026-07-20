@@ -33,10 +33,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 
 	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
+	"github.com/canonical/x-go/strutil/shlex"
 	"golang.org/x/sys/unix"
 	"gopkg.in/yaml.v3"
 
@@ -669,9 +671,20 @@ func (s *Backend) startWorkshop(conn lxd.InstanceServer, ctx context.Context, na
 		return err
 	}
 
-	// Workshop started, enable autostart.
-	if err := s.setAutoStart(conn, ctx, name, true); err != nil {
-		return err
+	for i := range 2 {
+		// Workshop started, enable autostart.
+		if err := s.setAutoStart(conn, ctx, name, true); err != nil {
+			if i == 0 && api.StatusErrorCheck(err, http.StatusPreconditionFailed) && strings.HasPrefix(err.Error(), "ETag does not match: ") {
+				// TODO: remove the loop after modifying the logic to wait for
+				// LXD's instance ready event. Currently, the instance may or
+				// may not set itself to Ready, so we can't rely on it. When it
+				// does so, LXD sets volatile.last_state.ready, which can
+				// invalidates the ETag; a single retry is enough to fix it.
+				continue
+			}
+			return err
+		}
+		break
 	}
 
 	var stderr strings.Builder
@@ -1234,7 +1247,7 @@ func proxyToLxdDevice(usr *user.User, proxy workshop.ProxyEntry) map[string]stri
 }
 
 func (s *Backend) workshopConfig(projectId string, userid, groupid string, file *workshop.File, format sdk.Revision, baseFingerprint string) (map[string]string, error) {
-	cloudConfig := `
+	cloudConfigTemplate := `
 #cloud-config
 users:
   - default
@@ -1303,14 +1316,45 @@ write_files:
     content: |
       HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
       TrustedUserCAKeys /etc/ssh/ssh_ca_ed25519_key.pub
+  - path: /etc/systemd/system/workshop-waitready.service
+    content: |
+      [Unit]
+      Description=Signal workshop readiness to LXD
+
+      [Service]
+      Type=notify
+      ExecStart=/usr/local/lib/workshop/waitready
+
+      [Install]
+      WantedBy=multi-user.target
 runcmd:
   # Project directory is required for 'workshop exec'.
-  - install --directory --mode=755 /project
+  - install --directory --mode=755 /project /usr/local/bin /usr/local/lib/workshop {{shquote .WorkshopStateDir}}
   # Create XDG base directories so SDKs don't need an extra mode=700 step.
   - install --directory --mode=700 --owner=workshop --group=workshop /home/workshop/.cache /home/workshop/.config /home/workshop/.local
   # Create ~/.local/bin so SDKs don't need to source ~/.profile to add it to the PATH.
   - install --directory --mode=755 --owner=workshop --group=workshop /home/workshop/.local/bin
+  # Put workshopctl on the PATH.
+  - ln -sf {{shquote .WorkshopCtlPath}} /usr/local/bin/workshopctl
+  - ln -sf ../../bin/workshopctl /usr/local/lib/workshop/waitready
+  - systemctl enable --now workshop-waitready.service
 `[1:]
+
+	var cloudConfig strings.Builder
+	funcs := map[string]any{
+		"shquote": shlex.Quote,
+	}
+	dot := struct {
+		WorkshopCtlPath  string
+		WorkshopStateDir string
+	}{
+		WorkshopCtlPath:  filepath.Join(dirs.WorkshopGuestBinDir, filepath.Base(dirs.WorkshopCtlPath)),
+		WorkshopStateDir: dirs.WorkshopStateDir,
+	}
+	t := template.Must(template.New("cloud-config").Funcs(funcs).Parse(cloudConfigTemplate))
+	if err := t.Execute(&cloudConfig, dot); err != nil {
+		return nil, err
+	}
 
 	f, err := yaml.Marshal(file)
 	if err != nil {
@@ -1323,7 +1367,7 @@ runcmd:
 		"boot.autostart":                 "false",
 		"raw.idmap":                      fmt.Sprintf("uid %s %s\ngid %s %s", userid, workshop.User.Uid, groupid, workshop.User.Gid),
 		"security.nesting":               "true",
-		"cloud-init.user-data":           cloudConfig,
+		"cloud-init.user-data":           cloudConfig.String(),
 		"user.workshop.format-revision":  format.String(),
 		"user.workshop.project-id":       projectId,
 		"user.workshop.name":             file.Name,

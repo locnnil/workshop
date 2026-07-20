@@ -27,6 +27,7 @@ import (
 
 	"github.com/canonical/workshop/client"
 	"github.com/canonical/workshop/internal/dirs"
+	"github.com/canonical/workshop/internal/waitready"
 )
 
 var clientConfig = client.Config{
@@ -36,6 +37,14 @@ var clientConfig = client.Config{
 }
 
 func main() {
+	if waitready.IsWaitreadyInvocation() {
+		if err := waitready.WaitReady(); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %s\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	// Set the user and group IDs to the workshop user
 	uid := uint32(1000) // Change this to the workshop UID
 

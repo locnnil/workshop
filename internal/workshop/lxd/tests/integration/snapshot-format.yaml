@@ -15,7 +15,7 @@ launched:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: '17fd6f33c4c2802b0142eefe3d41d4f98b1c0ce338ce06da2b3e6d06776ac3c2204ed2cc7c6c367d40cdfc6e11d82e6a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -39,8 +39,8 @@ launched:
       security.gid: '1000'
       security.uid: '1000'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false
@@ -55,7 +55,7 @@ started:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: '17fd6f33c4c2802b0142eefe3d41d4f98b1c0ce338ce06da2b3e6d06776ac3c2204ed2cc7c6c367d40cdfc6e11d82e6a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -79,8 +79,8 @@ started:
       security.gid: '1000'
       security.uid: '1000'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false
@@ -95,7 +95,7 @@ sdk-attached:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: '17fd6f33c4c2802b0142eefe3d41d4f98b1c0ce338ce06da2b3e6d06776ac3c2204ed2cc7c6c367d40cdfc6e11d82e6a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -131,8 +131,8 @@ sdk-attached:
       security.gid: '1000'
       security.uid: '1000'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false
@@ -147,7 +147,7 @@ sdk-mounted:
       gid 1000 1000
     raw.lxc: lxc.mount.entry = tmpfs tmp tmpfs defaults
     security.nesting: 'true'
-    cloud-init.user-data: 'e2e2ae8e679e632b6aefd9e2378ec5b0695e1d03ba0418a04aa2d304328e9bb61ee5aae99c0b53254895b1e39555c0f2'
+    cloud-init.user-data: '17fd6f33c4c2802b0142eefe3d41d4f98b1c0ce338ce06da2b3e6d06776ac3c2204ed2cc7c6c367d40cdfc6e11d82e6a'
     user.workshop.name: test
     user.workshop.project-id: '42424242'
   description: ''
@@ -191,8 +191,8 @@ sdk-mounted:
       security.gid: '1000'
       security.uid: '1000'
       type: proxy
-    workshop.workshopctl:
-      path: /usr/bin/workshopctl
+    workshop.bin:
+      path: /var/lib/workshop/bin
       readonly: 'true'
       type: disk
   ephemeral: false

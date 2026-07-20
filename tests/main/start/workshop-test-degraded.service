@@ -1,0 +1,9 @@
+[Unit]
+Description=Intentionally failing unit for the workshop start test
+
+[Service]
+Type=oneshot
+ExecStart=/bin/false
+
+[Install]
+WantedBy=multi-user.target
