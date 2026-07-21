@@ -161,31 +161,45 @@ func (s SdkRecord) MarshalYAML() (any, error) {
 
 func (s *SdkRecord) UnmarshalYAML(value *yaml.Node) error {
 	type record SdkRecord
-	err := value.Decode((*record)(s))
-	s.Name, s.Source = parseSdkName(s.Name)
-	return err
+	if err := value.Decode((*record)(s)); err != nil {
+		return err
+	}
+
+	name, source, err := ParseSdkName(s.Name)
+	if err != nil {
+		return err
+	}
+
+	s.Name, s.Source = name, source
+	return nil
 }
 
-func parseSdkName(name string) (string, sdk.Source) {
+func ParseSdkName(name string) (string, sdk.Source, error) {
 	if sdk.IsSystem(name) {
-		return name, sdk.SystemSource
+		return name, sdk.SystemSource, nil
 	}
 
 	if sdk.IsSketch(name) {
-		return name, sdk.SketchSource
+		return name, sdk.SketchSource, nil
 	}
 
 	suffix, found := strings.CutPrefix(name, "try-")
 	if found {
-		return suffix, sdk.TrySource
+		if sdk.IsSystem(suffix) || sdk.IsSketch(suffix) {
+			return "", sdk.StoreSource, fmt.Errorf("%q is a reserved SDK name", suffix)
+		}
+		return suffix, sdk.TrySource, nil
 	}
 
 	suffix, found = strings.CutPrefix(name, "project-")
 	if found {
-		return suffix, sdk.ProjectSource
+		if sdk.IsSystem(suffix) || sdk.IsSketch(suffix) {
+			return "", sdk.StoreSource, fmt.Errorf("%q is a reserved SDK name", suffix)
+		}
+		return suffix, sdk.ProjectSource, nil
 	}
 
-	return name, sdk.StoreSource
+	return name, sdk.StoreSource, nil
 }
 
 type Connection struct {

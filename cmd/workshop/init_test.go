@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/check.v1"
 
+	"github.com/canonical/workshop/internal/testutil"
 	"github.com/canonical/workshop/internal/workshop"
 )
 
@@ -31,6 +34,19 @@ func (s *workshopInit) run(cmd *CmdInit, name string) error {
 	return cmd.Run(nil, []string{name})
 }
 
+func (s *workshopInit) TestInitBaseUsage(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+
+	bases := slices.Clone(workshop.SupportedBases)
+	bases[len(bases)-1] = "and " + bases[len(bases)-1]
+	line := fmt.Sprintf("\nThe supported bases are %s.\n", strings.Join(bases, ", "))
+
+	help := cmd.Command().Long
+	outdated := !strings.Contains(help, line)
+	c.Check(outdated, check.Equals, false, check.Commentf(strings.TrimSpace(line)))
+}
+
 // --- Success cases ---
 
 func (s *workshopInit) TestInitBasic(c *check.C) {
@@ -53,6 +69,20 @@ func (s *workshopInit) TestInitBasic(c *check.C) {
 	c.Assert(strings.Contains(string(content), "python"), check.Equals, true)
 
 	c.Assert(s.stdout.String(), check.Matches, `"dev" workshop created at .*\n`)
+}
+
+func (s *workshopInit) TestInitEmptySdks(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.IsNil)
+
+	path := workshop.Filepath(projectDir, "dev")
+	c.Check(path, testutil.FileEquals, `name: dev
+base: ubuntu@24.04
+`)
 }
 
 func (s *workshopInit) TestInitWithSdkChannel(c *check.C) {
@@ -126,6 +156,34 @@ func (s *workshopInit) TestInitSystemSdk(c *check.C) {
 	content, err := os.ReadFile(path)
 	c.Assert(err, check.IsNil)
 	c.Assert(strings.Contains(string(content), "system"), check.Equals, true)
+}
+
+func (s *workshopInit) TestInitTrySdk(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"try-uv", "go"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.IsNil)
+
+	path := workshop.Filepath(projectDir, "dev")
+	content, err := os.ReadFile(path)
+	c.Assert(err, check.IsNil)
+	c.Assert(strings.Contains(string(content), "try-uv"), check.Equals, true)
+}
+
+func (s *workshopInit) TestInitProjectSdk(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"project-uv", "go"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.IsNil)
+
+	path := workshop.Filepath(projectDir, "dev")
+	content, err := os.ReadFile(path)
+	c.Assert(err, check.IsNil)
+	c.Assert(strings.Contains(string(content), "project-uv"), check.Equals, true)
 }
 
 // --- Failure: same name already exists ---
@@ -213,30 +271,40 @@ func (s *workshopInit) TestInitInvalidSdkName(c *check.C) {
 	c.Assert(err, check.ErrorMatches, `invalid SDK name "INVALID_SDK"`)
 }
 
+func (s *workshopInit) TestInitEmptySdkName(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{""}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `invalid SDK name ""`)
+}
+
+func (s *workshopInit) TestInitBlankSdkName(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"go", "  ", "uv"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `invalid SDK name ""`)
+}
+
 func (s *workshopInit) TestInitDuplicateSdk(c *check.C) {
 	projectDir := c.MkDir()
 	cmd := s.makeCmd(projectDir)
-	cmd.sdks = []string{"go", "go"}
+	cmd.sdks = []string{"go", " go"}
 
 	err := s.run(cmd, "dev")
 	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `duplicate SDK "go"`)
-}
-
-func (s *workshopInit) TestInitEmptySdks(c *check.C) {
-	projectDir := c.MkDir()
-	cmd := s.makeCmd(projectDir)
-	cmd.sdks = []string{}
-
-	err := s.run(cmd, "dev")
-	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "at least one SDK must be specified")
+	c.Assert(err, check.ErrorMatches, `"go" SDK must only be included once`)
 }
 
 func (s *workshopInit) TestInitInvalidChannel(c *check.C) {
 	projectDir := c.MkDir()
 	cmd := s.makeCmd(projectDir)
-	cmd.sdks = []string{"go/latest/foo"}
+	cmd.sdks = []string{"go/latest/foo "}
 
 	err := s.run(cmd, "dev")
 	c.Assert(err, check.NotNil)
@@ -251,6 +319,26 @@ func (s *workshopInit) TestInitReservedSdkName(c *check.C) {
 	err := s.run(cmd, "dev")
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.ErrorMatches, `"agent" is a reserved SDK name`)
+}
+
+func (s *workshopInit) TestInitReservedTrySdkName(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"try-system"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `"system" is a reserved SDK name`)
+}
+
+func (s *workshopInit) TestInitReservedProjectSdkName(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+	cmd.sdks = []string{"project-sketch"}
+
+	err := s.run(cmd, "dev")
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.ErrorMatches, `"sketch" is a reserved SDK name`)
 }
 
 func (s *workshopInit) TestInitWorkshopYamlExists(c *check.C) {
@@ -383,49 +471,4 @@ func (s *workshopInit) TestInitYamlRoundTrip(c *check.C) {
 	c.Assert(file.Sdks[0].Channel, check.Equals, "1.26/stable")
 	c.Assert(file.Sdks[1].Name, check.Equals, "system")
 	c.Assert(file.Sdks[2].Name, check.Equals, "python")
-}
-
-// --- parseSdkArgs unit tests ---
-
-func (s *workshopInit) TestParseSdkArgsSimple(c *check.C) {
-	sdks, err := parseSdkArgs([]string{"go", "python"})
-	c.Assert(err, check.IsNil)
-	c.Assert(sdks, check.HasLen, 2)
-	c.Assert(sdks[0].Name, check.Equals, "go")
-	c.Assert(sdks[0].Channel, check.Equals, "")
-	c.Assert(sdks[1].Name, check.Equals, "python")
-}
-
-func (s *workshopInit) TestParseSdkArgsWithChannel(c *check.C) {
-	sdks, err := parseSdkArgs([]string{"go/1.26/stable"})
-	c.Assert(err, check.IsNil)
-	c.Assert(sdks, check.HasLen, 1)
-	c.Assert(sdks[0].Name, check.Equals, "go")
-	c.Assert(sdks[0].Channel, check.Equals, "1.26/stable")
-}
-
-func (s *workshopInit) TestParseSdkArgsDuplicate(c *check.C) {
-	_, err := parseSdkArgs([]string{"go", "go"})
-	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, `duplicate SDK "go"`)
-}
-
-func (s *workshopInit) TestParseSdkArgsEmpty(c *check.C) {
-	_, err := parseSdkArgs([]string{})
-	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "at least one SDK must be specified")
-}
-
-func (s *workshopInit) TestParseSdkArgsWhitespace(c *check.C) {
-	sdks, err := parseSdkArgs([]string{" go ", " python "})
-	c.Assert(err, check.IsNil)
-	c.Assert(sdks, check.HasLen, 2)
-	c.Assert(sdks[0].Name, check.Equals, "go")
-	c.Assert(sdks[1].Name, check.Equals, "python")
-}
-
-func (s *workshopInit) TestParseSdkArgsOnlyWhitespace(c *check.C) {
-	_, err := parseSdkArgs([]string{" ", "  "})
-	c.Assert(err, check.NotNil)
-	c.Assert(err, check.ErrorMatches, "at least one SDK must be specified")
 }

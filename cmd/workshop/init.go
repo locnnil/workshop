@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +23,7 @@ type CmdInit struct {
 
 func (c *CmdInit) Command() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:     "init <NAME> --sdks <SDKs> [--base <BASE>]",
+		Use:     "init <NAME>",
 		Args:    cobra.ExactArgs(1),
 		Short:   "Create a new workshop definition in the project directory",
 		GroupID: GrpCRUD,
@@ -35,8 +34,10 @@ The NAME argument sets the workshop name. The command creates a named
 workshop file at .workshop/<NAME>.yaml. This fails if a workshop with
 the same name already exists.
 
+The supported bases are ubuntu@20.04, ubuntu@22.04, ubuntu@24.04, and ubuntu@26.04.
+
 SDKs are specified as a comma-separated list. Each SDK entry can optionally
-include a channel using the <name>/<channel> syntax (e.g., "go/1.26/stable").
+include a channel using the <NAME>/<CHANNEL> syntax (e.g., "go/1.26/stable").
 `,
 		Example: `
 Create a workshop called "dev" with the Go and UV SDKs:
@@ -46,14 +47,12 @@ Create a workshop with a specific SDK channel:
 $ workshop init dev --sdks go/1.26/stable
 
 Create a workshop using a specific base:
-$ workshop init dev --sdks go --base ubuntu@22.04`,
+$ workshop init dev --base ubuntu@22.04 --sdks go`,
 		RunE: c.Run,
 	}
 
 	cmd.Flags().StringSliceVar(&c.sdks, "sdks", nil, `Comma-separated list of SDKs (e.g., "go,uv/latest/stable").`)
 	cmd.Flags().StringVar(&c.base, "base", defaultBase, "Base image for the workshop.")
-
-	_ = cmd.MarkFlagRequired("sdks")
 
 	return cmd
 }
@@ -93,33 +92,20 @@ func (c *CmdInit) Run(cmd *cobra.Command, args []string) error {
 // parseSdkArgs converts a list of strings like ["go/1.26/stable", "python"]
 // into SdkRecord entries.
 func parseSdkArgs(args []string) ([]workshop.SdkRecord, error) {
-	if len(args) == 0 {
-		return nil, errors.New("at least one SDK must be specified")
-	}
-
 	var sdks []workshop.SdkRecord
-	seen := make(map[string]bool)
 	for _, arg := range args {
 		arg = strings.TrimSpace(arg)
-		if arg == "" {
-			continue
+		yamlName, channel, _ := strings.Cut(arg, "/")
+		name, source, err := workshop.ParseSdkName(yamlName)
+		if err != nil {
+			return nil, err
 		}
-
-		name, channel, _ := strings.Cut(arg, "/")
-
-		if _, ok := seen[name]; ok {
-			return nil, fmt.Errorf("duplicate SDK %q", name)
-		}
-		seen[name] = true
 
 		sdks = append(sdks, workshop.SdkRecord{
 			Name:    name,
 			Channel: channel,
+			Source:  source,
 		})
-	}
-
-	if len(sdks) == 0 {
-		return nil, errors.New("at least one SDK must be specified")
 	}
 
 	return sdks, nil
