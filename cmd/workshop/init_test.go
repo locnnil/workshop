@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/check.v1"
@@ -30,6 +32,19 @@ func (s *workshopInit) makeCmd(projectDir string) *CmdInit {
 
 func (s *workshopInit) run(cmd *CmdInit, name string) error {
 	return cmd.Run(nil, []string{name})
+}
+
+func (s *workshopInit) TestInitBaseUsage(c *check.C) {
+	projectDir := c.MkDir()
+	cmd := s.makeCmd(projectDir)
+
+	bases := slices.Clone(workshop.SupportedBases)
+	bases[len(bases)-1] = "and " + bases[len(bases)-1]
+	line := fmt.Sprintf("\nThe supported bases are %s.\n", strings.Join(bases, ", "))
+
+	help := cmd.Command().Long
+	outdated := !strings.Contains(help, line)
+	c.Check(outdated, check.Equals, false, check.Commentf(strings.TrimSpace(line)))
 }
 
 // --- Success cases ---
