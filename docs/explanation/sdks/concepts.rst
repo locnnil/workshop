@@ -89,9 +89,6 @@ By default, |sdk_markup| builds SDKs for every possible platform.
 This typically means all platforms
 with the same CPU architecture as the build machine.
 
-When installing an SDK,
-|ws_markup| will check its platform metadata for compatibility.
-
 |ws_markup| and |sdk_markup| follow `Debian's naming scheme <https://www.debian.org/ports/>`_
 for CPU architectures.
 SDKs that don't ship compiled binaries
@@ -142,6 +139,18 @@ and the workshop picks up the change on its next refresh
 without the definition being edited.
 A channel is optional;
 an SDK that omits one gets the default.
+
+A channel is independent of a platform.
+The same channel name resolves to a different revision for each platform:
+requesting a channel installs the revision
+built for the workshop's :ref:`base <exp_base>` and CPU architecture.
+
+Two workshops that both request :samp:`latest/stable`
+therefore receive different builds when their bases or architectures differ.
+A workshop on an :samp:`ubuntu@24.04` base
+and one on :samp:`ubuntu@22.04`
+each install the :samp:`latest/stable` revision built for its own platform,
+not a single shared build.
 
 Only Store SDKs have channels.
 The other kinds never reach the Store,
